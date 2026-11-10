@@ -198,5 +198,25 @@
       "opaqueMs": 0,
       "durationMs": 2999
     }
+  },
+  "celebration": {
+    "palette": { "core": "#eef7ff", "edge": "#8fa9c9", "glow": "#8fe3f280" },
+    "particles": {
+      "shapes": ["gem", "gem", "spark"],
+      "symbols": ["diamond"],
+      "colors": ["#8fe3f2", "#d7dbe0", "#b583ff", "#ff4f7a"],
+      "motion": "tumble",
+      "size": 1.4
+    },
+    "rays": { "style": "beams" },
+    "waves": { "style": "double" },
+    "title": { "font": "serif", "weight": 800, "stroke": 1, "strokeColor": "#1a1030cc", "tracking": 0.02 },
+    "tiers": {
+      "storm": { "edge": "#b583ff", "glow": "#b583ff80" },
+      "cataclysm": { "core": "#ffffff", "edge": "#8f1f2e", "glow": "#d7dbe09e", "density": 1.3 }
+    }
+  },
+  "sound": {
+    "preset": "bell"
   }
 }

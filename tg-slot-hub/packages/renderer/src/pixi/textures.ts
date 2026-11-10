@@ -3,6 +3,8 @@ import type { SymbolId } from '@tgslot/slot-engine'
 import { keyOutGreen } from '../chromaKey.js'
 import { FALLBACK_TEXTURE_SIZE } from '../constants.js'
 import { resolveSymbolSource } from '../theme.js'
+import { celebrationShapePoints } from '../celebration.js'
+import type { CelebrationShape } from '@tgslot/game-sdk'
 import type { TextureRegistry } from '../textureRegistry.js'
 import type { Theme } from '../types.js'
 
@@ -84,6 +86,64 @@ export function createCoinTexture(theme: Theme, registry?: TextureRegistry): Tex
       ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2)
       ctx.fillStyle = gradient
       ctx.fill()
+    },
+    registry,
+  )
+}
+
+/** 축하 파티클 텍스처 한 변(px). */
+const CELEBRATION_TEXTURE_SIZE = 64
+
+/**
+ * 축하 파티클 한 모양을 주색·그늘로 칠한 텍스처. 윤곽은 허브 CSS와 같은 `celebrationShapePoints`다.
+ * 위쪽은 흰빛, 아래는 그늘로 밀어 작아도 입체로 읽히게 하고, 가장자리에 밝은 선을 둘러 어두운 스크림 위에서도 떠 보이게 한다.
+ */
+export function createCelebrationShapeTexture(
+  shape: CelebrationShape,
+  color: string,
+  shade: string,
+  registry?: TextureRegistry,
+): Texture {
+  const size = CELEBRATION_TEXTURE_SIZE
+  return createCanvasTexture(
+    size,
+    size,
+    (ctx) => {
+      const pad = 3
+      const span = size - pad * 2
+      const points = celebrationShapePoints(shape)
+      ctx.beginPath()
+      if (points === null) {
+        ctx.arc(size / 2, size / 2, span / 2, 0, Math.PI * 2)
+      } else {
+        points.forEach(([x, y], i) => {
+          if (i === 0) ctx.moveTo(pad + x * span, pad + y * span)
+          else ctx.lineTo(pad + x * span, pad + y * span)
+        })
+        ctx.closePath()
+      }
+      if (shape === 'slice') {
+        // 과일 단면: 과육 · 흰 속껍질 · 겉껍질. 원의 중심이 평평한 윗변에 있다(허브 CSS와 같은 겹).
+        const rind = ctx.createRadialGradient(size / 2, pad + span * 0.22, 0, size / 2, pad + span * 0.22, span * 0.56)
+        rind.addColorStop(0, '#ffffff')
+        rind.addColorStop(0.18, color)
+        rind.addColorStop(0.68, color)
+        rind.addColorStop(0.68, '#fff8e6')
+        rind.addColorStop(0.8, '#fff8e6')
+        rind.addColorStop(0.8, shade)
+        rind.addColorStop(1, shade)
+        ctx.fillStyle = rind
+      } else {
+        const gradient = ctx.createLinearGradient(size * 0.2, 0, size * 0.8, size)
+        gradient.addColorStop(0, '#ffffff')
+        gradient.addColorStop(0.32, color)
+        gradient.addColorStop(1, shade)
+        ctx.fillStyle = gradient
+      }
+      ctx.fill()
+      ctx.lineWidth = 2
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)'
+      ctx.stroke()
     },
     registry,
   )

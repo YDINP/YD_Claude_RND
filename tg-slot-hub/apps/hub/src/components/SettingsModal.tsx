@@ -7,6 +7,7 @@
  */
 import type { ReactNode } from 'react'
 import type { PublicUser } from '@tgslot/shared'
+import { playUiSound } from '../lib/audio'
 import { useSettingsStore, type SettingsLocale, type SpinSpeed } from '../store/settings'
 import { useSessionStore } from '../store/session'
 import { patchMe } from '../sdk/api'
@@ -61,6 +62,12 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const setLocale = useSettingsStore((s) => s.setLocale)
   const setSound = useSettingsStore((s) => s.setSound)
+  const sfxVolume = useSettingsStore((s) => s.sfxVolume)
+  const setSfxVolume = useSettingsStore((s) => s.setSfxVolume)
+  const bgm = useSettingsStore((s) => s.bgm)
+  const setBgm = useSettingsStore((s) => s.setBgm)
+  const bgmVolume = useSettingsStore((s) => s.bgmVolume)
+  const setBgmVolume = useSettingsStore((s) => s.setBgmVolume)
   const setHaptics = useSettingsStore((s) => s.setHaptics)
   const setReducedMotion = useSettingsStore((s) => s.setReducedMotion)
   const spinSpeed = useSettingsStore((s) => s.spinSpeed)
@@ -145,6 +152,41 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
       </div>
 
       <ToggleRow label={t('sound')} on={sound} onToggle={() => setSound(!sound)} />
+      <div className="hub-settings__section">
+        <label className="hub-settings__label" htmlFor="hub-settings-sfx-volume">
+          {t('sfxVolume')} <span className="hub-settings__hint">{sfxVolume}%</span>
+        </label>
+        <input
+          id="hub-settings-sfx-volume"
+          className="hub-settings__slider"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={sfxVolume}
+          disabled={!sound}
+          onChange={(e) => setSfxVolume(Number(e.target.value))}
+          onPointerUp={() => playUiSound('tap')}
+          onKeyUp={() => playUiSound('tap')}
+        />
+      </div>
+      <ToggleRow label={t('bgm')} on={bgm} onToggle={() => setBgm(!bgm)} />
+      <div className="hub-settings__section">
+        <label className="hub-settings__label" htmlFor="hub-settings-bgm-volume">
+          {t('bgmVolume')} <span className="hub-settings__hint">{bgmVolume}%</span>
+        </label>
+        <input
+          id="hub-settings-bgm-volume"
+          className="hub-settings__slider"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={bgmVolume}
+          disabled={!sound || !bgm}
+          onChange={(e) => setBgmVolume(Number(e.target.value))}
+        />
+      </div>
       <ToggleRow label={t('haptics')} on={haptics} onToggle={() => setHaptics(!haptics)} />
       <ToggleRow
         label={t('reduceMotion')}

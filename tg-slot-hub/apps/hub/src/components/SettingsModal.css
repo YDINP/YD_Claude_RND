@@ -101,3 +101,12 @@
 .hub-settings__support-id {
   font-family: var(--hub-mono);
 }
+
+.hub-settings__slider {
+  width: 100%;
+  accent-color: var(--hub-gold);
+}
+
+.hub-settings__slider:disabled {
+  opacity: 0.4;
+}

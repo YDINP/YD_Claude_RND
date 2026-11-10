@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand'
 import type { Locale } from '@tgslot/shared'
-import { setAudioMuted } from '../lib/audio'
+import { setAudioMuted, setBgmEnabled, setBgmVolume, setSfxVolume } from '../lib/audio'
 
 /** 'auto'면 서버가 정한 user.locale(텔레그램 language_code 기반)을 그대로 따른다 */
 export type SettingsLocale = Locale | 'auto'
@@ -22,6 +22,11 @@ const STORAGE_KEY = 'tgslot.settings'
 export interface SettingsState {
   locale: SettingsLocale
   sound: boolean
+  /** 효과음 음량 0..100. 뮤트(`sound`)와 별개로 기억된다. */
+  sfxVolume: number
+  /** 배경음악 켜기/끄기와 음량 0..100. 효과음과 따로 기억된다. */
+  bgm: boolean
+  bgmVolume: number
   haptics: boolean
   reducedMotion: boolean
   spinSpeed: SpinSpeed
@@ -30,6 +35,9 @@ export interface SettingsState {
 export interface SettingsActions {
   setLocale: (locale: SettingsLocale) => void
   setSound: (on: boolean) => void
+  setSfxVolume: (percent: number) => void
+  setBgm: (on: boolean) => void
+  setBgmVolume: (percent: number) => void
   setHaptics: (on: boolean) => void
   setReducedMotion: (on: boolean) => void
   setSpinSpeed: (speed: SpinSpeed) => void
@@ -53,6 +61,10 @@ function isSettingsLocale(value: unknown): value is SettingsLocale {
   return value === 'en' || value === 'ko' || value === 'auto'
 }
 
+function clampVolume(percent: number): number {
+  return Math.min(100, Math.max(0, Math.round(percent)))
+}
+
 function isSpinSpeed(value: unknown): value is SpinSpeed {
   return value === 'normal' || value === 'quick' || value === 'turbo'
 }
@@ -67,6 +79,9 @@ function readStoredSettings(): Partial<SettingsState> {
     const result: Partial<SettingsState> = {}
     if (isSettingsLocale(p.locale)) result.locale = p.locale
     if (typeof p.sound === 'boolean') result.sound = p.sound
+    if (typeof p.sfxVolume === 'number' && Number.isFinite(p.sfxVolume)) result.sfxVolume = clampVolume(p.sfxVolume)
+    if (typeof p.bgm === 'boolean') result.bgm = p.bgm
+    if (typeof p.bgmVolume === 'number' && Number.isFinite(p.bgmVolume)) result.bgmVolume = clampVolume(p.bgmVolume)
     if (typeof p.haptics === 'boolean') result.haptics = p.haptics
     if (typeof p.reducedMotion === 'boolean') result.reducedMotion = p.reducedMotion
     if (isSpinSpeed(p.spinSpeed)) result.spinSpeed = p.spinSpeed
@@ -89,6 +104,9 @@ function buildInitialState(): SettingsState {
   return {
     locale: stored.locale ?? 'auto',
     sound: stored.sound ?? true,
+    sfxVolume: stored.sfxVolume ?? 100,
+    bgm: stored.bgm ?? true,
+    bgmVolume: stored.bgmVolume ?? 40,
     haptics: stored.haptics ?? true,
     reducedMotion: stored.reducedMotion ?? prefersReducedMotion(),
     spinSpeed: stored.spinSpeed ?? 'normal',
@@ -98,6 +116,9 @@ function buildInitialState(): SettingsState {
 const initialState = buildInitialState()
 // 모듈 로드 시점의 저장된(또는 기본) 사운드 설정을 오디오 뮤트 플래그에 즉시 반영한다.
 setAudioMuted(!initialState.sound)
+setSfxVolume(initialState.sfxVolume)
+setBgmEnabled(initialState.bgm)
+setBgmVolume(initialState.bgmVolume)
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   ...initialState,
@@ -110,6 +131,26 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   setSound(on) {
     set({ sound: on })
     setAudioMuted(!on)
+    writeStoredSettings(get())
+  },
+
+  setSfxVolume(percent) {
+    const sfxVolume = clampVolume(percent)
+    set({ sfxVolume })
+    setSfxVolume(sfxVolume)
+    writeStoredSettings(get())
+  },
+
+  setBgm(on) {
+    set({ bgm: on })
+    setBgmEnabled(on)
+    writeStoredSettings(get())
+  },
+
+  setBgmVolume(percent) {
+    const bgmVolume = clampVolume(percent)
+    set({ bgmVolume })
+    setBgmVolume(bgmVolume)
     writeStoredSettings(get())
   },
 

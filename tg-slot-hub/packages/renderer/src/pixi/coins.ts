@@ -11,6 +11,7 @@ import {
   SCATTER_BURST_PARTICLES,
 } from '../constants.js'
 import type { WinTier } from '../wins.js'
+import type { CelebrationMotion } from '@tgslot/game-sdk'
 import type { Layout } from '../layout.js'
 import type { ParticlePool } from './particles.js'
 
@@ -18,6 +19,9 @@ const COIN_MIN_SCALE = 0.28
 const COIN_MAX_SCALE = 0.62
 const COIN_SPAWN_SPREAD_MS = 700
 const COIN_SPIN_TURNS = 2
+/** 스킨 파티클 한 알의 지름(심볼 한 변 대비). 게임 스킨의 `size`가 곱해지므로 금화보다 작게 잡는다. */
+const SKIN_MIN_SCALE = 0.16
+const SKIN_MAX_SCALE = 0.36
 
 /** 코인 1개의 무작위 파라미터. 시드 없이 Math.random을 써도 되는 유일한 곳(연출 전용). */
 function randomBetween(min: number, max: number): number {
@@ -86,12 +90,17 @@ export function burstCoins(
  * 텍스처 없이 사각형 스프라이트를 흰 텍스처에 tint만 입혀 쓴다.
  * @returns 중단 함수
  */
-export function burstConfetti(pool: ParticlePool, texture: Texture, layout: Layout): () => void {
+export function burstConfetti(
+  pool: ParticlePool,
+  texture: Texture,
+  layout: Layout,
+  colors: readonly string[] = CONFETTI_COLORS,
+): () => void {
   const tweens: gsap.core.Tween[] = []
   const sprites = pool.acquire(CONFETTI_COUNT, texture)
 
   sprites.forEach((piece, i) => {
-    piece.tint = CONFETTI_COLORS[i % CONFETTI_COLORS.length] ?? '#f4d98a'
+    piece.tint = colors[i % colors.length] ?? '#f4d98a'
     piece.width = layout.symbolSize * randomBetween(0.06, 0.13)
     piece.height = layout.symbolSize * randomBetween(0.14, 0.24)
     piece.x = randomBetween(layout.frame.x, layout.frame.x + layout.frame.width)
@@ -185,5 +194,100 @@ export function burstScatters(
   }
 
   gsap.delayedCall((PHASE_FEATURE_MS + 300) / 1000, stop)
+  return stop
+}
+
+/** 게임 스킨 파티클 한 알. 텍스처는 모양×색마다, 또는 심볼 그림 그대로다. */
+export interface CelebrationSprite {
+  readonly texture: Texture
+}
+
+export interface CelebrationBurstOptions {
+  readonly motion: CelebrationMotion
+  /** 크기 배수. 기본 1. */
+  readonly size?: number
+}
+
+/**
+ * 게임 스킨을 입힌 빅윈 샤워. 자리·낙하는 `burstCoins`와 같고, 알마다 텍스처와 도는 방식이 다르다.
+ * `flip` 동전처럼 뒤집힘 / `tumble` 굴러 떨어짐 / `flutter` 꽃잎처럼 좌우로 흔들리며 천천히.
+ * @returns 중단 함수
+ */
+export function burstCelebration(
+  pool: ParticlePool,
+  layout: Layout,
+  particles: readonly CelebrationSprite[],
+  options: CelebrationBurstOptions,
+): () => void {
+  const first = particles[0]
+  if (first === undefined) return () => {}
+  const total = Math.min(MAX_COIN_PARTICLES, particles.length)
+  const tweens: gsap.core.Tween[] = []
+  const sprites = pool.acquire(total, first.texture)
+  const size = options.size ?? 1
+  const flutter = options.motion === 'flutter'
+  const fallMs = flutter ? COIN_FALL_MS * 1.5 : COIN_FALL_MS
+
+  sprites.forEach((sprite, i) => {
+    const texture = (particles[i] ?? first).texture
+    sprite.texture = texture
+    const px = randomBetween(SKIN_MIN_SCALE, SKIN_MAX_SCALE) * layout.symbolSize * size
+    sprite.scale.set(px / Math.max(1, texture.width))
+    sprite.x = randomBetween(layout.frame.x, layout.frame.x + layout.frame.width)
+    sprite.y = layout.frame.y - layout.symbolSize * randomBetween(0.2, 1.4)
+    sprite.rotation = randomBetween(-0.6, 0.6)
+    const delay = randomBetween(0, COIN_SPAWN_SPREAD_MS / 1000)
+
+    tweens.push(
+      gsap.to(sprite, {
+        y: layout.frame.y + layout.frame.height + layout.symbolSize,
+        rotation:
+          options.motion === 'tumble'
+            ? randomBetween(-1, 1) * Math.PI * COIN_SPIN_TURNS
+            : sprite.rotation + randomBetween(-1, 1) * (flutter ? 1.6 : 0.5),
+        duration: fallMs / 1000,
+        delay,
+        ease: flutter ? 'none' : 'sine.in',
+      }),
+    )
+    if (options.motion === 'flip') {
+      tweens.push(
+        gsap.to(sprite.scale, {
+          x: sprite.scale.x * 0.15,
+          duration: randomBetween(0.18, 0.32),
+          yoyo: true,
+          repeat: -1,
+          ease: 'sine.inOut',
+        }),
+      )
+    } else if (flutter) {
+      tweens.push(
+        gsap.to(sprite, {
+          x: sprite.x + randomBetween(0.35, 0.7) * layout.symbolSize * (i % 2 === 0 ? 1 : -1),
+          duration: randomBetween(0.45, 0.8),
+          yoyo: true,
+          repeat: -1,
+          ease: 'sine.inOut',
+        }),
+      )
+    }
+    tweens.push(
+      gsap.to(sprite, {
+        alpha: 0,
+        duration: (fallMs / 1000) * 0.3,
+        delay: delay + (fallMs / 1000) * 0.72,
+      }),
+    )
+  })
+
+  let stopped = false
+  const stop = (): void => {
+    if (stopped) return
+    stopped = true
+    for (const tween of tweens) tween.kill()
+    pool.release(sprites)
+  }
+
+  gsap.delayedCall((fallMs + COIN_SPAWN_SPREAD_MS) / 1000, stop)
   return stop
 }

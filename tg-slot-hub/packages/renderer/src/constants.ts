@@ -203,6 +203,11 @@ export const PHASE_ALL_MEGA_MS = 3080
  * 속도 프로파일의 `winHoldScale`은 그 위에 그대로 곱해진다.
  */
 export const BRIEF_PHASE_ALL_SCALE = 0.6
+/**
+ * 당첨이 둘 이상일 때 A단계에서 총합이 다 굴러간 뒤 머무는 시간(ms).
+ * 롤업이 홀드 전체를 쓰면 최종값에 닿는 순간 라인 순환으로 넘어가 총합이 거의 안 보였다.
+ */
+export const PHASE_ALL_MULTI_DWELL_MS = 1200
 /** 승리 연출 B단계(라인 하나씩) 한 스텝 길이(ms). 허브 문구를 읽을 시간을 준다. */
 export const PHASE_LINE_MS = 1900
 /** 라인이 바뀔 때 겹쳐 넘기는 시간(ms). */
@@ -310,6 +315,12 @@ export const SKIP_SETTLE_MS = 120
 export const SKIP_STAGGER_MS = 40
 /** 스킵 착지에서 정지 위치 위로 띄웠다가 내려오는 거리(심볼 단위). 재가속 없이 내려앉기만 한다. */
 export const SKIP_SETTLE_SYMBOLS = 0.06
+/**
+ * 스킵한 스핀의 변형 1단계 길이(ms).
+ * 변형을 통째로 건너뛰고 최종 그리드를 덮으면 멈춘 릴에서 심볼이 «툭 바뀌는» 오류처럼 보인다.
+ * 그래서 건너뛰지 않고 이 길이로 압축해 뒤집기·확장이 보이게 한다.
+ */
+export const SKIP_MUTATION_MS = 260
 
 /**
  * 변형(뮤테이션) 연출 길이(ms). 종류마다 다른 이유가 있다.
@@ -436,3 +447,11 @@ export const REEL_BACKDROP_ALPHA = 0.35
 export const REEL_BACKDROP_RADIUS_RATIO = 0.08
 /** 기본 안쪽 여백 = 심볼 한 변 x 이 값. 0이면 릴 창과 정확히 같은 사각형이다. */
 export const REEL_BACKDROP_INSET_RATIO = 0
+
+/**
+ * 기대감 연출: 스캐터가 트리거 직전 개수까지 먼저 떨어지면 남은 릴 하나마다 이만큼(ms, `normal` 기준)
+ * 더 돌다 선다. 이후 릴은 그만큼 뒤로 밀린다. 결과(정지 위치)는 그대로고 시간만 늘어난다.
+ */
+export const ANTICIPATION_EXTRA_MS = 800
+/** 속도 프로파일별 기대감 배율. 터보는 리듬을 깨지 않도록 끈다. 모션 축소도 끈다. */
+export const ANTICIPATION_SPEED_SCALE = { normal: 1, quick: 0.7, turbo: 0 } as const

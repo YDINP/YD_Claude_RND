@@ -148,6 +148,13 @@ describe('checkGamePack — 심볼 대응', () => {
     expect(find(problems, PACK_FILES.theme, 'symbols.ghost')?.level).toBe('warn')
   })
 
+  it('축하 파티클이 가리키는 심볼이 symbols에 없으면 오류다', () => {
+    const theme = { ...fixtureTheme, celebration: { particles: { symbols: ['wild', 'ghost'] } } }
+    const problems = check({ files: { [PACK_FILES.theme]: json(theme) } })
+    expect(find(problems, PACK_FILES.theme, 'celebration.particles.symbols.1')?.level).toBe('error')
+    expect(find(problems, PACK_FILES.theme, 'celebration.particles.symbols.0')).toBeUndefined()
+  })
+
   it('prompts의 symbol asset id가 math에 없으면 오류다', () => {
     const prompts = clone(fixturePrompts)
     prompts.assets[0] = { ...prompts.assets[0], id: 'ghost', out: 'theme/symbols/ghost.webp' } as never

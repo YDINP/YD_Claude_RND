@@ -5,6 +5,7 @@ import {
   BRIEF_PHASE_ALL_SCALE,
   PHASE_ALL_BIGWIN_MS,
   PHASE_ALL_MEGA_MS,
+  PHASE_ALL_MULTI_DWELL_MS,
   PHASE_ALL_MS,
   PHASE_FEATURE_MS,
   PHASE_LINE_MS,
@@ -121,7 +122,19 @@ describe('buildPresentation', () => {
 
   it('한 바퀴 길이는 각 단계의 합이다', () => {
     const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
-    expect(presentationCycleMs(steps)).toBe(PHASE_ALL_MS + PHASE_LINE_MS * 2)
+    expect(presentationCycleMs(steps)).toBe(PHASE_ALL_MS + PHASE_ALL_MULTI_DWELL_MS + PHASE_LINE_MS * 2)
+  })
+
+  it('당첨이 여럿이면 총합이 다 굴러간 뒤 머무는 시간을 둔다', () => {
+    const [all] = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
+    expect(all).toMatchObject({ phase: 'all', rollupMs: PHASE_ALL_MS, durationMs: PHASE_ALL_MS + PHASE_ALL_MULTI_DWELL_MS })
+  })
+
+  it('당첨이 하나거나 brief면 머무는 시간이 없다', () => {
+    const [single] = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500 })
+    expect(single).toMatchObject({ rollupMs: PHASE_ALL_MS, durationMs: PHASE_ALL_MS })
+    const [brief] = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500, presentation: 'brief' })
+    expect(brief!.durationMs).toBe(Math.round(PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE))
   })
 })
 

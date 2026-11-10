@@ -10,6 +10,7 @@ import {
 import {
   applyMutationEventsToGrid,
   buildMutationPlan,
+  compressMutationStep,
   expireMutationOverlay,
   fadeMutationOverlay,
   holdMutationOverlay,
@@ -423,5 +424,19 @@ describe('변형 층 — 스핀을 시작해도 되돌아가지 않는다', () =
   it('얹은 것이 없으면 시작해도 없는 그대로다', () => {
     expect(fadeMutationOverlay(NO_MUTATION_OVERLAY, POSITIONS)).toEqual(NO_MUTATION_OVERLAY)
     expect(mutationOverlaySymbolAt(NO_MUTATION_OVERLAY, 0, 1)).toBeUndefined()
+  })
+})
+
+describe('compressMutationStep', () => {
+  const step = { index: 0, type: 'mystery', mutation: {}, grid: [], cells: [], durationMs: 600, commitMs: 300, atMs: 0 } as never
+
+  it('상한보다 긴 단계를 줄이고 교체 시점 비율을 지킨다', () => {
+    const fast = compressMutationStep(step, 260)
+    expect(fast.durationMs).toBe(260)
+    expect(fast.commitMs).toBe(130)
+  })
+
+  it('이미 짧은 단계는 그대로 둔다', () => {
+    expect(compressMutationStep(step, 1000)).toBe(step)
   })
 })

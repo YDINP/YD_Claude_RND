@@ -32,6 +32,16 @@ export const SfxSchema = z.object({
   bigwin: z.string().min(1).optional(),
 })
 
+/** 효과음 합성 프리셋. 허브 `audio.ts`의 레시피 표 키와 같아야 한다. */
+export const SOUND_PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork'] as const
+export type SoundPreset = (typeof SOUND_PRESETS)[number]
+
+/** 게임별 소리 세트. 없으면 허브 기본(`bell`). `sfx` URL이 있으면 그 키만 파일이 대신한다. */
+export const SoundSchema = z.object({
+  preset: z.enum(SOUND_PRESETS),
+})
+export type SoundConfig = z.infer<typeof SoundSchema>
+
 const FractionSchema = z.number().min(0).max(1)
 
 /** 프레임 이미지 안에서 릴 창이 차지하는 영역. 프레임 크기에 대한 분수다. */
@@ -206,6 +216,126 @@ export const ThemeTransitionsSchema = z.object({
 })
 export type ThemeTransitions = z.infer<typeof ThemeTransitionsSchema>
 
+/** 빅윈 축하의 등급 이름. 허브 오버레이와 렌더러의 캔버스 버스트가 같은 키를 본다. */
+export const CELEBRATION_TIER_KEYS = ['surge', 'blast', 'storm', 'cataclysm'] as const
+export type CelebrationTierKey = (typeof CELEBRATION_TIER_KEYS)[number]
+
+/**
+ * 축하 파티클 모양. 전부 코드로 그린다(허브는 CSS clip-path, 렌더러는 캔버스 텍스처) —
+ * 모양의 윤곽은 렌더러의 `celebration.ts`가 한 벌만 들고 두 쪽이 나눠 쓴다.
+ */
+export const CELEBRATION_SHAPES = [
+  'coin',
+  'star',
+  'badge',
+  'gem',
+  'petal',
+  'slice',
+  'shard',
+  'casing',
+  'ema',
+  'gear',
+  'confetti',
+  'spark',
+] as const
+export type CelebrationShape = (typeof CELEBRATION_SHAPES)[number]
+
+/** 파티클이 지나가며 도는 방식. `flip`은 동전처럼 뒤집히고, `flutter`는 꽃잎처럼 흔들리며 내려온다. */
+export const CELEBRATION_MOTIONS = ['flip', 'tumble', 'flutter'] as const
+export type CelebrationMotion = (typeof CELEBRATION_MOTIONS)[number]
+
+/** 카드 뒤 광선. `sunburst` 가는 살 / `beams` 굵은 빛기둥 / `halo` 살 없는 후광. */
+export const CELEBRATION_RAY_STYLES = ['sunburst', 'beams', 'halo', 'none'] as const
+export type CelebrationRayStyle = (typeof CELEBRATION_RAY_STYLES)[number]
+
+/** 중앙에서 퍼지는 충격파 고리의 선. */
+export const CELEBRATION_WAVE_STYLES = ['ring', 'double', 'dashed', 'none'] as const
+export type CelebrationWaveStyle = (typeof CELEBRATION_WAVE_STYLES)[number]
+
+/** 등급 제목 글꼴 계열. 웹폰트를 따로 받지 않고 시스템 글꼴 묶음으로 푼다. */
+export const CELEBRATION_FONTS = ['sans', 'serif', 'slab', 'rounded'] as const
+export type CelebrationFont = (typeof CELEBRATION_FONTS)[number]
+
+/** 등급 제목·금액 글자의 결. 빠진 값은 기본 스킨 → 게임 공통 → 등급 순서로 채워진다. */
+export const CelebrationTitleSchema = z.object({
+  font: z.enum(CELEBRATION_FONTS).optional(),
+  weight: z.number().int().min(400).max(950).optional(),
+  /** 글자 외곽선 두께(px). 밝은 배경 아트 위에서도 금액이 읽히게 한다. */
+  stroke: z.number().min(0).max(6).optional(),
+  strokeColor: ColorSchema.optional(),
+  /** 금액 글자 채움. 위 → (가운데) → 아래. */
+  gradient: z.array(ColorSchema).min(2).max(3).optional(),
+  /** 자간(em). */
+  tracking: z.number().min(-0.1).max(0.4).optional(),
+})
+export type CelebrationTitle = z.infer<typeof CelebrationTitleSchema>
+
+/** 한 등급의 스킨. 전부 선택이다. */
+export const CelebrationTierSkinSchema = z.object({
+  /** 글자·고리의 주색. */
+  core: ColorSchema.optional(),
+  /** 그라디언트 아래끝·파티클 그늘. */
+  edge: ColorSchema.optional(),
+  /** 광선·후광·그림자 색. 알파를 담으려면 #RRGGBBAA. */
+  glow: ColorSchema.optional(),
+  /** 광선 세기(0~1, 불투명도). */
+  rays: z.number().min(0).max(1).optional(),
+  /** 광선 한 바퀴(ms). 작을수록 빨리 돈다. */
+  raySpinMs: z.number().min(1000).max(60000).optional(),
+  /** 충격파 고리 수. */
+  waves: z.number().int().min(0).max(3).optional(),
+  /** 파티클 밀도 배수. 기본 1. 렌더러 예산 상한은 그대로 적용된다. */
+  density: z.number().min(0).max(3).optional(),
+  title: CelebrationTitleSchema.optional(),
+})
+export type CelebrationTierSkin = z.infer<typeof CelebrationTierSkinSchema>
+
+/** 파티클 재료. 모양과 심볼 그림을 섞어 쓸 수 있고, 둘을 번갈아 돌린다. */
+export const CelebrationParticlesSchema = z.object({
+  shapes: z.array(z.enum(CELEBRATION_SHAPES)).min(1).optional(),
+  /** 파티클로 쓸 심볼 id. `symbols`에 있는 그림을 작게 줄여 뿌린다. */
+  symbols: z.array(z.string().min(1)).min(1).optional(),
+  /** 모양 파티클의 색. 순서대로 돌려 쓴다. 심볼 그림에는 입히지 않는다. */
+  colors: z.array(ColorSchema).min(1).optional(),
+  motion: z.enum(CELEBRATION_MOTIONS).optional(),
+  /** 크기 배수. 기본 1. */
+  size: z.number().min(0.4).max(3).optional(),
+})
+export type CelebrationParticles = z.infer<typeof CelebrationParticlesSchema>
+
+/**
+ * 게임별 빅윈 축하 스킨. 없으면 허브 기본(금화·태양살·금→자전 팔레트)이다.
+ *
+ * 같은 스킨이 **허브 오버레이·프리스핀 종료 팝업·렌더러의 캔버스 버스트** 세 곳을 함께 입힌다 —
+ * 한 게임의 빅윈이 화면마다 다른 게임처럼 보이면 안 된다.
+ * 공통 값(`palette`·`title`)이 먼저 깔리고 등급별 값(`tiers`)이 그 위를 덮는다.
+ */
+export const CelebrationSkinSchema = z.object({
+  palette: CelebrationTierSkinSchema.pick({ core: true, edge: true, glow: true }).optional(),
+  particles: CelebrationParticlesSchema.optional(),
+  rays: z.object({ style: z.enum(CELEBRATION_RAY_STYLES) }).optional(),
+  waves: z.object({ style: z.enum(CELEBRATION_WAVE_STYLES) }).optional(),
+  title: CelebrationTitleSchema.optional(),
+  /** 등급 이름 덮어쓰기. 빠진 등급은 허브 기본(i18n). */
+  labels: z
+    .object({
+      surge: z.string().trim().min(1).optional(),
+      blast: z.string().trim().min(1).optional(),
+      storm: z.string().trim().min(1).optional(),
+      cataclysm: z.string().trim().min(1).optional(),
+    })
+    .optional(),
+  tiers: z
+    .object({
+      surge: CelebrationTierSkinSchema.optional(),
+      blast: CelebrationTierSkinSchema.optional(),
+      storm: CelebrationTierSkinSchema.optional(),
+      cataclysm: CelebrationTierSkinSchema.optional(),
+    })
+    .optional(),
+})
+export type CelebrationSkin = z.infer<typeof CelebrationSkinSchema>
+
 /**
  * `games/<id>/theme/theme.json`의 스키마. 경로는 theme.json 파일 기준 상대 경로다.
  * 파일이 없는 효과음은 키 자체를 넣지 않는다 (빈 문자열 금지).
@@ -229,8 +359,11 @@ export const ThemeFileSchema = z.object({
   transitions: ThemeTransitionsSchema.optional(),
   /** 릴 창 뒤 패널. 없으면 렌더러 기본값(검정 반투명)으로 깔린다. */
   reelBackdrop: ReelBackdropSchema.optional(),
+  /** 빅윈 축하 스킨. 없으면 허브 기본 연출이다. */
+  celebration: CelebrationSkinSchema.optional(),
   palette: ThemePaletteSchema,
   sfx: SfxSchema.optional(),
+  sound: SoundSchema.optional(),
 })
 export type ThemeFile = z.infer<typeof ThemeFileSchema>
 

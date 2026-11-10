@@ -9,6 +9,7 @@ import {
   BRIEF_PHASE_ALL_SCALE,
   PHASE_ALL_BIGWIN_MS,
   PHASE_ALL_MEGA_MS,
+  PHASE_ALL_MULTI_DWELL_MS,
   PHASE_ALL_MS,
   PHASE_FEATURE_MS,
   PHASE_LINE_MS,
@@ -49,6 +50,8 @@ export type PresentationStep =
       tier: WinTier
       scatters: GridPosition[]
       durationMs: number
+      /** 총합 롤업 길이. 당첨이 여럿이면 `durationMs`보다 짧아 최종값이 머무는 시간이 생긴다. */
+      rollupMs: number
     }
   | { phase: 'feature'; feature: FreeSpinsTrigger; scatters: GridPosition[]; durationMs: number }
   | { phase: 'line'; win: WinLine; scatters: GridPosition[]; durationMs: number }
@@ -107,6 +110,7 @@ export function buildPresentation(
   const hold = Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
   // ways 게임에는 라인 인덱스가 없다(-1 고정). 배당 큰 심볼부터 보여준다.
   const ordered = isWaysGame(math) ? sortWaysWins(wins) : [...wins].sort((a, b) => a.line - b.line)
+  const dwell = !brief && ordered.length > 1 ? PHASE_ALL_MULTI_DWELL_MS : 0
 
   const steps: PresentationStep[] = [
     {
@@ -115,7 +119,8 @@ export function buildPresentation(
       totalWin: totalWinOf(ordered),
       tier,
       scatters,
-      durationMs: cap(hold),
+      durationMs: cap(dwell > 0 ? hold + dwell : hold),
+      rollupMs: cap(hold),
     },
   ]
   if (freeSpins !== null) {

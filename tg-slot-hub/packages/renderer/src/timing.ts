@@ -1,4 +1,6 @@
 import {
+  ANTICIPATION_EXTRA_MS,
+  ANTICIPATION_SPEED_SCALE,
   BASE_REVOLUTIONS,
   DEFAULT_SPIN_SPEED,
   FAST_SPIN_FACTOR,
@@ -51,6 +53,11 @@ export interface SpinPlanInput {
    * `durationMs`/`stagger`를 직접 주면 그쪽이 이긴다. 모션 축소는 언제나 이 위에 얹힌다.
    */
   speed?: SpinSpeed
+  /**
+   * 기대감을 걸 릴 인덱스(`anticipatedReels`). 이 릴들은 `ANTICIPATION_EXTRA_MS`만큼 더 돌고,
+   * 뒤따르는 릴도 그만큼 밀린다. 모션 축소·터보에서는 무시된다.
+   */
+  anticipation?: readonly number[]
 }
 
 export interface ReelSpinPlan {
@@ -68,6 +75,8 @@ export interface ReelSpinPlan {
   endMs: number
   /** 최소 회전 바퀴 수. 오른쪽 릴일수록 더 돈다. */
   revolutions: number
+  /** 기대감으로 이 릴에 얹힌 시간(ms). 앞선 기대감 릴의 누적분은 포함하지 않는다. 아니면 0. */
+  anticipationMs: number
 }
 
 export interface SpinPlan {
@@ -111,9 +120,15 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
   // 터보는 프로파일이 당김을 0으로 두어 같은 자리에서 생략된다.
   const pullUpMs = reduced ? 0 : profile.pullUpMs
 
+  const extraMs = reduced ? 0 : Math.round(ANTICIPATION_EXTRA_MS * (ANTICIPATION_SPEED_SCALE[input.speed ?? DEFAULT_SPIN_SPEED] ?? 1))
+  const anticipated = new Set(extraMs > 0 ? (input.anticipation ?? []) : [])
+
   const plans: ReelSpinPlan[] = []
+  let shiftMs = 0
   for (let reel = 0; reel < reels; reel += 1) {
-    const spinTotal = duration + stagger * reel
+    const anticipationMs = anticipated.has(reel) ? extraMs : 0
+    shiftMs += anticipationMs
+    const spinTotal = duration + stagger * reel + shiftMs
     const settleMs = reduced ? 0 : Math.min(profile.settleMs, spinTotal * LANDING_SETTLE_MAX_PORTION)
     plans.push({
       reel,
@@ -122,6 +137,7 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
       settleMs,
       endMs: pullUpMs + spinTotal,
       revolutions: BASE_REVOLUTIONS + reel,
+      anticipationMs,
     })
   }
 

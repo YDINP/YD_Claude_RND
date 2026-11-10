@@ -23,6 +23,7 @@ import {
   LANDING_SETTLE_SYMBOLS,
   PULL_UP_SYMBOLS,
   SKIP_SETTLE_SYMBOLS,
+  SKIP_MUTATION_MS,
   SYMBOL_FILL_RATIO,
   WIN_GLOW_LAYERS,
   WIN_HIGHLIGHT_STROKE_PX,
@@ -60,6 +61,7 @@ import {
   type SpinPlan,
   type SpinSpeed,
 } from '../timing.js'
+import { anticipatedReels } from '../anticipation.js'
 import type { RendererMode } from '../features.js'
 import {
   buildModeTransition,
@@ -90,6 +92,7 @@ import {
 } from '../presentation.js'
 import {
   buildMutationPlan,
+  compressMutationStep,
   expireMutationOverlay,
   fadeMutationOverlay,
   holdMutationOverlay,
@@ -105,10 +108,20 @@ import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import type { ResolvedFxEffect } from '../fx.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { RendererEvent, ShowWinsOptions, SpinHandle, SpinToOptions } from '../types.js'
-import { DEFAULT_SPIN_SPEED } from '../constants.js'
+import { DEFAULT_SPIN_SPEED, MAX_COIN_PARTICLES } from '../constants.js'
 import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
-import { burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
+import { burstCelebration, burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
 import {
+  celebrationLevelForWinTier,
+  celebrationParticleCount,
+  opaqueHex,
+  planCelebrationParticles,
+  resolveCelebrationSkin,
+  type CelebrationParticleLook,
+  type ResolvedCelebrationSkin,
+} from '../celebration.js'
+import {
+  createCelebrationShapeTexture,
   createCoinTexture,
   createSolidTexture,
   loadBackgroundTexture,
@@ -200,6 +213,10 @@ class PixiRenderer implements RendererCore {
   private readonly app: Application
   private readonly textures: Map<SymbolId, Texture>
   private readonly coinTexture: Texture
+  /** 이 게임의 빅윈 스킨. 허브 오버레이와 같은 `resolveCelebrationSkin` 결과다. */
+  private readonly celebration: ResolvedCelebrationSkin
+  /** 모양×색 텍스처. 첫 빅윈에 그려 두고 렌더러가 내려갈 때 `ownedTextures`와 함께 파괴된다. */
+  private readonly celebrationTextures = new Map<string, Texture>()
   private readonly confettiTexture: Texture
   /** 이 인스턴스가 직접 만든 텍스처. 해제할 때 GPU 리소스까지 되돌려준다. */
   private readonly ownedTextures: TextureRegistry
@@ -344,6 +361,10 @@ class PixiRenderer implements RendererCore {
   private activeMutation: { finish: () => void } | null = null
   /** 스킵이 눌린 스핀. 변형 단계가 이 값을 보고 남은 단계를 접는다. */
   private skipRequestedToken = -1
+  /** 이번 스핀에서 기대감이 걸린 릴 인덱스. */
+  private anticipatedPlan = new Set<number>()
+  /** 지금 기대감 구간(start 보냄, end 아직)인 릴. 없으면 null. */
+  private anticipatingReel: number | null = null
   /** 대기 중인 타이머와 그 대기자. 취소할 때 깨워서 내보내려고 resolver를 함께 들고 있다. */
   private readonly timers = new Map<ReturnType<typeof setTimeout>, () => void>()
   private destroyed = false
@@ -365,6 +386,7 @@ class PixiRenderer implements RendererCore {
     this.app = app
     this.textures = textures
     this.coinTexture = coinTexture
+    this.celebration = resolveCelebrationSkin(options.theme.celebration)
     this.ownedTextures = ownedTextures
     this.confettiTexture = createSolidTexture(ownedTextures)
     this.frameSprite = frameTexture === null ? null : new Sprite(frameTexture)
@@ -699,8 +721,9 @@ class PixiRenderer implements RendererCore {
   private skipSpin(token: number): void {
     // 이미 지나간 스핀의 손잡이는 아무것도 접지 않는다.
     if (this.destroyed || token !== this.spinToken) return
-    // 이 스핀은 접기로 했다. 아직 시작하지 않은 변형 단계도 이 표식을 보고 건너뛴다.
+    // 이 스핀은 접기로 했다. 아직 시작하지 않은 변형 단계는 이 표식을 보고 압축 재생한다.
     this.skipRequestedToken = token
+    this.endAnticipation()
     // 변형 재생 중이면 그 단계를 곧장 끝낸다. 최종 그리드는 그대로 확정된다.
     this.activeMutation?.finish()
     if (this.activeReels.size === 0) return
@@ -757,7 +780,9 @@ class PixiRenderer implements RendererCore {
       ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
       speed: opts?.speed ?? this.spinSpeed,
       reducedMotion: this.options.reducedMotion,
+      anticipation: anticipatedReels(this.options.math, stops),
     })
+    this.anticipatedPlan = new Set(plan.reels.filter((r) => r.anticipationMs > 0).map((r) => r.reel))
 
     await Promise.all(
       plan.reels.map(async (reelPlan) => {
@@ -825,7 +850,13 @@ class PixiRenderer implements RendererCore {
         view.idleOffset = 0
         this.renderReel(plan.reel)
         if (token === this.spinToken && !this.destroyed) {
+          this.endAnticipation()
           this.emit({ type: 'reelStop', reel: plan.reel })
+          const next = plan.reel + 1
+          if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) {
+            this.anticipatingReel = next
+            this.emit({ type: 'anticipation', phase: 'start', reel: next })
+          }
         }
         resolve()
       }
@@ -880,7 +911,15 @@ class PixiRenderer implements RendererCore {
    * 진행 중인 스핀을 끊는다. GSAP은 kill 시 onComplete를 부르지 않으므로
    * 대기 중인 promise를 여기서 직접 풀어 준다. 그러지 않으면 이전 `spinTo`가 영원히 매달린다.
    */
+  private endAnticipation(): void {
+    if (this.anticipatingReel === null) return
+    const reel = this.anticipatingReel
+    this.anticipatingReel = null
+    this.emit({ type: 'anticipation', phase: 'end', reel })
+  }
+
   private killSpinTimelines(): void {
+    this.endAnticipation()
     for (const timeline of this.spinTimelines) timeline.kill()
     this.spinTimelines = []
     this.activeReels.clear()
@@ -961,9 +1000,10 @@ class PixiRenderer implements RendererCore {
    * 어떻게 끝나든 마지막에 화면은 `plan.finalGrid`, 즉 엔진의 `SpinResult.grid`와 같다.
    */
   private async runMutationPhase(plan: MutationPlan, token: number): Promise<void> {
-    for (const step of plan.steps) {
+    for (const planned of plan.steps) {
       if (this.destroyed || token !== this.spinToken) return
-      if (this.skipRequestedToken === token) break
+      // 스킵해도 건너뛰지 않고 압축해 재생한다. 건너뛰면 멈춘 릴에서 심볼이 툭 바뀌어 보인다.
+      const step = this.skipRequestedToken === token ? compressMutationStep(planned, SKIP_MUTATION_MS) : planned
       this.emitMutation(step, 'start')
       await this.playMutationStep(step)
       // start를 냈으면 end도 반드시 낸다. 새 스핀이나 destroy가 끼어들어도 마찬가지다.
@@ -1113,10 +1153,24 @@ class PixiRenderer implements RendererCore {
     const first = steps[0]
     const tier = first !== undefined && first.phase === 'all' ? first.tier : 'none'
     if (!this.options.reducedMotion && tier !== 'none') {
-      this.stopCoins = burstCoins(this.particlePool, this.coinTexture, this.layout, coinCountForTier(tier))
+      const skin = this.celebration
+      const level = celebrationLevelForWinTier(tier)
+      if (skin.custom) {
+        const count = celebrationParticleCount(skin, level, coinCountForTier(tier), MAX_COIN_PARTICLES)
+        const particles = planCelebrationParticles(skin, level, count).map((look) => ({
+          texture: this.celebrationTexture(look),
+        }))
+        this.stopCoins = burstCelebration(this.particlePool, this.layout, particles, {
+          motion: skin.particles.motion,
+          size: skin.particles.size,
+        })
+      } else {
+        this.stopCoins = burstCoins(this.particlePool, this.coinTexture, this.layout, coinCountForTier(tier))
+      }
       // 색종이는 최고 등급에만. 아래 등급까지 뿌리면 특별함이 사라진다.
       if (tier === 'max') {
-        this.stopConfetti = burstConfetti(this.particlePool, this.confettiTexture, this.layout)
+        const colors = skin.particles.colors?.map(opaqueHex)
+        this.stopConfetti = burstConfetti(this.particlePool, this.confettiTexture, this.layout, colors)
       }
     }
 
@@ -1165,7 +1219,7 @@ class PixiRenderer implements RendererCore {
         type: 'winTotal',
         totalWin: step.totalWin,
         tier: step.tier,
-        durationMs: step.durationMs,
+        durationMs: step.rollupMs,
       })
       return
     }
@@ -1449,6 +1503,17 @@ class PixiRenderer implements RendererCore {
     this.stopCoins = null
     this.stopConfetti?.()
     this.stopConfetti = null
+  }
+
+  /** 스킨 파티클 한 알의 텍스처. 심볼이면 그 심볼 그림, 모양이면 모양×색으로 한 번만 그린다. */
+  private celebrationTexture(look: CelebrationParticleLook): Texture {
+    if (look.kind.kind === 'symbol') return this.textures.get(look.kind.symbol) ?? this.coinTexture
+    const key = `${look.kind.shape}|${look.color}`
+    const cached = this.celebrationTextures.get(key)
+    if (cached !== undefined) return cached
+    const texture = createCelebrationShapeTexture(look.kind.shape, look.color, look.shade, this.ownedTextures)
+    this.celebrationTextures.set(key, texture)
+    return texture
   }
 
   /**

@@ -14,16 +14,23 @@
  * 계산은 전부 `winCelebration.ts`(순수)에 있고 여기서는 rAF/타이머로 재생만 한다.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  DEFAULT_CELEBRATION_SKIN,
+  celebrationRayGeometry,
+  celebrationShapeClipPath,
+  type ResolvedCelebrationSkin,
+} from '@tgslot/renderer'
 import { useT, type TranslationKey } from '../../i18n'
 import {
   ROLLUP_BACKSTOP_MS,
   digitCount,
   overrideLabel,
   rollupValue,
-  shockwaveDelays,
-  showerCoins,
+  shockwaveDelaysFor,
+  showerParticles,
   type CelebrationTier,
   type NamedTier,
+  type ShowerParticle,
   type WinTierLabels,
 } from './winTiers'
 import './WinCelebration.css'
@@ -96,11 +103,67 @@ export function useWinRollup(target: number, durationMs: number): WinRollup {
   }
 }
 
+/**
+ * 게임 스킨의 등급 팔레트·글자 결을 CSS 커스텀 속성으로. `.hub-tier--*` 클래스 값을 덮는다 —
+ * 기본 스킨의 값은 그 클래스와 같아서 스킨이 없는 게임은 아무것도 달라지지 않는다.
+ */
+export function celebrationStyle(skin: ResolvedCelebrationSkin, tier: CelebrationTier): CSSProperties {
+  const level = skin.levels[tier]
+  const rays = celebrationRayGeometry(skin.rayStyle)
+  const [top, mid, bottom] = level.title.gradient
+  return {
+    '--tier-core': level.core,
+    '--tier-edge': level.edge,
+    '--tier-glow': level.glow,
+    '--tier-ray-opacity': String(skin.rayStyle === 'none' ? 0 : level.rays),
+    '--tier-ray-spin': `${level.raySpinMs}ms`,
+    '--tier-ray-on': `${rays.on}deg`,
+    '--tier-ray-period': `${rays.period}deg`,
+    '--win-font': level.title.fontFamily,
+    '--win-weight': String(level.title.weight),
+    '--win-stroke': `${level.title.stroke}px`,
+    '--win-stroke-color': level.title.strokeColor,
+    '--win-grad-top': top,
+    '--win-grad-mid': mid,
+    '--win-grad-bottom': bottom,
+    '--win-tracking': `${level.title.tracking}em`,
+  } as CSSProperties
+}
+
+function particleStyle(particle: ShowerParticle): CSSProperties {
+  const { kind, color, shade } = particle.look
+  const style: Record<string, string> = {
+    '--hub-coin-left': `${particle.left}%`,
+    '--hub-coin-delay': `${particle.delay}ms`,
+    '--hub-coin-duration': `${particle.duration}ms`,
+    '--hub-coin-drift': `${particle.drift}px`,
+    '--hub-coin-size': `${particle.size}px`,
+    '--hub-coin-spin': `${particle.spin}deg`,
+  }
+  if (kind.kind === 'symbol') {
+    if (kind.src !== undefined) style.backgroundImage = `url("${kind.src}")`
+  } else if (kind.shape !== 'coin') {
+    style['--bit-color'] = color
+    style['--bit-shade'] = shade
+    style.clipPath = celebrationShapeClipPath(kind.shape)
+  }
+  return style as CSSProperties
+}
+
+function particleClass(particle: ShowerParticle): string {
+  const { kind } = particle.look
+  if (kind.kind === 'symbol') return 'hub-win-fx__coin hub-win-fx__bit hub-win-fx__bit--symbol'
+  if (kind.shape === 'coin') return 'hub-win-fx__coin'
+  return `hub-win-fx__coin hub-win-fx__bit hub-win-fx__bit--${kind.shape}`
+}
+
 interface WinCelebrationFxProps {
   tier: CelebrationTier
   reducedMotion: boolean
   /** 코인 샤워를 그릴지. 진입 팝업처럼 반짝임으로 대신하는 화면은 false. */
   shower?: boolean
+  /** 게임 스킨(`theme.json`의 `celebration`). 없으면 허브 기본 연출. */
+  skin?: ResolvedCelebrationSkin
 }
 
 /**
@@ -109,13 +172,26 @@ interface WinCelebrationFxProps {
  * `z-index: -1`(광선, 카드 뒤)과 `1`(코인, 카드 앞) 사이에 글자가 낀다.
  * 모션 줄이기면 통째로 렌더하지 않는다.
  */
-export function WinCelebrationFx({ tier, reducedMotion, shower = true }: WinCelebrationFxProps): ReactNode {
+export function WinCelebrationFx({
+  tier,
+  reducedMotion,
+  shower = true,
+  skin = DEFAULT_CELEBRATION_SKIN,
+}: WinCelebrationFxProps): ReactNode {
   if (reducedMotion) return null
 
-  const rings = shockwaveDelays(tier)
+  const rings = skin.waveStyle === 'none' ? [] : shockwaveDelaysFor(skin.levels[tier].waves)
+  const className = [
+    'hub-win-fx',
+    `hub-win-fx--${tier}`,
+    `hub-tier--${tier}`,
+    `hub-win-fx--rays-${skin.rayStyle}`,
+    `hub-win-fx--waves-${skin.waveStyle}`,
+    `hub-win-fx--motion-${skin.particles.motion}`,
+  ].join(' ')
 
   return (
-    <div className={`hub-win-fx hub-win-fx--${tier} hub-tier--${tier}`} aria-hidden="true">
+    <div className={className} style={celebrationStyle(skin, tier)} aria-hidden="true">
       <div className="hub-win-fx__rays" />
       {rings.length > 0 && (
         <div className="hub-win-fx__waves">
@@ -130,21 +206,8 @@ export function WinCelebrationFx({ tier, reducedMotion, shower = true }: WinCele
       )}
       {shower && (
         <div className="hub-win-fx__shower">
-          {showerCoins(tier).map((coin, i) => (
-            <span
-              key={i}
-              className="hub-win-fx__coin"
-              style={
-                {
-                  '--hub-coin-left': `${coin.left}%`,
-                  '--hub-coin-delay': `${coin.delay}ms`,
-                  '--hub-coin-duration': `${coin.duration}ms`,
-                  '--hub-coin-drift': `${coin.drift}px`,
-                  '--hub-coin-size': `${coin.size}px`,
-                  '--hub-coin-spin': `${coin.spin}deg`,
-                } as CSSProperties
-              }
-            />
+          {showerParticles(skin, tier).map((particle, i) => (
+            <span key={i} className={particleClass(particle)} style={particleStyle(particle)} />
           ))}
         </div>
       )}
@@ -164,6 +227,8 @@ interface WinCelebrationProps {
   unit?: string
   titleId?: string
   reducedMotion: boolean
+  /** 게임 스킨. 팔레트·제목 글꼴·외곽선이 여기서 온다. 등급 이름(`labels`)이 없으면 스킨의 것을 쓴다. */
+  skin?: ResolvedCelebrationSkin
   /** 금액 아래에 붙는 줄들(요약·힌트·live 영역 등) — 소비자마다 다르다. */
   children?: ReactNode
 }
@@ -182,10 +247,11 @@ export function WinCelebration({
   titleId,
   reducedMotion,
   children,
+  skin = DEFAULT_CELEBRATION_SKIN,
 }: WinCelebrationProps): ReactNode {
   const t = useT()
   const title =
-    tier === 'none' ? plainTitle : (overrideLabel(tier, labels) ?? t(TIER_LABEL_KEY[tier]))
+    tier === 'none' ? plainTitle : (overrideLabel(tier, labels ?? skin.labels) ?? t(TIER_LABEL_KEY[tier]))
 
   const className = [
     'hub-win',
@@ -197,7 +263,7 @@ export function WinCelebration({
     .join(' ')
 
   return (
-    <span className={className}>
+    <span className={className} style={celebrationStyle(skin, tier)}>
       {title !== undefined && (
         <span className="hub-win__title" id={titleId}>
           {title}

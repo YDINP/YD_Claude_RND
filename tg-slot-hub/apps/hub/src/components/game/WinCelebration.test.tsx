@@ -13,6 +13,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
 import { WinCelebrationOverlay } from './WinCelebrationOverlay'
+import { DEFAULT_CELEBRATION_SKIN, resolveCelebrationSkin } from '@tgslot/renderer'
 import {
   BIG_WIN_EMPHASIS_MS,
   BIG_WIN_HURRIED_HOLD_MS,
@@ -38,6 +39,9 @@ import {
   rollupValue,
   shockwaveDelays,
   showerCoins,
+  MAX_SHOWER_PARTICLES,
+  shockwaveDelaysFor,
+  showerParticles,
 } from './winTiers'
 import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import { useSettingsStore } from '../../store/settings'
@@ -499,5 +503,60 @@ describe('useWinRollup', () => {
 
     rerender(<Probe target={900} duration={40} />)
     await waitFor(() => expect(screen.getByTestId('probe').textContent).toBe('settled:900'))
+  })
+})
+
+describe('game celebration skin', () => {
+  const sakura = resolveCelebrationSkin(
+    {
+      palette: { core: '#ffe3ea', edge: '#e05a3c', glow: '#f6c0cf80' },
+      particles: { shapes: ['petal'], symbols: ['charm'], colors: ['#f6c0cf'], motion: 'flutter' },
+      rays: { style: 'halo' },
+      waves: { style: 'none' },
+      title: { font: 'rounded', stroke: 2, strokeColor: '#6e1a2bcc' },
+      labels: { storm: 'HANAMI' },
+      tiers: { storm: { density: 1.5 } },
+    },
+    { symbols: { charm: '/games/shiba-shrine/theme/symbols/charm.webp' } },
+  )
+
+  it('keeps the default shower identical to the coin shower', () => {
+    const particles = showerParticles(DEFAULT_CELEBRATION_SKIN, 'blast')
+    expect(particles).toHaveLength(SHOWER_COUNT_BY_TIER.blast)
+    expect(particles.map(({ look: _look, ...slot }) => slot)).toEqual(showerCoins('blast'))
+    expect(showerParticles(DEFAULT_CELEBRATION_SKIN, 'blast')).toBe(particles)
+  })
+
+  it('scales the shower by the skin density and caps it', () => {
+    expect(showerParticles(sakura, 'storm')).toHaveLength(Math.round(SHOWER_COUNT_BY_TIER.storm * 1.5))
+    const dense = resolveCelebrationSkin({ tiers: { cataclysm: { density: 3 } } })
+    expect(showerParticles(dense, 'cataclysm')).toHaveLength(MAX_SHOWER_PARTICLES)
+    expect(shockwaveDelaysFor(5)).toHaveLength(3)
+    expect(shockwaveDelaysFor(0)).toEqual([])
+  })
+
+  it('draws the skin shapes and symbol sprites, and drops the rings when the skin says none', () => {
+    const { container } = render(<WinCelebrationFx tier="cataclysm" reducedMotion={false} skin={sakura} />)
+    const fx = container.querySelector('.hub-win-fx') as HTMLElement
+    expect(fx.className).toContain('hub-win-fx--rays-halo')
+    expect(fx.className).toContain('hub-win-fx--motion-flutter')
+    expect(fx.style.getPropertyValue('--tier-core')).toBe('#ffe3ea')
+    expect(container.querySelector('.hub-win-fx__wave')).toBeNull()
+
+    const petals = container.querySelectorAll<HTMLElement>('.hub-win-fx__bit--petal')
+    const charms = container.querySelectorAll<HTMLElement>('.hub-win-fx__bit--symbol')
+    expect(petals.length).toBeGreaterThan(0)
+    expect(charms.length).toBeGreaterThan(0)
+    expect(petals[0]!.style.clipPath).toContain('polygon(')
+    expect(petals[0]!.style.getPropertyValue('--bit-color')).toBe('#f6c0cf')
+    expect(charms[0]!.style.backgroundImage).toContain('charm.webp')
+  })
+
+  it('takes the tier name and title treatment from the skin', () => {
+    const { container } = render(<WinCelebration tier="storm" value={0} reducedMotion={false} skin={sakura} />)
+    expect(screen.getByText('HANAMI')).toBeInTheDocument()
+    const card = container.querySelector('.hub-win') as HTMLElement
+    expect(card.style.getPropertyValue('--win-stroke')).toBe('2px')
+    expect(card.style.getPropertyValue('--win-font')).toContain('Rounded')
   })
 })

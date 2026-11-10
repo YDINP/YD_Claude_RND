@@ -4,9 +4,10 @@
  * 코인 소진 시트.
  * 스핀 결과와 잔액은 항상 서버 값(store/game.ts의 spin())을 그대로 반영한다.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   createSlotRenderer,
+  resolveCelebrationSkin,
   loadTheme,
   type SlotRenderer,
   type Theme,
@@ -28,6 +29,25 @@ import { groupLabel, groupMembers, symbolLabel, winLineLabel } from '../../game/
 import { useDialog } from '../../hooks/useDialog'
 import { detectDebugFlag, writeStoredDebugFlag } from '../../lib/debugFlag'
 import { evaluateTapGesture } from '../../lib/tapGesture'
+import {
+  bgmModeTransition,
+  playFeature,
+  playMutation,
+  playReelStop,
+  playRollupEnd,
+  playRollupTick,
+  playSpinStart,
+  playUiSound,
+  playWin,
+  setBgmMode,
+  setSfxOverrides,
+  setSoundPreset,
+  startAnticipation,
+  startBgm,
+  stopAnticipation,
+  stopBgm,
+  stopSpinLoop,
+} from '../../lib/audio'
 import { Modal } from '../Modal'
 import { activePopup, isRoundFlowBusy } from '../../game/roundFlow'
 import { RoundPopupView } from './RoundPopup'
@@ -558,8 +578,27 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   //   (features/freeSpins)으로 직접 만드는 세리머니 팝업이 대신한다.
   // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
   function handleRendererEvent(event: RendererEvent): void {
+    if (event.type === 'reelStop') {
+      playReelStop(event.reel)
+      return
+    }
+    if (event.type === 'anticipation') {
+      if (event.phase === 'start') startAnticipation()
+      else stopAnticipation()
+      return
+    }
+    if (event.type === 'spinEnd') {
+      stopSpinLoop()
+      stopAnticipation()
+      return
+    }
+    if (event.type === 'mutation') {
+      if (event.phase === 'start') playMutation()
+      return
+    }
     if (event.type === 'modeTransition') {
       useGameStore.getState().notifyCurtain(event.to, event.phase)
+      bgmModeTransition(event.to, event.phase)
       if (event.phase === 'end') revealPendingFreeSpins()
       return
     }
@@ -567,6 +606,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     if (event.type === 'featureTriggered') {
       // 재발동만 여기서 다룬다 — 최초 진입은 세리머니 팝업(store.roundFlow)의 몫이다.
       const feature = event.feature
+      playFeature()
       if (feature.type === 'freeSpins' && feature.retrigger) showFreeSpinsRetrigger(feature.spins)
       return
     }
@@ -622,6 +662,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
     winSkipRef.current = false
     setWinRollupValue(0)
+    playWin(event.tier, duration)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
     // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
@@ -630,15 +671,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (winSkipRef.current) {
         setWinRollupValue(target)
         winRafRef.current = null
+        playRollupEnd(event.tier)
         return
       }
       if (startTs === null) startTs = ts
       const progress = Math.min(1, (ts - startTs) / duration)
       setWinRollupValue(Math.round(target * progress))
       if (progress < 1) {
+        playRollupTick(progress)
         winRafRef.current = requestAnimationFrame(step)
       } else {
         winRafRef.current = null
+        playRollupEnd(event.tier)
       }
     }
     winRafRef.current = requestAnimationFrame(step)
@@ -647,6 +691,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
     if (phase !== 'spinning') return
+    playSpinStart()
     setWinRollupValue(0)
     setLineLabelSource(null)
     winSkipRef.current = false
@@ -725,6 +770,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         if (cancelled || !containerRef.current || !math) return
         // 배당표 시트는 렌더러 생성 성공 여부와 무관하게 심볼 이미지가 필요하므로 먼저 반영한다.
         setTheme(loadedTheme)
+        setSfxOverrides(loadedTheme.sfx)
+        setSoundPreset(loadedTheme.sound?.preset)
+        setBgmMode(useGameStore.getState().freeSpins ? 'freeSpins' : 'base')
+        startBgm()
         renderer = createSlotRenderer({
           container: containerRef.current,
           math,
@@ -753,6 +802,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
     return () => {
       cancelled = true
+      stopSpinLoop()
+      stopBgm()
       renderer?.destroy()
       setRenderer(null)
     }
@@ -777,6 +828,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // undefined이고, 팝업은 심볼 없이 그린다(널 오브젝트).
   const scatterSymbolId = math?.scatter?.symbol
   const scatterImageUrl = scatterSymbolId === undefined ? undefined : theme?.symbols[scatterSymbolId]
+  // 빅윈 스킨 — 오버레이·프리스핀 종료 팝업이 같은 값을 입는다(렌더러 캔버스 버스트도 같은 함수로 푼다).
+  const celebrationSkin = useMemo(
+    () => resolveCelebrationSkin(theme?.celebration, theme === null ? {} : { symbols: theme.symbols }),
+    [theme],
+  )
   // ways 게임(payModel === 'ways')은 페이라인이 없다 — "라인당 베팅" 대신 "웨이당 베팅"을
   // 보여주고, 나누는 단위도 paylines.length가 아니라 ways.betDivisor(관례상 25)다.
   const isWays = math?.payModel === 'ways'
@@ -932,6 +988,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const handleAutoSpinPick = (count: number): void => {
     setAutoSpinSheetOpen(false)
     haptic('medium')
+    playUiSound('toggle')
     startAutoSpinAction(count)
   }
 
@@ -941,6 +998,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    */
   const handleStopAutoSpin = (): void => {
     stopAutoSpinAction()
+    playUiSound('toggle')
     haptic('light')
   }
 
@@ -1061,17 +1119,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const handleBetDec = (): void => {
     if (betLevels.length === 0) return
     if (errorCode === 'BET_LOCKED') dismissError()
+    playUiSound('down')
     setBet((betIndex - 1 + betLevels.length) % betLevels.length)
   }
 
   const handleBetInc = (): void => {
     if (betLevels.length === 0) return
     if (errorCode === 'BET_LOCKED') dismissError()
+    playUiSound('up')
     setBet((betIndex + 1) % betLevels.length)
   }
 
   const handleBetPick = (index: number): void => {
     if (errorCode === 'BET_LOCKED') dismissError()
+    playUiSound('tap')
     setBet(index)
     setBetSheetOpen(false)
   }
@@ -1169,6 +1230,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 졌을 땐 이미 0이고, 회수된 경우엔 지갑에 들어간 금액 그대로다. 세션이 계속되면(이겨서
       // 다음 단계로 넘어가면) gambleSession.pendingWin이 표시를 대신 맡으므로 손대지 않는다.
       if (outcome !== 'win' || response.stepsLeft === 0) {
+        // 진행 중인 승리 롤업(rAF)이 뒤늦게 틱하면 이 최종값을 옛 당첨액으로 덮어쓴다 — 먼저 멈춘다.
+        if (winRafRef.current !== null) {
+          cancelAnimationFrame(winRafRef.current)
+          winRafRef.current = null
+        }
         setWinRollupValue(response.pendingWin)
       }
 
@@ -1256,7 +1322,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         <button
           type="button"
           className="hub-game-screen__icon-btn"
-          onClick={() => setHelpSheetOpen(true)}
+          onClick={() => {
+            playUiSound('open')
+            setHelpSheetOpen(true)
+          }}
           disabled={!math}
           aria-label={t('help')}
         >
@@ -1374,6 +1443,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         <RoundPopupView
           popup={roundPopup}
           onDismiss={dismissRoundPopupAction}
+          skin={celebrationSkin}
           {...(lastResult?.freeSpinsSummary ? { freeSpinsPlayed: lastResult.freeSpinsSummary.spins } : {})}
           {...(scatterImageUrl === undefined ? {} : { scatterImageUrl })}
         />
@@ -1389,6 +1459,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           totalBet={winCelebration.totalBet}
           hurried={winCelebration.hurried}
           onDismiss={dismissWinCelebrationAction}
+          skin={celebrationSkin}
         />
       )}
 
@@ -1473,7 +1544,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             <button
               type="button"
               className="hub-game-screen__bet-display"
-              onClick={() => setBetSheetOpen(true)}
+              onClick={() => {
+                playUiSound('open')
+                setBetSheetOpen(true)
+              }}
               disabled={isBusy || betLevels.length === 0 || betLocked}
               aria-label={t('bet')}
             >
@@ -1517,7 +1591,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           <button
             type="button"
             className="hub-game-screen__auto-btn"
-            onClick={() => setAutoSpinSheetOpen(true)}
+            onClick={() => {
+              playUiSound('open')
+              setAutoSpinSheetOpen(true)
+            }}
             disabled={!math || autoSpinning || freeSpins !== null}
             aria-label={t('autoSpinTitle')}
           >
