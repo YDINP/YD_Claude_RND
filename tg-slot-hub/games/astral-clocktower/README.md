@@ -180,22 +180,17 @@ RNG 소비 순서는 `릴 정지 4회 → 확장 스캔 → 승급 5회`로 고�
 | `quill` | 9 | 9 | 9 | 9 |
 | 합계 | 64 | 67 | 67 | 64 |
 
-## 아트 — 아직 없다
+## 아트 (2026-11-10 생성, live)
 
-`art/prompts.json`(15장)은 완성돼 있으나 **생성물이 없다.** `codex` 프로바이더가 사용량
-한도에 걸려 있고(해제 예정 2026-09-08 17:10) `OPENAI_API_KEY`·`GEMINI_API_KEY`도 없다.
-로컬 ComfyUI(SDXL)로는 크로마키 배경도, 프레임의 플랫 초록 창도 그려지지 않아 쓸 수 없다
-(부록 B-5에 실측). 한도가 풀리면:
+`art/prompts.json` 15장을 codex로 생성했다. 정식 감사는 MC 25M seed 42에서 **94.249%**
+(±0.179%p, 7/7 PASS)로 `docs/RTP_AUDIT_astral-clocktower.md`에 있다. 위 «실측 수치» 표는 아트 이전의
+2,000만 스핀 측정값이다.
 
-```bash
-pnpm --filter @tgslot/theme-gen gen games/astral-clocktower
-git add games/astral-clocktower/theme games/astral-clocktower/thumb.webp
-pnpm pack:check
-```
-
-프레임은 세로 규격(ART_DIRECTION v5)이라 창 탐지가 **세로 전용 영역**을 타야 한다.
-`tools/theme-gen`의 `frameWindowRegion()`이 캔버스 종횡비로 자동 선택한다 — 생성 로그의
-`frame: frame 릴 창 감지 ... h=`가 0.78 미만이면 탐지가 잘린 것이니 그때는 프레임을 다시 생성한다.
+- **프레임 창은 손으로 넣었다.** codex가 초록 창 안을 흰색으로 칠해서 자동 감지가 아래 절반만
+  잡았다(`h=0.388`). 투명 영역을 실측한 값(x 0.0583 · y 0.1802 · w 0.8833 · h 0.742)이 `theme.json`의
+  `frameLayout`이다. 프레임을 다시 생성하면 이 값도 다시 재야 한다.
+- 배경 그림이 화려해서 `reelBackdrop`(#0b1022, 0.72)을 깔았다.
+- 프리스핀 진입·종료 전환 클립은 아직 없다.
 
 ## 수정할 때
 
