@@ -1,5 +1,5 @@
 import type { GameMath, Mutation } from './schema.js'
-import { evaluate, evaluateScatter } from './evaluate.js'
+import { evaluate, evaluateScatter, payoutForCount } from './evaluate.js'
 import { evaluateWays } from './ways.js'
 import type { GridPosition, MutationEvent, Rng, SymbolId } from './types.js'
 
@@ -97,18 +97,37 @@ function applyMystery(
  */
 const WIN_PROBE_UNIT = 1_000_000
 
+function probeLineWin(math: GameMath, grid: SymbolId[][]): number {
+  return math.payModel === 'ways'
+    ? evaluateWays(grid, math, WIN_PROBE_UNIT).totalWin
+    : evaluate(grid, math, WIN_PROBE_UNIT).totalWin
+}
+
 /**
- * 그리드가 지금 얼마를 지급하는지 재는 척도값. 절대 금액이 아니라 **비교용**이다.
+ * 확장이 지급을 늘렸는지 **한 번의 탐침으로** 잰다. 절대 금액이 아니라 비교용 척도이고,
  * 라인(또는 ways) 배당과 스캐터 배당의 상대 크기가 실제 베팅과 같도록 단위를 맞춘다.
+ *
+ * 스캐터는 확장 뒤 그리드만 세고, 확장 전 개수는 덮인 스캐터 칸 수로 역산한다.
+ * 확장 뒤 지급이 0이면 증가분은 0 이하가 확정이므로 확장 전 그리드는 평가하지 않는다.
+ * `grid`는 확장이 적용된 상태로 받고, 같은 상태로 돌려준다.
  */
-function probeWin(math: GameMath, grid: SymbolId[][]): number {
+function probeGain(math: GameMath, grid: SymbolId[][], changes: readonly Change[]): boolean {
   const divisor = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
   const totalBet = WIN_PROBE_UNIT * Math.max(1, divisor)
-  const { totalWin } =
-    math.payModel === 'ways'
-      ? evaluateWays(grid, math, WIN_PROBE_UNIT)
-      : evaluate(grid, math, WIN_PROBE_UNIT)
-  return totalWin + evaluateScatter(grid, math, totalBet).win
+  const scatter = evaluateScatter(grid, math, totalBet)
+  const after = probeLineWin(math, grid) + scatter.win
+  if (after <= 0) return false
+
+  const scatterSymbol = math.scatter?.symbol
+  let covered = 0
+  for (const change of changes) if (change.from === scatterSymbol) covered += 1
+  const scatterBefore =
+    covered === 0 ? scatter.win : Math.round(payoutForCount(math.scatter?.pays, scatter.count + covered) * totalBet)
+
+  for (const change of changes) setSymbol(grid, change.position[0], change.position[1], change.from)
+  const before = probeLineWin(math, grid) + scatterBefore
+  for (const change of changes) setSymbol(grid, change.position[0], change.position[1], change.to)
+  return after > before
 }
 
 function applyExpandWild(
@@ -119,8 +138,6 @@ function applyExpandWild(
   const scatter = math.scatter?.symbol
   const expanded: number[] = []
   const changes: Change[] = []
-  // 되돌릴 수 있으려면 확장 **전** 지급액을 먼저 재야 한다. RNG는 쓰지 않는다.
-  const before = mutation.onlyIfWin ? probeWin(math, grid) : 0
 
   for (const reel of targetReels(math, mutation.reels)) {
     let seen = 0
@@ -145,8 +162,8 @@ function applyExpandWild(
 
   // onlyIfWin: 확장이 **지급을 늘리지 못했으면** 없던 일로 되돌린다.
   // 확장 전에 이미 있던 승리는 확장의 성과가 아니므로 증가분으로 판정한다.
-  // (확장 전 지급이 0이면 "확장 후 승리가 없으면 되돌린다"와 같은 규칙이 된다.)
-  if (mutation.onlyIfWin && probeWin(math, grid) <= before) {
+  // (확장 전 지급이 0이면 "확장 후 승리가 없으면 되돌린다"와 같은 규칙이 된다.) RNG는 쓰지 않는다.
+  if (mutation.onlyIfWin && !probeGain(math, grid, changes)) {
     for (const change of changes) setSymbol(grid, change.position[0], change.position[1], change.from)
     return undefined
   }

@@ -258,33 +258,21 @@ function reelMatchStats(math: GameMath, matches: ReadonlySet<SymbolId>): ReelMat
 }
 
 /**
- * 릴별로 "창의 매치가 전부 와일드일 때의 매치 칸 수" 기대값.
- *
- * 와일드가 아닌 매치가 한 칸이라도 있으면 0으로 친다. 곧
- * `E[매치 수 x 1{창에 와일드 아닌 매치 없음}]`이고, ways 지급에서 챔피언이 아닌 후보의
- * 와일드-전용 몫을 빼는 데 쓴다. 릴끼리 독립이므로 이 인수들의 곱이 그대로
- * "지급 창이 전부 와일드인 사건에 걸린 기대 경로 수"가 된다.
+ * 릴별 "창에 보이는 와일드 매치 칸 수" 기대값. 칸마다 스트립 위에서 균등하므로
+ * `rows x 스트립의 와일드 빈도`다. 챔피언이 아닌 후보에서 순수 와일드 경로 몫
+ * `Π 와일드 칸 수`를 빼는 데 쓰고, 릴끼리 독립이므로 곱의 기대값은 기대값의 곱이다.
  */
-function reelWildOnlyExpectation(
+function reelWildExpectation(
   math: GameMath,
   matches: ReadonlySet<SymbolId>,
   wildIds: ReadonlySet<SymbolId>,
 ): number[] {
   return math.strips.map((strip) => {
-    const length = strip.length
-    let sum = 0
-    for (let stop = 0; stop < length; stop += 1) {
-      let matched = 0
-      let nonWild = 0
-      for (let row = 0; row < math.rows; row += 1) {
-        const symbol = strip[(stop + row) % length] as SymbolId
-        if (!matches.has(symbol)) continue
-        matched += 1
-        if (!wildIds.has(symbol)) nonWild += 1
-      }
-      if (nonWild === 0) sum += matched
+    let hits = 0
+    for (const symbol of strip) {
+      if (matches.has(symbol) && wildIds.has(symbol)) hits += 1
     }
-    return sum / length
+    return (math.rows * hits) / strip.length
   })
 }
 
@@ -300,9 +288,10 @@ function reelWildOnlyExpectation(
  *
  * 여기서 j는 실제로 지급되는 길이다. 4연속인데 3개까지만 배당이 있으면 곱은 3릴까지만 센다.
  *
- * 평가기는 지급 창이 전부 와일드인 해석을 챔피언 후보 하나로 접는다. 해석식도 같은 규칙을
- * 따라야 하므로, 챔피언이 아닌 후보에서는 "지급 창이 전부 와일드"인 몫을 뺀다.
- * 그 몫도 릴별 인수의 곱으로 갈라지므로(`reelWildOnlyExpectation`) 닫힌 식이 유지된다.
+ * 평가기는 지급 칸이 전부 와일드인 경로를 챔피언 후보 하나로 접는다. 해석식도 같은 규칙을
+ * 따라야 하므로, 챔피언이 아닌 후보에서는 `Π 와일드 칸 수`의 기대값을 뺀다. 와일드 칸이 있으면
+ * 그 릴은 이미 비어 있지 않으므로 연속 길이 사건과 겹쳐도 지시함수가 필요 없고,
+ * 릴별 인수의 곱(`reelWildExpectation`)으로 닫힌 식이 유지된다.
  */
 export function expectedWaysMultiplier(math: GameMath): number {
   const candidates = getLineCandidates(math)
@@ -315,7 +304,7 @@ export function expectedWaysMultiplier(math: GameMath): number {
   let total = 0
   for (const candidate of candidates) {
     const stats = reelMatchStats(math, candidate.matches)
-    const wildOnly = reelWildOnlyExpectation(math, candidate.matches, wildIds)
+    const wildOnly = reelWildExpectation(math, candidate.matches, wildIds)
 
     orders.forEach((order, directionIndex) => {
       for (let k = 1; k <= math.reels; k += 1) {

@@ -47,6 +47,11 @@ describe('GameMathSchema', () => {
     expect(math.paytable['a']?.[2]).toBe(1)
   })
 
+  it('와일드를 2종 이상 선언하면 거부한다', () => {
+    const symbols = [...VALID.symbols, { id: 'w2', name: { en: 'Wild 2' }, wild: true }]
+    expect(messagesFor({ symbols })).toContain('와일드는 1종만 선언할 수 있다: w, w2')
+  })
+
   it('스트립 개수가 reels와 다르면 거부한다', () => {
     expect(messagesFor({ strips: [['a', 'a', 'a', 'a']] })).toContain('strips 개수')
   })
