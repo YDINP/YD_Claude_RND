@@ -196,9 +196,9 @@ describe('낙하 이동', () => {
 
 describe('시간 예산', () => {
   const rows: [CascadeSpeedRow, number][] = [
-    ['normal', 4500],
-    ['quick', 3400],
-    ['turbo', 2600],
+    ['normal', 13000],
+    ['quick', 9000],
+    ['turbo', 5000],
     ['reduced', 2400],
   ]
 
@@ -209,19 +209,19 @@ describe('시간 예산', () => {
 
   it('계획 총 길이도 예산 안이다', () => {
     const { steps, finalGrid } = twelveCascades()
-    expect(buildCascadePlan(START, steps, { finalGrid }).totalMs).toBeLessThanOrEqual(4500)
-    expect(buildCascadePlan(START, steps, { finalGrid, speed: 'quick' }).totalMs).toBeLessThanOrEqual(3400)
-    expect(buildCascadePlan(START, steps, { finalGrid, speed: 'turbo' }).totalMs).toBeLessThanOrEqual(2600)
+    expect(buildCascadePlan(START, steps, { finalGrid }).totalMs).toBeLessThanOrEqual(13000)
+    expect(buildCascadePlan(START, steps, { finalGrid, speed: 'quick' }).totalMs).toBeLessThanOrEqual(9000)
+    expect(buildCascadePlan(START, steps, { finalGrid, speed: 'turbo' }).totalMs).toBeLessThanOrEqual(5000)
     expect(buildCascadePlan(START, steps, { finalGrid, reducedMotion: true }).totalMs).toBeLessThanOrEqual(2400)
   })
 
-  it('1·2단계는 기본 길이, 3단계부터 줄고 하한 0.27배에서 멈춘다', () => {
-    expect(cascadeStepDurations(0, 'normal', REELS).totalMs).toBe(760)
-    expect(cascadeStepDurations(1, 'normal', REELS).totalMs).toBe(760)
-    expect(cascadeStepDurations(2, 'normal', REELS).totalMs).toBeLessThan(760)
+  it('1~3단계는 기본 길이, 4단계부터 줄고 하한 0.4배에서 멈춘다', () => {
+    expect(cascadeStepDurations(0, 'normal', REELS).totalMs).toBe(1620)
+    expect(cascadeStepDurations(2, 'normal', REELS).totalMs).toBe(1620)
+    expect(cascadeStepDurations(3, 'normal', REELS).totalMs).toBeLessThan(1620)
     const floor = cascadeStepDurations(11, 'normal', REELS).totalMs
     expect(floor).toBe(cascadeStepDurations(20, 'normal', REELS).totalMs)
-    expect(floor).toBeGreaterThanOrEqual(Math.floor(760 * 0.27) - 2)
+    expect(floor).toBeGreaterThanOrEqual(Math.floor(1620 * 0.4) - 2)
   })
 
   it('모션 축소가 속도보다 우선한다', () => {
@@ -414,7 +414,7 @@ describe('실제 엔진 연쇄', () => {
       expect(plan.mismatch).toBe(false)
       expect(plan.steps.at(-1)?.gridAfter).toEqual(result.finalGrid)
       expect(plan.steps.at(-1)?.cumulativeWin).toBe(cascades.reduce((sum, c) => sum + c.stepWin, 0))
-      expect(plan.totalMs).toBeLessThanOrEqual(4500)
+      expect(plan.totalMs).toBeLessThanOrEqual(13000)
       const schedule = compressedCascadeSchedule(plan, 0)
       expect(schedule.reduce((sum, d) => sum + d.totalMs, 0)).toBeLessThanOrEqual(1290)
     }

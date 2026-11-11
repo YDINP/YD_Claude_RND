@@ -458,20 +458,21 @@ export const ANTICIPATION_SPEED_SCALE = { normal: 1, quick: 0.7, turbo: 0 } as c
 
 /**
  * 연쇄 1단계의 기본 길이(ms): 강조 → 팝 → 낙하. 행은 속도 프로파일과 모션 축소다.
- * 12연쇄 합이 normal 4.5s / quick 3.4s / turbo 2.6s / 축소 2.4s를 넘지 않는다(테스트 고정).
+ * 12연쇄 합이 normal 13s / quick 9s / turbo 5s / 축소 2.4s를 넘지 않는다(테스트 고정).
+ * 보통 속도에서 어느 클러스터가 터지는지 읽히도록 강조를 길게 둔다(사용자 지적: 너무 빨리 터짐).
  */
 export const CASCADE_PHASE_MS = {
-  normal: { highlightMs: 280, popMs: 180, dropMs: 300 },
-  quick: { highlightMs: 200, popMs: 120, dropMs: 210 },
-  turbo: { highlightMs: 120, popMs: 100, dropMs: 180 },
+  normal: { highlightMs: 900, popMs: 300, dropMs: 420 },
+  quick: { highlightMs: 600, popMs: 200, dropMs: 300 },
+  turbo: { highlightMs: 260, popMs: 140, dropMs: 220 },
   reduced: { highlightMs: 100, popMs: 0, dropMs: 80 },
 } as const
 /** 이 인덱스(0부터)부터 단계마다 줄인다. 3단계부터다. */
-export const CASCADE_DECAY_FROM_INDEX = 2
+export const CASCADE_DECAY_FROM_INDEX = 3
 /** 단계마다 곱하는 배율. */
-export const CASCADE_DECAY = 0.78
+export const CASCADE_DECAY = 0.85
 /** 줄여도 그 행 기본의 이 배율 아래로는 내려가지 않는다. */
-export const CASCADE_FLOOR_RATIO = 0.27
+export const CASCADE_FLOOR_RATIO = 0.4
 /** 낙하에서 릴마다 늦게 출발하는 간격(ms). */
 export const CASCADE_DROP_STAGGER_MS = 30
 /** 스태거가 낙하 시간에서 차지할 수 있는 최대 몫. 나머지는 실제 이동이다. */
@@ -487,6 +488,8 @@ export const CASCADE_SKIP_MIN_DROP_MS = 45
 export const CASCADE_SKIP_POP_PORTION = 0.2
 /** 강조 중 이긴 심볼이 부푸는 배율. */
 export const CASCADE_HIGHLIGHT_SCALE = 1.1
+/** 강조 구간 중 히트 연출(펄스 1회)이 차지하는 비율. 나머지는 멈춰서 보여 주는 딜레이다. */
+export const CASCADE_HIT_PORTION = 0.6
 /** 터진 칸 하나에서 흩어지는 파편 수. */
 export const CASCADE_DEBRIS_PER_CELL = 6
 /** 클러스터 외곽선 두께(px). */

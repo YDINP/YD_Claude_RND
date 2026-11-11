@@ -4,6 +4,7 @@ import type { SymbolId } from '@tgslot/slot-engine'
 import {
   CASCADE_DEBRIS_PER_CELL,
   CASCADE_HIGHLIGHT_SCALE,
+  CASCADE_HIT_PORTION,
   MUTATION_PARTICLE_DISTANCE_RATIO,
   SYMBOL_FILL_RATIO,
 } from '../constants.js'
@@ -92,7 +93,7 @@ export function playCascadeFx(
     if (highlightMs > 0) {
       timeline.to(
         sprite.scale,
-        { x: base * CASCADE_HIGHLIGHT_SCALE, y: base * CASCADE_HIGHLIGHT_SCALE, duration: s(highlightMs / 2), ease: 'sine.inOut', yoyo: true, repeat: 1 },
+        { x: base * CASCADE_HIGHLIGHT_SCALE, y: base * CASCADE_HIGHLIGHT_SCALE, duration: s((highlightMs * CASCADE_HIT_PORTION) / 2), ease: 'sine.inOut', yoyo: true, repeat: 1 },
         0,
       )
     }
