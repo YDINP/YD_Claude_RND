@@ -26,6 +26,9 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   freeSpins: 'debugPresetFreeSpins',
   gamble: 'debugPresetGamble',
   lose: 'debugPresetLose',
+  cascade3: 'debugPresetCascade3',
+  orderRound: 'debugPresetOrderRound',
+  orderComplete: 'debugPresetOrderComplete',
 }
 
 interface DebugPanelProps {

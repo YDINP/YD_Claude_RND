@@ -37,10 +37,11 @@ export function buildGrid(math: GameMath, stops: number[]): SymbolId[][] {
  * 클라이언트가 임의 금액을 보내 페이테이블 라운딩을 노리는 것을 막는 서버 측 관문이다.
  */
 /**
- * 배당 단위. 라인 게임은 라인당 베팅액, ways 게임은 웨이당 베팅액이다.
+ * 배당 단위. 라인 게임은 라인당 베팅액, ways 게임은 웨이당 베팅액, 클러스터 게임은 총 베팅액이다.
  * 어느 쪽이든 `단위 x 단위 수 = 총 베팅액`이 성립하도록 스키마가 강제한다.
  */
 export function getBetUnit(math: GameMath, totalBet: number): number {
+  if (math.payModel === 'cluster') return totalBet
   return math.payModel === 'ways' ? getBetPerWay(math, totalBet) : getBetPerLine(math, totalBet)
 }
 

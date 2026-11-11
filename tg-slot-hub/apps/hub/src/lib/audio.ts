@@ -596,6 +596,8 @@ const RECIPES: Record<SoundPreset, Recipe> = {
   western: WESTERN_RECIPE,
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
+  // candy-cluster-pop: 사운드 레인이 전용 레시피로 바꾼다. 그때까지 fruit를 빌려 쓴다.
+  candy: FRUIT_RECIPE,
 }
 
 let preset: SoundPreset = 'bell'
@@ -717,6 +719,27 @@ export function playMutation(): void {
   if (!c) return
   recipe.mutation(c)
 }
+
+// ── 연쇄·주문 카드 (candy-cluster-pop) ─────────────────────
+// 계약만 먼저 고정한 빈 함수다. 소리는 사운드 레인이 채운다(PLAN_candy-cluster-pop.md H10).
+
+/** 연쇄 단계마다의 팝. `step`이 오를수록 음계가 한 칸씩 오른다(0부터). */
+export function playCascadePop(_step: number): void {}
+
+/** 사다리 배수가 한 칸 올랐다. `index`는 사다리 칸(0부터). */
+export function playLadderUp(_index: number): void {}
+
+/** 지운 칸 위로 사탕이 떨어진다. */
+export function playCascadeDrop(): void {}
+
+/** 토큰이 주문 카드에 닿았다. 단계당 1회로 묶어 부른다. */
+export function playOrderTick(): void {}
+
+/** 주문 카드 완료 도장. */
+export function playOrderComplete(): void {}
+
+/** 주문 카드가 새로 깔린다. */
+export function playOrderDeal(): void {}
 
 // ── 기대감 ────────────────────────────────────────────────
 

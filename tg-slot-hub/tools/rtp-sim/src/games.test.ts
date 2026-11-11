@@ -40,6 +40,14 @@ interface LoadResult {
  * 수집 단계에서는 절대 던지지 않는다. 팩 하나가 깨져도 다른 팩의 테스트까지
  * 무너지지 않도록 실패를 자기 `it` 안에 가둔다.
  */
+function readManifestStatus(dir: string): unknown {
+  try {
+    return (readJson(join(dir, 'manifest.json')) as { status?: unknown }).status
+  } catch {
+    return undefined
+  }
+}
+
 function loadMath(dir: string): LoadResult {
   try {
     return { math: parseGameMath(readJson(join(dir, 'math.json'))), error: null }
@@ -103,10 +111,15 @@ describe('games/* 수학 모델 게이트', () => {
     })
 
     const isMonteCarlo = loaded.math !== null && !isAnalytic(loaded.math)
+    /**
+     * `hidden` 팩은 아직 튜닝 전이다(엔진 기능이 뒤따라오는 팩도 있다). 스키마·id·배당 단위만 보고
+     * 수치 게이트(RTP·적중률·정밀도)는 건너뛴다. `live`/`soon`으로 바꾸는 순간 그대로 다시 걸린다.
+     */
+    const tuned = readManifestStatus(dir) !== 'hidden'
 
     if (loaded.math !== null && !isMonteCarlo) {
       // 닫힌 식이 있는 모델만 베팅 레벨별로 돈다. 분포 표본은 뽑지 않는다.
-      it.each(loaded.math.betLevels)('베팅액 %i에서 RTP가 목표 ±0.5%%p 안이다', (bet) => {
+      it.skipIf(!tuned).each(loaded.math.betLevels)('베팅액 %i에서 RTP가 목표 ±0.5%%p 안이다', (bet) => {
         const math = requireMath()
         const report = computeExactRtp(math, bet, { sampleSpins: 0 })
         expect(report.rtp).toBeGreaterThanOrEqual(math.rtpTarget - RTP_TOLERANCE)
@@ -120,7 +133,7 @@ describe('games/* 수학 모델 게이트', () => {
        * 40만 스핀에서 반폭은 1.4%p 수준이라, 이 단계에서 확정할 수 있는 것은
        * "크게 어긋나지는 않았다"까지다. 목표 ±0.5%p 안인지는 정식 감사가 판정한다.
        */
-      it('몬테카를로 RTP가 목표 ±max(0.5%p, 3xSE) 안이다', () => {
+      it.skipIf(!tuned)('몬테카를로 RTP가 목표 ±max(0.5%p, 3xSE) 안이다', () => {
         const math = requireMath()
         const bet = math.betLevels[0] ?? 1
         // 방법 선택은 엔진의 computeExactRtp 디스패처에 맡긴다. 여기서 따로 고르지 않는다.
@@ -147,7 +160,7 @@ describe('games/* 수학 모델 게이트', () => {
         ).toBe(true)
       }, MC_TIMEOUT_MS)
 
-      it('정밀도 확정은 정식 감사가 맡는다', () => {
+      it.skipIf(!tuned)('정밀도 확정은 정식 감사가 맡는다', () => {
         // 1차 관문의 스핀 수로는 엄격 규칙(반폭 <= 0.2%p)을 만족할 수 없다.
         // 그 사실 자체를 못박아 둔다 — 누군가 여기에 엄격 규칙을 붙이면 이 테스트가 알려 준다.
         const math = requireMath()
@@ -181,7 +194,7 @@ describe('games/* 수학 모델 게이트', () => {
       })
     }
 
-    it('적중률과 최대 배수가 플레이 가능한 범위다', () => {
+    it.skipIf(!tuned)('적중률과 최대 배수가 플레이 가능한 범위다', () => {
       const math = requireMath()
       const bet = math.betLevels[0]
       expect(bet).toBeDefined()

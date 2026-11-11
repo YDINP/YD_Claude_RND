@@ -33,7 +33,7 @@ export const SfxSchema = z.object({
 })
 
 /** 효과음 합성 프리셋. 허브 `audio.ts`의 레시피 표 키와 같아야 한다. */
-export const SOUND_PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork'] as const
+export const SOUND_PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const
 export type SoundPreset = (typeof SOUND_PRESETS)[number]
 
 /** 게임별 소리 세트. 없으면 허브 기본(`bell`). `sfx` URL이 있으면 그 키만 파일이 대신한다. */

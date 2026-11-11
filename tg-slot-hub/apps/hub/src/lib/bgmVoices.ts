@@ -331,7 +331,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const KITS: Record<SoundPreset, Kit> = {
+const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -475,6 +475,9 @@ const KITS: Record<SoundPreset, Kit> = {
     },
   },
 }
+
+// candy-cluster-pop 전용 악기 구성이 나오기 전까지 fruit를 빌려 쓴다.
+const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: BASE_KITS.fruit }
 
 // ── 조립 ──────────────────────────────────────────────────
 

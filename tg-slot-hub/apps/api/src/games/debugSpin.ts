@@ -47,6 +47,12 @@ export function matchesDebugPreset(
       return !isFreeSpin && result.totalWin > 0
     case 'lose':
       return result.totalWin === 0 && !hasFeature
+    case 'cascade3':
+      return (result.cascades?.length ?? 0) >= 3
+    case 'orderRound':
+      return !isFreeSpin && result.features.some((feature) => feature.type === 'orderRound')
+    case 'orderComplete':
+      return result.features.some((feature) => feature.type === 'orderComplete')
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)

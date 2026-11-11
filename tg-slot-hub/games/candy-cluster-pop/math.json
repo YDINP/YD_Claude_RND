@@ -1,0 +1,103 @@
+{
+  "id": "candy-cluster-pop",
+  "reels": 6,
+  "rows": 5,
+  "payModel": "cluster",
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {"en": "Rainbow Lollipop", "ko": "무지개 롤리팝"},
+      "wild": true
+    },
+    {
+      "id": "scatter",
+      "name": {"en": "Ribbon Lollipop", "ko": "리본 막대사탕"},
+      "scatter": true
+    },
+    {
+      "id": "heart",
+      "name": {"en": "Heart Jelly", "ko": "하트 젤리"}
+    },
+    {
+      "id": "star",
+      "name": {"en": "Star Cookie", "ko": "별 쿠키"}
+    },
+    {
+      "id": "bean",
+      "name": {"en": "Big Jelly Bean", "ko": "큰 젤리빈"}
+    },
+    {
+      "id": "drop_red",
+      "name": {"en": "Red Drop", "ko": "빨간 물방울"}
+    },
+    {
+      "id": "drop_blue",
+      "name": {"en": "Blue Sugar Cube", "ko": "파란 각설탕"}
+    },
+    {
+      "id": "drop_green",
+      "name": {"en": "Green Marble", "ko": "초록 구슬"}
+    },
+    {
+      "id": "drop_purple",
+      "name": {"en": "Purple Capsule", "ko": "보라 캡슐"}
+    },
+    {
+      "id": "drop_yellow",
+      "name": {"en": "Yellow Konpeito", "ko": "노란 별사탕"}
+    }
+  ],
+  "strips": [
+    ["drop_yellow","bean","drop_yellow","drop_green","star","drop_blue","scatter","drop_green","star","drop_blue","drop_purple","drop_purple","drop_yellow","drop_blue","bean","drop_red","drop_yellow","heart","drop_blue","drop_yellow","star","drop_purple","drop_green","bean","drop_yellow","star","drop_red","drop_yellow","bean","heart","drop_blue","heart","star","bean","drop_purple","drop_red","drop_green","star","drop_red","drop_green","drop_purple","drop_blue","drop_green","heart","drop_purple","bean","star","bean","drop_red","star","bean","drop_yellow","wild","drop_yellow","drop_blue","drop_red","drop_red","drop_red","drop_purple","drop_green","drop_blue","drop_blue","drop_blue","drop_purple","drop_green","drop_purple","heart","drop_purple","drop_red","drop_purple","drop_yellow","drop_blue","drop_red","drop_purple","drop_red","drop_purple","drop_red","drop_blue","heart","drop_purple","drop_yellow","drop_green","drop_green","bean","heart","drop_green","drop_green","drop_blue","bean","drop_yellow","drop_red","scatter","drop_red","drop_blue","drop_yellow","drop_blue","drop_green","drop_purple","star","wild","scatter","drop_red","drop_yellow","drop_green","heart","drop_yellow","drop_green","drop_yellow"],
+    ["drop_red","drop_green","bean","heart","bean","bean","drop_green","drop_red","drop_purple","star","heart","drop_yellow","drop_red","star","drop_blue","drop_green","drop_blue","drop_red","drop_green","drop_blue","drop_purple","drop_purple","drop_purple","star","star","drop_blue","drop_green","heart","scatter","heart","drop_blue","drop_blue","drop_red","drop_purple","drop_blue","heart","wild","drop_yellow","scatter","bean","drop_green","wild","drop_red","drop_green","drop_yellow","drop_green","bean","drop_red","drop_purple","star","drop_yellow","drop_red","drop_purple","drop_red","drop_yellow","drop_green","bean","star","bean","drop_blue","drop_red","star","bean","drop_yellow","star","drop_green","drop_blue","drop_yellow","drop_purple","drop_yellow","drop_blue","drop_yellow","drop_yellow","drop_yellow","drop_red","drop_purple","drop_green","drop_purple","drop_purple","drop_red","drop_green","drop_red","star","drop_green","drop_yellow","scatter","bean","drop_green","drop_yellow","drop_red","drop_purple","bean","heart","drop_blue","drop_purple","drop_red","drop_blue","drop_blue","drop_green","heart","drop_blue","drop_yellow","drop_yellow","drop_blue","drop_purple","drop_purple","heart","drop_yellow"],
+    ["bean","drop_purple","drop_red","drop_purple","drop_green","drop_blue","drop_blue","star","heart","wild","drop_green","drop_blue","drop_blue","drop_blue","drop_yellow","bean","drop_blue","drop_yellow","star","drop_red","heart","star","drop_yellow","drop_red","drop_green","heart","bean","drop_yellow","drop_red","drop_yellow","heart","wild","bean","drop_red","drop_purple","drop_red","drop_yellow","bean","drop_yellow","drop_yellow","bean","heart","drop_green","drop_green","drop_blue","bean","drop_red","star","drop_blue","drop_green","drop_yellow","drop_green","bean","star","heart","drop_purple","drop_yellow","drop_green","drop_red","star","drop_red","drop_red","drop_blue","bean","drop_purple","drop_green","drop_blue","drop_purple","drop_blue","drop_blue","drop_purple","drop_green","drop_yellow","drop_green","drop_yellow","scatter","drop_yellow","drop_red","drop_red","drop_red","heart","drop_green","drop_purple","drop_red","drop_green","drop_yellow","drop_yellow","drop_blue","drop_blue","bean","star","drop_purple","scatter","drop_purple","drop_green","drop_blue","drop_purple","drop_red","drop_yellow","drop_purple","star","heart","drop_purple","star","drop_green","drop_purple","scatter","drop_purple"],
+    ["drop_red","heart","drop_blue","drop_blue","drop_yellow","heart","drop_green","drop_purple","drop_green","drop_blue","drop_purple","drop_red","drop_red","drop_green","star","bean","drop_red","bean","drop_purple","bean","drop_blue","drop_red","heart","drop_yellow","bean","drop_red","bean","drop_yellow","drop_green","bean","drop_blue","drop_yellow","scatter","drop_yellow","drop_red","drop_green","drop_red","drop_green","wild","drop_green","drop_purple","star","drop_green","drop_yellow","drop_blue","drop_yellow","drop_green","drop_green","star","star","drop_red","drop_red","bean","drop_red","drop_blue","drop_blue","drop_blue","drop_purple","drop_blue","drop_red","scatter","drop_yellow","drop_red","drop_yellow","star","drop_blue","drop_yellow","drop_purple","drop_yellow","drop_yellow","heart","drop_red","drop_green","drop_blue","bean","drop_purple","drop_purple","scatter","drop_green","drop_yellow","heart","drop_yellow","star","drop_purple","drop_blue","heart","wild","heart","heart","drop_blue","drop_yellow","drop_purple","drop_purple","star","star","bean","drop_purple","drop_red","drop_blue","drop_yellow","drop_green","drop_purple","bean","drop_purple","star","drop_purple","drop_green","drop_green"],
+    ["drop_green","drop_green","bean","drop_blue","drop_green","drop_red","drop_red","drop_purple","drop_green","drop_green","drop_yellow","drop_purple","drop_purple","bean","drop_purple","star","drop_yellow","drop_yellow","drop_yellow","drop_yellow","heart","drop_purple","heart","drop_yellow","drop_blue","drop_blue","drop_yellow","drop_purple","drop_purple","drop_yellow","bean","drop_red","drop_yellow","heart","scatter","drop_purple","star","drop_yellow","drop_yellow","drop_blue","drop_red","star","bean","bean","drop_red","drop_purple","scatter","drop_red","heart","drop_blue","heart","drop_purple","drop_yellow","heart","drop_yellow","drop_red","star","drop_purple","drop_blue","drop_green","bean","heart","heart","drop_red","drop_purple","bean","drop_red","drop_blue","drop_red","drop_yellow","drop_red","drop_yellow","drop_blue","drop_red","wild","drop_blue","drop_purple","drop_blue","bean","drop_purple","drop_green","drop_green","drop_green","drop_blue","drop_blue","drop_green","star","star","star","drop_green","wild","drop_yellow","drop_green","bean","star","drop_blue","bean","scatter","drop_red","star","drop_red","drop_red","drop_blue","drop_purple","drop_green","drop_green","drop_blue","drop_green"],
+    ["drop_blue","star","bean","drop_red","drop_green","drop_red","drop_yellow","drop_red","bean","bean","drop_green","drop_yellow","drop_red","drop_yellow","drop_blue","drop_blue","drop_green","bean","drop_red","drop_blue","drop_green","heart","heart","heart","drop_blue","drop_purple","bean","bean","drop_green","drop_yellow","scatter","drop_purple","drop_purple","drop_green","drop_purple","star","drop_blue","heart","drop_purple","drop_blue","drop_blue","bean","drop_green","drop_yellow","drop_red","drop_yellow","drop_green","drop_red","drop_purple","drop_red","drop_purple","drop_green","star","drop_red","drop_yellow","drop_yellow","bean","drop_purple","drop_red","drop_green","drop_green","drop_green","bean","star","bean","drop_yellow","star","drop_green","heart","drop_yellow","drop_yellow","drop_green","star","drop_yellow","drop_purple","drop_blue","drop_purple","star","drop_green","scatter","drop_blue","drop_blue","drop_purple","drop_purple","star","drop_blue","star","drop_red","drop_purple","drop_blue","heart","drop_yellow","wild","drop_yellow","drop_red","drop_blue","drop_yellow","drop_blue","scatter","drop_purple","heart","wild","drop_yellow","drop_red","heart","drop_red","drop_purple","drop_red"]
+  ],
+  "cluster": {"minCluster": 5, "adjacency": "orthogonal", "wildJoins": true},
+  "cascade": {
+    "enabled": true,
+    "maxCascades": 12,
+    "refill": "gravity",
+    "source": "strip-pull",
+    "multiplierLadder": [1,2,3,5,8,12,20]
+  },
+  "round": {"maxWinCap": 5000},
+  "paytable": {
+    "heart": {"5": 1.0, "6": 1.5, "7": 2.0, "8": 3.0, "9": 4.0, "10": 6.0, "12": 10.0, "15": 20.0},
+    "star": {"5": 0.75, "6": 1.1, "7": 1.5, "8": 2.25, "9": 3.0, "10": 4.5, "12": 7.5, "15": 15.0},
+    "bean": {"5": 0.5, "6": 0.75, "7": 1.0, "8": 1.5, "9": 2.0, "10": 3.0, "12": 5.0, "15": 10.0},
+    "drop_red": {"5": 0.25, "6": 0.4, "7": 0.5, "8": 0.75, "9": 1.0, "10": 1.5, "12": 2.5, "15": 5.0},
+    "drop_blue": {"5": 0.25, "6": 0.4, "7": 0.5, "8": 0.75, "9": 1.0, "10": 1.5, "12": 2.5, "15": 5.0},
+    "drop_green": {"5": 0.2, "6": 0.3, "7": 0.4, "8": 0.6, "9": 0.8, "10": 1.2, "12": 2.0, "15": 4.0},
+    "drop_purple": {"5": 0.2, "6": 0.3, "7": 0.4, "8": 0.6, "9": 0.8, "10": 1.2, "12": 2.0, "15": 4.0},
+    "drop_yellow": {"5": 0.15, "6": 0.2, "7": 0.3, "8": 0.45, "9": 0.6, "10": 0.9, "12": 1.5, "15": 3.0}
+  },
+  "wild": {"substitutesFor": "all"},
+  "scatter": {
+    "symbol": "scatter",
+    "pays": {"3": 0.5, "4": 3, "5": 10, "6": 50}
+  },
+  "orderRound": {
+    "trigger": 4,
+    "spins": 8,
+    "slots": 3,
+    "maxOrders": 6,
+    "extraSpinsPerOrder": 2,
+    "pool": [
+      {"id": "pop-red-30", "kind": "popSymbol", "symbol": "drop_red", "target": 30, "prize": 3, "weight": 4},
+      {"id": "pop-blue-30", "kind": "popSymbol", "symbol": "drop_blue", "target": 30, "prize": 3, "weight": 4},
+      {"id": "pop-green-30", "kind": "popSymbol", "symbol": "drop_green", "target": 30, "prize": 3, "weight": 4},
+      {"id": "pop-purple-30", "kind": "popSymbol", "symbol": "drop_purple", "target": 30, "prize": 3, "weight": 4},
+      {"id": "pop-yellow-30", "kind": "popSymbol", "symbol": "drop_yellow", "target": 30, "prize": 3, "weight": 4},
+      {"id": "pop-heart-15", "kind": "popSymbol", "symbol": "heart", "target": 15, "prize": 5, "weight": 3},
+      {"id": "cluster-10", "kind": "clusterSize", "target": 10, "prize": 8, "weight": 2},
+      {"id": "chain-3", "kind": "chainLength", "target": 3, "prize": 5, "weight": 3},
+      {"id": "chain-4", "kind": "chainLength", "target": 4, "prize": 10, "weight": 1}
+    ]
+  },
+  "betLevels": [20,40,100,200,500,1000],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}

@@ -1,5 +1,6 @@
 export { createSlotRenderer } from './createRenderer.js'
 export type {
+  CellRect,
   FrameLayout,
   PaylineStyle,
   RendererEvent,
@@ -66,6 +67,7 @@ export {
 } from './grid.js'
 export {
   cellPitch,
+  cellRect,
   computeFrameLayout,
   computeLayout,
   computeWindowFitLayout,

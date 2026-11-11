@@ -1,0 +1,34 @@
+{
+  "id": "candy-cluster-pop",
+  "name": {
+    "en": "Candy Cluster Pop",
+    "ko": "캔디 클러스터 팝"
+  },
+  "version": "0.0.0",
+  "thumbnail": "/games/candy-cluster-pop/thumb.webp",
+  "status": "hidden",
+  "reels": 6,
+  "rows": 5,
+  "lines": 0,
+  "payModel": "cluster",
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "volatility": "high",
+  "features": [
+    "cluster",
+    "cascade",
+    "orderRound",
+    "scatter",
+    "wild"
+  ],
+  "sort": 7
+}

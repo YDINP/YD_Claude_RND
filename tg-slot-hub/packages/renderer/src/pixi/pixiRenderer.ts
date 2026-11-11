@@ -39,6 +39,7 @@ import {
 } from '../grid.js'
 import {
   cellPitch,
+  cellRect,
   computeFrameLayout,
   computeLayout,
   computeWindowFitLayout,
@@ -107,7 +108,7 @@ import {
 import type { RendererCore, ResolvedRendererOptions } from '../internal.js'
 import type { ResolvedFxEffect } from '../fx.js'
 import { TextureRegistry } from '../textureRegistry.js'
-import type { RendererEvent, ShowWinsOptions, SpinHandle, SpinToOptions } from '../types.js'
+import type { CellRect, RendererEvent, ShowWinsOptions, SpinHandle, SpinToOptions } from '../types.js'
 import { DEFAULT_SPIN_SPEED, MAX_COIN_PARTICLES } from '../constants.js'
 import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
 import { burstCelebration, burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
@@ -1925,6 +1926,11 @@ class PixiRenderer implements RendererCore {
    * 풀과 텍스처 장부의 지금 상태. 순수 데이터라 그리는 쪽이 마음대로 써도 된다.
    * 화면에 무엇을 어떻게 보여줄지는 여기서 정하지 않는다.
    */
+  getCellRect(reel: number, row: number): CellRect {
+    const { math } = this.options
+    return cellRect(this.layout, this.geometry.content, math.reels, math.rows, reel, row)
+  }
+
   diagnostics(): RendererDiagnostics {
     return {
       pools: {

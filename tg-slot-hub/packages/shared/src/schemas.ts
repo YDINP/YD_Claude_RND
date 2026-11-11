@@ -68,7 +68,8 @@ export const GameSummarySchema = z.object({
   status: GameStatusSchema,
   reels: z.number().int().min(1),
   rows: z.number().int().min(1),
-  lines: z.number().int().min(1),
+  /** 페이라인 수 또는 ways 수. 클러스터 게임은 0이다 */
+  lines: z.number().int().min(0),
   minBet: z.number().int().min(1),
   maxBet: z.number().int().min(1),
   sort: z.number().int().default(0),
@@ -113,8 +114,19 @@ export type ApiError = z.infer<typeof ApiErrorSchema>
  * `win`: 당첨은 있지만 피처(프리스핀/스캐터 등)는 없음. `bigWin`: 총 베팅의 10배 이상.
  * `freeSpins`: 프리스핀 진입/재발동 피처 발생. `gamble`: 더블업 제안이 열리는 유료 당첨.
  * `lose`: 무당첨에 피처 없음.
+ * 연쇄 게임 전용: `cascade3`: 연쇄 3단계 이상. `orderRound`: 유료 스핀에 주문 카드 라운드 진입.
+ * `orderComplete`: 라운드 중 주문 완료 1건 이상. 해당 피처가 없는 게임은 서버가 거부한다.
  */
-export const SpinDebugPresetSchema = z.enum(['win', 'bigWin', 'freeSpins', 'gamble', 'lose'])
+export const SpinDebugPresetSchema = z.enum([
+  'win',
+  'bigWin',
+  'freeSpins',
+  'gamble',
+  'lose',
+  'cascade3',
+  'orderRound',
+  'orderComplete',
+])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
 /** `allowDevMock`이 꺼져 있으면 서버는 이 블록을 통째로 거부한다 (`400 DEBUG_DISABLED`). */
@@ -134,9 +146,19 @@ export const SpinRequestSchema = z.object({
 })
 export type SpinRequest = z.infer<typeof SpinRequestSchema>
 
-export const WinLineSchema = z
+const GridPositionSchema = z.tuple([z.number().int(), z.number().int()])
+
+/** `payKind`가 없던 시절의 라운드는 `line`/`ways`에서 종류를 되짚는다. */
+function withPayKind(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return value
+  const line = value as { payKind?: unknown; line?: unknown; ways?: unknown }
+  if (line.payKind !== undefined) return value
+  return { ...line, payKind: line.line === -1 || line.ways !== undefined ? 'ways' : 'line' }
+}
+
+const WinLineObjectSchema = z
   .object({
-    /** 페이라인 인덱스. `-1`은 페이라인이 아닌 ways 당첨을 뜻한다 (이때 `ways`가 함께 온다) */
+    /** 페이라인 인덱스. `-1`은 페이라인이 아닌 당첨(ways·클러스터)을 뜻한다 */
     line: z.number().int().min(-1),
     symbol: z.string(),
     count: z.number().int().min(1),
@@ -149,12 +171,68 @@ export const WinLineSchema = z
     /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지 */
     direction: z.enum(['ltr', 'rtl']).optional(),
     /** [reel, row] 좌표 목록 */
-    positions: z.array(z.tuple([z.number().int(), z.number().int()])),
+    positions: z.array(GridPositionSchema),
+    /** 지급 종류. 파싱하면 항상 채워진다(없던 라운드는 line/ways에서 되짚는다) */
+    payKind: z.enum(['line', 'ways', 'cluster']).optional(),
+    /** 연쇄 단계 인덱스(0부터). 연쇄 게임만 */
+    cascade: z.number().int().min(0).optional(),
+    /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만 */
+    ladder: z.number().int().min(1).optional(),
   })
-  .refine((v) => (v.line === -1) === (v.ways !== undefined), {
-    message: 'line이 -1이면 ways가 있어야 하고, ways가 있으면 line은 -1이어야 한다',
+  .refine((v) => (v.line === -1) === (v.payKind !== 'line'), {
+    message: 'line이 -1이면 ways·클러스터 당첨이고, 라인 당첨이면 line은 0 이상이어야 한다',
   })
+  .refine((v) => (v.payKind === 'ways') === (v.ways !== undefined), {
+    message: 'ways 당첨에만 ways(경로 수)가 있다',
+  })
+
+export const WinLineSchema = z.preprocess(withPayKind, WinLineObjectSchema)
 export type WinLine = z.infer<typeof WinLineSchema>
+
+/**
+ * 연쇄 1단계. `@tgslot/slot-engine`의 `CascadeStep`과 같은 모양이다.
+ * `refill[reel]`은 그 릴 위에서 떨어지는 심볼을 위→아래 순서로 담는다(릴별 압축 표기).
+ */
+export const CascadeStepSchema = z.object({
+  index: z.number().int().min(0),
+  wins: z.array(WinLineSchema),
+  /** 지워진 칸 [reel, row] */
+  removed: z.array(GridPositionSchema),
+  refill: z.array(z.array(z.string())),
+  /** 이 단계의 사다리 배수 */
+  multiplier: z.number().int().min(1),
+  stepWin: z.number().int().min(0),
+})
+export type CascadeStep = z.infer<typeof CascadeStepSchema>
+
+/** 주문 카드 1장. `prize`는 **총 베팅액 배수**다 */
+export const OrderCardSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['popSymbol', 'clusterSize', 'chainLength']),
+  /** popSymbol 전용 */
+  symbol: z.string().optional(),
+  target: z.number().int().min(1),
+  progress: z.number().int().min(0),
+  prize: z.number().gt(0),
+})
+export type OrderCard = z.infer<typeof OrderCardSchema>
+
+/** 주문 카드 라운드의 스핀 간 상태. 서버 값만이 정본이다 */
+export const OrderRoundCarrySchema = z.object({
+  /** 왼쪽 칸부터. 더 뽑을 카드가 없으면 짧아진다 */
+  cards: z.array(OrderCardSchema),
+  drawn: z.number().int().min(0),
+  completed: z.number().int().min(0),
+  /** 지금까지 지급한 상품 합계 코인 */
+  prizeTotal: z.number().int().min(0),
+})
+export type OrderRoundCarry = z.infer<typeof OrderRoundCarrySchema>
+
+/** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다 */
+export const RoundCarrySchema = z.object({
+  orders: OrderRoundCarrySchema.optional(),
+})
+export type RoundCarry = z.infer<typeof RoundCarrySchema>
 
 /** 뮤테이션이 바꾼 칸 하나. 렌더러가 from → to 전환을 그린다. */
 export const MutationCellChangeSchema = z.object({
@@ -189,6 +267,12 @@ export const SpinResponseSchema = z.object({
   gridBefore: z.array(z.array(z.string())).optional(),
   /** 적용된 뮤테이션. 선언 순서대로, 실제로 무언가 바꾼 것만 담긴다 */
   mutations: z.array(MutationEventSchema).default([]),
+  /** 연쇄 게임만. `grid`에서 시작해 순서대로 접으면 `finalGrid`가 된다 */
+  cascades: z.array(CascadeStepSchema).optional(),
+  /** 연쇄 게임만. 연쇄가 끝난 판 */
+  finalGrid: z.array(z.array(z.string())).optional(),
+  /** 주문 카드 상품 합계 코인. `totalWin`에 이미 들어 있다 */
+  orderWin: z.number().int().min(0).optional(),
   wins: z.array(WinLineSchema),
   totalBet: z.number().int(),
   totalWin: z.number().int(),
@@ -236,6 +320,10 @@ export const SpinResponseSchema = z.object({
       total: z.number().int().min(0),
       /** 세션에서 실제로 돈 프리스핀 횟수 (리트리거 포함) */
       spins: z.number().int().min(0),
+      /** 주문 카드 라운드만. 상품을 인정받은 완료 장수 */
+      ordersCompleted: z.number().int().min(0).optional(),
+      /** 주문 카드 라운드만. 상품 합계 코인 */
+      orderPrizeTotal: z.number().int().min(0).optional(),
     })
     .optional(),
   /**
@@ -347,6 +435,8 @@ export const FreeSpinsStateSchema = z.object({
    * 오래된 행에는 없을 수 있어 선택 필드다 (없으면 만료되지 않는다).
    */
   expiresAt: z.string().optional(),
+  /** 스핀 간 이월 상태(주문 카드 등). 쓰는 피처가 없는 게임은 키가 없다 */
+  carry: RoundCarrySchema.optional(),
 })
 export type FreeSpinsState = z.infer<typeof FreeSpinsStateSchema>
 
@@ -366,6 +456,17 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('freeSpinsCapped'),
     requested: z.number().int().min(1),
+    granted: z.number().int().min(0),
+    cap: z.number().int().min(1),
+  }),
+  /** 주문 카드 라운드 진입. 처음 깔리는 카드를 왼쪽 칸부터 싣는다 */
+  z.object({ type: z.literal('orderRound'), cards: z.array(OrderCardSchema) }),
+  /** 주문 카드 1장 완료. `prize`는 실제 지급한 **코인**이다 */
+  z.object({ type: z.literal('orderComplete'), id: z.string(), prize: z.number().int().min(0) }),
+  /** 라운드 지급 상한에 걸려 잘렸다. 값은 전부 코인 */
+  z.object({
+    type: z.literal('winCapped'),
+    requested: z.number().int().min(0),
     granted: z.number().int().min(0),
     cap: z.number().int().min(1),
   }),

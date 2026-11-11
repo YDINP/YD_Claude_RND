@@ -161,6 +161,8 @@ describe('authedFetch (via getMe/spin)', () => {
         ],
         ways: 4,
         direction: 'ltr',
+        // payKind가 없던 응답은 파싱이 line/ways에서 되짚어 채운다.
+        payKind: 'ways',
       },
     ])
   })

@@ -703,4 +703,6 @@ export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   western: WESTERN,
   shrine: SHRINE,
   clockwork: CLOCKWORK,
+  // candy-cluster-pop 전용 스타일이 나오기 전까지 tropical을 빌려 쓴다.
+  candy: TROPICAL,
 }
