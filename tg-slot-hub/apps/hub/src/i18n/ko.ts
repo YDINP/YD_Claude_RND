@@ -120,7 +120,7 @@ const ko: Record<TranslationKey, string> = {
   orderStampDone: '완료',
   orderCardPop: '{n}개 터뜨리기',
   orderCardPopNamed: '{name} {n}개',
-  orderCardCluster: '{n}개 이상 한 번에',
+  orderCardCluster: '한 번에 {n}개+',
   orderCardChain: '연쇄 {n}번',
   orderExitCompleted: '완료한 카드',
   orderExitNone: '완료한 카드가 없어요',
