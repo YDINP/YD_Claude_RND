@@ -213,7 +213,8 @@ export function assertAnalyticBet(math: GameMath, totalBet: number): void {
   if (!Number.isInteger(totalBet) || totalBet <= 0) {
     throw new RangeError(`totalBet은 양의 정수여야 한다: ${totalBet}`)
   }
-  const divisor = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
+  const divisor =
+    math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.payModel === 'cluster' ? 1 : math.paylines.length
   if (divisor <= 0 || totalBet % divisor !== 0) {
     throw new RangeError(`totalBet(${totalBet})이 배당 단위 수(${divisor})로 나누어떨어지지 않는다`)
   }

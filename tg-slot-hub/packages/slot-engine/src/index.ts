@@ -15,8 +15,9 @@ export type { LineCandidate } from './evaluate.js'
 export { assertBetLevel, buildGrid, getBetUnit, resolveSpin, spin, spinUnchecked } from './spin.js'
 export { applyMutations, isProbabilistic } from './mutations.js'
 export { pickWeighted } from './random.js'
-export { applyCascadeStep, foldCascades } from './cascade.js'
-export { tallyOrders } from './orders.js'
+export { applyCascadeStep, foldCascades, runCascades } from './cascade.js'
+export { evaluateClusters } from './cluster.js'
+export { drawOrderCards, tallyOrders } from './orders.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
   computeAnalyticRtp,

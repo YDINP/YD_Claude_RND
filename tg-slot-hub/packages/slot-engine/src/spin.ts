@@ -1,9 +1,20 @@
 import type { GameMath } from './schema.js'
 import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './evaluate.js'
+import { runCascades } from './cascade.js'
 import { applyMutations } from './mutations.js'
+import { drawOrderCards, tallyOrders } from './orders.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
-import type { Bet, FeatureTrigger, MutationEvent, Rng, RoundState, SpinResult, SymbolId } from './types.js'
+import type {
+  Bet,
+  FeatureTrigger,
+  MutationEvent,
+  OrderCard,
+  Rng,
+  RoundState,
+  SpinResult,
+  SymbolId,
+} from './types.js'
 
 /**
  * 정지 위치로부터 화면에 보이는 심볼 격자를 만든다.
@@ -76,12 +87,13 @@ export function spinUnchecked(
   }
   const gridBefore = buildGrid(math, stops)
   const mutated = applyMutations(math, gridBefore, rng)
-  return resolveSpin(math, mutated.grid, stops, totalBet, betUnit, state, gridBefore, mutated.events)
+  return resolveSpin(math, mutated.grid, stops, totalBet, betUnit, state, gridBefore, mutated.events, rng)
 }
 
 /**
  * 그리드가 정해진 뒤의 정산. 라인·스캐터·프리스핀을 한자리에서 처리한다.
- * RNG를 쓰지 않으므로 전수 조사와 재현 검증이 같은 코드를 공유한다.
+ * 연쇄 팩이 아니면 RNG를 쓰지 않으므로 전수 조사와 재현 검증이 같은 코드를 공유한다.
+ * 주문 카드 라운드 팩만 카드 추첨에 `rng`가 필요하다(없으면 던진다). 이 추첨이 스핀의 마지막 RNG 소비다.
  */
 export function resolveSpin(
   math: GameMath,
@@ -92,7 +104,11 @@ export function resolveSpin(
   state?: RoundState,
   gridBefore: SymbolId[][] = grid,
   mutations: MutationEvent[] = [],
+  rng?: Rng,
 ): SpinResult {
+  if (math.cascade !== undefined) {
+    return resolveCascadeSpin(math, grid, stops, totalBet, state, gridBefore, mutations, rng)
+  }
   const { wins, totalWin: lineWin } =
     math.payModel === 'ways' ? evaluateWays(grid, math, betUnit) : evaluate(grid, math, betUnit)
   const scatter = evaluateScatter(grid, math, totalBet)
@@ -157,6 +173,169 @@ export function resolveSpin(
     totalWin,
     features,
   }
+  if (nextState !== undefined) result.nextState = nextState
+  return result
+}
+
+/**
+ * 연쇄 팩의 정산. 클러스터 연쇄를 돌리고, 스캐터는 연쇄가 끝난 판에서 센다.
+ * 주문 카드 라운드(진입·진행·완료·종료)도 여기서 처리한다. `grid`는 연쇄 시작 판이다.
+ *
+ * 지급 상한(`round.maxWinCap x totalBet`)은 **스핀 단위**로 건다. 클러스터, 스캐터, 주문 상품 순으로 채우고
+ * 넘치는 몫은 잘라 `winCapped` 피처를 남긴다. RoundCarry에 라운드 누적 지급이 없어 라운드 누적 상한은 못 건다.
+ */
+function resolveCascadeSpin(
+  math: GameMath,
+  grid: SymbolId[][],
+  stops: number[],
+  totalBet: number,
+  state: RoundState | undefined,
+  gridBefore: SymbolId[][],
+  mutations: MutationEvent[],
+  rng: Rng | undefined,
+): SpinResult {
+  const cap = math.round === undefined ? Infinity : Math.round(math.round.maxWinCap * totalBet)
+  const outcome = runCascades(math, grid, stops, totalBet, cap)
+  const wins = outcome.steps.flatMap((step) => step.wins)
+  const lineWin = outcome.win
+  const scatter = evaluateScatter(outcome.finalGrid, math, totalBet)
+  const multiplier = state?.multiplier ?? 1
+
+  const features: FeatureTrigger[] = []
+  let requested = lineWin
+  let room = Math.max(0, cap - lineWin)
+  const scatterGranted = Math.min(scatter.win, room)
+  room -= scatterGranted
+  requested += scatter.win
+  if (scatter.win > 0) {
+    features.push({
+      type: 'scatterWin',
+      symbol: math.scatter?.symbol ?? '',
+      count: scatter.count,
+      win: scatterGranted,
+      positions: scatter.positions,
+    })
+  }
+
+  const orders = math.orderRound
+  const carry = state?.carry?.orders
+  let orderWin = 0
+  let nextState: RoundState | undefined
+  let roundSpin = false
+
+  if (orders !== undefined && state === undefined) {
+    if (scatter.count >= orders.trigger) {
+      if (rng === undefined) throw new RangeError('주문 카드 추첨에는 rng가 필요하다')
+      const granted = Math.min(orders.spins, MAX_FREE_SPINS_PER_ROUND)
+      const cards = drawOrderCards(math, [], orders.slots, rng)
+      features.push({ type: 'freeSpins', spins: granted, multiplier: 1, retrigger: false })
+      features.push({ type: 'orderRound', cards })
+      nextState = {
+        freeSpinsLeft: granted,
+        freeSpinsTotal: granted,
+        multiplier: 1,
+        carry: { orders: { cards, drawn: cards.length, completed: 0, prizeTotal: 0 } },
+      }
+    }
+  } else if (orders !== undefined && state !== undefined && carry !== undefined) {
+    roundSpin = true
+    const tallied = tallyOrders(carry.cards, outcome)
+    const finished = new Set(tallied.completed.map((card) => card.id))
+    const board: (OrderCard | null)[] = tallied.cards.map((card) => (finished.has(card.id) ? null : card))
+    let drawn = carry.drawn
+    let completed = carry.completed
+    let prizeTotal = carry.prizeTotal
+    let extra = 0
+    const drawLimit = orders.maxOrders + orders.slots - 1
+
+    // 상한을 넘은 완료는 상품만 주고 스핀은 주지 않는다.
+    for (const card of tallied.completed) {
+      const requestedPrize = Math.round(card.prize * totalBet)
+      const prize = Math.min(requestedPrize, room)
+      room -= prize
+      requested += requestedPrize
+      orderWin += prize
+      prizeTotal += prize
+      features.push({ type: 'orderComplete', id: card.id, prize })
+      if (completed < orders.maxOrders) {
+        completed += 1
+        extra += orders.extraSpinsPerOrder
+      }
+    }
+    // 완료로 빈 칸은 왼쪽부터 새 카드로 채운다. 이번 스핀에 완료한 카드는 다시 뽑지 않는다.
+    for (let slot = 0; slot < board.length; slot += 1) {
+      if (board[slot] !== null || drawn >= drawLimit) continue
+      if (rng === undefined) throw new RangeError('주문 카드 추첨에는 rng가 필요하다')
+      const onBoard = board.filter((card): card is OrderCard => card !== null)
+      // 후보가 모자란 작은 풀이면 방금 낸 카드도 다시 허용한다. 빈손 추첨은 RNG를 쓰지 않는다.
+      const card =
+        drawOrderCards(math, [...onBoard, ...tallied.completed], 1, rng)[0] ?? drawOrderCards(math, onBoard, 1, rng)[0]
+      if (card === undefined) continue
+      board[slot] = card
+      drawn += 1
+    }
+    const cards = board.filter((card): card is OrderCard => card !== null)
+    const left = Math.max(0, state.freeSpinsLeft - 1) + extra
+    if (left > 0) {
+      nextState = {
+        freeSpinsLeft: left,
+        freeSpinsTotal: state.freeSpinsTotal + extra,
+        multiplier: state.multiplier,
+        carry: { orders: { cards, drawn, completed, prizeTotal } },
+      }
+    }
+  } else if (orders === undefined) {
+    const config = math.scatter?.freeSpins
+    const triggered = triggersFreeSpins(scatter.count, math)
+    if (state === undefined) {
+      if (triggered && config !== undefined) {
+        const granted = Math.min(config.count, MAX_FREE_SPINS_PER_ROUND)
+        if (granted > 0) {
+          features.push({ type: 'freeSpins', spins: granted, multiplier: config.multiplier, retrigger: false })
+          nextState = { freeSpinsLeft: granted, freeSpinsTotal: granted, multiplier: config.multiplier }
+        }
+        if (granted < config.count) {
+          features.push({ type: 'freeSpinsCapped', requested: config.count, granted, cap: MAX_FREE_SPINS_PER_ROUND })
+        }
+      }
+    } else {
+      let left = Math.max(0, state.freeSpinsLeft - 1)
+      let total = state.freeSpinsTotal
+      if (triggered && config !== undefined && config.retrigger) {
+        const spare = Math.max(0, MAX_FREE_SPINS_PER_ROUND - state.freeSpinsTotal)
+        const granted = Math.min(config.count, spare)
+        if (granted > 0) {
+          features.push({ type: 'freeSpins', spins: granted, multiplier: state.multiplier, retrigger: true })
+          left += granted
+          total += granted
+        }
+        if (granted < config.count) {
+          features.push({ type: 'freeSpinsCapped', requested: config.count, granted, cap: MAX_FREE_SPINS_PER_ROUND })
+        }
+      }
+      if (left > 0) nextState = { freeSpinsLeft: left, freeSpinsTotal: total, multiplier: state.multiplier }
+    }
+  }
+
+  const granted = lineWin + scatterGranted + orderWin
+  if (Number.isFinite(cap) && (outcome.capped || granted < requested)) {
+    features.push({ type: 'winCapped', requested: Math.max(requested, granted), granted, cap })
+  }
+
+  const result: SpinResult = {
+    stops,
+    gridBefore,
+    grid,
+    mutations,
+    wins,
+    lineWin,
+    scatterWin: scatterGranted,
+    totalWin: Math.round((lineWin + scatterGranted) * multiplier + orderWin),
+    features,
+    cascades: outcome.steps,
+    finalGrid: outcome.finalGrid,
+  }
+  if (roundSpin) result.orderWin = orderWin
   if (nextState !== undefined) result.nextState = nextState
   return result
 }

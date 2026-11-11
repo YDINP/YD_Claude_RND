@@ -79,7 +79,8 @@ function probeLineWin(math: GameMath, grid: SymbolId[][]): number {
  * `grid`는 확장이 적용된 상태로 받고, 같은 상태로 돌려준다.
  */
 function probeGain(math: GameMath, grid: SymbolId[][], changes: readonly Change[]): boolean {
-  const divisor = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
+  const divisor =
+    math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.payModel === 'cluster' ? 1 : math.paylines.length
   const totalBet = WIN_PROBE_UNIT * Math.max(1, divisor)
   const scatter = evaluateScatter(grid, math, totalBet)
   const after = probeLineWin(math, grid) + scatter.win
