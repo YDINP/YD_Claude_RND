@@ -123,7 +123,11 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
   // 프레임 아트가 있으면 창 좌표를 반드시 갖게 한다. 생성기(theme-gen)는 frameLayout을 쓰지 않으므로
   // 기본값(ART_DIRECTION §5)을 여기서 채워 넣어 렌더러가 분기하지 않게 한다.
   if (file.frameLayout !== undefined) {
-    theme.frameLayout = { window: { ...file.frameLayout.window } }
+    const gapRatio = (file.frameLayout as { gapRatio?: unknown }).gapRatio
+    theme.frameLayout = {
+      window: { ...file.frameLayout.window },
+      ...(typeof gapRatio === 'number' ? { gapRatio } : {}),
+    }
   } else if (file.frame !== undefined) {
     theme.frameLayout = { window: { ...DEFAULT_FRAME_WINDOW } }
   }

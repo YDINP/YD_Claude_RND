@@ -23,6 +23,8 @@ export interface LayoutInput {
   chrome?: boolean
   /** 심볼 크기 하한(px). 프레임 창 안에 억지로 맞춰야 할 때만 낮춘다. */
   minSymbolSize?: number
+  /** 칸 사이 간격 / 심볼 크기. 없으면 `SYMBOL_GAP_RATIO`(live 팩 고정값). */
+  gapRatio?: number
 }
 
 export interface Rect {
@@ -75,10 +77,11 @@ export function computeLayout(input: LayoutInput): Layout {
   const chrome = input.chrome !== false
   const chromeUnits = chrome ? FRAME_PADDING_RATIO + FRAME_BORDER_RATIO : 0
   const floor = Math.max(0, input.minSymbolSize ?? MIN_SYMBOL_SIZE)
+  const gapRatio = Math.max(0, input.gapRatio ?? SYMBOL_GAP_RATIO)
 
   // 폭 = s * (reels + (reels-1)*gapRatio + 2*(paddingRatio + borderRatio))
-  const widthUnits = reels + (reels - 1) * SYMBOL_GAP_RATIO + 2 * chromeUnits
-  const heightUnits = rows + (rows - 1) * SYMBOL_GAP_RATIO + 2 * chromeUnits
+  const widthUnits = reels + (reels - 1) * gapRatio + 2 * chromeUnits
+  const heightUnits = rows + (rows - 1) * gapRatio + 2 * chromeUnits
 
   const width = Math.max(0, input.containerWidth)
   const height = Math.max(0, input.containerHeight ?? 0)
@@ -88,7 +91,7 @@ export function computeLayout(input: LayoutInput): Layout {
   const raw = Math.min(fromWidth, fromHeight)
   const symbolSize = Math.max(floor, Math.min(MAX_SYMBOL_SIZE, Number.isFinite(raw) ? raw : floor))
 
-  const gap = symbolSize * SYMBOL_GAP_RATIO
+  const gap = symbolSize * gapRatio
   const padding = chrome ? symbolSize * FRAME_PADDING_RATIO : 0
   const border = chrome ? symbolSize * FRAME_BORDER_RATIO : 0
   const radius = symbolSize * FRAME_RADIUS_RATIO
@@ -212,6 +215,7 @@ export interface FramedLayoutInput {
   window?: FrameWindow
   reels: number
   rows: number
+  gapRatio?: number
 }
 
 export interface FramedLayout {
@@ -256,6 +260,7 @@ export function computeFrameLayout(input: FramedLayoutInput): FramedLayout {
     rows: input.rows,
     chrome: false,
     minSymbolSize: 1,
+    ...(input.gapRatio === undefined ? {} : { gapRatio: input.gapRatio }),
   })
 
   return {
@@ -281,6 +286,7 @@ export interface WindowFitInput {
   rows: number
   /** 프레임이 컨테이너 폭을 넘어도 되는 비율. 기본 `DEFAULT_OVERFLOW_X`(0 = 잘리지 않음). */
   overflowX?: number
+  gapRatio?: number
 }
 
 export interface WindowFitLayout {
@@ -369,6 +375,7 @@ export function computeWindowFitLayout(input: WindowFitInput): WindowFitLayout {
     rows: input.rows,
     chrome: false,
     minSymbolSize: 1,
+    ...(input.gapRatio === undefined ? {} : { gapRatio: input.gapRatio }),
   })
 
   return {

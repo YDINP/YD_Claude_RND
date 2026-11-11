@@ -24,6 +24,7 @@ import {
   PULL_UP_SYMBOLS,
   SKIP_SETTLE_SYMBOLS,
   SKIP_MUTATION_MS,
+  MUTATION_SPRITE_POOL_MAX,
   SYMBOL_FILL_RATIO,
   WIN_GLOW_LAYERS,
   WIN_HIGHLIGHT_STROKE_PX,
@@ -92,6 +93,16 @@ import {
   type PresentationStepContext,
 } from '../presentation.js'
 import {
+  buildCascadePlan,
+  cascadeSkipStepMs,
+  compressCascadeStep,
+  type CascadePlan,
+  type CascadePlanStep,
+  type CascadeStepDurations,
+} from '../cascade.js'
+import { CascadeSpritePool, playCascadeFx, type CascadeFxHandle } from './cascadeFx.js'
+import {
+  applyMutationEventsToGrid,
   buildMutationPlan,
   compressMutationStep,
   expireMutationOverlay,
@@ -242,6 +253,10 @@ class PixiRenderer implements RendererCore {
   private readonly mutationLayer = new Container()
   /** 변형 파티클 재사용 풀. 스핀마다 수백 개를 새로 만들지 않으려고 둔다. */
   private readonly mutationPool = new MutationSpritePool(this.mutationLayer)
+  /** 연쇄 심볼이 사는 층. 릴 마스크 안(`reelsLayer`의 맨 위 자식)이다. */
+  private readonly cascadeLayer = new Container()
+  private readonly cascadeSprites = new CascadeSpritePool(this.cascadeLayer, MUTATION_SPRITE_POOL_MAX)
+  private readonly cascadeOutline = new Graphics()
   /** 승리 파티클 재사용 풀 겸 총량 예산. 코인·색종이·스캐터가 이 하나를 나눠 쓴다. */
   private readonly particlePool = new ParticlePool(this.fxLayer)
   /**
@@ -360,6 +375,8 @@ class PixiRenderer implements RendererCore {
   private overlay: MutationOverlay = NO_MUTATION_OVERLAY
   /** 재생 중인 변형 한 단계. 스킵이 이걸 붙잡아 곧장 끝낸다. */
   private activeMutation: { finish: () => void } | null = null
+  /** 재생 중인 연쇄 단계. `compress`는 STOP, `finish`는 끼어들기(새 스핀·destroy)다. */
+  private activeCascade: { finish: () => void; compress: () => void } | null = null
   /** 스킵이 눌린 스핀. 변형 단계가 이 값을 보고 남은 단계를 접는다. */
   private skipRequestedToken = -1
   /** 이번 스핀에서 기대감이 걸린 릴 인덱스. */
@@ -427,6 +444,7 @@ class PixiRenderer implements RendererCore {
       this.backdropGraphics,
       this.reelsLayer,
       this.maskGraphics,
+      this.cascadeOutline,
       this.mutationLayer,
       this.featureGraphics,
       this.modeGraphics,
@@ -445,6 +463,8 @@ class PixiRenderer implements RendererCore {
     this.app.stage.addChild(this.root)
 
     this.buildReels()
+    // 릴 위, 같은 마스크 안. 창 위에서 떨어지는 리필이 창 밖에서는 보이지 않는다.
+    this.reelsLayer.addChild(this.cascadeLayer)
     this.applyLayout()
     this.observeResize()
     this.warmTransitionClips()
@@ -490,6 +510,8 @@ class PixiRenderer implements RendererCore {
     const containerWidth = el.clientWidth > 0 ? el.clientWidth : FALLBACK_CONTAINER_WIDTH
     const containerHeight = el.clientHeight > 0 ? el.clientHeight : 0
     const { reels, rows } = this.options.math
+    const gapRatio = this.options.theme.frameLayout?.gapRatio
+    const gap = gapRatio === undefined ? {} : { gapRatio }
 
     const frameTexture = this.frameSprite?.texture
     if (frameTexture !== undefined && frameTexture.width > 0 && frameTexture.height > 0) {
@@ -505,6 +527,7 @@ class PixiRenderer implements RendererCore {
           reels,
           rows,
           overflowX: this.options.overflowX,
+          ...gap,
         })
         return {
           canvasWidth: fitted.canvasWidth,
@@ -525,6 +548,7 @@ class PixiRenderer implements RendererCore {
         window,
         reels,
         rows,
+        ...gap,
       })
       return {
         canvasWidth: framed.canvasWidth,
@@ -537,7 +561,7 @@ class PixiRenderer implements RendererCore {
       }
     }
 
-    const layout = computeLayout({ containerWidth, containerHeight, reels, rows })
+    const layout = computeLayout({ containerWidth, containerHeight, reels, rows, ...gap })
     return {
       canvasWidth: layout.width,
       canvasHeight: layout.height,
@@ -727,6 +751,8 @@ class PixiRenderer implements RendererCore {
     this.endAnticipation()
     // 변형 재생 중이면 그 단계를 곧장 끝낸다. 최종 그리드는 그대로 확정된다.
     this.activeMutation?.finish()
+    // 연쇄는 끝내지 않고 압축한다. 남은 단계도 같은 길이로 재생된다.
+    this.activeCascade?.compress()
     if (this.activeReels.size === 0) return
     const plan = buildSkipPlan(this.options.math.reels)
 
@@ -804,6 +830,16 @@ class PixiRenderer implements RendererCore {
     if (mutationPlan !== null) {
       await this.runMutationPhase(mutationPlan, token)
       if (this.destroyed || token !== this.spinToken) return
+    }
+
+    // 연쇄는 변형 뒤, spinEnd 앞이다. 승리 연출은 연쇄가 끝난 판(finalGrid) 위에서 시작한다.
+    const cascadePlan = this.planCascades(stops, opts)
+    if (cascadePlan !== null) {
+      await this.runCascadePhase(cascadePlan, token)
+      if (this.destroyed || token !== this.spinToken) return
+    } else if (opts?.finalGrid !== undefined && (opts.cascades?.length ?? 0) > 0) {
+      // 단계가 판과 어긋나 계획을 못 세웠다. 연출은 버려도 화면은 서버 판과 같아야 한다.
+      this.applyGridOverride(opts.finalGrid)
     }
 
     this.emit({ type: 'spinEnd' })
@@ -926,6 +962,7 @@ class PixiRenderer implements RendererCore {
     this.activeReels.clear()
     // 재생 중이던 변형도 함께 끊는다. 끊긴 단계는 자기 그리드를 확정하고 물러난다.
     this.activeMutation?.finish()
+    this.activeCascade?.finish()
     const resolvers = this.spinResolvers
     this.spinResolvers = []
     for (const resolve of resolvers) resolve()
@@ -1111,6 +1148,123 @@ class PixiRenderer implements RendererCore {
       }))
   }
 
+  // ------------------------------------------------------------------ 연쇄
+
+  /**
+   * 이번 스핀의 연쇄 계획. 단계가 없으면 null.
+   * 시작 판은 변형까지 입힌 판(`SpinResult.grid`)이다. 단계가 판과 어긋나면 연출만 버린다.
+   */
+  private planCascades(stops: number[], opts?: SpinToOptions): CascadePlan | null {
+    const cascades = opts?.cascades ?? []
+    if (cascades.length === 0) return null
+    try {
+      let grid: readonly (readonly SymbolId[])[] = opts?.gridBefore ?? stopsToGrid(this.options.math, stops)
+      const mutations = opts?.mutations ?? []
+      if (mutations.length > 0) grid = applyMutationEventsToGrid(grid, mutations)
+      return buildCascadePlan(grid, cascades, {
+        speed: opts?.speed ?? this.spinSpeed,
+        reducedMotion: this.options.reducedMotion,
+        ...(opts?.finalGrid === undefined ? {} : { finalGrid: opts.finalGrid }),
+      })
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * 연쇄 단계를 순서대로 재생한다. 단계마다 `cascadeStep` start/end 한 쌍을 낸다.
+   *
+   * STOP은 남은 단계를 건너뛰지 않고 압축한다. 단계 길이는 STOP 순간 남은 단계 수로 한 번만 정하고
+   * (`cascadeSkipStepMs`), 재생 중이던 단계는 남은 몫을 그 길이에 맞춰 빨리 돌린다.
+   * 어떻게 끝나든 화면은 단계의 `gridAfter`로 확정되고, 끝까지 가면 `finalGrid`다.
+   */
+  private async runCascadePhase(plan: CascadePlan, token: number): Promise<void> {
+    const reels = this.options.math.reels
+    let skipStepMs: number | null = null
+    const skipMsAt = (index: number): number | null => {
+      if (this.skipRequestedToken !== token) return null
+      if (skipStepMs === null) skipStepMs = cascadeSkipStepMs(plan.steps.length - index)
+      return skipStepMs
+    }
+    for (const planned of plan.steps) {
+      if (this.destroyed || token !== this.spinToken) return
+      const ms = skipMsAt(planned.index)
+      const durations = ms === null ? planned.durations : compressCascadeStep(ms, reels)
+      this.emitCascadeStep(planned, plan.steps.length, 'start')
+      await this.playCascadeStep(planned, durations, () => skipMsAt(planned.index))
+      // start를 냈으면 end도 반드시 낸다. 끼어들어도 화면은 이미 gridAfter로 확정됐다.
+      this.emitCascadeStep(planned, plan.steps.length, 'end')
+      if (this.destroyed || token !== this.spinToken) return
+    }
+    this.applyGridOverride(plan.finalGrid)
+  }
+
+  private emitCascadeStep(step: CascadePlanStep, total: number, phase: 'start' | 'end'): void {
+    this.emit({
+      type: 'cascadeStep',
+      index: step.index,
+      total,
+      phase,
+      stepWin: step.stepWin,
+      cumulativeWin: step.cumulativeWin,
+      multiplier: step.multiplier,
+      removed: step.removed,
+      removedSymbols: step.removedSymbols,
+    })
+  }
+
+  /**
+   * 단계 하나. 시작 tick에 릴을 감추고 풀 스프라이트로 같은 판을 세운다. 끝 tick에 `gridAfter`를
+   * 확정하고 릴을 되살린 뒤 풀을 돌려준다. 두 교체가 각각 한 tick 안이라 깜빡임이 없다.
+   */
+  private playCascadeStep(
+    step: CascadePlanStep,
+    durations: CascadeStepDurations,
+    skipMs: () => number | null,
+  ): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let handle: CascadeFxHandle | null = null
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        this.activeCascade = null
+        this.applyGridOverride(step.gridAfter)
+        this.setReelsVisible(true)
+        handle?.release()
+        resolve()
+      }
+      this.activeCascade = {
+        finish,
+        compress: () => {
+          const ms = skipMs()
+          if (ms !== null) handle?.compress(ms)
+        },
+      }
+      this.setReelsVisible(false)
+      handle = playCascadeFx(
+        step,
+        durations,
+        {
+          symbols: this.cascadeSprites,
+          debris: this.mutationPool,
+          outline: this.cascadeOutline,
+          textures: this.textures,
+          spark: this.fxTextures.spark,
+          layout: this.layout,
+          color: this.options.theme.palette.frame,
+          reducedMotion: this.options.reducedMotion,
+        },
+        finish,
+      )
+      if (settled) handle.release()
+    })
+  }
+
+  private setReelsVisible(visible: boolean): void {
+    for (const view of this.reels) view.root.visible = visible
+  }
+
   // ------------------------------------------------------------------ 승리
 
   /**
@@ -1200,6 +1354,24 @@ class PixiRenderer implements RendererCore {
   private renderStep(step: PresentationStep, context: PresentationStepContext): void {
     this.stopSymbolFx()
     this.winGraphics.clear()
+
+    if (step.phase === 'all' && step.cascade === true) {
+      // 연쇄 모드: 이긴 칸은 연쇄 중에 이미 터져 끝난 판에 없다. 그 자리를 다시 짚으면
+      // 엉뚱한 심볼이 이긴 것처럼 보이므로 스캐터만 밝힌다.
+      if (step.scatters.length > 0) this.dimExcept(step.scatters)
+      else this.undim()
+      this.playFxAt(step.scatters)
+      this.showScatters(step.scatters)
+      this.emit({ type: 'winCycle', cycle: context.cycle, totalWin: step.totalWin })
+      this.emit({
+        type: 'winTotal',
+        totalWin: step.totalWin,
+        tier: step.tier,
+        durationMs: step.rollupMs,
+        ...(step.fromAmount === undefined ? {} : { fromAmount: step.fromAmount }),
+      })
+      return
+    }
 
     if (step.phase === 'all') {
       // ways 게임은 여러 심볼의 승리가 같은 칸을 겹쳐 짚는다. 겹친 채로 두면 한 칸에
@@ -1911,6 +2083,7 @@ class PixiRenderer implements RendererCore {
     this.ownedTextures.destroyAll()
     // 풀에 감춰 둔 것은 무대 밖이라 앱과 함께 내려가지 않는다. 여기서 직접 버린다.
     this.mutationPool.clear()
+    this.cascadeSprites.clear()
     this.particlePool.clear()
     this.sheetSprites.clear()
     this.symbolFxPool.clear()
@@ -1922,15 +2095,16 @@ class PixiRenderer implements RendererCore {
 
   // ------------------------------------------------------------------ 진단
 
-  /**
-   * 풀과 텍스처 장부의 지금 상태. 순수 데이터라 그리는 쪽이 마음대로 써도 된다.
-   * 화면에 무엇을 어떻게 보여줄지는 여기서 정하지 않는다.
-   */
+  /** 칸 하나의 캔버스 기준 사각형(CSS px). 허브가 주문 토큰을 날릴 출발점이다. */
   getCellRect(reel: number, row: number): CellRect {
     const { math } = this.options
     return cellRect(this.layout, this.geometry.content, math.reels, math.rows, reel, row)
   }
 
+  /**
+   * 풀과 텍스처 장부의 지금 상태. 순수 데이터라 그리는 쪽이 마음대로 써도 된다.
+   * 화면에 무엇을 어떻게 보여줄지는 여기서 정하지 않는다.
+   */
   diagnostics(): RendererDiagnostics {
     return {
       pools: {
