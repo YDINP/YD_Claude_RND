@@ -126,6 +126,8 @@ const en = {
   orderCardChain: 'Chain {n}',
   orderExitCompleted: 'Completed cards',
   orderExitNone: 'No cards completed',
+  orderExitCount: '{n} cards completed',
+  orderExitMore: 'and {n} more',
   orderExitPrizeSum: 'Prizes {amount}',
   orderExitRoundTotal: 'Round total {amount}',
   tabCluster: 'Cluster',

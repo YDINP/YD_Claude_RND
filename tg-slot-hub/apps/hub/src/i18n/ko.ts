@@ -124,6 +124,8 @@ const ko: Record<TranslationKey, string> = {
   orderCardChain: '연쇄 {n}번',
   orderExitCompleted: '완료한 카드',
   orderExitNone: '완료한 카드가 없어요',
+  orderExitCount: '카드 {n}장 완료',
+  orderExitMore: '그 밖에 {n}장',
   orderExitPrizeSum: '상품 {amount}',
   orderExitRoundTotal: '라운드 총합 {amount}',
   tabCluster: '클러스터',

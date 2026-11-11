@@ -35,7 +35,12 @@ export type RoundPopup =
       readonly kind: 'freeSpinsExit'
       readonly totalWin: number
       /** 주문 카드 라운드 종료 요약. 완료한 카드 목록과 상품 합. 라운드 총합은 `totalWin`이다. */
-      readonly orders?: { readonly items: readonly CompletedOrder[]; readonly prizeTotal: number }
+      readonly orders?: {
+        readonly items: readonly CompletedOrder[]
+        readonly prizeTotal: number
+        /** 서버가 센 완료 장수. 새로고침으로 화면 기록(`items`)이 비어도 이 값은 남는다. */
+        readonly completed: number
+      }
     }
 
 export type RoundFlowState =
@@ -236,7 +241,8 @@ export function withOrderPopup(
     return { ...ceremony, popup: { ...popup, order: true } }
   }
   const prizeTotal = result.freeSpinsSummary?.orderPrizeTotal ?? log.reduce((sum, item) => sum + item.prize, 0)
-  return { ...ceremony, popup: { ...popup, orders: { items: log, prizeTotal } } }
+  const completed = Math.max(log.length, result.freeSpinsSummary?.ordersCompleted ?? 0)
+  return { ...ceremony, popup: { ...popup, orders: { items: log, prizeTotal, completed } } }
 }
 
 // ---- 승리 연출 분량 결정 (순수) ----

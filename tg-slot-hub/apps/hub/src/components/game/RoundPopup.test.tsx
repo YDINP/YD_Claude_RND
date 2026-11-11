@@ -76,6 +76,13 @@ describe('RoundPopupView', () => {
     expect(screen.queryByText('STAMPEDE')).not.toBeInTheDocument()
   })
 
+  it('counts cards completed before a reload from the server total, not as none', () => {
+    const orders = { items: [], prizeTotal: 202, completed: 3 }
+    render(<RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 438, orders }} onDismiss={() => {}} />)
+    expect(screen.queryByText('No cards completed')).not.toBeInTheDocument()
+    expect(screen.getByText('3 cards completed')).toBeInTheDocument()
+  })
+
   it('still rolls the total up and still showers coins — only the escalation is gone', async () => {
     const { container } = render(
       <RoundPopupView popup={EXIT} onDismiss={() => {}} freeSpinsPlayed={8} />,

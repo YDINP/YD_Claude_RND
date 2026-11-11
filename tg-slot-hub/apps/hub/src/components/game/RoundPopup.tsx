@@ -193,7 +193,7 @@ export function RoundPopupView({
           {popup.kind === 'freeSpinsExit' && popup.orders !== undefined && (
             <span className="hub-round-popup__orders">
               <span className="hub-round-popup__orders-title">{t('orderExitCompleted')}</span>
-              {popup.orders.items.length === 0 ? (
+              {popup.orders.completed === 0 ? (
                 <span className="hub-round-popup__orders-row">{t('orderExitNone')}</span>
               ) : (
                 popup.orders.items.map((item, i) => (
@@ -202,6 +202,14 @@ export function RoundPopupView({
                     <span>+{item.prize.toLocaleString('en-US')}</span>
                   </span>
                 ))
+              )}
+              {/* 새로고침 전에 완료한 카드는 화면 기록에 없다. 서버가 센 장수로 빈자리를 채운다. */}
+              {popup.orders.completed > popup.orders.items.length && (
+                <span className="hub-round-popup__orders-row">
+                  {t(popup.orders.items.length === 0 ? 'orderExitCount' : 'orderExitMore', {
+                    n: popup.orders.completed - popup.orders.items.length,
+                  })}
+                </span>
               )}
               <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
                 {t('orderExitPrizeSum', { amount: popup.orders.prizeTotal.toLocaleString('en-US') })}

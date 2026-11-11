@@ -127,7 +127,15 @@ describe('cascade helpers', () => {
       items,
       true,
     )
-    expect(exit.popup).toMatchObject({ kind: 'freeSpinsExit', totalWin: 500, orders: { items, prizeTotal: 120 } })
+    expect(exit.popup).toMatchObject({ kind: 'freeSpinsExit', totalWin: 500, orders: { items, prizeTotal: 120, completed: 1 } })
+    // 새로고침으로 화면 기록이 비어도 서버가 센 장수는 남는다.
+    const reloaded = withOrderPopup(
+      { popup: { kind: 'freeSpinsExit', totalWin: 438 }, to: 'base' },
+      { features: [], freeSpinsSummary: { spins: 14, total: 438, ordersCompleted: 3, orderPrizeTotal: 202 } as never },
+      [],
+      true,
+    )
+    expect(reloaded.popup).toMatchObject({ orders: { items: [], prizeTotal: 202, completed: 3 } })
     const entry = withOrderPopup({ popup: { kind: 'freeSpinsEntry', spins: 8, multiplier: 1 }, to: 'freeSpins' }, { features: [] }, [], true)
     expect(entry.popup).toMatchObject({ order: true })
     const plain = { popup: { kind: 'freeSpinsExit' as const, totalWin: 5 }, to: 'base' as const }
