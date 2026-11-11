@@ -1,4 +1,4 @@
-import type { GameMath, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, GameMath, GridPosition, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
 import type { CelebrationSkin, FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
@@ -9,7 +9,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -105,7 +105,17 @@ export type RendererEvent =
    * 승리 연출 A단계가 시작됐다. 총배당과 그 단계의 길이를 함께 준다.
    * 허브가 배당 카운터를 이 시간에 맞춰 굴리라고 있는 이벤트다.
    */
-  | { type: 'winTotal'; totalWin: number; tier: WinTier; durationMs: number }
+  | {
+      type: 'winTotal'
+      totalWin: number
+      tier: WinTier
+      durationMs: number
+      /**
+       * 연쇄 게임에서 카운터를 굴리기 시작할 금액. 연쇄 재생 중에 이미 `cumulativeWin`까지 올렸으므로
+       * 여기서는 그 값부터 `totalWin`(스캐터·주문 상품분)까지만 굴린다. 없으면 0부터.
+       */
+      fromAmount?: number
+    }
   /**
    * 승리 연출 B단계에서 라인(ways면 심볼) 하나를 짚었다. B단계의 매 스텝 **시작**에 온다.
    *
@@ -126,6 +136,12 @@ export type RendererEvent =
       group?: string
       direction?: 'ltr' | 'rtl'
       positions?: readonly (readonly [number, number])[]
+      /** `WinLine.payKind`. 없으면 line/ways로 짐작한다. */
+      payKind?: 'line' | 'ways' | 'cluster'
+      /** 연쇄 단계 인덱스(0부터). 연쇄 게임만. */
+      cascade?: number
+      /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만. */
+      ladder?: number
       index: number
       total: number
       cycle: number
@@ -156,6 +172,25 @@ export type RendererEvent =
    * 한 단계 더 들어가지 않고 읽도록 맨 위에도 올려 둔다. 이벤트에 없으면 정의되지 않는다.
    */
   | { type: 'mutation'; mutation: MutationEvent; symbol?: SymbolId; phase: 'start' | 'end' }
+  /**
+   * 연쇄 한 단계가 시작하거나 끝났다. 변형이 끝난 뒤, `spinEnd` 전에 단계마다 `start`/`end` 한 쌍이 온다.
+   * STOP으로 압축 재생해도 쌍은 빠지지 않는다.
+   *
+   * `stepWin`은 이 단계 지급, `cumulativeWin`은 1단계부터 이 단계까지의 합이다(허브 WinStrip 틱).
+   * `multiplier`는 이 단계의 사다리 배수(사다리 미터), `removed`는 지워진 칸 [reel, row]이고
+   * `removedSymbols`는 같은 순서의 원래 심볼 id다(주문 카드 표시용 진행. 와일드도 들어 있으니 허브가 거른다).
+   */
+  | {
+      type: 'cascadeStep'
+      index: number
+      total: number
+      phase: 'start' | 'end'
+      stepWin: number
+      cumulativeWin: number
+      multiplier: number
+      removed: readonly GridPosition[]
+      removedSymbols: readonly SymbolId[]
+    }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -203,6 +238,13 @@ export interface SpinToOptions {
    * 재생이 끝나면 화면은 엔진의 `SpinResult.grid`와 정확히 같아진다.
    */
   mutations?: readonly MutationEvent[]
+  /**
+   * 변형 뒤에 재생할 연쇄 단계(`SpinResult.cascades`). `grid`에서 시작해 단계마다 접는다.
+   * 재생이 끝나면 화면은 `finalGrid`와 정확히 같아진다.
+   */
+  cascades?: readonly CascadeStep[]
+  /** 연쇄가 끝난 판(`SpinResult.finalGrid`). 계획이 접은 결과와 다르면 이 값이 이긴다. */
+  finalGrid?: readonly (readonly SymbolId[])[]
 }
 
 export interface ShowWinsOptions {
@@ -224,6 +266,11 @@ export interface ShowWinsOptions {
    * 허브의 프리스핀 인트로/진입 게이트가 끊기지 않는다.
    */
   presentation?: 'full' | 'brief'
+  /**
+   * 기본 `'standard'`. `'cascade'`는 연쇄 재생 중에 강조를 이미 마친 스핀용이다 —
+   * A단계와 피처만 보여 주고 라인별 B단계 순환은 하지 않는다(끝난 판에서 지난 단계를 되짚지 않는다).
+   */
+  mode?: 'standard' | 'cascade'
   /**
    * @deprecated 릴 위 라인 명판은 사라졌다. 문구는 `winLine` 이벤트를 받아 허브가 그린다.
    * 다음 릴리스에서 제거한다. 지금은 넘겨도 무시된다.
@@ -259,6 +306,14 @@ export interface SpinHandle extends PromiseLike<void> {
    * 이미 다 끝난 뒤에 불러도 아무 일도 일어나지 않는다.
    */
   skip(): void
+}
+
+/** 캔버스 기준 CSS px 사각형. 캔버스 요소의 왼쪽 위가 원점이다. */
+export interface CellRect {
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 export interface SlotRenderer {
@@ -311,4 +366,9 @@ export interface SlotRenderer {
    * 초기화 전이나 해제 뒤에는 전부 0인 빈 진단이 나온다.
    */
   diagnostics(): RendererDiagnostics
+  /**
+   * 칸 `[reel, row]`의 화면 사각형(캔버스 기준 CSS px). 허브가 주문 토큰을 날릴 출발점이다.
+   * 초기화 전이나 해제 뒤에는 null. 범위 밖 칸이면 던진다.
+   */
+  getCellRect(reel: number, row: number): CellRect | null
 }

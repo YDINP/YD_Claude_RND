@@ -152,6 +152,29 @@ export function positionRects(layout: Layout, positions: readonly (readonly [num
   }))
 }
 
+/**
+ * 칸 하나의 캔버스 좌표 사각형. `content`는 릴 레이아웃을 담은 레이어의 캔버스 위치다.
+ * 범위 밖 칸은 던진다 — 허브가 엉뚱한 자리에서 토큰을 날리지 않게 한다.
+ */
+export function cellRect(
+  layout: Layout,
+  content: Point,
+  reels: number,
+  rows: number,
+  reel: number,
+  row: number,
+): { x: number; y: number; w: number; h: number } {
+  if (!Number.isInteger(reel) || !Number.isInteger(row) || reel < 0 || reel >= reels || row < 0 || row >= rows) {
+    throw new RangeError(`칸 [${reel}, ${row}]이 ${reels}x${rows} 밖이다`)
+  }
+  return {
+    x: content.x + reelLeft(layout, reel),
+    y: content.y + rowTop(layout, row),
+    w: layout.symbolSize,
+    h: layout.symbolSize,
+  }
+}
+
 /** 프레임 이미지 안의 릴 창. 값은 프레임 크기에 대한 분수(0~1)다. */
 export interface FrameWindow {
   x: number

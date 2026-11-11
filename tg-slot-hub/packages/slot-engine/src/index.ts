@@ -3,6 +3,7 @@ export * from './schema.js'
 export {
   evaluate,
   evaluateScatter,
+  featureTriggerCount,
   getBetPerLine,
   getLineCandidates,
   getWildChampions,
@@ -13,6 +14,9 @@ export {
 export type { LineCandidate } from './evaluate.js'
 export { assertBetLevel, buildGrid, getBetUnit, resolveSpin, spin, spinUnchecked } from './spin.js'
 export { applyMutations, isProbabilistic } from './mutations.js'
+export { pickWeighted } from './random.js'
+export { applyCascadeStep, foldCascades } from './cascade.js'
+export { tallyOrders } from './orders.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
   computeAnalyticRtp,

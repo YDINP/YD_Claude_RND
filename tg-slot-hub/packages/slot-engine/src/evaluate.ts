@@ -347,6 +347,14 @@ export function evaluateScatter(grid: SymbolId[][], math: GameMath, totalBet: nu
   return { count, positions, multiplier, win: Math.round(multiplier * totalBet) }
 }
 
+/**
+ * 보너스(프리스핀 또는 주문 카드 라운드)를 여는 스캐터 개수. 보너스가 없으면 undefined.
+ * 기대감 연출처럼 "몇 개면 열리나"만 알면 되는 쪽은 이것만 본다.
+ */
+export function featureTriggerCount(math: GameMath): number | undefined {
+  return math.orderRound?.trigger ?? math.scatter?.freeSpins?.trigger
+}
+
 /** 이번 그리드가 프리스핀을 여는가. */
 export function triggersFreeSpins(scatterCount: number, math: GameMath): boolean {
   const freeSpins = math.scatter?.freeSpins

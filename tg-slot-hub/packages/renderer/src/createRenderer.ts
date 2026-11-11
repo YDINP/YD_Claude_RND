@@ -126,5 +126,6 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
     },
     // 아직 없거나 이미 내려간 렌더러에는 셀 것이 없다. null 대신 빈 진단을 준다.
     diagnostics: () => core?.diagnostics() ?? emptyDiagnostics(),
+    getCellRect: (reel: number, row: number) => core?.getCellRect(reel, row) ?? null,
   }
 }

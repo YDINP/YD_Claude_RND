@@ -192,3 +192,60 @@ export function makeMutationMath(overrides: Record<string, unknown> = {}): GameM
     ...overrides,
   })
 }
+
+/**
+ * 클러스터·연쇄·주문 카드 라운드 검증용 4x3 모델. 심볼은 와일드, 일반 3종(a·b·c), 스캐터.
+ * 해석이 아니라 손 그리드 테스트용이라 스트립은 스키마를 통과할 만큼만 둔다.
+ */
+export function clusterMathJson(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'cluster',
+    reels: 4,
+    rows: 3,
+    payModel: 'cluster',
+    symbols: [
+      { id: 'w', name: { en: 'Wild' }, wild: true },
+      { id: 'a', name: { en: 'Alpha' } },
+      { id: 'b', name: { en: 'Beta' } },
+      { id: 'c', name: { en: 'Gamma' } },
+      { id: 's', name: { en: 'Scatter' }, scatter: true },
+    ],
+    strips: [
+      ['a', 'b', 'c', 'w', 's', 'a'],
+      ['b', 'c', 'a', 's', 'w', 'b'],
+      ['c', 'a', 'b', 'w', 's', 'c'],
+      ['a', 'c', 'b', 's', 'w', 'a'],
+    ],
+    cluster: { minCluster: 4, adjacency: 'orthogonal' },
+    cascade: { enabled: true, maxCascades: 5, refill: 'gravity', source: 'strip-pull', multiplierLadder: [1, 2, 3] },
+    round: { maxWinCap: 500 },
+    paytable: {
+      a: { 4: 0.5, 6: 1, 8: 2 },
+      b: { 4: 0.4, 6: 0.8 },
+      c: { 4: 0.3 },
+    },
+    wild: { substitutesFor: 'all' },
+    scatter: { symbol: 's', pays: { 3: 1 } },
+    orderRound: {
+      trigger: 3,
+      spins: 8,
+      slots: 3,
+      maxOrders: 6,
+      extraSpinsPerOrder: 2,
+      pool: [
+        { id: 'pop-a', kind: 'popSymbol', symbol: 'a', target: 10, prize: 5, weight: 3 },
+        { id: 'pop-b', kind: 'popSymbol', symbol: 'b', target: 12, prize: 5, weight: 3 },
+        { id: 'big-6', kind: 'clusterSize', target: 6, prize: 8, weight: 2 },
+        { id: 'chain-3', kind: 'chainLength', target: 3, prize: 10, weight: 1 },
+      ],
+    },
+    betLevels: [20, 40, 100],
+    rtpTarget: 0.945,
+    volatility: 'high',
+    ...overrides,
+  }
+}
+
+export function makeClusterMath(overrides: Record<string, unknown> = {}): GameMath {
+  return parseGameMath(clusterMathJson(overrides))
+}

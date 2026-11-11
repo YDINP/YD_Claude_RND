@@ -1,4 +1,5 @@
 import type {
+  CellRect,
   PaylineStyle,
   RendererFit,
   RendererOptions,
@@ -32,4 +33,5 @@ export interface RendererCore {
   resize(): void
   destroy(): void
   diagnostics(): RendererDiagnostics
+  getCellRect(reel: number, row: number): CellRect
 }

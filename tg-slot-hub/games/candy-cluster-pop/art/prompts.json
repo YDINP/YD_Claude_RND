@@ -1,0 +1,131 @@
+{
+  "game": "candy-cluster-pop",
+  "concept": "D0 초안. 슈가 프로스트 젤리(소프트 매트·새틴) 캔디, PLAN_candy-cluster-pop.md §7. 아트 레인이 다시 쓴다.",
+  "stylePrefix": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality —",
+  "negative": "glossy glass candy, photorealistic photography, blurry, watermark, text, busy background, baked-in drop shadow, cropped edges, neon cyberpunk styling",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a rainbow swirl lollipop disc, the top-tier wild, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a tall stick lollipop with a satin ribbon bow, the only vertical symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "heart",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a plump heart-shaped strawberry jelly, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/heart.webp",
+      "outSize": 512
+    },
+    {
+      "id": "star",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a star-shaped butter cookie with sugar frosting, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/star.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bean",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a big glossy-free matte jelly bean, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bean.webp",
+      "outSize": 512
+    },
+    {
+      "id": "drop_red",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small red candy drop shaped like a water droplet, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/drop_red.webp",
+      "outSize": 512
+    },
+    {
+      "id": "drop_blue",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small blue sugar cube, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/drop_blue.webp",
+      "outSize": 512
+    },
+    {
+      "id": "drop_green",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small round green candy marble, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/drop_green.webp",
+      "outSize": 512
+    },
+    {
+      "id": "drop_purple",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small purple jelly bean capsule, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/drop_purple.webp",
+      "outSize": 512
+    },
+    {
+      "id": "drop_yellow",
+      "kind": "symbol",
+      "prompt": "Sugar-frost jelly candy icon render, soft matte satin sugar coating, 3/4 top-down camera angle, soft top-left softbox lighting, pastel palette of sky (#8fd8f2), strawberry (#ff7aa8), lime (#a8e05f), cream (#fff1d6) and grape (#9d7ae0), crisp clean silhouette readable at 58px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small yellow konpeito star candy, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/drop_yellow.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Flat front-on slot machine frame: cream frosting border with wafer pillars, the reel window spans x 2-98% and y 10-90%. The window is pure #00FF00, draw nothing inside it."
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Desaturated pastel candy land background, soft and calm so symbols stay readable, no characters, no text."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Candy shop order counter with order slips pinned on the wall, pastel and soft, no readable text."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "A candy cluster bursting into sugar sparkles while a stamp lands on an order card, pastel candy land, no text."
+    }
+  ]
+}

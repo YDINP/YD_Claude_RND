@@ -164,10 +164,15 @@ function checkManifestMathAgreement(pack: GamePack, add: Add): void {
   if (manifest.reels !== math.reels) add('error', file, 'reels', `math.json(${math.reels})과 다르다: ${manifest.reels}`)
   if (manifest.rows !== math.rows) add('error', file, 'rows', `math.json(${math.rows})과 다르다: ${manifest.rows}`)
 
-  const mathLines = math.payModel === 'ways' ? (math.ways?.base ?? 0) : math.paylines.length
+  // 클러스터 게임은 라인도 ways도 없어 0과 비교한다.
+  const mathLines =
+    math.payModel === 'ways' ? (math.ways?.base ?? 0) : math.payModel === 'cluster' ? 0 : math.paylines.length
   if (manifest.lines !== mathLines) {
-    const label = math.payModel === 'ways' ? 'ways.base' : 'paylines 개수'
+    const label = math.payModel === 'ways' ? 'ways.base' : math.payModel === 'cluster' ? '클러스터 게임 값' : 'paylines 개수'
     add('error', file, 'lines', `math.json의 ${label}(${mathLines})과 다르다: ${manifest.lines}`)
+  }
+  if (manifest.payModel !== undefined && manifest.payModel !== math.payModel) {
+    add('error', file, 'payModel', `math.json(${math.payModel})과 다르다: ${manifest.payModel}`)
   }
 
   const same = (a: readonly number[], b: readonly number[]): boolean =>

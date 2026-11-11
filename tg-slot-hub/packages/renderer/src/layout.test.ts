@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_OVERFLOW_X, MAX_SYMBOL_SIZE, MIN_SYMBOL_SIZE } from './constants.js'
 import {
   cellPitch,
+  cellRect,
   computeFrameLayout,
   computeLayout,
   computeWindowFitLayout,
@@ -772,5 +773,24 @@ describe('프레임은 좌우로 잘리지 않는다', () => {
     const short = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.42 })
     const tall = fitWith({ x: 0.14, y: 0.18, w: 0.72, h: 0.72 })
     expect(tall.layout.symbolSize).toBeGreaterThan(short.layout.symbolSize)
+  })
+})
+
+describe('cellRect', () => {
+  const layout = computeLayout({ containerWidth: 430, reels: 6, rows: 5 })
+
+  it('콘텐츠 레이어 위치를 더한 캔버스 좌표이고 크기는 심볼 크기다', () => {
+    const rect = cellRect(layout, { x: 12, y: 30 }, 6, 5, 2, 3)
+    expect(rect).toEqual({
+      x: 12 + reelLeft(layout, 2),
+      y: 30 + rowTop(layout, 3),
+      w: layout.symbolSize,
+      h: layout.symbolSize,
+    })
+  })
+
+  it('범위 밖 칸은 던진다', () => {
+    expect(() => cellRect(layout, { x: 0, y: 0 }, 6, 5, 6, 0)).toThrow(RangeError)
+    expect(() => cellRect(layout, { x: 0, y: 0 }, 6, 5, 0, -1)).toThrow(RangeError)
   })
 })

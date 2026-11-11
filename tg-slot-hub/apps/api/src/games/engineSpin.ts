@@ -49,13 +49,26 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       cap: feature.cap,
     }
   }
-  return {
-    type: 'scatterWin',
-    symbol: feature.symbol,
-    count: feature.count,
-    win: feature.win,
-    positions: feature.positions.map(([reel, row]) => [reel, row] as [number, number]),
+  if (feature.type === 'orderRound') {
+    return { type: 'orderRound', cards: feature.cards.map((card) => ({ ...card })) }
   }
+  if (feature.type === 'orderComplete') {
+    return { type: 'orderComplete', id: feature.id, prize: feature.prize }
+  }
+  if (feature.type === 'winCapped') {
+    return { type: 'winCapped', requested: feature.requested, granted: feature.granted, cap: feature.cap }
+  }
+  if (feature.type === 'scatterWin') {
+    return {
+      type: 'scatterWin',
+      symbol: feature.symbol,
+      count: feature.count,
+      win: feature.win,
+      positions: feature.positions.map(([reel, row]) => [reel, row] as [number, number]),
+    }
+  }
+  const exhaustive: never = feature
+  throw new Error(`[engineSpin] unknown feature: ${JSON.stringify(exhaustive)}`)
 }
 
 export function toSharedFeatures(features: readonly EngineFeatureTrigger[]): FeatureTrigger[] {

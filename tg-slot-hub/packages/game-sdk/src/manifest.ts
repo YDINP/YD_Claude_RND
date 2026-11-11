@@ -14,7 +14,10 @@ export const GameManifestSchema = z.object({
   status: z.enum(['live', 'soon', 'hidden']),
   reels: z.number().int().min(1),
   rows: z.number().int().min(1),
-  lines: z.number().int().min(1),
+  /** 페이라인 수 또는 ways 수. 클러스터 게임은 0이다. */
+  lines: z.number().int().min(0),
+  /** 로비 표기용 배당 방식. 있으면 math.json의 payModel과 같아야 한다. */
+  payModel: z.enum(['lines', 'ways', 'cluster']).optional(),
   betLevels: z.array(z.number().int().positive()).min(1),
   /** 기본 게임만의 목표 RTP. math.json의 rtpTarget과 같아야 한다. */
   rtpTarget: z.number().gt(0).max(1),
@@ -29,6 +32,8 @@ export const GameManifestSchema = z.object({
   /** 'wild', 'freespins', 'jackpot' 등 로비 배지에 쓰는 자유 태그. */
   features: z.array(z.string().min(1)).default([]),
   sort: z.number().int().default(0),
+  /** 정식 감사 기본 스핀 수. 파일럿 σ로 구한 n*를 1천만 단위로 올린 값. */
+  auditSpins: z.number().int().positive().optional(),
 })
 
 export type GameManifest = z.infer<typeof GameManifestSchema>

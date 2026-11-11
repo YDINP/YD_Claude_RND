@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { VolatilitySchema } from '@tgslot/shared'
+import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 
 export { VolatilitySchema }
 export type { Volatility } from '@tgslot/shared'
@@ -141,6 +142,67 @@ export const GambleConfigSchema = z.object({
 })
 export type GambleConfig = z.infer<typeof GambleConfigSchema>
 
+/**
+ * 클러스터 페이 모델 설정. 같은 심볼이 상하좌우로 `minCluster`개 이상 붙으면 지급한다.
+ * 배당 기준은 **총 베팅액**이고, 페이테이블 키는 그룹 크기(와일드 포함)다.
+ */
+export const ClusterConfigSchema = z.object({
+  minCluster: z.number().int().min(3),
+  adjacency: z.literal('orthogonal'),
+  /** 와일드가 여러 심볼의 그룹에 동시에 낄 수 있는가. 와일드만으로 된 그룹은 지급하지 않는다. */
+  wildJoins: z.boolean().default(true),
+})
+export type ClusterConfig = z.infer<typeof ClusterConfigSchema>
+
+/**
+ * 연쇄(텀블) 설정. 이긴 칸을 지우고 중력으로 내린 뒤 스트립에서 이어 받아 채운다(RNG 0회).
+ * 단계 k의 배수는 `multiplierLadder[min(k, 길이-1)]`이고 매 스핀 처음부터 시작한다.
+ */
+export const CascadeConfigSchema = z.object({
+  enabled: z.literal(true),
+  maxCascades: z.number().int().min(1).max(20),
+  refill: z.literal('gravity'),
+  source: z.literal('strip-pull'),
+  multiplierLadder: z.array(z.number().int().min(1)).min(1),
+})
+export type CascadeConfig = z.infer<typeof CascadeConfigSchema>
+
+/** 라운드(유료 스핀 1회 + 파생 스핀 전부) 단위 규칙. 팩별 opt-in이다. */
+export const RoundConfigSchema = z.object({
+  /** 라운드 지급 상한. **총 베팅액 배수**다. 주문 상품까지 포함한다. */
+  maxWinCap: z.number().gt(0),
+})
+export type RoundConfig = z.infer<typeof RoundConfigSchema>
+
+export const OrderPoolEntrySchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(['popSymbol', 'clusterSize', 'chainLength']),
+  /** popSymbol 전용. */
+  symbol: z.string().min(1).optional(),
+  target: z.number().int().min(1),
+  /** 상품. 총 베팅액 배수(0.05 눈금). */
+  prize: z.number().gt(0),
+  weight: z.number().int().positive(),
+})
+export type OrderPoolEntry = z.infer<typeof OrderPoolEntrySchema>
+
+/**
+ * 주문 카드 라운드. `scatter.freeSpins` 대신 쓰는 보너스다(둘은 함께 둘 수 없다).
+ * 카드를 완료하면 상품을 즉시 주고 `extraSpinsPerOrder`만큼 스핀을 늘린다. 라운드 안 리트리거는 없다.
+ */
+export const OrderRoundConfigSchema = z.object({
+  /** 진입 스캐터 개수. 연쇄가 끝난 판(`finalGrid`) 기준. */
+  trigger: z.number().int().min(1),
+  spins: z.number().int().min(1),
+  /** 동시에 깔리는 카드 수. */
+  slots: z.number().int().min(1).max(4),
+  /** 한 라운드에서 상품·추가 스핀을 인정하는 최대 완료 장수. */
+  maxOrders: z.number().int().min(1),
+  extraSpinsPerOrder: z.number().int().min(0),
+  pool: z.array(OrderPoolEntrySchema).min(1),
+})
+export type OrderRoundConfig = z.infer<typeof OrderRoundConfigSchema>
+
 const BaseGameMathSchema = z.object({
   id: z.string().min(1),
   reels: z.number().int().min(1),
@@ -150,9 +212,13 @@ const BaseGameMathSchema = z.object({
   groups: z.record(z.string().min(1), SymbolGroupSchema).optional(),
   /** 릴별 스트립. strips.length === reels. */
   strips: z.array(z.array(z.string().min(1)).min(1)).min(1),
-  /** 'lines'면 페이라인, 'ways'면 인접 카운트 곱. 없으면 'lines'. */
-  payModel: z.enum(['lines', 'ways']).default('lines'),
+  /** 'lines'면 페이라인, 'ways'면 인접 카운트 곱, 'cluster'면 상하좌우 그룹. 없으면 'lines'. */
+  payModel: z.enum(['lines', 'ways', 'cluster']).default('lines'),
   ways: WaysConfigSchema.optional(),
+  cluster: ClusterConfigSchema.optional(),
+  cascade: CascadeConfigSchema.optional(),
+  round: RoundConfigSchema.optional(),
+  orderRound: OrderRoundConfigSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -172,6 +238,14 @@ const BaseGameMathSchema = z.object({
   rtpTarget: z.number().gt(0).max(1),
   volatility: VolatilitySchema,
 })
+
+/**
+ * 지급 코인이 정수인가. 0.05 눈금 배수(1.1 등)는 이진 소수라 `100 x 1.1 = 110.00000000000001`이 된다.
+ * 엔진은 어차피 `Math.round`로 지급하므로 부동소수 오차만큼은 정수로 본다.
+ */
+function isWholeCoin(value: number): boolean {
+  return Math.abs(value - Math.round(value)) < 1e-9
+}
 
 /** 페이룰의 매치 개수를 오름차순 숫자 배열로. */
 function payruleCounts(payrule: Record<number, number>): number[] {
@@ -264,12 +338,22 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     if (math.paylines.length > 0) {
       issue('ways 게임은 paylines를 두지 않는다', ['paylines'])
     }
+  } else if (math.payModel === 'cluster') {
+    if (math.cluster === undefined) issue("payModel이 'cluster'면 cluster 설정이 필요하다", ['cluster'])
+    if (math.cascade === undefined) issue("payModel이 'cluster'면 cascade 설정이 필요하다", ['cascade'])
+    if (math.paylines.length > 0) issue('클러스터 게임은 paylines를 두지 않는다', ['paylines'])
+    if (math.ways !== undefined) issue('클러스터 게임은 ways를 두지 않는다', ['ways'])
   } else if (math.paylines.length === 0) {
     issue("payModel이 'lines'면 paylines가 최소 1개 필요하다", ['paylines'])
   }
+  if (math.payModel !== 'cluster' && math.cluster !== undefined) {
+    issue("cluster 설정은 payModel이 'cluster'일 때만 둔다", ['cluster'])
+  }
 
-  const unitCount = math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.paylines.length
-  const unitLabel = math.payModel === 'ways' ? 'betDivisor' : '라인 수'
+  // 클러스터는 총 베팅액이 배당 단위라 단위 수가 1이다.
+  const unitCount =
+    math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.payModel === 'cluster' ? 1 : math.paylines.length
+  const unitLabel = math.payModel === 'ways' ? 'betDivisor' : math.payModel === 'cluster' ? '총 베팅액' : '라인 수'
   if (unitCount > 0) {
     math.betLevels.forEach((level, index) => {
       if (level % unitCount !== 0) {
@@ -297,9 +381,11 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     }
 
     const counts = payruleCounts(payrule)
+    // 클러스터의 키는 그룹 크기라 상한이 화면 칸 수다.
+    const maxCount = math.payModel === 'cluster' ? math.reels * math.rows : math.reels
     for (const count of counts) {
-      if (count < 1 || count > math.reels) {
-        issue(`매치 개수 ${count}가 1..${math.reels} 범위를 벗어났다`, ['paytable', key, String(count)])
+      if (count < 1 || count > maxCount) {
+        issue(`매치 개수 ${count}가 1..${maxCount} 범위를 벗어났다`, ['paytable', key, String(count)])
       }
     }
     // "긴 연속이 이긴다" 규칙이 성립하려면 배수가 매치 개수에 대해 단조증가여야 한다.
@@ -323,7 +409,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
       const betPerLine = level / lineCount
       for (const count of counts) {
         const multiplier = payrule[count] ?? 0
-        if (!Number.isInteger(betPerLine * multiplier)) {
+        if (!isWholeCoin(betPerLine * multiplier)) {
           issue(
             `${key} ${count}개: 베팅액 ${level}(라인당 ${betPerLine}) x 배수 ${multiplier} = ${betPerLine * multiplier}로 정수가 아니다`,
             ['paytable', key, String(count)],
@@ -498,7 +584,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
       for (const level of math.betLevels) {
         for (const count of counts) {
           const multiplier = pays[count] ?? 0
-          if (!Number.isInteger(level * multiplier)) {
+          if (!isWholeCoin(level * multiplier)) {
             issue(
               `스캐터 ${count}개: 총 베팅액 ${level} x 배수 ${multiplier} = ${level * multiplier}로 정수가 아니다`,
               ['scatter', 'pays', String(count)],
@@ -512,6 +598,51 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     if (freeSpins !== undefined && freeSpins.trigger > cells) {
       issue(`프리스핀 트리거 ${freeSpins.trigger}개가 화면 칸 수(${cells})보다 많다`, ['scatter', 'freeSpins', 'trigger'])
     }
+  }
+
+  const orders = math.orderRound
+  if (orders !== undefined) {
+    const at = (...path: (string | number)[]): (string | number)[] => ['orderRound', ...path]
+    if (math.scatter === undefined) issue('주문 카드 라운드는 스캐터로 열린다. scatter 설정이 필요하다', at())
+    if (math.scatter?.freeSpins !== undefined) issue('orderRound와 scatter.freeSpins는 함께 둘 수 없다', at())
+    if (orders.trigger > cellCount) issue(`트리거 ${orders.trigger}개가 화면 칸 수(${cellCount})보다 많다`, at('trigger'))
+    const longest = orders.spins + orders.extraSpinsPerOrder * orders.maxOrders
+    if (longest > MAX_FREE_SPINS_PER_ROUND) {
+      issue(`최장 라운드 ${longest}스핀이 상한 ${MAX_FREE_SPINS_PER_ROUND}을 넘는다`, at('spins'))
+    }
+
+    const ids = new Set<string>()
+    orders.pool.forEach((entry, index) => {
+      const field = (name: string): (string | number)[] => at('pool', index, name)
+      if (ids.has(entry.id)) issue(`중복 주문 id: ${entry.id}`, field('id'))
+      ids.add(entry.id)
+      if (entry.kind === 'popSymbol') {
+        const target = entry.symbol === undefined ? undefined : declared.get(entry.symbol)
+        if (entry.symbol === undefined) issue('popSymbol 주문에는 symbol이 필요하다', field('symbol'))
+        else if (target === undefined) issue(`선언되지 않은 심볼: ${entry.symbol}`, field('symbol'))
+        else if (target.wild === true || target.scatter === true) {
+          issue(`popSymbol은 와일드·스캐터가 아닌 심볼이어야 한다: ${entry.symbol}`, field('symbol'))
+        }
+      } else if (entry.symbol !== undefined) {
+        issue(`${entry.kind} 주문은 symbol을 두지 않는다`, field('symbol'))
+      }
+      if (entry.kind === 'clusterSize' && entry.target > cellCount) {
+        issue(`clusterSize target ${entry.target}이 화면 칸 수(${cellCount})보다 크다`, field('target'))
+      }
+      if (entry.kind === 'chainLength') {
+        if (math.cascade === undefined) issue('chainLength 주문은 cascade 설정이 필요하다', field('kind'))
+        else if (entry.target > math.cascade.maxCascades) {
+          issue(`chainLength target ${entry.target}이 maxCascades(${math.cascade.maxCascades})보다 크다`, field('target'))
+        }
+      }
+      for (const level of math.betLevels) {
+        if (!isWholeCoin(level * entry.prize)) {
+          issue(`주문 ${entry.id}: 총 베팅액 ${level} x 상품 ${entry.prize} = ${level * entry.prize}로 정수가 아니다`, field('prize'))
+        }
+      }
+    })
+    // 추첨은 활성 카드 id를 빼고 뽑으므로, 칸을 다 채우려면 서로 다른 id가 slots개 이상 있어야 한다.
+    if (ids.size < orders.slots) issue(`서로 다른 주문 id(${ids.size})가 slots(${orders.slots})보다 적다`, at('pool'))
   }
 })
 
