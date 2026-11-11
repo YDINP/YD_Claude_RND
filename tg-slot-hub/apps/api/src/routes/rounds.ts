@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { GambleRequestSchema } from '@tgslot/shared'
 import type { GambleResponse } from '@tgslot/shared'
 import { createSeededRng } from '@tgslot/slot-engine'
-import type { Rng } from '@tgslot/slot-engine'
+import type { Rng, RoundState } from '@tgslot/slot-engine'
 import type { Repos } from '../repos/types.js'
 import type { GambleStepRecord } from '../repos/types.js'
 import type { JwtService } from '../auth/jwt.js'
@@ -51,6 +51,11 @@ export interface RoundSeedResponse {
   /** 재현에 쓸 베팅액. 프리스핀이면 진입 시점에 고정된 값이다. */
   totalBet: number
   /**
+   * 스핀 **직전** 라운드 상태 (남은 프리스핀·배수·이월 carry). 엔진 `spin`의 4번째 인자로
+   * 그대로 넘기면 같은 결과가 나온다. 유료 스핀이거나 이 값이 없던 시절의 라운드는 null.
+   */
+  stateBefore: RoundState | null
+  /**
    * 이 라운드에서 진행한 더블업 판정. 각 단계의 `seedInput`으로 같은 결과를 재현할 수 있다.
    * 더블업을 하지 않았으면 빈 배열이다.
    */
@@ -84,6 +89,7 @@ export function createRoundsRoute(deps: RoundsRouteDeps): Hono<{ Variables: Auth
       isFreeSpin: round.isFreeSpin,
       multiplier: round.multiplier,
       totalBet: round.bet,
+      stateBefore: round.stateBefore,
       gamble: round.gambleSteps,
     }
     return c.json(response, 200)

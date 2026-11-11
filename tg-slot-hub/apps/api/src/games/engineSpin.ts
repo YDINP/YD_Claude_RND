@@ -6,16 +6,58 @@ import type {
   RoundState,
   SpinResult,
 } from '@tgslot/slot-engine'
-import type { FeatureTrigger, FreeSpinsState, MutationEvent } from '@tgslot/shared'
+import { foldCascades } from '@tgslot/slot-engine'
+import type { CascadeStep as EngineCascadeStep, WinLine as EngineWinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, FeatureTrigger, MutationEvent, WinLine } from '@tgslot/shared'
 
-/** 저장된 프리스핀 세션 → 엔진이 받는 라운드 상태. 필드 이름만 옮긴다. */
-export function toRoundState(freeSpins: FreeSpinsState | null): RoundState | undefined {
-  if (!freeSpins) return undefined
+export { toRoundState } from '../economy/freeSpins.js'
+
+/**
+ * 엔진의 WinLine과 shared의 WinLine은 모양이 같지만 소유 패키지가 다르므로 명시적으로 옮긴다.
+ * 필드를 하나씩 옮기는 구조라 엔진에 필드가 늘면 여기도 같이 늘려야 한다.
+ * 키 순서가 고정이라 jsonb 왕복을 거친 값이어도 응답 바이트가 같다.
+ */
+export function toSharedWinLine(win: EngineWinLine): WinLine {
   return {
-    freeSpinsLeft: freeSpins.left,
-    freeSpinsTotal: freeSpins.total,
-    multiplier: freeSpins.multiplier,
+    line: win.line,
+    symbol: win.symbol,
+    count: win.count,
+    multiplier: win.multiplier,
+    win: win.win,
+    positions: win.positions.map(([reel, row]) => [reel, row] as [number, number]),
+    // 심볼 그룹(Any BAR 등)으로 지급된 라인일 때만 있다. 연출이 그룹 이름을 띄우는 데 쓴다.
+    ...(win.group === undefined ? {} : { group: win.group }),
+    // ways 지급일 때만. 라인 게임에는 없다.
+    ...(win.ways === undefined ? {} : { ways: win.ways }),
+    ...(win.direction === undefined ? {} : { direction: win.direction }),
+    // 연쇄·클러스터 팩만. 기존 6팩은 이 키가 생기지 않는다(응답이 그대로다).
+    ...(win.payKind === undefined ? {} : { payKind: win.payKind }),
+    ...(win.cascade === undefined ? {} : { cascade: win.cascade }),
+    ...(win.ladder === undefined ? {} : { ladder: win.ladder }),
   }
+}
+
+/**
+ * 연쇄 단계 → shared. `refill`은 릴별 배열(`SymbolId[][]`)이라 칸 객체 목록보다 훨씬 작다.
+ * 12단계 최악 스핀을 12KB 안에 두는 핵심이다.
+ */
+export function toSharedCascadeStep(step: EngineCascadeStep): CascadeStep {
+  return {
+    index: step.index,
+    wins: step.wins.map(toSharedWinLine),
+    removed: step.removed.map(([reel, row]) => [reel, row] as [number, number]),
+    refill: step.refill.map((column) => [...column]),
+    multiplier: step.multiplier,
+    stepWin: step.stepWin,
+  }
+}
+
+/**
+ * 저장된 `cascades`로 연쇄 후 최종 판을 되살린다. 스핀을 다시 돌리지 않는다.
+ * `grid`는 뮤테이션까지 적용된 첫 평가 그리드다 (`foldCascades(grid, cascades) === finalGrid`).
+ */
+export function rebuildFinalGrid(grid: string[][], cascades: readonly EngineCascadeStep[]): string[][] {
+  return foldCascades(grid, cascades)
 }
 
 /**

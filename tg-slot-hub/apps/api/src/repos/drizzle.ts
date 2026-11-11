@@ -10,7 +10,7 @@ import type {
   Locale,
   MutationEvent,
 } from '@tgslot/shared'
-import type { WinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, RoundState, WinLine } from '@tgslot/slot-engine'
 import type { DrizzleDb } from '../db/client.js'
 import {
   bonusClaims,
@@ -28,7 +28,7 @@ import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
-import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
+import { freeSpinsSummary, isFreeSpinsActive, toRoundState, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import {
   findStepByKey,
   gambleEscrowRefId,
@@ -63,6 +63,7 @@ import type {
   LeaderboardRow,
   LeaderboardSnapshot,
   Repos,
+  FreeSpinsSummaryRecord,
   RoundRecord,
   UpsertResult,
 } from './types.js'
@@ -100,6 +101,8 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     stops: row.stops,
     gridBefore: (row.gridBefore ?? null) as string[][] | null,
     mutations: (row.mutations ?? []) as MutationEvent[],
+    cascades: (row.cascades ?? null) as CascadeStep[] | null,
+    stateBefore: (row.stateBefore ?? null) as RoundState | null,
     gambleSteps: (row.gambleSteps ?? []) as GambleStepRecord[],
     // jsonb 컬럼이라 드라이버가 unknown으로 준다. 쓸 때 WinLine[]만 넣으므로 여기서 되돌린다.
     wins: row.wins as WinLine[],
@@ -117,7 +120,7 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     features: (row.features ?? []) as FeatureTrigger[],
     freeSpinsAfter: (row.freeSpinsAfter ?? null) as FreeSpinsState | null,
     ...(row.freeSpinsSummary
-      ? { freeSpinsSummary: row.freeSpinsSummary as { total: number; spins: number } }
+      ? { freeSpinsSummary: row.freeSpinsSummary as FreeSpinsSummaryRecord }
       : {}),
     createdAt: row.createdAt,
   }
@@ -430,7 +433,10 @@ export class DrizzleRepos implements Repos {
 
       // 프리스핀 세션 갱신. 유저 단위 행이라 전역 잭팟 행보다 먼저 끝내 둔다.
       // 남은 횟수·배수는 엔진의 nextState가 결정하고, 서버는 고정 베팅과 누적 당첨만 얹는다.
-      const freeSpinsAfter = wrapFreeSpinsState(freeSpinsBefore, {
+      // 만료된 세션은 이미 죽은 것이다. 새 진입 스핀이 그 베팅·누적·carry를 물려받지 않도록 **활성일 때만**
+      // 이전 세션으로 넘긴다 (소진과 같은 경로: 상태 없이 도는 스핀).
+      const activeBefore = isFreeSpin ? freeSpinsBefore : null
+      const freeSpinsAfter = wrapFreeSpinsState(activeBefore, {
         gameId: input.gameId,
         totalBet,
         isFreeSpin,
@@ -438,10 +444,11 @@ export class DrizzleRepos implements Repos {
         nextState: result.nextState,
         now,
       })
-      const summary = freeSpinsSummary(freeSpinsBefore, {
+      const summary = freeSpinsSummary(activeBefore, {
         isFreeSpin,
         win: result.totalWin,
         ended: freeSpinsAfter === null,
+        features,
       })
 
       // 새 당첨이면 그 금액을 지갑 밖으로 잠그고 제안을 연다. 잠겨 있는 동안에는 잔액에 보이지 않으므로
@@ -529,6 +536,8 @@ export class DrizzleRepos implements Repos {
           stops: result.stops,
           gridBefore: result.gridBefore,
           mutations: result.mutations,
+          cascades: result.cascades ?? null,
+          stateBefore: isFreeSpin ? (toRoundState(freeSpinsBefore) ?? null) : null,
           wins: result.wins,
           seed,
           seedHash,
@@ -548,7 +557,8 @@ export class DrizzleRepos implements Repos {
         .returning()
       if (!insertedRound) throw new Error('[drizzle-repo] round insert failed')
 
-      await tx.insert(ledger).values(entries)
+      // 당첨 없는 프리스핀은 원장에 남길 항목이 하나도 없다. 빈 values()는 드라이버가 던진다.
+      if (entries.length > 0) await tx.insert(ledger).values(entries)
 
       const [updatedWallet] = await tx
         .update(wallets)

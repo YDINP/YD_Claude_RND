@@ -103,6 +103,7 @@ export function validateGamePack(pack: GamePack, source: PackSource, options: Va
   // serving: 폴더명=manifest.id=math.id, manifest↔math 합의, 런타임 자산 존재까지만 본다.
   checkIdentity(pack, add, stage)
   checkManifestMathAgreement(pack, add)
+  checkCascadeStrips(pack, add)
 
   // 런타임이 실제로 받아가는 자산. 존재 검사와 추적 검사가 **같은 목록**을 본다.
   const runtime = runtimeAssets(pack, ungenerated)
@@ -118,6 +119,7 @@ export function validateGamePack(pack: GamePack, source: PackSource, options: Va
 
   // authoring 전용: 저작 파이프라인 위생. 팩을 돌리는 데는 필요 없다.
   if (isAuthoring) {
+    checkRequiredThemeKeys(pack, add)
     checkTracked(runtime, source, files, add)
     if (pack.hasTheme) {
       checkSymbolThumbnails(pack, requireFile)
@@ -194,6 +196,51 @@ function checkManifestMathAgreement(pack: GamePack, add: Add): void {
     if (Math.abs(total - expected) > 1e-9) {
       add('warn', file, 'rtpTotalTarget', `rtpTarget + jackpotContribution(${expected})과 다르다: ${total}`)
     }
+  }
+}
+
+/**
+ * 연쇄 팩은 한 스핀에 최대 `maxCascades`번 칸이 채워진다. 릴 스트립이 `rows x (maxCascades + 1)`보다
+ * 짧으면 한 스핀 안에서 같은 구간이 되풀이돼 리필이 눈에 띄게 반복된다. 막을 이유는 없어 경고만 한다.
+ */
+function checkCascadeStrips(pack: GamePack, add: Add): void {
+  const { math } = pack
+  if (math.cascade === undefined) return
+  const needed = math.rows * (math.cascade.maxCascades + 1)
+  math.strips.forEach((strip, reel) => {
+    if (strip.length < needed) {
+      add(
+        'warn',
+        PACK_FILES.math,
+        `strips.${reel}`,
+        `릴 ${reel} 스트립 길이(${strip.length})가 rows x (maxCascades + 1) = ${needed}보다 짧다. 연쇄 리필이 한 스핀 안에서 반복될 수 있다`
+      )
+    }
+  })
+}
+
+/** 허브가 쓰는 테마 키. 공개(`hidden`이 아닌) 팩은 전부 채워야 한다. math 심볼은 `checkThemeSymbols`가 본다. */
+const REQUIRED_THEME_KEYS = ['frame', 'background', 'frameLayout', 'palette', 'celebration', 'sound'] as const
+
+/**
+ * 공개 팩의 테마 완결성. `hidden`은 아트 작업 중일 수 있어 건너뛴다.
+ *
+ * `backgroundFreeSpins`는 보너스 라운드(프리스핀·주문 라운드)가 있는 팩에만 의미가 있다. 스키마가
+ * "없으면 기본 배경 위에 금빛 틴트"라는 폴백을 정의하므로 **경고**다. 나머지 키는 빠지면 오류다.
+ */
+function checkRequiredThemeKeys(pack: GamePack, add: Add): void {
+  if (pack.manifest.status === 'hidden') return
+  const file = PACK_FILES.theme
+  if (!pack.hasTheme) {
+    add('error', file, '', `공개 팩(${pack.manifest.status})인데 테마가 없다`)
+    return
+  }
+  for (const key of REQUIRED_THEME_KEYS) {
+    if (pack.theme[key] === undefined) add('error', file, key, `공개 팩은 테마에 ${key}가 있어야 한다`)
+  }
+  const hasBonusRound = pack.math.scatter?.freeSpins !== undefined || pack.math.orderRound !== undefined
+  if (hasBonusRound && pack.theme.backgroundFreeSpins === undefined) {
+    add('warn', file, 'backgroundFreeSpins', '보너스 라운드가 있는 팩인데 보너스 배경이 없다. 기본 배경에 금빛 틴트가 덧씌워진다')
   }
 }
 

@@ -5,7 +5,7 @@ import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
 import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
-import { freeSpinsSummary, isFreeSpinsActive, wrapFreeSpinsState } from '../economy/freeSpins.js'
+import { freeSpinsSummary, isFreeSpinsActive, toRoundState, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import {
   findStepByKey,
   gambleEscrowRefId,
@@ -283,7 +283,10 @@ export class MemoryRepos implements Repos {
     }
 
     // 남은 횟수·배수는 엔진의 nextState가 결정한다. 서버는 고정 베팅과 누적 당첨만 얹는다.
-    const freeSpinsAfter = wrapFreeSpinsState(freeSpinsBefore, {
+    // 만료된 세션은 이미 죽은 것이다. 새 진입 스핀이 그 베팅·누적·carry를 물려받지 않도록 **활성일 때만**
+    // 이전 세션으로 넘긴다 (소진과 같은 경로: 상태 없이 도는 스핀).
+    const activeBefore = isFreeSpin ? freeSpinsBefore : null
+    const freeSpinsAfter = wrapFreeSpinsState(activeBefore, {
       gameId: input.gameId,
       totalBet,
       isFreeSpin,
@@ -291,10 +294,11 @@ export class MemoryRepos implements Repos {
       nextState: result.nextState,
       now,
     })
-    const summary = freeSpinsSummary(freeSpinsBefore, {
+    const summary = freeSpinsSummary(activeBefore, {
       isFreeSpin,
       win: result.totalWin,
       ended: freeSpinsAfter === null,
+      features,
     })
 
     // 새 당첨이면 그 금액을 지갑 밖으로 잠그고 제안을 연다. 잠겨 있는 동안에는 잔액에 보이지 않으므로
@@ -371,6 +375,8 @@ export class MemoryRepos implements Repos {
       stops: [...result.stops],
       gridBefore: result.gridBefore.map((row) => [...row]),
       mutations: result.mutations,
+      cascades: result.cascades ? result.cascades.map((step) => structuredClone(step)) : null,
+      stateBefore: isFreeSpin ? (toRoundState(freeSpinsBefore) ?? null) : null,
       wins: result.wins,
       seed,
       seedHash,
@@ -720,6 +726,8 @@ function cloneRound(round: RoundRecord): RoundRecord {
     stops: [...round.stops],
     gridBefore: round.gridBefore ? round.gridBefore.map((row) => [...row]) : null,
     mutations: round.mutations.map((mutation) => ({ ...mutation })),
+    cascades: round.cascades ? round.cascades.map((step) => structuredClone(step)) : null,
+    stateBefore: round.stateBefore ? structuredClone(round.stateBefore) : null,
     gambleSteps: round.gambleSteps.map((step) => ({ ...step })),
     wins: round.wins.map((win) => ({ ...win })),
     features: round.features.map((feature) => ({ ...feature })),

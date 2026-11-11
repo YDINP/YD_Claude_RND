@@ -1,18 +1,20 @@
 import { Hono } from 'hono'
 import { SpinRequestSchema } from '@tgslot/shared'
-import type {
-  GameStateResponse,
-  GamesResponse,
-  SpinDebugPreset,
-  SpinResponse,
-  WinLine as SharedWinLine,
-} from '@tgslot/shared'
+import type { GameStateResponse, GamesResponse, SpinDebugPreset, SpinResponse } from '@tgslot/shared'
 import { buildGrid } from '@tgslot/slot-engine'
-import type { Rng, WinLine as EngineWinLine } from '@tgslot/slot-engine'
+import type { Rng } from '@tgslot/slot-engine'
 import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
 import { toLevelState } from '../economy/level.js'
 import { toMissionDtos } from '../economy/missions.js'
-import { applyMutationsToGrid, spinWithState, toRoundState, toSharedFeatures } from '../games/engineSpin.js'
+import {
+  applyMutationsToGrid,
+  rebuildFinalGrid,
+  spinWithState,
+  toRoundState,
+  toSharedCascadeStep,
+  toSharedFeatures,
+  toSharedWinLine,
+} from '../games/engineSpin.js'
 import { DebugNoMatchError, findDebugSeed } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
@@ -57,26 +59,6 @@ export interface GamesRouteDeps {
   createRng?: (seed: string, nonce: number) => Rng
 }
 
-/**
- * 엔진의 WinLine과 shared의 WinLine은 모양이 같지만 소유 패키지가 다르므로 명시적으로 옮긴다.
- * 필드를 하나씩 옮기는 구조라 엔진에 필드가 늘면 여기도 같이 늘려야 한다.
- */
-function toSharedWinLine(win: EngineWinLine): SharedWinLine {
-  return {
-    line: win.line,
-    symbol: win.symbol,
-    count: win.count,
-    multiplier: win.multiplier,
-    win: win.win,
-    positions: win.positions.map(([reel, row]) => [reel, row] as [number, number]),
-    // 심볼 그룹(Any BAR 등)으로 지급된 라인일 때만 있다. 연출이 그룹 이름을 띄우는 데 쓴다.
-    ...(win.group === undefined ? {} : { group: win.group }),
-    // ways 지급일 때만. 라인 게임에는 없다.
-    ...(win.ways === undefined ? {} : { ways: win.ways }),
-    ...(win.direction === undefined ? {} : { direction: win.direction }),
-  }
-}
-
 export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVariables }> {
   const route = new Hono<{ Variables: AuthVariables }>()
   const lock = deps.lock ?? new SpinLock(deps.config.spinLockTimeoutMs)
@@ -100,6 +82,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     if (!pack) return c.json({ error: 'Game not found', code: 'GAME_NOT_FOUND' }, 404)
 
     // 새로고침한 클라이언트가 진행 중인 프리스핀을 이어서 돌 수 있게 서버 상태를 그대로 준다.
+    // `freeSpins.carry`(주문 카드·진행)도 그대로 실려 있어 새로고침하면 라운드가 복원된다.
     const state = await deps.repos.getGameState(c.get('auth').sub, pack.id)
     const response: GameStateResponse = { freeSpins: state.freeSpins, state }
     return c.json(response, 200)
@@ -128,6 +111,13 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     // 낭비하지 않고 바로 알려준다.
     if (debug?.preset === 'gamble' && !pack.math.gamble) {
       return c.json({ error: 'This game has no gamble feature, so no gamble outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
+    // 연쇄·주문 프리셋도 같다. 그 피처가 없는 팩은 어떤 시드로도 만족될 수 없으니 탐색 없이 거절한다.
+    if (debug?.preset === 'cascade3' && !pack.math.cascade) {
+      return c.json({ error: 'This game has no cascade feature, so no cascade outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
+    if ((debug?.preset === 'orderRound' || debug?.preset === 'orderComplete') && !pack.math.orderRound) {
+      return c.json({ error: 'This game has no order round, so no order outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
 
     // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,
@@ -231,6 +221,12 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       const rebuiltGrid = buildGrid(pack.math, round.stops)
       const gridBefore = round.gridBefore ?? rebuiltGrid
       const grid = applyMutationsToGrid(gridBefore, round.mutations)
+      // 연쇄 팩은 재실행하지 않고 저장된 단계로 조립한다. 최종 판은 첫 평가 그리드에서 접어 만든다.
+      const cascades = round.cascades
+      // 주문 상품은 완료 피처의 실지급 코인 합이다 (엔진의 `orderWin`과 같다). 라운드 스핀에만 싣는다.
+      const orderWin = round.stateBefore?.carry?.orders
+        ? round.features.reduce((sum, feature) => sum + (feature.type === 'orderComplete' ? feature.prize : 0), 0)
+        : undefined
 
       const response: SpinResponse = {
         roundId: round.id,
@@ -238,6 +234,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         grid,
         gridBefore,
         mutations: round.mutations,
+        ...(cascades ? { cascades: cascades.map(toSharedCascadeStep), finalGrid: rebuildFinalGrid(grid, cascades) } : {}),
+        ...(orderWin === undefined ? {} : { orderWin }),
         wins: round.wins.map(toSharedWinLine),
         totalBet: round.bet,
         totalWin: round.win,
