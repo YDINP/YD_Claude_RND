@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { logError } from './log.js'
 import { promptsJsonPath, readJson, resolveGameDir } from './paths.js'
-import { applyThemeUpdate, generateAsset, MATTE_MODES, planAssets, reprocessAsset, type MatteMode } from './pipeline.js'
+import { applyThemeUpdate, assetRawPath, generateAsset, MATTE_MODES, planAssets, reprocessAsset, restoreThemeFromOutput, type MatteMode } from './pipeline.js'
 import { checkCodexAvailable, createCodexProvider } from './provider/codex.js'
 import { createComfyProvider } from './provider/comfy.js'
 import { createGeminiProvider } from './provider/gemini.js'
@@ -24,6 +24,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/theme-gen gen <게임 폴더> [�
   --dry-run                                실제 호출 없이 계획만 출력
   --force                                  기존 출력 파일이 있어도 다시 생성
   --reprocess                              프로바이더를 호출하지 않고 art/raw/<id>.png에서 후처리만 다시 돌린다
+                                           raw가 없는 에셋은 출력 파일에서 theme.json 항목만 복원한다
   -h, --help                               도움말
 
 자동 선택 순서: --provider → THEME_GEN_PROVIDER → OPENAI_API_KEY → GEMINI_API_KEY → codex 로그인 → 로컬 ComfyUI
@@ -170,7 +171,14 @@ async function main(): Promise<void> {
     const themeUpdate: ThemeUpdate = {}
     const results = []
     for (const asset of assets) {
-      results.push(await reprocessAsset(gameDir, asset, themeUpdate))
+      if (existsSync(assetRawPath(gameDir, asset))) {
+        results.push(await reprocessAsset(gameDir, asset, themeUpdate))
+      } else if (await restoreThemeFromOutput(gameDir, asset, themeUpdate)) {
+        console.log(`  [restore] ${asset.id} (raw 없음, 출력 파일에서 theme.json만 복원)`)
+      } else {
+        throw new Error(`--reprocess: ${asset.id}의 raw도 출력도 없다`)
+      }
+      applyThemeUpdate(gameDir, themeUpdate)
     }
     applyThemeUpdate(gameDir, themeUpdate)
     console.log(formatRunSummary(results))
@@ -201,6 +209,7 @@ async function main(): Promise<void> {
     const result = await generateAsset(gameDir, file, asset, provider, options.force, themeUpdate, options.matte)
     if (result.skipped) console.log(`  [skip] ${asset.id} (이미 있음, --force로 재생성)`)
     results.push(result)
+    applyThemeUpdate(gameDir, themeUpdate)
   }
 
   applyThemeUpdate(gameDir, themeUpdate)

@@ -14,6 +14,7 @@ import { chromaKey } from './chromaKey.js'
 import { removeFlatBackground } from './flatMatte.js'
 import { logAsset, logInfo, logWarn } from './log.js'
 import { readJsonOptional, writeBuffer, writeJson } from './paths.js'
+import { detectAlphaWindow } from './frameWindow.js'
 import { processFlat, processFrame, processSymbol } from './postProcess.js'
 import type { ImageProvider } from './provider/types.js'
 import { resolveAssetPrompt, type PromptAsset, type PromptsFile } from './schema.js'
@@ -184,6 +185,31 @@ async function writeAssetOutputs(gameDir: string, asset: PromptAsset, input: Buf
   }
 
   recordThemeUpdate(gameDir, asset, outPath, themeUpdate)
+}
+
+/**
+ * 이미 만들어진 출력 파일만으로 theme.json 갱신분을 복원한다(`--reprocess`에서 raw가 없는 에셋용).
+ * frame이면 출력 webp의 알파 구멍을 다시 실측해 frameLayout을 채운다. 출력이 없으면 false.
+ */
+export async function restoreThemeFromOutput(gameDir: string, asset: PromptAsset, themeUpdate: ThemeUpdate): Promise<boolean> {
+  const outPath = assetOutPath(gameDir, asset)
+  if (!existsSync(outPath)) return false
+
+  if (asset.kind === 'frame') {
+    const { data, info } = await sharp(outPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    const window = detectAlphaWindow({ data, width: info.width, height: info.height, channels: 4 })
+    if (window !== null) themeUpdate.frameLayout = { window }
+  } else if (asset.kind === 'sheet' && asset.symbol !== undefined) {
+    const jsonPath = sheetJsonPath(outPath)
+    if (!existsSync(jsonPath)) return false
+    const animation = sheetAnimationName(asset)
+    themeUpdate.sheets = {
+      ...(themeUpdate.sheets ?? {}),
+      [asset.symbol]: { ...(themeUpdate.sheets?.[asset.symbol] ?? {}), [animation]: relativeToThemeDir(gameDir, jsonPath) },
+    }
+  }
+  recordThemeUpdate(gameDir, asset, outPath, themeUpdate)
+  return true
 }
 
 /**

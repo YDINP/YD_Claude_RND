@@ -6,6 +6,7 @@
   "scripts": {
     "gen": "tsx src/cli.ts",
     "check:clips": "tsx src/clipCheckCli.ts",
+    "contact": "tsx src/contactSheetCli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

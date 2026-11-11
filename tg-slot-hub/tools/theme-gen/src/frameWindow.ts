@@ -225,3 +225,50 @@ export function punchWindowAlpha(image: RawImage, window: FrameWindowFraction, o
   const data = featherPx > 0 ? featherAlpha(rgba, width, height, featherPx) : rgba
   return { data, width, height, channels: 4 }
 }
+
+/**
+ * 뚫린 알파 구멍의 바운딩 박스. 이미지 중앙에서 `alpha < threshold` 픽셀만 4-연결로 BFS한다.
+ * 색 감지는 창 안을 흰색으로 칠한 프레임에서 일부만 잡히므로, 펀칭과 크로마키 뒤의 실제 구멍을
+ * 기준값으로 삼는다. 중앙이 불투명이면 null.
+ */
+export function detectAlphaWindow(image: RawImage, threshold: number = FRAME_WINDOW_ALPHA_THRESHOLD): FrameWindowFraction | null {
+  const { data, width, height, channels } = image
+  if (channels !== 4) return null
+  const isHole = (idx: number): boolean => (data[idx * 4 + 3] ?? 255) < threshold
+  const start = Math.floor(height / 2) * width + Math.floor(width / 2)
+  if (!isHole(start)) return null
+
+  const visited = new Uint8Array(width * height)
+  const stack = new Int32Array(width * height)
+  let top = 0
+  stack[top++] = start
+  visited[start] = 1
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+
+  while (top > 0) {
+    const idx = stack[--top] as number
+    const x = idx % width
+    const y = (idx - x) / width
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+    const neighbours = [x > 0 ? idx - 1 : -1, x < width - 1 ? idx + 1 : -1, y > 0 ? idx - width : -1, y < height - 1 ? idx + width : -1]
+    for (const n of neighbours) {
+      if (n >= 0 && visited[n] === 0 && isHole(n)) {
+        visited[n] = 1
+        stack[top++] = n
+      }
+    }
+  }
+
+  return { x: minX / width, y: minY / height, w: (maxX + 1 - minX) / width, h: (maxY + 1 - minY) / height }
+}
+
+/** 두 창 사각형의 x/y/w/h 중 가장 큰 차이(분수). */
+export function maxWindowDelta(a: FrameWindowFraction, b: FrameWindowFraction): number {
+  return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.w - b.w), Math.abs(a.h - b.h))
+}

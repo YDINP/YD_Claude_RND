@@ -1,7 +1,8 @@
 import sharp from 'sharp'
 import { chromaKey } from './chromaKey.js'
-import { SYMBOL_MARGIN_RATIO, SYMBOL_THUMB_SIZE, WEBP_QUALITY } from './constants.js'
-import { detectFrameWindow, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
+import { FRAME_WINDOW_ALPHA_MISMATCH, SYMBOL_MARGIN_RATIO, SYMBOL_THUMB_SIZE, WEBP_QUALITY } from './constants.js'
+import { detectAlphaWindow, detectFrameWindow, maxWindowDelta, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
+import { logWarn } from './log.js'
 
 export interface ProcessedSymbol {
   full: Buffer
@@ -65,6 +66,7 @@ export interface ProcessedFrame {
 
 /**
  * `kind: "frame"` 에셋 전용 후처리.
+ * 0) 펀칭·크로마키 뒤 알파 구멍을 BFS로 실측해 `window`로 쓴다(색 감지와 1.5% 넘게 다르면 경고).
  * 1) 중앙 영역에서 초록/흰색 placeholder 릴 창을 찾아 알파 0으로 뚫는다(둥근 모서리 + 페더링).
  * 2) 남은 초록 테두리 번짐을 잡기 위해 이미지 전체에 크로마키를 한 번 더 돌린다.
  * 3) 폭 기준으로 `outSize`에 맞춰 리사이즈해 webp로 인코딩한다.
@@ -74,9 +76,21 @@ export async function processFrame(input: Buffer, outSize: number): Promise<Proc
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const raw = { data, width: info.width, height: info.height, channels: 4 as const }
 
-  const window = detectFrameWindow(raw) ?? undefined
-  const punched = window !== undefined ? punchWindowAlpha(raw, window) : raw
+  const colorWindow = detectFrameWindow(raw) ?? undefined
+  const punched = colorWindow !== undefined ? punchWindowAlpha(raw, colorWindow) : raw
   const keyed = chromaKey(punched)
+
+  let window = colorWindow
+  const alphaWindow = detectAlphaWindow(keyed)
+  if (alphaWindow !== null) {
+    if (colorWindow !== undefined && maxWindowDelta(colorWindow, alphaWindow) > FRAME_WINDOW_ALPHA_MISMATCH) {
+      logWarn(
+        `frame: 색 감지 창과 알파 실측 창이 ${(maxWindowDelta(colorWindow, alphaWindow) * 100).toFixed(1)}% 다르다 — 알파 실측을 쓴다 ` +
+          `(색 x=${colorWindow.x.toFixed(3)} y=${colorWindow.y.toFixed(3)} w=${colorWindow.w.toFixed(3)} h=${colorWindow.h.toFixed(3)})`,
+      )
+    }
+    window = alphaWindow
+  }
 
   const png = await sharp(keyed.data, { raw: { width: keyed.width, height: keyed.height, channels: 4 } })
     .png()
