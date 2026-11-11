@@ -601,6 +601,63 @@ no people, no faces, no hands, no animals. Camera locked, no camera movement, no
 
 ---
 
+### 2-7. candy-cluster-pop — 슈가 프로스트 주문 카운터 (프리스핀 = 주문 카드 라운드)
+
+팩 컨셉: 매트·새틴 설탕 코팅 젤리(**유리처럼 번들거리지 않는다**), 하늘(`#8fd8f2`)·딸기(`#ff7aa8`)·라임(`#a8e05f`)·
+크림(`#fff1d6`)·포도(`#9d7ae0`). 보너스는 일반 프리스핀이 아니라 **사탕 가게 주문대에서 벌어지는 주문 카드 라운드**다.
+프리스핀 배경(`bg-freespins.webp`)은 하늘색 판벽 위에 크림색 주문 전표 21장이 핀으로 꽂힌 카운터다.
+
+> `art/prompts.json`의 `stylePrefix`가 «NOT glossy and NOT glass-like»를 못박고 있다. 그래서 R12의 «유리»·«광택»
+> 어휘를 이 팩에서는 **반대로** 쓴다 — 프롬프트에 `not glossy, not glass`를 명시한다(fruit-fiesta의 캔디글라스와 정반대).
+
+#### 진입 — 주문 전표가 쏟아진다
+
+> 크림색 주문 전표가 아래에서 소용돌이쳐 올라와 점점 빽빽해지고, **펄럭이며 겹쳐 쌓이는 그 동작으로**
+> 화면 전체를 덮는다. 전표 더미는 덮인 뒤에도 계속 펄럭인다.
+
+**왜 이 팩인가.** 라운드의 정체가 «주문 카드»다. 라운드가 열린다는 것은 전표가 카운터에 도착한다는 뜻이라
+전환이 곧 규칙 예고가 된다. 전표는 종이라 겹치면 구조적으로 불투명해지고(R1), 가장자리가 계속 펄럭여
+단색 정지로 굳지 않는다(R11) — shiba가 겪은 «덮으면 멈춘다»를 소재 단계에서 피한다.
+
+**규칙 적용.** R1(완전 불투명) / R2(3초 사이클 x4) / R3(`camera_fixed` 없이 본문 고정 문구) / R4(손·사람·글자 금지,
+전표는 «completely blank») / R8(올라옴 = 덮임 한 동작) / R9(주어 «order slips»를 첫 문단에) / R11(덮인 채 펄럭임) /
+R12(`stylePrefix`의 매트·설탕·팔레트 hex, `negative`의 photorealistic·glossy glass 가져옴, `cropped edges`·
+`busy background`·`3/4 top-down`은 뺌) / R13(안 겪은 금지어 없음).
+
+```
+Vertical full-screen game transition effect, soft toy-like 3D render, soft matte satin finish with a dusting of fine sugar, not glossy, not glass, not photorealistic, premium mobile game art. A flurry of cream paper order slips with scalloped bottom edges and small strawberry-pink pins flutters in front of a pastel sky-blue candy shop counter with warm hanging lamps behind. One continuous motion repeats: the slips swirl up from the bottom of the frame and pour in thicker and thicker, overlapping and stacking in that same flutter until the whole frame is completely opaque edge to edge, corner to corner, a seamless layered mass of cream slips, holding fully covered for a beat while the slips keep fluttering and rippling so the covered frame is never a flat still color, then the slips blow away and the shop shows through before the next flurry. The slips fluttering in and the frame being covered are one single motion, never separate steps. Each full cycle lasts about three seconds and repeats about four times across the clip. Sky blue #8fd8f2, strawberry #ff7aa8, lime #a8e05f, cream #fff1d6 and grape #9d7ae0 pastel accents, soft top-left light. The slips are completely blank. No text, no letters, no numbers, no logos, no watermark, no people, no faces, no hands, no arms, no fingers, no animals. Only the objects move; the camera never moves. Camera locked, no camera movement, no zoom, no pan.
+```
+
+#### 복귀 — 도장이 찍히고 전표가 걷힌다
+
+> 전표 더미 위로 딸기색 도장이 내려와 **쿵 찍히고, 그 충격이 그대로 전표 전체를 위로 날려 보내며**
+> 하늘색 주문대가 드러난다.
+
+**왜 이 팩인가.** 라운드 규칙에서 카드를 채우면 «도장이 찍힌다». 라운드의 끝을 도장 한 번으로 읽히게 하고,
+진입이 «쏟아져 쌓임»이니 복귀는 «찍고 걷힘»으로 방향을 바꾼다(R6, 역재생 아님). 도장이 사람 손 없이 스스로
+움직이므로 R4를 지킨다. 도장 자국은 **무늬 없는 별**로 못박는다(글자가 찍히면 치명적).
+
+**규칙 적용.** R1·R2·R4·R6·R8(도장 착지 = 전표 날림 한 동작)·R9(도장을 첫 문장에)·R11·R12·R13. 복귀는 덮인 채 시작하므로
+`opaqueMs: 0` 후보다.
+
+```
+Vertical full-screen game transition effect, soft toy-like 3D render, soft matte satin finish with a dusting of fine sugar, not glossy, not glass, not photorealistic, premium mobile game art. A single large round strawberry-pink rubber stamp with a cream handle floats centered above a thick drift of cream paper order slips that fills the frame completely, edge to edge, corner to corner. One continuous motion repeats: the stamp drops straight down and lands with a soft thump, pressing one big plain pink star-shaped mark into the slips, and that same thump lifts the whole drift of slips up and away, fluttering off the top and sides of the frame in pastel waves, revealing a calm pastel sky-blue candy shop counter with warm hanging lamps, fully clear and still, then a fresh flurry of slips pours back in and covers the whole frame corner to corner in complete opacity for a beat while the slips keep fluttering, before the stamp drops again. The stamp landing and the slips lifting away are one single motion, never separate steps. While the frame is covered the slips keep moving, never a flat still color. Each full cycle lasts about three seconds and repeats about four times across the clip. Sky blue #8fd8f2, strawberry #ff7aa8, lime #a8e05f, cream #fff1d6 and grape #9d7ae0 pastel accents, soft top-left light. The slips and the stamp are completely blank except the star mark. No text, no letters, no numbers, no logos, no watermark, no people, no faces, no hands, no arms, no fingers, no animals. Only the objects move; the camera never moves. Camera locked, no camera movement, no zoom, no pan.
+```
+
+> 발주 방식: 위 두 프롬프트를 **각각 한 편씩** 발주했다(승인된 2편, $1.86). R10대로 한 편에서 양방향을 자르는 길도
+> 있었으나 승인 범위가 2편이라 방향별로 뽑았다. `vidgen-portrait.mjs`는 스크래치패드에서 유실돼
+> `vidgen.mjs`(`ben_suno/vocalo-ch/bugnomama/scripts/`)에서 이미지 첨부와 `ratio:'16:9'` 고정만 걷어 낸 t2v 변형을 썼다
+> (`ratio:'9:16'`, `camera_fixed` 미전달, `generate_audio:false`).
+
+> **채택 결과 (candy-cluster-pop).** 1차 `exit`(도장이 전표 더미 위에 얹힘)는 더미가 화면 아래 65%만 덮고 위에 하늘색
+> 벽과 도장이 그대로 보여 R1 위반이라 폐기했다. 프롬프트를 «초근접, 더미가 프레임을 가득 채움»으로 바꿔 **한 번 재발주**
+> (`exit2`, 총 3편 $2.79). 컷: 진입 `candy-enter.mp4` 02.60 → 05.60 (스왑 +2.30s, 덮임 약 0.7s 동안에도 전표가 계속 펄럭임),
+> 복귀 `candy-exit2.mp4` 00.90 → 03.90 (스왑 +0.00s, 도장 착지 후 전표가 날려 올라가며 주문대 노출). 16fps/q60, 48프레임,
+> 최대 프레임 63ms, 정지 0.0%. 진입 328 KiB / 복귀 463 KiB. 한계: 진입 마지막 0.5초는 초근접 전표라 초점이 흐리고,
+> 복귀에서 드러나는 주문대는 약간 사진 같은 질감이다(전표·도장은 장난감 톤).
+
+---
+
 ## 3. 생성 결과 실측
 
 `doubao-seedance-2-0` t2v, 9:16, 1080p, 13초, `generate_audio: false`.

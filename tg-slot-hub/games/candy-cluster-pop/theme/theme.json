@@ -147,6 +147,18 @@
   "sound": {
     "preset": "candy"
   },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2300,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
+  },
   "background": "bg.webp",
   "backgroundFreeSpins": "bg-freespins.webp",
   "sheets": {
