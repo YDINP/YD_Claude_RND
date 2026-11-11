@@ -14,8 +14,9 @@ export function isBothWays(math: GameMath): boolean {
   return math.ways?.bothWays === true
 }
 
-/** 배당 단위 개수. 라인 게임은 라인 수, ways 게임은 `ways.betDivisor`다. */
+/** 배당 단위 개수. 라인 게임은 라인 수, ways 게임은 `ways.betDivisor`, 클러스터는 1(총 베팅액)이다. */
 export function betUnitCount(math: GameMath): number {
+  if (math.payModel === 'cluster') return 1
   if (!isWaysGame(math)) return math.paylines.length
   return math.ways?.betDivisor ?? DEFAULT_WAYS_BET_DIVISOR
 }

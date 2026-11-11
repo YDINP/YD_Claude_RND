@@ -23,6 +23,10 @@ export function winBetMultiple(wins: readonly WinLine[], math: GameMath, totalBe
   if (isWaysGame(math)) {
     return wins.reduce((sum, win) => sum + waysCountOf(win) * win.multiplier, 0) / units
   }
+  // 클러스터 배수는 총 베팅액 배수이고, 연쇄 사다리가 그 위에 곱해진다.
+  if (math.payModel === 'cluster') {
+    return wins.reduce((sum, win) => sum + win.multiplier * (win.ladder ?? 1), 0) / units
+  }
   return wins.reduce((sum, win) => sum + win.multiplier, 0) / units
 }
 
@@ -41,7 +45,11 @@ export const WIN_TIERS: readonly WinTier[] = ['none', 'big', 'mega', 'epic', 'ma
  */
 export function winTier(wins: readonly WinLine[], math: GameMath, totalBet?: number): WinTier {
   if (wins.length === 0) return 'none'
-  const multiple = winBetMultiple(wins, math, totalBet)
+  return winTierForMultiple(winBetMultiple(wins, math, totalBet))
+}
+
+/** 베팅액 배수 하나로 등급을 정한다. 연쇄 모드처럼 총합을 따로 아는 쪽이 쓴다. */
+export function winTierForMultiple(multiple: number): WinTier {
   if (multiple >= WIN_TIER_MULTIPLIERS.max) return 'max'
   if (multiple >= WIN_TIER_MULTIPLIERS.epic) return 'epic'
   if (multiple >= WIN_TIER_MULTIPLIERS.mega) return 'mega'

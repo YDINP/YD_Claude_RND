@@ -879,3 +879,54 @@ describe('기대감 배선', () => {
     expect(source).not.toMatch(/totalWin|Math\.random|wins/)
   })
 })
+
+describe('연쇄 배선', () => {
+  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const fx = (): string => stripComments(readFileSync(join(srcDir, 'pixi', 'cascadeFx.ts'), 'utf8'))
+
+  it('순서는 착지 → 변형 → 연쇄 → spinEnd다', () => {
+    const source = renderer()
+    const mutationAt = source.indexOf('await this.runMutationPhase(mutationPlan, token)')
+    const cascadeAt = source.indexOf('await this.runCascadePhase(cascadePlan, token)')
+    const endAt = source.indexOf("this.emit({ type: 'spinEnd' })")
+    expect(mutationAt).toBeGreaterThan(-1)
+    expect(cascadeAt).toBeGreaterThan(mutationAt)
+    expect(endAt).toBeGreaterThan(cascadeAt)
+  })
+
+  it('연쇄 연출은 텍스처를 시작에 한 번 정하고 바꾸지 않는다', () => {
+    // 착지한 판에서 심볼이 제자리에서 바뀌어 보이는 경로를 아예 두지 않는다.
+    expect(fx()).not.toMatch(/\.texture\s*=/)
+    expect(fx()).not.toContain('onCommit')
+  })
+
+  it('낙하는 위치 트윈이다', () => {
+    expect(fx()).toContain("timeline.to(sprite, { y: to.y, duration: s(moveMs), ease: 'power2.in' }")
+  })
+
+  it('STOP은 연쇄를 끝내지 않고 압축한다', () => {
+    const source = renderer()
+    const skipAt = source.indexOf('private skipSpin(')
+    const skipEnd = source.indexOf('private async runSpin(')
+    const body = source.slice(skipAt, skipEnd)
+    expect(body).toContain('this.activeCascade?.compress()')
+    expect(body).not.toContain('this.activeCascade?.finish()')
+  })
+
+  it('끼어들면 gridAfter를 확정한 뒤 end를 낸다', () => {
+    const source = renderer()
+    expect(source).toContain('this.applyGridOverride(step.gridAfter)')
+    expect(source).toContain("this.emitCascadeStep(planned, plan.steps.length, 'end')")
+    const killAt = source.indexOf('private killSpinTimelines(')
+    expect(source.slice(killAt, killAt + 800)).toContain('this.activeCascade?.finish()')
+  })
+
+  it('연쇄가 끝나면 finalGrid로 확정한다', () => {
+    expect(renderer()).toContain('this.applyGridOverride(plan.finalGrid)')
+  })
+
+  it('연쇄 판은 slot-engine 값이 아니라 렌더러 사본으로 접는다', () => {
+    const source = readFileSync(join(srcDir, 'cascade.ts'), 'utf8')
+    expect(source).toContain('export function applyCascadeStepToGrid(')
+  })
+})

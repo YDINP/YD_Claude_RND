@@ -15,7 +15,7 @@ import {
   PHASE_LINE_MS,
   REDUCED_WIN_CYCLE_MS,
 } from './constants.js'
-import { totalWinOf, winTier, type WinTier } from './wins.js'
+import { totalWinOf, winTier, winTierForMultiple, type WinTier } from './wins.js'
 import { defaultWaysLabel, isWaysGame, isWaysWin, sortWaysWins } from './ways.js'
 import type { RendererEvent } from './types.js'
 import { spinSpeedProfile, type SpinSpeed } from './timing.js'
@@ -52,6 +52,13 @@ export type PresentationStep =
       durationMs: number
       /** 총합 롤업 길이. 당첨이 여럿이면 `durationMs`보다 짧아 최종값이 머무는 시간이 생긴다. */
       rollupMs: number
+      /** 연쇄 모드에서만. 연쇄 재생 중에 이미 올린 금액이고 롤업은 여기서 시작한다. */
+      fromAmount?: number
+      /**
+       * 연쇄 모드에서만 true. 이긴 칸은 연쇄 중에 이미 터져 끝난 판에 없으므로 다시 짚지 않는다
+       * (스캐터만 강조한다).
+       */
+      cascade?: true
     }
   | { phase: 'feature'; feature: FreeSpinsTrigger; scatters: GridPosition[]; durationMs: number }
   | { phase: 'line'; win: WinLine; scatters: GridPosition[]; durationMs: number }
@@ -75,6 +82,78 @@ export interface PresentationOptions {
    * 홀드도 등급과 무관하게 `PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE`로 고정한다(속도 배율은 그대로).
    */
   presentation?: 'full' | 'brief'
+  /**
+   * `'cascade'`는 연쇄 재생으로 강조를 이미 마친 스핀이다. A단계와 피처만 만들고 라인 스텝은 없다.
+   * 총합은 연쇄 지급에 스캐터 배당과 주문 상품을 더한 값이고, 롤업은 연쇄 합에서 시작한다.
+   * 다중 당첨 머무름은 연쇄가 2단계 이상일 때만 붙는다.
+   */
+  mode?: 'standard' | 'cascade'
+}
+
+/** 승리에 실린 연쇄 단계 수(서로 다른 `cascade` 인덱스 개수). */
+export function cascadeStepCountOf(wins: readonly WinLine[]): number {
+  const seen = new Set<number>()
+  for (const win of wins) if (win.cascade !== undefined) seen.add(win.cascade)
+  return seen.size
+}
+
+/** 연쇄 모드 총합에 더할 피처 지급: 스캐터 배당과 주문 상품. */
+function featurePayout(features: readonly FeatureTrigger[]): number {
+  let sum = 0
+  for (const feature of features) {
+    if (feature.type === 'scatterWin') sum += feature.win
+    else if (feature.type === 'orderComplete') sum += feature.prize
+  }
+  return sum
+}
+
+/**
+ * 연쇄 모드 계획. 등급은 연쇄 합이 아니라 스캐터·주문 상품까지 더한 총합으로 정한다 —
+ * 빅윈·코인·셀레브레이션은 연쇄와 정산이 끝난 뒤 이 한 번만 나간다.
+ */
+function buildCascadePresentation(
+  wins: readonly WinLine[],
+  math: GameMath,
+  options: PresentationOptions,
+  scatters: GridPosition[],
+  freeSpins: FreeSpinsTrigger | null,
+): PresentationStep[] {
+  const features = options.features ?? []
+  const cascadeWin = totalWinOf(wins)
+  const totalWin = cascadeWin + featurePayout(features)
+  if (totalWin <= 0 && scatters.length === 0 && freeSpins === null) return []
+
+  const reduced = options.reducedMotion === true
+  const cap = (ms: number): number => (reduced ? Math.min(ms, REDUCED_WIN_CYCLE_MS) : ms)
+  const brief = options.presentation === 'brief'
+  const tier = tierOfTotal(totalWin, wins, math, options.totalBet)
+  const holdBase = brief ? PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE : phaseAllDurationMs(tier)
+  const hold = Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
+  const dwell = !brief && cascadeStepCountOf(wins) >= 2 ? PHASE_ALL_MULTI_DWELL_MS : 0
+  const ordered = sortWaysWins(wins)
+
+  const steps: PresentationStep[] = [
+    {
+      phase: 'all',
+      wins: ordered,
+      totalWin,
+      tier,
+      scatters,
+      durationMs: cap(hold + dwell),
+      rollupMs: cap(hold),
+      fromAmount: cascadeWin,
+      cascade: true,
+    },
+  ]
+  if (freeSpins !== null) {
+    steps.push({ phase: 'feature', feature: freeSpins, scatters, durationMs: cap(PHASE_FEATURE_MS) })
+  }
+  return steps
+}
+
+function tierOfTotal(totalWin: number, wins: readonly WinLine[], math: GameMath, totalBet?: number): WinTier {
+  if (typeof totalBet !== 'number' || totalBet <= 0) return winTier(wins, math, totalBet)
+  return totalWin > 0 ? winTierForMultiple(totalWin / totalBet) : 'none'
 }
 
 /**
@@ -96,6 +175,7 @@ export function buildPresentation(
   const features = options.features ?? []
   const scatters = scatterPositions(features)
   const freeSpins = findFreeSpins(features)
+  if (options.mode === 'cascade') return buildCascadePresentation(wins, math, options, scatters, freeSpins)
   if (wins.length === 0 && scatters.length === 0 && freeSpins === null) return []
 
   const reduced = options.reducedMotion === true
@@ -317,7 +397,12 @@ export function defaultLineLabel(win: WinLine): string {
  */
 export function presentationOptionsFor(
   opts:
-    | { totalBet?: number; features?: readonly FeatureTrigger[]; presentation?: 'full' | 'brief' }
+    | {
+        totalBet?: number
+        features?: readonly FeatureTrigger[]
+        presentation?: 'full' | 'brief'
+        mode?: 'standard' | 'cascade'
+      }
     | undefined,
   reducedMotion: boolean,
   speed?: SpinSpeed,
@@ -326,6 +411,7 @@ export function presentationOptionsFor(
   if (opts?.totalBet !== undefined) options.totalBet = opts.totalBet
   if (opts?.features !== undefined) options.features = opts.features
   if (opts?.presentation !== undefined) options.presentation = opts.presentation
+  if (opts?.mode !== undefined) options.mode = opts.mode
   if (speed !== undefined) options.speed = speed
   return options
 }
@@ -338,8 +424,10 @@ export function presentationOptionsFor(
  * 짧은 연출을 무한히 반복하며 다음 판을 영영 걸지 않는다.
  */
 export function shouldLoopPresentation(
-  opts: { loop?: boolean; presentation?: 'full' | 'brief' } | undefined,
+  opts: { loop?: boolean; presentation?: 'full' | 'brief'; mode?: 'standard' | 'cascade' } | undefined,
 ): boolean {
   if (opts?.presentation === 'brief') return false
+  // 연쇄 모드는 끝난 판에서 지난 단계를 되짚지 않는다. 한 바퀴(A·피처)로 끝난다.
+  if (opts?.mode === 'cascade') return false
   return opts?.loop !== false
 }

@@ -455,3 +455,39 @@ export const REEL_BACKDROP_INSET_RATIO = 0
 export const ANTICIPATION_EXTRA_MS = 800
 /** 속도 프로파일별 기대감 배율. 터보는 리듬을 깨지 않도록 끈다. 모션 축소도 끈다. */
 export const ANTICIPATION_SPEED_SCALE = { normal: 1, quick: 0.7, turbo: 0 } as const
+
+/**
+ * 연쇄 1단계의 기본 길이(ms): 강조 → 팝 → 낙하. 행은 속도 프로파일과 모션 축소다.
+ * 12연쇄 합이 normal 4.5s / quick 3.4s / turbo 2.6s / 축소 2.4s를 넘지 않는다(테스트 고정).
+ */
+export const CASCADE_PHASE_MS = {
+  normal: { highlightMs: 280, popMs: 180, dropMs: 300 },
+  quick: { highlightMs: 200, popMs: 120, dropMs: 210 },
+  turbo: { highlightMs: 120, popMs: 100, dropMs: 180 },
+  reduced: { highlightMs: 100, popMs: 0, dropMs: 80 },
+} as const
+/** 이 인덱스(0부터)부터 단계마다 줄인다. 3단계부터다. */
+export const CASCADE_DECAY_FROM_INDEX = 2
+/** 단계마다 곱하는 배율. */
+export const CASCADE_DECAY = 0.78
+/** 줄여도 그 행 기본의 이 배율 아래로는 내려가지 않는다. */
+export const CASCADE_FLOOR_RATIO = 0.27
+/** 낙하에서 릴마다 늦게 출발하는 간격(ms). */
+export const CASCADE_DROP_STAGGER_MS = 30
+/** 스태거가 낙하 시간에서 차지할 수 있는 최대 몫. 나머지는 실제 이동이다. */
+export const CASCADE_MAX_STAGGER_PORTION = 0.3
+/** STOP 압축: 단계 길이 = clamp(BUDGET / 남은 단계 수, MIN, MAX). */
+export const CASCADE_SKIP_BUDGET_MS = 1200
+export const CASCADE_SKIP_MIN_MS = 90
+export const CASCADE_SKIP_MAX_MS = 220
+/** 압축한 단계에서 낙하가 차지하는 몫과 하한(ms). 낙하는 압축해도 위치 트윈이다. */
+export const CASCADE_SKIP_DROP_PORTION = 0.5
+export const CASCADE_SKIP_MIN_DROP_MS = 45
+/** 압축한 단계에서 팝이 차지하는 몫. 남는 시간은 강조다. */
+export const CASCADE_SKIP_POP_PORTION = 0.2
+/** 강조 중 이긴 심볼이 부푸는 배율. */
+export const CASCADE_HIGHLIGHT_SCALE = 1.1
+/** 터진 칸 하나에서 흩어지는 파편 수. */
+export const CASCADE_DEBRIS_PER_CELL = 6
+/** 클러스터 외곽선 두께(px). */
+export const CASCADE_OUTLINE_STROKE_PX = 3

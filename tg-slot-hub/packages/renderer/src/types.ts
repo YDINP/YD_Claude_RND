@@ -14,6 +14,8 @@ export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
   window: FrameWindow
+  /** 칸 사이 간격 / 심볼 크기. 없으면 렌더러 기본값(live 팩 값 그대로). */
+  gapRatio?: number
 }
 
 export interface ThemePalette {
