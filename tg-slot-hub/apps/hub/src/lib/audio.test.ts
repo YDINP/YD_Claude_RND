@@ -116,7 +116,7 @@ describe('recipe table', () => {
     window.dispatchEvent(new Event('pointerdown'))
     expect(lastContext).not.toBeNull()
 
-    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork'] as const) {
+    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const) {
       audio.setSoundPreset(preset)
       const before = lastContext!.oscillators
       expect(() => {
@@ -137,6 +137,41 @@ describe('recipe table', () => {
         audio.stopSpinLoop()
       }, preset).not.toThrow()
       expect(lastContext!.oscillators, preset).toBeGreaterThan(before)
+    }
+    vi.unstubAllGlobals()
+  })
+
+  it('candy cascade and order cues make sound, and the pop pitch rises with every step', async () => {
+    const firstFreqs: number[] = []
+    class RecordingContext extends FakeAudioContext {
+      createOscillator = () => {
+        this.oscillators += 1
+        const node = fakeNode()
+        const freq = node.frequency as { setValueAtTime: (v: number) => void }
+        freq.setValueAtTime = vi.fn((v: number) => firstFreqs.push(v))
+        return node
+      }
+    }
+    vi.stubGlobal('AudioContext', RecordingContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('candy')
+
+    const leadFreq = (step: number): number => {
+      firstFreqs.length = 0
+      audio.playCascadePop(step)
+      return firstFreqs[0]!
+    }
+    const pops = Array.from({ length: 10 }, (_, step) => leadFreq(step))
+    for (let i = 1; i < pops.length; i++) expect(pops[i]!, `step ${i}`).toBeGreaterThan(pops[i - 1]!)
+    expect(leadFreq(30)).toBe(pops[9])
+
+    for (const cue of ['playLadderUp', 'playCascadeDrop', 'playOrderTick', 'playOrderComplete', 'playOrderDeal'] as const) {
+      const before = lastContext!.oscillators
+      ;(audio[cue] as (n?: number) => void)(2)
+      expect(lastContext!.oscillators, cue).toBeGreaterThan(before)
     }
     vi.unstubAllGlobals()
   })

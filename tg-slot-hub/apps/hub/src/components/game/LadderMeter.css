@@ -1,0 +1,53 @@
+.hub-ladder {
+  display: flex;
+  gap: 3px;
+  padding: 0 var(--hub-space-sm);
+  height: 22px;
+  align-items: stretch;
+}
+
+.hub-ladder__step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--hub-text-sub);
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+  white-space: nowrap;
+}
+
+.hub-ladder__step--reached {
+  color: var(--hub-gold-light);
+  border-color: rgba(216, 169, 74, 0.45);
+}
+
+.hub-ladder__step--active {
+  color: #2a1a00;
+  background: linear-gradient(180deg, var(--hub-gold-light), var(--hub-gold));
+  border-color: var(--hub-gold-light);
+  animation: hub-ladder-punch 260ms cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes hub-ladder-punch {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-ladder__step--active {
+    animation: none;
+  }
+}

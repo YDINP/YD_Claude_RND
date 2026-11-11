@@ -14,6 +14,7 @@
  * 돌려주기만 한다 — 실제 실행은 store가 한다. 그래서 타이머도 렌더러도 없이 순서를 검증할 수 있다.
  */
 import type { FeatureTrigger, FreeSpinsState, SpinResponse } from '@tgslot/shared'
+import type { CompletedOrder } from './orders'
 
 /** 커튼이 향하는 곳. 렌더러의 `modeTransition.to`와 같은 어휘를 쓴다. */
 export type CurtainTarget = 'freeSpins' | 'base'
@@ -23,8 +24,19 @@ export type CurtainTarget = 'freeSpins' | 'base'
  * 둘 다 사용자가 탭해서 닫는 것이 기본이고, 자동 닫힘은 안전장치다(스핀 속도와 무관하게 고정).
  */
 export type RoundPopup =
-  | { readonly kind: 'freeSpinsEntry'; readonly spins: number; readonly multiplier: number }
-  | { readonly kind: 'freeSpinsExit'; readonly totalWin: number }
+  | {
+      readonly kind: 'freeSpinsEntry'
+      readonly spins: number
+      readonly multiplier: number
+      /** 주문 카드 라운드 진입이면 true — 제목만 바뀐다. */
+      readonly order?: boolean
+    }
+  | {
+      readonly kind: 'freeSpinsExit'
+      readonly totalWin: number
+      /** 주문 카드 라운드 종료 요약. 완료한 카드 목록과 상품 합. 라운드 총합은 `totalWin`이다. */
+      readonly orders?: { readonly items: readonly CompletedOrder[]; readonly prizeTotal: number }
+    }
 
 export type RoundFlowState =
   | { readonly kind: 'idle' }
@@ -206,6 +218,25 @@ export function ceremonyFor(
   }
 
   return null
+}
+
+/**
+ * 주문 카드 라운드의 진입/종료 팝업에 주문 정보를 얹는다. 주문 카드가 없는 게임은 그대로 돌려준다.
+ * 상품 합은 서버가 준 `freeSpinsSummary.orderPrizeTotal`이 우선이고, 없을 때만 기록의 합이다.
+ */
+export function withOrderPopup(
+  ceremony: { popup: RoundPopup; to: CurtainTarget },
+  result: Pick<SpinResponse, 'features'> & Partial<Pick<SpinResponse, 'freeSpinsSummary'>>,
+  log: readonly CompletedOrder[],
+  orderRoundEnabled: boolean,
+): { popup: RoundPopup; to: CurtainTarget } {
+  if (!orderRoundEnabled) return ceremony
+  const { popup } = ceremony
+  if (popup.kind === 'freeSpinsEntry') {
+    return { ...ceremony, popup: { ...popup, order: true } }
+  }
+  const prizeTotal = result.freeSpinsSummary?.orderPrizeTotal ?? log.reduce((sum, item) => sum + item.prize, 0)
+  return { ...ceremony, popup: { ...popup, orders: { items: log, prizeTotal } } }
 }
 
 // ---- 승리 연출 분량 결정 (순수) ----

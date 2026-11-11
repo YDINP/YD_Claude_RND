@@ -17,6 +17,15 @@ const baseGame: GameSummary = {
 }
 
 describe('GameCard', () => {
+  it('writes the spec per pay model: lines, ways and cluster', () => {
+    const { rerender } = render(<GameCard game={baseGame} locale="en" />)
+    expect(screen.getByText('3×3 · 5 lines')).toBeInTheDocument()
+    rerender(<GameCard game={{ ...baseGame, reels: 4, rows: 5, lines: 625 }} locale="en" />)
+    expect(screen.getByText('4×5 · 625 ways')).toBeInTheDocument()
+    rerender(<GameCard game={{ ...baseGame, reels: 6, rows: 5, lines: 0 }} locale="en" />)
+    expect(screen.getByText('6×5 · Cluster 5+')).toBeInTheDocument()
+  })
+
   it('renders the Korean localized name for the ko locale', () => {
     render(<GameCard game={baseGame} locale="ko" />)
     expect(screen.getByText('클래식 777')).toBeInTheDocument()

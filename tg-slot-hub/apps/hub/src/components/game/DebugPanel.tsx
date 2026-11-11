@@ -45,6 +45,10 @@ interface DebugPanelProps {
   phase: GamePhase
   freeSpins: FreeSpinsState | null
   gambleSession: GambleSession | null
+  /** 이 게임에서 보여 줄 프리셋. 없으면 기본 5종. */
+  presets?: readonly DebugPreset[]
+  /** 주문 카드 라운드 중인가. 아니면 `orderComplete`는 잠기고 안내가 뜬다. */
+  orderRoundActive?: boolean
 }
 
 function formatMs(ms: number | null): string {
@@ -64,6 +68,8 @@ export function DebugPanel({
   phase,
   freeSpins,
   gambleSession,
+  presets = DEBUG_PRESETS,
+  orderRoundActive = false,
 }: DebugPanelProps): ReactNode {
   const t = useT()
   const [copied, setCopied] = useState(false)
@@ -91,7 +97,7 @@ export function DebugPanel({
       <section className="hub-debug-panel__section">
         <h3 className="hub-sheet__subtitle">{t('debugPresetsTitle')}</h3>
         <div className="hub-debug-panel__presets">
-          {DEBUG_PRESETS.map((preset) => (
+          {presets.map((preset) => (
             <button
               key={preset}
               type="button"
@@ -100,13 +106,16 @@ export function DebugPanel({
                   ? 'hub-debug-panel__preset-btn hub-debug-panel__preset-btn--armed'
                   : 'hub-debug-panel__preset-btn'
               }
-              disabled={busy}
+              disabled={busy || (preset === 'orderComplete' && !orderRoundActive)}
               onClick={() => onSetPreset(armedPreset === preset ? null : preset)}
             >
               {t(PRESET_LABEL_KEY[preset])}
             </button>
           ))}
         </div>
+        {presets.includes('orderComplete') && !orderRoundActive && (
+          <p className="hub-debug-panel__hint">{t('debugOrderCompleteHint')}</p>
+        )}
         {armedPreset && (
           <p className="hub-debug-panel__armed-note" role="status">
             {t('debugPresetArmedBadge', { preset: t(PRESET_LABEL_KEY[armedPreset]) })}

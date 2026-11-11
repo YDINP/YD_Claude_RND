@@ -13,6 +13,18 @@ interface GameCardProps {
   onPlay?: (gameId: string) => void
 }
 
+/**
+ * 릴 사양 문구. 클러스터(`lines`가 0)는 `Cluster N+`, ways(페이라인이 이렇게 많은 팩은 없다)는 `N ways`.
+ * 요약에 `payModel`/`minCluster`가 실려 오면 그 값이 우선이다.
+ */
+export function specLabel(game: GameSummary & { payModel?: 'lines' | 'ways' | 'cluster'; minCluster?: number }): string {
+  const grid = `${game.reels}×${game.rows}`
+  const model = game.payModel ?? (game.lines === 0 ? 'cluster' : game.lines >= 100 ? 'ways' : 'lines')
+  if (model === 'cluster') return `${grid} · Cluster ${game.minCluster ?? 5}+`
+  if (model === 'ways') return `${grid} · ${game.lines} ways`
+  return `${grid} · ${game.lines} lines`
+}
+
 function localizedName(game: GameSummary, locale: Locale): string {
   if (locale === 'ko' && game.name.ko) return game.name.ko
   return game.name.en
@@ -44,7 +56,7 @@ export function GameCard({ game, locale, onPlay }: GameCardProps): ReactNode {
       <div className="hub-game-card__body">
         <span className="hub-game-card__name">{name}</span>
         <span className="hub-game-card__spec">
-          {game.reels}×{game.rows} · {game.lines} lines
+          {specLabel(game)}
         </span>
         <button
           type="button"

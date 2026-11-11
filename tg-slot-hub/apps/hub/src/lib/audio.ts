@@ -459,6 +459,70 @@ const FRUIT_RECIPE: Recipe = {
   },
 }
 
+/** 캔디: 장조 펜타토닉 2옥타브(G5~E7). 연쇄 팝이 한 단계마다 한 칸씩 오른다. */
+const CANDY_SCALE = [783.99, 880, 987.77, 1174.66, 1318.51, 1567.98, 1760, 1975.53, 2349.32, 2637.02]
+
+/** 사탕 팝: fruit 보다 짧고 높은 사인 한 방울. 위로 튀는 글라이드 + 아주 짧은 반짝임. */
+const candyPopVoice: Voice = (c, f, at, vol) => {
+  tone(c, { freq: f * 0.85, slideTo: f * 1.12, at, dur: 0.055, vol, type: 'sine', attack: 0.001 })
+  tone(c, { freq: f * 2.01, at: at + 0.006, dur: 0.03, vol: vol * 0.25, type: 'sine', attack: 0.001 })
+  noise(c, { at, dur: 0.01, vol: vol * 0.12, filter: 'bandpass', freq: 5200, q: 1.5 })
+}
+
+/** 글로켄슈필: 금속 막대. 비정수 배음 두 개가 빠르게 사라진다. */
+const glockVoice: Voice = (c, f, at, vol) => {
+  tone(c, { freq: f, at, dur: 0.55, vol, type: 'sine', attack: 0.001 })
+  tone(c, { freq: f * 2.76, at, dur: 0.18, vol: vol * 0.4, type: 'sine', attack: 0.001 })
+  tone(c, { freq: f * 5.4, at, dur: 0.07, vol: vol * 0.2, type: 'sine', attack: 0.001 })
+}
+
+/** 마림바: 둥근 나무 울림 + 4배쯤의 짧은 배음 + 채 한 번. */
+const marimbaVoice: Voice = (c, f, at, vol) => {
+  tone(c, { freq: f, at, dur: 0.22, vol, type: 'sine', attack: 0.001 })
+  tone(c, { freq: f * 3.93, at, dur: 0.05, vol: vol * 0.3, type: 'sine', attack: 0.001 })
+  noise(c, { at, dur: 0.012, vol: vol * 0.25, filter: 'bandpass', freq: 2400, q: 1.2 })
+}
+
+const CANDY_RECIPE: Recipe = {
+  loop: { hz: 1800, ticks: 12, tonal: 0.8, alt: 0.3, len: 0.016, vol: 0.13 },
+  riser: { wave: 'triangle', from: 392, to: 1568, pulseHz: 13, lp: 3800, vol: 0.09 },
+  scale: CANDY_SCALE,
+  spinStart(c) {
+    tone(c, { freq: 300, slideTo: 900, dur: 0.12, vol: 0.28, type: 'sine', attack: 0.003 })
+    noise(c, { dur: 0.12, vol: 0.14, filter: 'bandpass', freq: 1400, sweepTo: 4200, q: 1.2 })
+  },
+  reelStop(c, lift) {
+    marimbaVoice(c, 330 * lift, 0, 0.55)
+    noise(c, { dur: 0.02, vol: 0.2, filter: 'bandpass', freq: 1800, q: 1.2 })
+  },
+  winSmall(c, rollup) {
+    run(c, glockVoice, CANDY_SCALE, [0, 2, 4], 0.07, 0.34)
+    sparkle(c, { dur: Math.min(rollup, 1.2), density: 12, vol: 0.07, lo: 1800, hi: 3600, voice: 'glass' })
+  },
+  winBig(c, tier, rollup) {
+    const steps = { big: 6, mega: 8, epic: 9, max: 9 }[tier]
+    for (let i = 0; i < steps; i++) marimbaVoice(c, CANDY_SCALE[i]! * 0.5, i * 0.06, 0.34)
+    const at = steps * 0.06 + 0.05
+    chord(c, glockVoice, [783.99, 987.77, 1174.66, 1567.98], at, 0.22, 0.03)
+    tone(c, { freq: 160, slideTo: 420, at, dur: 0.16, vol: 0.22, type: 'sine' })
+    sparkle(c, { dur: rollup, density: tier === 'big' ? 16 : 24, vol: 0.07, lo: 1800, hi: 3800, voice: 'glass' })
+  },
+  feature(c) {
+    noise(c, { dur: 0.8, vol: 0.16, filter: 'bandpass', freq: 600, sweepTo: 5600, q: 2 })
+    tone(c, { freq: 300, dur: 0.8, vol: 0.18, type: 'sine', slideTo: 1200, attack: 0.04 })
+    run(c, glockVoice, CANDY_SCALE, [3, 4, 5, 6, 7, 8], 0.07, 0.26)
+  },
+  mutation(c) {
+    run(c, marimbaVoice, CANDY_SCALE, [6, 8], 0.05, 0.28)
+  },
+  tick(c, progress) {
+    tone(c, { freq: 2200 + progress * 1000, dur: 0.026, vol: 0.055, type: 'sine', attack: 0.001 })
+  },
+  tickEnd(c, tier) {
+    run(c, glockVoice, CANDY_SCALE, tier === 'none' ? [3, 5] : [4, 6, 8], 0.06, 0.26)
+  },
+}
+
 const WESTERN_RECIPE: Recipe = {
   loop: { hz: 950, ticks: 12, tonal: 0.35, alt: 0.2, len: 0.026, vol: 0.2 },
   riser: { wave: 'sawtooth', from: 110, to: 440, pulseHz: 7, lp: 1500, vol: 0.1 },
@@ -596,8 +660,7 @@ const RECIPES: Record<SoundPreset, Recipe> = {
   western: WESTERN_RECIPE,
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
-  // candy-cluster-pop: 사운드 레인이 전용 레시피로 바꾼다. 그때까지 fruit를 빌려 쓴다.
-  candy: FRUIT_RECIPE,
+  candy: CANDY_RECIPE,
 }
 
 let preset: SoundPreset = 'bell'
@@ -721,25 +784,62 @@ export function playMutation(): void {
 }
 
 // ── 연쇄·주문 카드 (candy-cluster-pop) ─────────────────────
-// 계약만 먼저 고정한 빈 함수다. 소리는 사운드 레인이 채운다(PLAN_candy-cluster-pop.md H10).
+// 음색은 CANDY_RECIPE와 같은 재료(사탕 팝·글로켄·마림바)다. 이 소리들은 캔디 게임에서만 불린다.
 
 /** 연쇄 단계마다의 팝. `step`이 오를수록 음계가 한 칸씩 오른다(0부터). */
-export function playCascadePop(_step: number): void {}
+export function playCascadePop(step: number): void {
+  const c = live()
+  if (!c) return
+  const f = CANDY_SCALE[Math.min(Math.max(0, Math.floor(step)), CANDY_SCALE.length - 1)]!
+  candyPopVoice(c, f, 0, 0.5)
+  candyPopVoice(c, f * 1.26, 0.04, 0.3)
+  candyPopVoice(c, f * 1.5, 0.075, 0.2)
+}
 
 /** 사다리 배수가 한 칸 올랐다. `index`는 사다리 칸(0부터). */
-export function playLadderUp(_index: number): void {}
+export function playLadderUp(index: number): void {
+  const c = live()
+  if (!c) return
+  const n = Math.min(Math.max(0, Math.floor(index)) + 2, CANDY_SCALE.length - 1)
+  marimbaVoice(c, CANDY_SCALE[n]! * 0.5, 0.02, 0.32)
+  glockVoice(c, CANDY_SCALE[n]!, 0.06, 0.2)
+}
 
 /** 지운 칸 위로 사탕이 떨어진다. */
-export function playCascadeDrop(): void {}
+export function playCascadeDrop(): void {
+  const c = live()
+  if (!c) return
+  tone(c, { freq: 900, slideTo: 300, dur: 0.16, vol: 0.12, type: 'sine', attack: 0.004, lp: 3000, lpTo: 600 })
+  noise(c, { at: 0.15, dur: 0.035, vol: 0.12, filter: 'bandpass', freq: 900, q: 1 })
+  tone(c, { freq: 220, slideTo: 130, at: 0.15, dur: 0.07, vol: 0.14, type: 'sine', attack: 0.002 })
+}
 
-/** 토큰이 주문 카드에 닿았다. 단계당 1회로 묶어 부른다. */
-export function playOrderTick(): void {}
+/** 토큰이 주문 카드에 닿았다. 단계당 1회로 묶어 부른다. 마림바 두 알 굴림. */
+export function playOrderTick(): void {
+  const c = live()
+  if (!c) return
+  marimbaVoice(c, 659.25, 0, 0.3)
+  marimbaVoice(c, 783.99, 0.04, 0.28)
+  tone(c, { freq: 3200, at: 0.04, dur: 0.012, vol: 0.05, type: 'sine', attack: 0.001 })
+}
 
-/** 주문 카드 완료 도장. */
-export function playOrderComplete(): void {}
+/** 주문 카드 완료 도장: 쿵 하는 도장 + 글로켄 3음 상행. */
+export function playOrderComplete(): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(0.8)
+  tone(c, { freq: 140, slideTo: 50, dur: 0.16, vol: 0.6, type: 'sine', attack: 0.002 })
+  noise(c, { dur: 0.05, vol: 0.3, filter: 'lowpass', freq: 500, sweepTo: 150, q: 0.7 })
+  run(c, (cc, f, at, v) => glockVoice(cc, f, at + 0.12, v), CANDY_SCALE, [2, 4, 6], 0.09, 0.32)
+}
 
-/** 주문 카드가 새로 깔린다. */
-export function playOrderDeal(): void {}
+/** 주문 카드가 새로 깔린다. 스윽 훑는 소리 + 작은 마림바 한 알. */
+export function playOrderDeal(): void {
+  const c = live()
+  if (!c) return
+  noise(c, { dur: 0.14, vol: 0.1, filter: 'bandpass', freq: 800, sweepTo: 3200, q: 1.2 })
+  marimbaVoice(c, 880, 0.1, 0.16)
+}
 
 // ── 기대감 ────────────────────────────────────────────────
 

@@ -164,3 +164,48 @@
 - 수정 전 스템: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/sfx_before/` (같은 이름)
 - 믹스(최종): `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/<preset>_mix.wav`, SFX 만 `<preset>_sfx.wav`, BGM 만 `<preset>_duck.wav`, BGM `<preset>_base.wav` / `<preset>_free.wav`
 - 원자료: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/sfx_check_final.json`, `mix_check.json`, `bgm_final.log`
+
+## candy-cluster-pop 사운드 (H10·H11) — 2026-11-11
+
+`candy` 프리셋의 전용 레시피(`CANDY_RECIPE`)와 연쇄·주문 카드 효과음 6종, 전용 BGM을 earshot 으로 듣고 잰 기록. 방법은 위와 같고 스템은 `candy_<이벤트>.wav`, BGM 은 BGM 40% 기본 음량으로 렌더했다. **수치는 참고값이고 최종 귀 판정은 사용자 몫이다.**
+
+### 효과음 (G 장조 펜타토닉 2옥타브, G5~E7)
+
+| 항목 | 결과 |
+|---|---|
+| 연쇄 팝 1→10단계 | 최대 스펙트럼 피크 866 → 979 → 1099 → 1319 → 1470 → 1752 → 1962 → 2178 → 2600 → 2912 Hz, **단조 증가**. 단위 테스트(`audio.test.ts`)도 같은 증가를 확인 |
+| 사다리 상승음 0→6 | 988 → 1175 → 1318 → 1568 → 1760 → 1976 → 2349 Hz, 단조 증가 |
+| 클릭·잘린 꼬리 | 13개 스템 전부 마지막 10 ms 꼬리 −180 dB, 클리핑 0 |
+| true peak | 전 스템 −9.3 dBTP 이하(가장 큰 `chain` −9.4, `winsmall` −9.3). **−1 dBTP 이하 충족** |
+| 믹스(30초 장면, BGM 40%) | −25.4 LUFS, true peak −7.4 dBTP, 클리핑 0 |
+
+| 스템 | LUFS | dBTP | earshot 판독 |
+|---|---|---|---|
+| pops(10단계) | −28.6 | −10.6 | “rising short bubble pops in ascending musical notes” z +2.88 (그럴듯) |
+| ladder | −26.1 | −12.3 | — |
+| drop | −40.7 | −22.6 | 조용한 보조음(의도) |
+| ordertick | −31.2 | −14.9 | “short marimba ticks” z +3.70 (강함) |
+| ordercomplete | −20.7 | −9.7 | “a rubber stamp thud followed by three rising glockenspiel notes” z +3.25 (강함) |
+| orderdeal | −35.3 | −19.0 | 조용한 보조음(의도) |
+| chain(5단계+틱+완료+깔기) | −24.4 | −9.4 | “playful candy game sound effects with rising pops and chimes” z +2.42 (약함) |
+| spin / reelstop / winsmall / winbig / feature / rollup | −44.7 / −32.3 / −24.6 / −26.9 / −19.2 / −21.6 | −20.6 ~ −9.3 | 레시피 공통 6종, 클릭 없음 |
+
+### BGM (116 bpm, D 장조, 글로켄 선율 + 통통 신스 베이스 + 핑거 스냅)
+
+| 항목 | candy | fruit(비교) |
+|---|---|---|
+| 기본 LUFS | **−31.6** (목표 −30~−32 충족) | −32.0 |
+| 라운드 변주 LUFS | **−30.7** | −30.4 |
+| true peak | −17.7 / −16.9 dBTP, 클리핑 0 | −17.1 / −15.4 |
+| “happy upbeat cheerful” z | +3.25 (기본) | +2.45 |
+| “bouncy synth bass pop music with glockenspiel and finger snaps” z | +3.70 | +4.28 |
+
+- **fruit 와의 구분**: `ab`(candy vs fruit) CLAP 코사인 **0.91** — 모델은 둘을 거의 같은 소리로 듣는다(참고: 기존 fruit/clockwork 0.89, western/shrine 0.98). 측정 차이는 candy 가 더 밝다(중심 685 Hz vs 463 Hz). 튜닝 라운드를 3번 돌렸지만 0.92 → 0.91 로만 움직였다. 둘 다 밝은 팝·말렛 질감이라 CLAP 이 같은 군으로 묶는 것으로 보인다. **구분은 귀로 확인이 필요하다.**
+- 라운드 변주(free): 반음 위(+1), 16분 하이햇, 마림바 대선율 추가. candy_base↔candy_free 코사인 0.93.
+- BGM `bpm` 필드는 earshot 이 읽지 못했다(None). 설계값 116 이다.
+
+### 파일
+
+- 효과음 스템: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/sfx/candy_<pops|ladder|drop|ordertick|ordercomplete|orderdeal|chain|spin|reelstop|winsmall|winbig|feature|rollup>.wav`
+- BGM·믹스: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/candy_base.wav`, `candy_free.wav`, `candy_mix.wav`, `candy_sfx.wav`(SFX만), `candy_duck.wav`(BGM만, 덕킹 포함)
+- 원자료: `scratchpad/bgm/candy_sfx_check.json`

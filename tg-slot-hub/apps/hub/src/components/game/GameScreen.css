@@ -89,6 +89,15 @@
   border-color: rgba(79, 195, 217, 0.4);
 }
 
+.hub-game-screen__cascade-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--hub-space-xs);
+  flex-shrink: 0;
+  background: var(--hub-bg);
+}
+
 .hub-game-screen__stage {
   position: relative;
   flex: 1;
