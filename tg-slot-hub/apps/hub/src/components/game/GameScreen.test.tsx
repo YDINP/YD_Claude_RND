@@ -338,6 +338,25 @@ describe('GameScreen', () => {
     expect(await screen.findByText('Wild substitutes for all symbols')).toBeInTheDocument()
   })
 
+  it('cluster 게임의 도움말은 와일드를 "모든 심볼 대체"가 아니라 클러스터 합류로 설명한다', async () => {
+    mockedGetGameMath.mockResolvedValue({
+      ...rawMath,
+      symbols: [...rawMath.symbols, { id: 'wild', name: { en: 'Wild' }, wild: true }],
+      wild: { substitutesFor: 'all' },
+    })
+
+    render(<GameScreen gameId="classic-777" />)
+    await screen.findByText('10')
+    act(() => {
+      useGameStore.setState((st) => ({ math: st.math ? { ...st.math, payModel: 'cluster' as const } : st.math }))
+    })
+
+    screen.getByRole('button', { name: 'Help' }).click()
+
+    expect(await screen.findByText(/joins any adjacent cluster/)).toBeInTheDocument()
+    expect(screen.queryByText('Wild substitutes for all symbols')).not.toBeInTheDocument()
+  })
+
   describe('win amount rollup (winTotal renderer event) — no more on-stage banner', () => {
     async function spinAndSettle(response: SpinResponse): Promise<void> {
       mockedApiSpin.mockResolvedValueOnce(response)
@@ -1259,6 +1278,45 @@ describe('GameScreen', () => {
       const row = document.querySelector('.hub-win-strip__free-spins-row')
       expect(row).not.toBeNull()
       expect(row?.textContent).toBe('')
+    })
+
+    it('복원(서버 상태에 프리스핀이 남아 있음)이면 렌더러 모드를 전환 클립 없이(immediate) 맞춘다', async () => {
+      mockedGetGameState.mockResolvedValue({
+        freeSpins: { gameId: 'classic-777', left: 7, total: 10, multiplier: 2, totalBet: 20, accumulatedWin: 30 },
+        state: { freeSpins: null, gamble: null },
+      })
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      const setMode = vi.mocked(createSlotRenderer).mock.results.at(-1)?.value.setMode as ReturnType<typeof vi.fn>
+      await waitFor(() =>
+        expect(setMode).toHaveBeenCalledWith({
+          freeSpins: { left: 7, total: 10, multiplier: 2 },
+          immediate: true,
+        }),
+      )
+      expect(useGameStore.getState().roundFlow.kind).toBe('idle')
+    })
+
+    it('실제 진입 판은 팝업이 닫힌 뒤 immediate 없이 setMode를 불러 전환 클립을 탄다', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      const setMode = vi.mocked(createSlotRenderer).mock.results.at(-1)?.value.setMode as ReturnType<typeof vi.fn>
+      setMode.mockClear()
+
+      await spinAndSettle(
+        baseSpinResponse({
+          isFreeSpin: true,
+          freeSpins: { gameId: 'classic-777', left: 7, total: 10, multiplier: 2, totalBet: 20, accumulatedWin: 30 },
+        }),
+      )
+      expect(setMode).not.toHaveBeenCalled()
+      act(() => useGameStore.getState().dismissRoundPopup())
+
+      expect(setMode).toHaveBeenCalledTimes(1)
+      const arg = setMode.mock.calls[0]?.[0]
+      expect(arg).toEqual({ freeSpins: { left: 7, total: 10, multiplier: 2 } })
+      expect(arg).not.toHaveProperty('immediate')
     })
 
     it('shows the free-spins counter below the reels once the entry curtain finishes, sourced from store.freeSpins (not a renderer event)', async () => {

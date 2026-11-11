@@ -27,6 +27,7 @@ export function isFreeSpinsActive(mode: RendererMode): boolean {
  * 남은 횟수나 배수가 바뀌었다고 다시 연출하면 매 스핀마다 화면이 번쩍인다.
  */
 export function modeTransitionTarget(previous: RendererMode, next: RendererMode): ModeTarget | null {
+  if (next.immediate === true) return null
   const before = isFreeSpinsActive(previous)
   const after = isFreeSpinsActive(next)
   if (before === after) return null

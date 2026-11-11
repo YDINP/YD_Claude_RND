@@ -181,7 +181,11 @@ export interface SpinRenderer {
     },
   ): Promise<void>
   /** 프리스핀 진입/종료 시 배경·프레임 등 시각 모드를 전환한다. `null`로 되돌리면 평소 모드다. */
-  setMode?(mode: { freeSpins?: { left: number; total: number; multiplier: number } | null }): void
+  setMode?(mode: {
+    freeSpins?: { left: number; total: number; multiplier: number } | null
+    /** true면 커튼·클립 없이 곧장 모드를 맞춘다(서버 상태 복원용). */
+    immediate?: boolean
+  }): void
   /**
    * 보고 있던 승리 연출 바퀴를 곧장 접는다(showWins의 약속을 그 자리에서 resolve시킨다). 순환
    * 자체는 멈추지 않는다 — SPIN 버튼/스페이스로 "연출 스킵 + 즉시 다음 스핀"을 할 때 GameScreen이

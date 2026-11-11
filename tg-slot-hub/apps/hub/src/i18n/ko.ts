@@ -59,6 +59,7 @@ const ko: Record<TranslationKey, string> = {
   paylinesTitle: '페이라인',
   betPerLine: '라인당 베팅: {amount}',
   wildSubstitutesAll: '와일드는 모든 심볼을 대체합니다',
+  wildClusterNote: '와일드는 맞닿은 어느 클러스터에든 합류하고, 여러 클러스터에 동시에 속할 수 있습니다. 와일드만으로 이어진 묶음은 당첨되지 않습니다.',
   singlePayFootnote: '1개는 1번 릴에 있을 때만 인정돼요',
   // settings
   settings: '설정',

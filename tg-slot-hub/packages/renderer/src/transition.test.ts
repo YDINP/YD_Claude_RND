@@ -13,6 +13,16 @@ import { buildModeTransition, coverAlphaAt, isFreeSpinsActive, modeTransitionTar
 const active = { freeSpins: { left: 7, total: 10, multiplier: 2 } }
 const base = { freeSpins: null }
 
+describe('modeTransitionTarget immediate', () => {
+  it('복원(immediate)이면 모드가 달라도 전환하지 않는다', () => {
+    expect(modeTransitionTarget(base, { ...active, immediate: true })).toBeNull()
+  })
+
+  it('실제 진입(immediate 없음)은 전환한다', () => {
+    expect(modeTransitionTarget(base, active)).toBe('freeSpins')
+  })
+})
+
 describe('isFreeSpinsActive', () => {
   it('상태가 있으면 켜진 것이다', () => {
     expect(isFreeSpinsActive(active)).toBe(true)

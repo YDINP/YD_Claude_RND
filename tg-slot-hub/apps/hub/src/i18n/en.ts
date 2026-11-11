@@ -58,6 +58,7 @@ const en = {
   paylinesTitle: 'Paylines',
   betPerLine: 'Bet per line: {amount}',
   wildSubstitutesAll: 'Wild substitutes for all symbols',
+  wildClusterNote: 'A wild joins any adjacent cluster and can belong to several clusters at once. A group made only of wilds does not pay.',
   singlePayFootnote: 'A single symbol pays only on reel 1',
   // settings
   settings: 'Settings',

@@ -46,4 +46,9 @@ export interface FreeSpinsMode {
 export interface RendererMode {
   /** 프리스핀 중이면 상태, 아니면 null. */
   freeSpins?: FreeSpinsMode | null
+  /**
+   * true면 모드를 전환 연출(커튼·클립) 없이 곧장 맞춘다. 서버 상태 복원(새로고침/재진입)처럼
+   * 방금 진입한 게 아니라 이미 그 모드였던 경우에 쓴다. 실제 진입 판은 이 값을 주지 않는다.
+   */
+  immediate?: boolean
 }

@@ -582,7 +582,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 오자마자(릴이 돌기도 전에) 커튼이 뜨는 예전 버그가 되살아난다 — 그래서 store.getState()로
   // "지금 이 순간" 값만 한 번 읽고 구독하지 않는다.
   useEffect(() => {
-    rendererInstance?.setMode?.({ freeSpins: toRendererFreeSpinsMode(useGameStore.getState().freeSpins) })
+    // 여기는 복원 경로다(실제 진입은 store의 runCurtain) — 전환 클립·커튼 없이 곧장 맞춘다.
+    rendererInstance?.setMode?.({
+      freeSpins: toRendererFreeSpinsMode(useGameStore.getState().freeSpins),
+      immediate: true,
+    })
   }, [rendererInstance])
 
   // 렌더러가 준비되거나(마운트) 속도가 바뀌면 그대로 반영한다 — 돌고 있는 스핀은 건드리지 않고
@@ -2076,7 +2080,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       )
                     })}
                   </ul>
-                  {math.wild && <p className="hub-paytable__wild-note">{t('wildSubstitutesAll')}</p>}
+                  {math.wild && <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : 'wildSubstitutesAll')}</p>}
                   {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
                 </>
               )}
@@ -2129,7 +2133,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresWildTitle')}</h3>
                       <p className="hub-paytable__wild-note">
-                        {math.wild.substitutesFor === 'all'
+                        {isCluster
+                          ? t('wildClusterNote')
+                          : math.wild.substitutesFor === 'all'
                           ? t('wildSubstitutesAll')
                           : t('wildSubstitutesSome', {
                               symbols: math.wild.substitutesFor.map((id) => symbolLabel(math, id, locale)).join(', '),
