@@ -1,4 +1,6 @@
-import type { CascadeOutcome, OrderCard } from './types.js'
+import { pickWeighted } from './random.js'
+import type { GameMath } from './schema.js'
+import type { CascadeOutcome, OrderCard, Rng } from './types.js'
 
 /** 이번 스핀이 카드에 보태는 값. popSymbol은 더하고, 나머지는 한 스핀 기록과 비교한다. */
 function spinValue(card: OrderCard, outcome: CascadeOutcome): number {
@@ -42,4 +44,33 @@ export function tallyOrders(
     if (updated.progress >= updated.target) completed.push(updated)
   }
   return { cards: next, completed }
+}
+
+/**
+ * 주문 카드를 `count`장 뽑는다. 장당 `pickWeighted` 1회이고, `active`에 있는 id와 이미 뽑은 id는 제외한다.
+ * 후보가 모자라면 뽑을 수 있는 만큼만 돌려준다(RNG 호출도 그만큼). 새 카드의 progress는 0이다.
+ */
+export function drawOrderCards(
+  math: GameMath,
+  active: readonly OrderCard[],
+  count: number,
+  rng: Rng,
+): OrderCard[] {
+  const config = math.orderRound
+  if (config === undefined) throw new RangeError('orderRound 설정이 없는 게임에 drawOrderCards를 호출했다')
+  const taken = new Set(active.map((card) => card.id))
+  const drawn: OrderCard[] = []
+  for (let n = 0; n < count; n += 1) {
+    const weights: Record<string, number> = {}
+    for (const entry of config.pool) if (!taken.has(entry.id)) weights[entry.id] = entry.weight
+    const id = pickWeighted(weights, rng)
+    if (id === undefined) break
+    const entry = config.pool.find((candidate) => candidate.id === id)
+    if (entry === undefined) break
+    taken.add(id)
+    const card: OrderCard = { id: entry.id, kind: entry.kind, target: entry.target, progress: 0, prize: entry.prize }
+    if (entry.symbol !== undefined) card.symbol = entry.symbol
+    drawn.push(card)
+  }
+  return drawn
 }
