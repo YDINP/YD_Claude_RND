@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectFrameWindow, frameWindowRegion, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
+import { detectAlphaWindow, detectFrameWindow, frameWindowRegion, maxWindowDelta, punchWindowAlpha, type FrameWindowFraction } from './frameWindow.js'
 import { FRAME_WINDOW_REGION_PORTRAIT, FRAME_WINDOW_REGION_SQUARE } from './constants.js'
 import type { RawImage } from './chromaKey.js'
 
@@ -209,5 +209,46 @@ describe('detectFrameWindow — 세로(v5) 프레임', () => {
     expect(square.w).toBeLessThan(0.94)
     // 세로 격자에서 폭이 곧 셀 크기이므로 이 차이가 그대로 심볼 크기 손실이다.
     expect(portrait.w).toBeGreaterThanOrEqual(0.96)
+  })
+})
+
+describe('detectAlphaWindow', () => {
+  function holeFrame(holeX0: number, holeX1: number, holeY0: number, holeY1: number): RawImage {
+    const data = Buffer.alloc(WIDTH * HEIGHT * 4)
+    for (let y = 0; y < HEIGHT; y += 1) {
+      for (let x = 0; x < WIDTH; x += 1) {
+        const offset = (y * WIDTH + x) * 4
+        const inHole = x >= holeX0 && x < holeX1 && y >= holeY0 && y < holeY1
+        data[offset] = 216
+        data[offset + 1] = 169
+        data[offset + 2] = 74
+        data[offset + 3] = inHole ? 0 : 255
+      }
+    }
+    return { data, width: WIDTH, height: HEIGHT, channels: 4 }
+  }
+
+  it('중앙에서 이어진 알파 구멍의 바운딩 박스를 분수로 돌려준다', () => {
+    const w = detectAlphaWindow(holeFrame(20, 180, 60, 240)) as FrameWindowFraction
+    expect(w.x).toBeCloseTo(0.1, 6)
+    expect(w.y).toBeCloseTo(0.2, 6)
+    expect(w.w).toBeCloseTo(0.8, 6)
+    expect(w.h).toBeCloseTo(0.6, 6)
+  })
+
+  it('중앙과 이어지지 않은 구멍은 무시한다', () => {
+    const image = holeFrame(20, 180, 60, 240)
+    for (let y = 10; y < 20; y += 1) for (let x = 10; x < 20; x += 1) image.data[(y * WIDTH + x) * 4 + 3] = 0
+    const w = detectAlphaWindow(image) as FrameWindowFraction
+    expect(w.x).toBeCloseTo(0.1, 6)
+    expect(w.y).toBeCloseTo(0.2, 6)
+  })
+
+  it('중앙이 불투명이면 null이다', () => {
+    expect(detectAlphaWindow(holeFrame(0, 0, 0, 0))).toBeNull()
+  })
+
+  it('maxWindowDelta는 네 값 중 가장 큰 차이를 돌려준다', () => {
+    expect(maxWindowDelta({ x: 0.1, y: 0.2, w: 0.8, h: 0.6 }, { x: 0.1, y: 0.25, w: 0.8, h: 0.55 })).toBeCloseTo(0.05, 6)
   })
 })

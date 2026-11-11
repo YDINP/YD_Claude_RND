@@ -140,6 +140,9 @@ export const FRAME_WINDOW_REGION_PORTRAIT = { xMin: 0.01, xMax: 0.99, yMin: 0.05
 export const FRAME_WINDOW_DOWNSCALE = 4
 /** 이 알파값 이하 픽셀은 이미 투명하다고 보고 색상 판정에서 뺀다. */
 export const FRAME_WINDOW_ALPHA_THRESHOLD = 10
+
+/** 색 감지 창과 알파 실측 창이 이 분수 이상 다르면 경고하고 알파 실측을 쓴다. */
+export const FRAME_WINDOW_ALPHA_MISMATCH = 0.015
 /** 초록 판정 하한: g가 이 값보다 커야 한다. */
 export const FRAME_WINDOW_GREEN_MIN_GREEN = 140
 /** 초록 판정 마진: g가 r/b보다 이만큼 더 커야 한다. */

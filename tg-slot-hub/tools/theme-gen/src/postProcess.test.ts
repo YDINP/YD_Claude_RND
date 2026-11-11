@@ -86,6 +86,27 @@ async function buildSyntheticFramePng(): Promise<Buffer> {
     .toBuffer()
 }
 
+describe('processFrame — 알파 실측', () => {
+  it('색 감지가 창의 아래쪽 절반만 잡아도 알파 구멍 전체를 frameLayout으로 쓴다', async () => {
+    const half = await sharp({ create: { width: 160, height: 90, channels: 4, background: { r: 0, g: 255, b: 0, alpha: 255 } } })
+      .png()
+      .toBuffer()
+    const clear = await sharp({ create: { width: 160, height: 90, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 255 } } })
+      .png()
+      .toBuffer()
+    const input = await sharp({ create: { width: 200, height: 300, channels: 4, background: { r: 216, g: 169, b: 74, alpha: 255 } } })
+      .composite([
+        { input: clear, left: 20, top: 60, blend: 'dest-out' },
+        { input: half, left: 20, top: 150 },
+      ])
+      .png()
+      .toBuffer()
+    const { window } = await processFrame(input, 100)
+    expect(window?.y).toBeCloseTo(0.2, 1)
+    expect(window?.h).toBeGreaterThan(0.55)
+  })
+})
+
 describe('processFrame', () => {
   it('릴 창을 찾아 뚫고 frameLayout 분수를 돌려준다', async () => {
     const input = await buildSyntheticFramePng()
