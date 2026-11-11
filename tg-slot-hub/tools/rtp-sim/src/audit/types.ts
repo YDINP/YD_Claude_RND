@@ -173,6 +173,132 @@ export interface DistributionReport {
   observedFeatures: ObservedFeatures | null
   /** RTP가 표본에서 나왔을 때의 정밀도. enumerate/analytic이면 null. */
   precision: RtpPrecision | null
+  /** 연쇄 팩의 연쇄·클러스터·주문 카드 통계. 연쇄가 없거나 전수·해석 모드면 없다. */
+  cascade?: CascadeReport
+}
+
+/** 연쇄 깊이 한 칸. 깊이 = 그 스핀에서 지급된 연쇄 단계 수. */
+export interface CascadeDepthRow {
+  depth: number
+  /** 유료 스핀 수. */
+  base: number
+  baseProbability: number
+  /** 라운드(주문 카드·프리스핀) 스핀 수. */
+  round: number
+}
+
+/** 사다리 단계(연쇄 index)별 지급. */
+export interface LadderRow {
+  index: number
+  multiplier: number
+  hits: number
+  win: number
+  rtp: number
+}
+
+export interface ClusterSizeRow {
+  size: number
+  hits: number
+  win: number
+  rtp: number
+  share: number
+}
+
+/** RTP를 지급 출처로 나눈 값. 넷의 합이 표본 RTP다. */
+export interface CascadeBreakdown {
+  /** 유료 스핀의 클러스터 지급. */
+  lines: number
+  /** 유료 스핀의 스캐터 지급. */
+  scatter: number
+  /** 주문 카드 상품. */
+  orderPrize: number
+  /** 라운드 스핀의 클러스터·스캐터 지급. */
+  roundClusters: number
+  /** lines + scatter. */
+  base: number
+  /** 라운드 스핀 전체 지급을 따로 더한 값. orderPrize + roundClusters와 같아야 한다. */
+  round: number
+}
+
+export interface CascadeReport {
+  paidSpins: number
+  roundSpins: number
+  /** 유료 스핀 중 첫 클러스터가 터진 비율. */
+  firstClusterRate: number
+  /** 첫 클러스터가 터진 유료 스핀의 평균 연쇄 단계 수. */
+  meanCascades: number
+  /** 연쇄 한 단계 뒤에 다음 단계가 이어질 확률 (유료 스핀 전 단계 합산). */
+  continueProbability: number
+  /** 유료 스핀 중 3단계 이상 이어진 비율. */
+  depth3PlusRate: number
+  maxCascades: number
+  /** `maxCascades`에서 끊겼는데 판에 클러스터가 남아 있던 스핀 비율 (전 스핀 기준). */
+  maxCascadesHitRate: number
+  maxCascadesHits: number
+  /** `winCapped`가 붙은 스핀 비율 (전 스핀 기준). */
+  winCappedRate: number
+  winCappedSpins: number
+  /** 캡이 잘라낸 지급의 RTP. 캡을 끄면 RTP가 대략 이만큼 오른다. */
+  capLossRtp: number
+  depth: CascadeDepthRow[]
+  ladder: LadderRow[]
+  clusterSizes: ClusterSizeRow[]
+  breakdown: CascadeBreakdown
+  orders: OrderReport | null
+}
+
+export interface OrderLengthRow {
+  length: number
+  rounds: number
+  probability: number
+}
+
+export interface OrderCompletionRow {
+  completed: number
+  rounds: number
+  probability: number
+}
+
+export interface OrderKindRow {
+  kind: string
+  dealt: number
+  completed: number
+  /** completed / dealt. */
+  rate: number
+}
+
+export interface OrderCardRow {
+  id: string
+  kind: string
+  target: number
+  prize: number
+  dealt: number
+  /** 라운드당 등장 장수. */
+  dealtPerRound: number
+  completed: number
+  rate: number
+  /** 이 카드 상품이 만든 RTP. */
+  prizeRtp: number
+}
+
+export interface OrderReport {
+  rounds: number
+  /** 유료 스핀이 라운드를 연 비율. */
+  entryRate: number
+  meanLength: number
+  maxLength: number
+  /** 스키마상 최장 라운드 (spins + extraSpinsPerOrder x maxOrders). */
+  longestAllowed: number
+  /** longestAllowed를 넘은 라운드 수. 0이어야 한다. */
+  overLength: number
+  lengths: OrderLengthRow[]
+  completions: OrderCompletionRow[]
+  /** 라운드당 완료 장수 평균. */
+  cardsPerRound: number
+  /** 전체 카드 완료율 (completed / dealt). */
+  completionRate: number
+  byKind: OrderKindRow[]
+  byId: OrderCardRow[]
 }
 
 /** 샘플 스핀에 붙는 뮤테이션 요약. 엔진 `MutationEvent`를 화면용으로 줄인 것. */
@@ -279,6 +405,8 @@ export interface ManifestExtras {
   rtpTotalTarget?: number
   /** 이 게임에 요구할 최대 배수 하한. 없으면 릴 수로 정한다. */
   maxWinTarget?: number
+  /** 정식 감사 기본 스핀 수. 파일럿 σ로 낸 n*를 1천만 단위로 올림한 값이다. */
+  auditSpins?: number
   nameKo?: string
   nameEn?: string
   version?: string
@@ -308,6 +436,8 @@ export interface GameSummaryInfo {
   reels: number
   rows: number
   lines: number
+  /** lines / ways / cluster. */
+  payModel: string
   betLevels: number[]
   stripLengths: number[]
   symbolCount: number
@@ -382,7 +512,7 @@ export interface AuditResult {
   generatedAt: string
   game: GameSummaryInfo
   manifest: ManifestExtras | null
-  options: { totalBet: number; spins: number; seed: string }
+  options: { totalBet: number; spins: number; seed: string; shards?: number }
   distribution: DistributionReport
   /** 프리스핀·스캐터 요약. 두 기능이 다 없으면 null. */
   features: FeatureReport | null

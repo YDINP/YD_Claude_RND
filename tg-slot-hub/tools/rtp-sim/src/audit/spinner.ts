@@ -1,4 +1,4 @@
-import { MAX_FREE_SPINS_PER_ROUND, applyMutations, buildGrid, getBetUnit, resolveSpin } from '@tgslot/slot-engine'
+import { MAX_FREE_SPINS_PER_ROUND, getBetUnit, spinUnchecked } from '@tgslot/slot-engine'
 import type { GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
 
 /** 이 게임이 정지 그리드를 평가 전에 변형하는가. */
@@ -10,26 +10,18 @@ export function hasMutations(math: GameMath): boolean {
 /**
  * 베팅 레벨 검사를 건너뛰는 스핀 1회. 검수 도구는 튜닝을 위해 레벨 밖 베팅액도 재야 한다.
  *
- * 엔진의 `spinUnchecked`와 **같은 순서**로 돌린다: 릴 정지를 전부 뽑은 뒤 뮤테이션이 뽑는다.
- * 이 순서는 provably fair 계약이라 어기면 같은 시드에서 다른 결과가 나온다.
- * (`spinUnchecked` 자체는 패키지 밖으로 나오지 않아 `applyMutations`로 조립한다.)
+ * 엔진의 `spinUnchecked`를 그대로 부른다. RNG 소비 순서(릴 정지 → 뮤테이션 → 주문 카드 추첨)는
+ * provably fair 계약이라 도구 쪽에 복제하면 연쇄·주문 팩에서 다른 게임을 재게 된다.
+ * `betUnit`은 예전 호출 모양을 지키려고 남긴 인자다. 엔진이 `getBetUnit`으로 같은 값을 다시 낸다.
  */
 export function drawSpin(
   math: GameMath,
   totalBet: number,
-  betUnit: number,
+  _betUnit: number,
   rng: Rng,
   state?: RoundState,
 ): SpinResult {
-  const stops: number[] = []
-  for (let reel = 0; reel < math.reels; reel += 1) {
-    const strip = math.strips[reel]
-    if (strip === undefined) throw new RangeError(`릴 ${reel}의 스트립이 없다`)
-    stops.push(rng.nextInt(strip.length))
-  }
-  const gridBefore = buildGrid(math, stops)
-  const mutated = applyMutations(math, gridBefore, rng)
-  return resolveSpin(math, mutated.grid, stops, totalBet, betUnit, state, gridBefore, mutated.events)
+  return spinUnchecked(math, totalBet, rng, state)
 }
 
 export { MAX_FREE_SPINS_PER_ROUND }

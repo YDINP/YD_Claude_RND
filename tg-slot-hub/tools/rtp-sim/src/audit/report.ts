@@ -1,6 +1,8 @@
-import { pp } from './stats.js'
+import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import type {
   AuditResult,
+  CascadeReport,
+  OrderReport,
   DistributionMethod,
   MutationStatRow,
   WaysContributionRow,
@@ -100,10 +102,16 @@ function mutationTable(rows: MutationStatRow[]): string {
   )
 }
 
-function countTable(rows: CountContributionRow[]): string {
+function countTable(rows: CountContributionRow[], cluster = false): string {
   return table(
-    ['매치 개수', 'RTP 기여', '전체 대비', '지급 라인 수', '지급 코인'],
-    rows.map((row) => [`${row.count}개 연속`, pct(row.rtp), pct(row.share, 2), num(row.hits), num(row.win)]),
+    [cluster ? '크기' : '매치 개수', 'RTP 기여', '전체 대비', cluster ? '지급 건수' : '지급 라인 수', '지급 코인'],
+    rows.map((row) => [
+      cluster ? `${row.count}칸` : `${row.count}개 연속`,
+      pct(row.rtp),
+      pct(row.share, 2),
+      num(row.hits),
+      num(row.win),
+    ]),
   )
 }
 
@@ -120,6 +128,138 @@ function histogramTable(rows: HistogramRow[], rtp: number): string {
   )
 }
 
+function fixed(value: number, digits = 4): string {
+  return value.toFixed(digits)
+}
+
+/** 연쇄 절. 깊이 분포·사다리 단계·클러스터 크기·캡. */
+function cascadeSections(cascade: CascadeReport): string[] {
+  const b = cascade.breakdown
+  return [
+    '## 5-3. 연쇄',
+    '',
+    '클러스터 배당은 **총 베팅액 기준**이다(총 베팅액 x 페이테이블 배수 x 그 단계의 사다리 배수).',
+    `깊이는 한 스핀에서 지급된 연쇄 단계 수다. P(지속)은 유료 스핀의 단계 합산으로 (Σ깊이 − 첫 클러스터 스핀) / Σ깊이다. ${ESTIMATED}`,
+    '',
+    table(
+      ['지표', '값'],
+      [
+        ['최초 클러스터율 (유료 스핀)', pct(cascade.firstClusterRate)],
+        ['평균 연쇄 (첫 클러스터가 터진 스핀)', fixed(cascade.meanCascades)],
+        ['P(지속)', fixed(cascade.continueProbability)],
+        ['3연쇄 이상 (유료 스핀)', pct(cascade.depth3PlusRate)],
+        [
+          `maxCascades(${cascade.maxCascades}) 도달`,
+          `${pct(cascade.maxCascadesHitRate, 6)} (${num(cascade.maxCascadesHits)}스핀)`,
+        ],
+        ['winCapped 도달', `${pct(cascade.winCappedRate, 6)} (${num(cascade.winCappedSpins)}스핀)`],
+        ['캡 on/off 차 (잘린 지급)', `${pct(cascade.capLossRtp)} — 캡을 끄면 RTP가 대략 이만큼 오른다`],
+        ['관측 스핀', `유료 ${num(cascade.paidSpins)} + 라운드 ${num(cascade.roundSpins)}`],
+      ],
+    ),
+    '',
+    '### 지급 출처',
+    '',
+    table(
+      ['출처', 'RTP 몫'],
+      [
+        ['기본 클러스터 (lines)', pct(b.lines)],
+        ['기본 스캐터 (scatter)', pct(b.scatter)],
+        ['기본 게임 합', pct(b.base)],
+        ['주문 카드 상품 (orderPrize)', pct(b.orderPrize)],
+        ['라운드 클러스터 (roundClusters, 라운드 스캐터 포함)', pct(b.roundClusters)],
+        ['라운드 합', pct(b.round)],
+        ['합계 (표본)', pct(b.base + b.round)],
+      ],
+    ),
+    '',
+    '### 연쇄 깊이 분포',
+    '',
+    table(
+      ['깊이', '유료 스핀', '유료 확률', '라운드 스핀'],
+      cascade.depth.map((row) => [String(row.depth), num(row.base), pct(row.baseProbability), num(row.round)]),
+    ),
+    '',
+    '### 사다리 단계별 지급',
+    '',
+    table(
+      ['단계', '사다리 배수', '지급 클러스터 수', 'RTP 몫'],
+      cascade.ladder.map((row) => [`#${row.index + 1}`, `x${row.multiplier}`, num(row.hits), pct(row.rtp)]),
+    ),
+    '',
+    '### 클러스터 크기 분포',
+    '',
+    table(
+      ['크기', '지급 클러스터 수', 'RTP 몫', '클러스터 지급 대비'],
+      cascade.clusterSizes.map((row) => [`${row.size}칸`, num(row.hits), pct(row.rtp), pct(row.share, 2)]),
+    ),
+    '',
+  ]
+}
+
+/** 주문 카드 절. 등장률·완료율·라운드 길이·완료 장수. */
+function orderSections(orders: OrderReport, breakdown: CascadeReport['breakdown']): string[] {
+  return [
+    '## 5-4. 주문 카드 라운드',
+    '',
+    `라운드 진입은 유료 스핀 기준이다. 완료율 = 완료 장수 / 등장 장수(실제로 판에 올라 플레이된 카드). ${ESTIMATED}`,
+    '',
+    table(
+      ['지표', '값'],
+      [
+        ['라운드 진입률', `${pct(orders.entryRate)} (약 ${triggerOdds(orders.entryRate)}스핀에 1회)`],
+        ['라운드 수', num(orders.rounds)],
+        ['평균 라운드 길이', `${fixed(orders.meanLength, 3)}스핀`],
+        ['최장 라운드', `${orders.maxLength}스핀 (허용 ${orders.longestAllowed}, 위반 ${num(orders.overLength)}건)`],
+        ['라운드당 완료 장수', fixed(orders.cardsPerRound)],
+        ['카드 완료율 (전체)', pct(orders.completionRate, 2)],
+        ['상품 몫', pct(breakdown.orderPrize)],
+        ['라운드 클러스터 몫', pct(breakdown.roundClusters)],
+        ['라운드 몫', pct(breakdown.round)],
+      ],
+    ),
+    '',
+    '### 종류별 완료율',
+    '',
+    table(
+      ['종류', '등장', '완료', '완료율'],
+      orders.byKind.map((row) => ['`' + row.kind + '`', num(row.dealt), num(row.completed), pct(row.rate, 2)]),
+    ),
+    '',
+    '### 카드별',
+    '',
+    table(
+      ['id', '종류', 'target', '상품', '등장', '라운드당 등장', '완료', '완료율', '상품 RTP'],
+      orders.byId.map((row) => [
+        '`' + row.id + '`',
+        row.kind,
+        String(row.target),
+        `${row.prize}x`,
+        num(row.dealt),
+        fixed(row.dealtPerRound, 3),
+        num(row.completed),
+        pct(row.rate, 2),
+        pct(row.prizeRtp),
+      ]),
+    ),
+    '',
+    '### 라운드 길이 분포',
+    '',
+    table(
+      ['길이', '라운드 수', '확률'],
+      orders.lengths.map((row) => [`${row.length}스핀`, num(row.rounds), pct(row.probability, 3)]),
+    ),
+    '',
+    '### 라운드당 완료 장수 분포',
+    '',
+    table(
+      ['완료 장수', '라운드 수', '확률'],
+      orders.completions.map((row) => [`${row.completed}장`, num(row.rounds), pct(row.probability, 3)]),
+    ),
+    '',
+  ]
+}
+
 /** 검수 결과를 한국어 마크다운 리포트로. CLI의 `--out` 파일과 GUI의 내보내기가 같은 함수를 쓴다. */
 export function buildAuditMarkdown(result: AuditResult): string {
   const { game, distribution: dist, features, mc, agreement, ruin, jackpot } = result
@@ -133,7 +273,12 @@ export function buildAuditMarkdown(result: AuditResult): string {
     `# RTP 검수 리포트 — ${title} (\`${game.id}\`)`,
     '',
     `- 생성 시각: ${result.generatedAt}`,
-    `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (라인당 ${num(dist.betPerLine)})`,
+    game.payModel === 'cluster'
+      ? `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (클러스터 배당은 총 베팅액 기준)`
+      : `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (라인당 ${num(dist.betPerLine)})`,
+    ...(result.options.shards === undefined
+      ? []
+      : [`- 시드 샤딩: 워커 ${result.options.shards}개, 샤드 i의 시드 \`${result.options.seed}:shard-i\`, 스핀은 균등 분할 후 합산`]),
     `- 몬테카를로: ${num(result.options.spins)} 스핀, 시드 \`${result.options.seed}\``,
     `- RTP 산출: **${methodLabel(dist.method)}**${
       dist.estimated
@@ -175,7 +320,9 @@ export function buildAuditMarkdown(result: AuditResult): string {
           '배당 모델',
           dist.isWays
             ? `ways (${num(dist.totalBet / dist.betPerLine)} 단위, 웨이당 베팅액 ${num(dist.betPerLine)})`
-            : `lines (${game.lines}개)`,
+            : game.payModel === 'cluster'
+              ? 'cluster (직교 인접 클러스터, 배당 기준 = 총 베팅액)'
+              : `lines (${game.lines}개)`,
         ],
         ['베팅 레벨', game.betLevels.map(num).join(', ')],
         ['스트립 길이', `${game.stripLengths.join(' x ')} (조합 ${num(dist.combos)})`],
@@ -202,8 +349,11 @@ export function buildAuditMarkdown(result: AuditResult): string {
   sections.push(
     `## 2. RTP 산출 — ${methodLabel(dist.method)}`,
     '',
-    dist.estimated
-      ? `정지 조합이 ${num(dist.combos)}개라 전수 조사가 불가능하다. RTP는 닫힌 식으로 **정확히** 구하고,` +
+    dist.method === 'monte-carlo'
+      ? `닫힌 식이 없는 모델이라 RTP까지 표본으로 잰다. 정밀도(표준오차·95% CI·스핀 수·시드)를 함께 기록하고,` +
+        ` 분포·기여도는 ${num(dist.observations)} 스핀 고정 시드 표본에서 낸다. 표본에서 온 값에는 ${ESTIMATED} 표시를 붙였다.`
+      : dist.estimated
+        ? `정지 조합이 ${num(dist.combos)}개라 전수 조사가 불가능하다. RTP는 닫힌 식으로 **정확히** 구하고,` +
         ` 적중률·최대 배수·배수 분포·기여도만 ${num(dist.observations)} 스핀 고정 시드 표본으로 추정한다.` +
         ` 표본에서 온 값에는 ${ESTIMATED} 표시를 붙였다.`
       : `모든 정지 위치 조합 ${num(dist.combos)}개를 남김없이 계산한 값이다. 표본 오차가 없다.`,
@@ -241,10 +391,10 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '### 베팅 레벨별',
     '',
     table(
-      ['총 베팅액', '라인당', 'RTP', '목표 대비', '95% CI', '적중률', '최대 배수', '방법', '판정'],
+      ['총 베팅액', game.payModel === 'cluster' ? '배당 기준' : '라인당', 'RTP', '목표 대비', '95% CI', '적중률', '최대 배수', '방법', '판정'],
       result.betLevels.map((row) => [
         num(row.totalBet),
-        num(row.betPerLine),
+        game.payModel === 'cluster' ? '총 베팅액' : num(row.betPerLine),
         pct(row.rtp),
         pp(row.delta),
         row.ci95HalfWidth === null ? '-' : `±${(row.ci95HalfWidth * 100).toFixed(3)}%p`,
@@ -303,19 +453,19 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '',
     contributionTable(dist.groups, '그룹'),
     '',
-    dist.isWays ? '### 웨이즈 수 분포' : '### 페이라인별',
+    game.payModel === 'cluster' ? '' : dist.isWays ? '### 웨이즈 수 분포' : '### 페이라인별',
     '',
-    dist.isWays
+    game.payModel !== 'cluster' && dist.isWays
       ? `이 게임은 페이라인이 없다. 인접 릴의 심볼 개수를 곱해 경로 수를 세고, 웨이당 베팅액(총 베팅액 / ${num(
           dist.totalBet / dist.betPerLine,
         )})에 배수를 곱해 지급한다.`
       : '',
-    dist.isWays ? '' : lineTable(dist.lines),
+    dist.isWays || game.payModel === 'cluster' ? '' : lineTable(dist.lines),
     dist.isWays ? waysTable(dist.ways) : '',
     '',
-    '### 매치 개수별',
+    game.payModel === 'cluster' ? '### 클러스터 크기별 (스캐터는 개수)' : '### 매치 개수별',
     '',
-    countTable(dist.counts),
+    countTable(dist.counts, game.payModel === 'cluster'),
     '',
   )
 
@@ -377,6 +527,33 @@ export function buildAuditMarkdown(result: AuditResult): string {
                 ? '0회 (캡에 닿지 않았다)'
                 : `${num(features.cappedSpins)}회, 잘린 프리스핀 ${num(features.cappedSpinsLost ?? 0)}회`,
           ],
+        ],
+      ),
+      '',
+    )
+  }
+
+  if (dist.cascade !== undefined) {
+    sections.push(...cascadeSections(dist.cascade))
+    if (dist.cascade.orders !== null) sections.push(...orderSections(dist.cascade.orders, dist.cascade.breakdown))
+  }
+
+  if (dist.precision !== null) {
+    const sigma = dist.precision.stdErr * Math.sqrt(dist.precision.spins)
+    const needed = requiredAuditSpins(sigma)
+    sections.push(
+      '## 5-5. 정밀도와 필요 스핀 수',
+      '',
+      '`n* = ⌈(1.96·σ̂·1.1/0.002)²⌉` — 95% CI 반폭 0.2%p를 10% 여유로 맞추는 스핀 수다.',
+      '',
+      table(
+        ['항목', '값'],
+        [
+          ['σ̂ (라운드 배수, 이번 측정)', fixed(sigma)],
+          ['n*', num(needed)],
+          ['n* 1천만 올림', num(roundAuditSpins(needed))],
+          ['manifest.auditSpins', result.manifest?.auditSpins === undefined ? '미지정' : num(result.manifest.auditSpins)],
+          ['실제 n', num(dist.precision.spins)],
         ],
       ),
       '',

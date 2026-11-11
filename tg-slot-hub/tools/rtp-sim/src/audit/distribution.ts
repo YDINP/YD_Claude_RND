@@ -103,6 +103,25 @@ export function buildFeatureReport(math: GameMath, distribution: DistributionRep
   const config = math.scatter
   if (config === undefined) return null
 
+  const observed = distribution.observedFeatures
+  // 연쇄·주문 카드 팩은 닫힌 식이 없다. 트리거와 라운드 길이도 표본 관측값을 쓴다.
+  if ((math.cascade !== undefined || math.orderRound !== undefined) && observed !== null) {
+    const triggerProbability = observed.spins === 0 ? 0 : observed.triggers / observed.spins
+    return {
+      scatterSymbol: config.symbol,
+      triggerProbability,
+      spinsPerTrigger: observed.triggers === 0 ? 0 : observed.freeSpins / observed.triggers,
+      multiplier: config.freeSpins?.multiplier ?? 1,
+      retrigger: config.freeSpins?.retrigger ?? false,
+      freeSpinsShare: distribution.rtp === 0 ? 0 : distribution.breakdown.freeSpins / distribution.rtp,
+      scatterShare: distribution.rtp === 0 ? 0 : distribution.breakdown.scatter / distribution.rtp,
+      observedTriggerRate: triggerProbability,
+      cappedSpins: observed.cappedSpins,
+      cappedSpinsLost: observed.cappedSpinsLost,
+      observedFreeSpinsPerPaidSpin: observed.spins === 0 ? 0 : observed.freeSpins / observed.spins,
+    }
+  }
+
   const analytic = computeAnalyticRtp(math, distribution.totalBet)
   const feature = config.freeSpins
   const spinsPerTrigger =
@@ -110,7 +129,6 @@ export function buildFeatureReport(math: GameMath, distribution: DistributionRep
       ? 0
       : expectedFreeSpinsPerTrigger(feature.count, analytic.triggerProbability, feature.retrigger)
 
-  const observed = distribution.observedFeatures
   return {
     scatterSymbol: config.symbol,
     triggerProbability: analytic.triggerProbability,

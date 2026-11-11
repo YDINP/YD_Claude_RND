@@ -49,3 +49,16 @@ export function pp(value: number, digits = 3): string {
   const sign = value >= 0 ? '+' : ''
   return `${sign}${(value * 100).toFixed(digits)}%p`
 }
+
+/**
+ * 정식 감사에 필요한 스핀 수 n* = ⌈(1.96·σ·여유/반폭)²⌉. 계획 §3 M2의 식이다.
+ * @param stdDev 라운드 배수의 표준편차 σ̂
+ */
+export function requiredAuditSpins(stdDev: number, halfWidth = 0.002, margin = 1.1): number {
+  return Math.ceil(((1.96 * stdDev * margin) / halfWidth) ** 2)
+}
+
+/** manifest.auditSpins에 적을 값. n*를 1천만 단위로 올린다. */
+export function roundAuditSpins(spins: number): number {
+  return Math.ceil(spins / 10_000_000) * 10_000_000
+}

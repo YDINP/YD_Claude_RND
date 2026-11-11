@@ -16,16 +16,25 @@ import {
   DEFAULT_SAMPLE_SPINS,
   buildAuditMarkdown,
   canEnumerate,
+  pickAuditSpins,
+  resolveMethod,
   runAudit,
 } from './audit/index.js'
+import type { AuditResult } from './audit/index.js'
+import { runShardedAudit } from './audit/shards.js'
 import { findWorkspaceRoot, readJson, resolveMathPath } from './paths.js'
 
 /** 총 베팅액을 지정하지 않았을 때 우선 고르는 값. betLevels에 없으면 첫 레벨을 쓴다. */
 const PREFERRED_BET = 100
 
+/** 워커 수 상한. 메모리가 빠듯한 기계를 지키려는 값이다. */
+export const MAX_SHARDS = 8
+
 interface AuditCliOptions {
   target: string
-  spins: number
+  /** null이면 manifest.auditSpins, 그것도 없으면 기본값. */
+  spins: number | null
+  shards: number
   seed: string
   bet: number | null
   out: string | null
@@ -37,7 +46,8 @@ interface AuditCliOptions {
 const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|math.json|게임id> [옵션]
 
 옵션
-  --spins <n>    몬테카를로 스핀 수 (기본 ${DEFAULT_AUDIT_SPINS.toLocaleString('en-US')})
+  --spins <n>    몬테카를로 스핀 수 (기본 manifest.auditSpins, 없으면 ${DEFAULT_AUDIT_SPINS.toLocaleString('en-US')})
+  --shards <k>   몬테카를로 감사를 워커 k개로 나눠 돈다 (시드 \`<seed>:shard-i\`, 최대 ${MAX_SHARDS})
   --sample <n>   전수 조사가 불가능한 모델에서 분포를 추정할 표본 스핀 수
                  (해석 모델 기본 ${DEFAULT_SAMPLE_SPINS.toLocaleString('en-US')},
                   몬테카를로 모델 기본 ${DEFAULT_MC_SAMPLE_SPINS.toLocaleString('en-US')})
@@ -49,7 +59,8 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run audit <게임폴더|
 
 export function parseAuditArgs(argv: string[]): AuditCliOptions {
   let target: string | undefined
-  let spins = DEFAULT_AUDIT_SPINS
+  let spins: number | null = null
+  let shards = 1
   // 지정하지 않으면 방법에 따라 고른다 (해석 200만 / 몬테카를로 2천5백만).
   let sampleSpins: number | null = null
   let seed = DEFAULT_AUDIT_SEED
@@ -69,6 +80,9 @@ export function parseAuditArgs(argv: string[]): AuditCliOptions {
     switch (arg) {
       case '--spins':
         spins = Number(takeValue())
+        break
+      case '--shards':
+        shards = Number(takeValue())
         break
       case '--sample':
         sampleSpins = Number(takeValue())
@@ -97,13 +111,17 @@ export function parseAuditArgs(argv: string[]): AuditCliOptions {
   }
 
   if (target === undefined) throw new Error(`대상 게임을 지정할 것\n\n${USAGE}`)
-  if (!Number.isInteger(spins) || spins <= 0) throw new Error(`--spins는 양의 정수여야 한다: ${spins}`)
+  if (spins !== null && (!Number.isInteger(spins) || spins <= 0)) throw new Error(`--spins는 양의 정수여야 한다: ${spins}`)
+  if (!Number.isInteger(shards) || shards < 1 || shards > MAX_SHARDS) {
+    throw new Error(`--shards는 1~${MAX_SHARDS} 정수여야 한다: ${shards}`)
+  }
   if (sampleSpins !== null && (!Number.isInteger(sampleSpins) || sampleSpins <= 0)) {
     throw new Error(`--sample은 양의 정수여야 한다: ${sampleSpins}`)
   }
   if (bet !== null && (!Number.isInteger(bet) || bet <= 0)) throw new Error(`--bet은 양의 정수여야 한다: ${bet}`)
-  return { target, spins, seed, bet, out, stdout, sampleSpins }
+  return { target, spins, shards, seed, bet, out, stdout, sampleSpins }
 }
+
 
 /** 검수 베팅액을 고른다. 명시값 > 100 > 첫 betLevel 순. */
 export function pickBet(betLevels: readonly number[], requested: number | null): number {
@@ -114,7 +132,7 @@ export function pickBet(betLevels: readonly number[], requested: number | null):
   return first
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const options = parseAuditArgs(process.argv.slice(2))
   const mathPath = resolveMathPath(options.target)
   const math = parseGameMath(readJson(mathPath))
@@ -138,21 +156,34 @@ function main(): void {
     throw new Error(`--bet ${totalBet}을 쓸 수 없다: ${reason}. 가능한 값: ${math.betLevels.join(', ')}`)
   }
 
-  process.stderr.write(`[rtp-sim] ${mathPath}\n`)
+  const spins = pickAuditSpins(options.spins, manifestJson)
+  process.stderr.write(`[rtp-sim] ${mathPath} (${spins.toLocaleString('en-US')} 스핀)\n`)
   let lastPhase = ''
-  const result = runAudit(math, manifestJson, {
+  let lastPercent = -1
+  const onProgress = (phase: string, ratio: number): void => {
+    const percent = Math.round(ratio * 100)
+    if (phase !== lastPhase || (percent !== lastPercent && percent % 10 === 0)) {
+      process.stderr.write(`\r[rtp-sim] ${phase} ${percent}%   `)
+      lastPhase = phase
+      lastPercent = percent
+    }
+  }
+  const common = {
     totalBet,
-    spins: options.spins,
+    spins,
     seed: options.seed,
     ...(options.sampleSpins === null ? {} : { sampleSpins: options.sampleSpins }),
-    onProgress: (phase, ratio) => {
-      const percent = Math.round(ratio * 100)
-      if (phase !== lastPhase || percent % 10 === 0) {
-        process.stderr.write(`\r[rtp-sim] ${phase} ${percent}%   `)
-        lastPhase = phase
-      }
-    },
-  })
+    onProgress,
+  }
+  const sharded = options.shards > 1 && resolveMethod(math, totalBet) === 'monte-carlo'
+  if (options.shards > 1 && !sharded) {
+    process.stderr.write('[rtp-sim] 닫힌 식이 있는 모델이라 샤딩 없이 돈다\n')
+  }
+  const startedAt = Date.now()
+  const result: AuditResult = sharded
+    ? await runShardedAudit(math, manifestJson, { ...common, shards: options.shards })
+    : runAudit(math, manifestJson, common)
+  process.stderr.write(`\n[rtp-sim] 소요 ${((Date.now() - startedAt) / 1000).toFixed(1)}s\n`)
   process.stderr.write('\r[rtp-sim] 계산 완료                    \n')
 
   const markdown = buildAuditMarkdown(result)
@@ -182,9 +213,7 @@ function main(): void {
   }
 }
 
-try {
-  main()
-} catch (error) {
+main().catch((error: unknown) => {
   process.stderr.write(`\n[rtp-sim] ${error instanceof Error ? error.message : String(error)}\n\n`)
   process.exit(1)
-}
+})

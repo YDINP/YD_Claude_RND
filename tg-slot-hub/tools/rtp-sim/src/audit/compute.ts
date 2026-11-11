@@ -1,4 +1,4 @@
-import { MAX_ENUMERATION_COMBOS, computeExactRtp } from '@tgslot/slot-engine'
+import { MAX_ENUMERATION_COMBOS, computeExactRtp, getBetUnit } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
 import { analyzeDistribution, buildFeatureReport, canEnumerate, resolveMethod } from './distribution.js'
 import { runMonteCarlo } from './mc.js'
@@ -7,12 +7,13 @@ import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
 import { DEFAULT_MC_SAMPLE_SPINS, DEFAULT_SAMPLE_SPINS } from './sampleDistribution.js'
 import { DEFAULT_RUIN_SPINS, DEFAULT_RUIN_START_MULTIPLE, DEFAULT_RUIN_TRIALS, simulateRuin } from './ruin.js'
-import { agreementVerdict, pp } from './stats.js'
+import { agreementVerdict, pp, requiredAuditSpins } from './stats.js'
 import type {
   AgreementVerdict,
   AuditOptions,
   AuditResult,
   BetLevelRow,
+  CascadeReport,
   DistributionMethod,
   DistributionReport,
   FeatureReport,
@@ -20,6 +21,7 @@ import type {
   JackpotAccounting,
   ManifestExtras,
   MonteCarloResult,
+  McAggregate,
   RuinReport,
 } from './types.js'
 
@@ -42,11 +44,22 @@ export const WIDE_REEL_THRESHOLD = 5
 export const DEFAULT_AUDIT_SPINS = 2_000_000
 export const DEFAULT_AUDIT_SEED = '42'
 
+/** 감사 스핀 수. 명시값 > manifest.auditSpins > 기본값 순. */
+export function pickAuditSpins(requested: number | null, manifestJson: unknown): number {
+  if (requested !== null) return requested
+  return readManifestExtras(manifestJson)?.auditSpins ?? DEFAULT_AUDIT_SPINS
+}
+
 /**
  * 몬테카를로로 RTP를 낼 때 요구하는 정밀도. 95% 신뢰구간 반폭이 이보다 넓으면
  * "목표에 들어왔다"는 말 자체가 성립하지 않으므로 표본 부족으로 떨어뜨린다.
  */
 export const MAX_CI95_HALF_WIDTH = 0.002
+
+/** 연쇄 게이트. 한 단계 뒤 다음 단계가 이어질 확률, 첫 클러스터 뒤 평균 단계 수, 상한 도달률. */
+export const MAX_CONTINUE_PROBABILITY = 0.55
+export const MAX_MEAN_CASCADES = 2.5
+export const MAX_CASCADE_CAP_RATE = 0.0001
 
 /**
  * 몬테카를로 게임의 베팅 레벨별 검증에 쓰는 스핀 수.
@@ -95,8 +108,7 @@ export function auditBetLevels(
 ): BetLevelRow[] {
   const options: BetLevelOptions =
     typeof onProgressOrOptions === 'function' ? { onProgress: onProgressOrOptions } : (onProgressOrOptions ?? {})
-  const lines = math.paylines.length
-  const method = options.method ?? resolveMethod(math, math.betLevels[0] ?? lines)
+  const method = options.method ?? resolveMethod(math, math.betLevels[0] ?? math.paylines.length)
   const exactDistribution = method === 'enumerate'
   const spins = options.spins ?? BET_LEVEL_MC_SPINS
   const seed = options.seed ?? DEFAULT_AUDIT_SEED
@@ -105,25 +117,13 @@ export function auditBetLevels(
   math.betLevels.forEach((totalBet, index) => {
     if (method === 'monte-carlo') {
       const run = runMonteCarlo(math, totalBet, spins, `${seed}:level-${totalBet}`, { points: 1 })
-      const halfWidth = Z95 * (run.stdDev / Math.sqrt(run.spins))
-      const delta = run.rtp - math.rtpTarget
-      rows.push({
-        totalBet,
-        betPerLine: totalBet / lines,
-        rtp: run.rtp,
-        hitRate: run.hitRate,
-        maxWinMultiplier: run.maxWin / totalBet,
-        method,
-        ci95HalfWidth: halfWidth,
-        delta,
-        pass: betLevelPasses(delta, halfWidth),
-      })
+      rows.push(betLevelRowFromRun(math, totalBet, run))
     } else {
       const report = computeExactRtp(math, totalBet, { sampleSpins: 0 })
       const delta = report.rtp - math.rtpTarget
       rows.push({
         totalBet,
-        betPerLine: totalBet / lines,
+        betPerLine: getBetUnit(math, totalBet),
         rtp: report.rtp,
         hitRate: exactDistribution ? report.hitRate : null,
         maxWinMultiplier: exactDistribution ? report.maxWinMultiplier : null,
@@ -136,6 +136,23 @@ export function auditBetLevels(
     onProgress(options, (index + 1) / math.betLevels.length)
   })
   return rows
+}
+
+/** 몬테카를로로 잰 레벨 한 줄. 샤드로 나눠 돌린 뒤 합친 집계도 같은 판정을 받는다. */
+export function betLevelRowFromRun(math: GameMath, totalBet: number, run: McAggregate): BetLevelRow {
+  const halfWidth = Z95 * (run.stdDev / Math.sqrt(run.spins))
+  const delta = run.rtp - math.rtpTarget
+  return {
+    totalBet,
+    betPerLine: getBetUnit(math, totalBet),
+    rtp: run.rtp,
+    hitRate: run.hitRate,
+    maxWinMultiplier: run.maxWin / totalBet,
+    method: 'monte-carlo',
+    ci95HalfWidth: halfWidth,
+    delta,
+    pass: betLevelPasses(delta, halfWidth),
+  }
 }
 
 function onProgress(options: BetLevelOptions, ratio: number): void {
@@ -328,6 +345,19 @@ export function buildGates(input: GateInput): GateRow[] {
     detail: `합계 ${histogramSum.toFixed(12)}`,
   })
 
+  if (distribution.method === 'monte-carlo' && extras?.auditSpins !== undefined && distribution.precision !== null) {
+    const precision = distribution.precision
+    const sigma = precision.stdErr * Math.sqrt(precision.spins)
+    const needed = requiredAuditSpins(sigma)
+    gates.push({
+      label: '정식 감사 스핀 수 n ≥ n* = ⌈(1.96·σ̂·1.1/0.002)²⌉',
+      pass: precision.spins >= needed,
+      detail: `n ${precision.spins.toLocaleString('en-US')} / n* ${needed.toLocaleString('en-US')} (σ̂ ${sigma.toFixed(4)}, manifest.auditSpins ${extras.auditSpins.toLocaleString('en-US')})`,
+    })
+  }
+
+  if (distribution.cascade !== undefined) gates.push(...cascadeGates(distribution.cascade))
+
   if (jackpot !== null) {
     gates.push({
       label:
@@ -342,6 +372,48 @@ export function buildGates(input: GateInput): GateRow[] {
     })
   }
 
+  return gates
+}
+
+/** 연쇄·주문 카드 게이트. 계획 §3 M3. */
+export function cascadeGates(cascade: CascadeReport): GateRow[] {
+  const gates: GateRow[] = [
+    {
+      label: `연쇄 지속 확률 P(지속) ≤ ${MAX_CONTINUE_PROBABILITY}`,
+      pass: cascade.continueProbability <= MAX_CONTINUE_PROBABILITY,
+      detail: `${cascade.continueProbability.toFixed(4)} (유료 스핀, 단계 합산)`,
+    },
+    {
+      label: `평균 연쇄 ≤ ${MAX_MEAN_CASCADES}`,
+      pass: cascade.meanCascades <= MAX_MEAN_CASCADES,
+      detail: `${cascade.meanCascades.toFixed(4)} (첫 클러스터가 터진 유료 스핀 기준)`,
+    },
+    {
+      label: `maxCascades(${cascade.maxCascades}) 도달 < ${pct(MAX_CASCADE_CAP_RATE, 2)}`,
+      pass: cascade.maxCascadesHitRate < MAX_CASCADE_CAP_RATE,
+      detail: `${pct(cascade.maxCascadesHitRate, 6)} (${cascade.maxCascadesHits.toLocaleString('en-US')}스핀)`,
+    },
+  ]
+  const orders = cascade.orders
+  if (orders === null) return gates
+  const roundSum = cascade.breakdown.orderPrize + cascade.breakdown.roundClusters
+  gates.push(
+    {
+      label: `주문 라운드 길이 ≤ ${orders.longestAllowed} (위반 0건)`,
+      pass: orders.overLength === 0 && orders.rounds > 0,
+      detail: `최장 ${orders.maxLength}스핀, 위반 ${orders.overLength}건 / ${orders.rounds.toLocaleString('en-US')}라운드`,
+    },
+    {
+      label: '주문 카드 종류별 완료율이 리포트에 있다',
+      pass: orders.byKind.length > 0 && orders.byKind.every((row) => row.dealt > 0),
+      detail: orders.byKind.map((row) => `${row.kind} ${pct(row.rate, 1)}`).join(', '),
+    },
+    {
+      label: '상품 몫 + 라운드 클러스터 몫 = 라운드 몫',
+      pass: Math.abs(roundSum - cascade.breakdown.round) < SUM_EPSILON,
+      detail: `${pct(cascade.breakdown.orderPrize)} + ${pct(cascade.breakdown.roundClusters)} = ${pct(roundSum)} / 라운드 ${pct(cascade.breakdown.round)}`,
+    },
+  )
   return gates
 }
 
@@ -360,7 +432,7 @@ export interface AuditParts {
 export function composeAuditResult(
   math: GameMath,
   manifestJson: unknown,
-  options: Pick<AuditOptions, 'totalBet' | 'spins' | 'seed' | 'generatedAt'>,
+  options: Pick<AuditOptions, 'totalBet' | 'spins' | 'seed' | 'generatedAt'> & { shards?: number },
   parts: AuditParts,
 ): AuditResult {
   const { totalBet, spins, seed } = options
@@ -379,6 +451,7 @@ export function composeAuditResult(
       reels: math.reels,
       rows: math.rows,
       lines: math.paylines.length,
+      payModel: math.payModel ?? 'lines',
       betLevels: [...math.betLevels],
       stripLengths: math.strips.map((strip) => strip.length),
       symbolCount: math.symbols.length,
@@ -387,7 +460,7 @@ export function composeAuditResult(
       groups: readGroups(math),
     },
     manifest: extras,
-    options: { totalBet, spins, seed },
+    options: { totalBet, spins, seed, ...(options.shards === undefined ? {} : { shards: options.shards }) },
     distribution,
     features,
     betLevels,

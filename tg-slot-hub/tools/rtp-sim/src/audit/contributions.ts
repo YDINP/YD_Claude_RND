@@ -136,6 +136,66 @@ export class Accumulators {
       if (stat !== undefined) stat.win += roundWin
     }
   }
+
+  /** 다른 통(샤드)의 값을 더한다. 워커가 구조화 복제로 넘긴, 메서드 없는 객체도 받는다. */
+  absorb(other: AccumulatorsData): void {
+    mergeBuckets(this.symbols, other.symbols)
+    mergeBuckets(this.groups, other.groups)
+    mergeBuckets(this.counts, other.counts)
+    other.lineWin.forEach((win, index) => {
+      this.lineWin[index] = (this.lineWin[index] ?? 0) + win
+    })
+    other.lineHits.forEach((hits, index) => {
+      this.lineHits[index] = (this.lineHits[index] ?? 0) + hits
+    })
+    for (const [key, bucket] of other.ways) {
+      const found = this.ways.get(key)
+      if (found === undefined) this.ways.set(key, { ...bucket })
+      else {
+        found.win += bucket.win
+        found.hits += bucket.hits
+      }
+    }
+    for (const [type, stat] of other.mutations) {
+      const found = this.mutations.get(type)
+      if (found === undefined) this.mutations.set(type, { ...stat })
+      else {
+        found.spins += stat.spins
+        found.cells += stat.cells
+        found.win += stat.win
+      }
+    }
+    this.mutationObservations += other.mutationObservations
+    this.total += other.total
+    this.scatterWin += other.scatterWin
+    this.scatterHits += other.scatterHits
+  }
+}
+
+export type AccumulatorsData = Pick<
+  Accumulators,
+  | 'symbols'
+  | 'groups'
+  | 'counts'
+  | 'lineWin'
+  | 'lineHits'
+  | 'ways'
+  | 'mutations'
+  | 'mutationObservations'
+  | 'total'
+  | 'scatterWin'
+  | 'scatterHits'
+>
+
+export function mergeBuckets<K>(into: Map<K, Bucket>, from: ReadonlyMap<K, Bucket>): void {
+  for (const [key, bucket] of from) {
+    const found = into.get(key)
+    if (found === undefined) into.set(key, { win: bucket.win, hits: bucket.hits })
+    else {
+      found.win += bucket.win
+      found.hits += bucket.hits
+    }
+  }
 }
 
 /** 이론상 정지 조합 수. */

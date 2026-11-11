@@ -11,7 +11,8 @@
     "sim": "tsx src/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "audit": "tsx src/audit-cli.ts"
+    "audit": "tsx src/audit-cli.ts",
+    "tune": "tsx src/tune-cli.ts"
   },
   "dependencies": {
     "@tgslot/game-sdk": "workspace:*",

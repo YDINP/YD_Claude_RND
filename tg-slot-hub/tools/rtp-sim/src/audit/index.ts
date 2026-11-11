@@ -6,8 +6,11 @@ export {
   DEFAULT_AUDIT_SEED,
   DEFAULT_AUDIT_SPINS,
   BET_LEVEL_MC_SPINS,
+  MAX_CASCADE_CAP_RATE,
   MAX_CI95_HALF_WIDTH,
+  MAX_CONTINUE_PROBABILITY,
   MAX_HIT_RATE,
+  MAX_MEAN_CASCADES,
   MIN_HIT_RATE,
   MIN_MAX_WIN_MULTIPLIER,
   MIN_MAX_WIN_MULTIPLIER_5REEL,
@@ -17,9 +20,12 @@ export {
   acceptMonteCarloRtp,
   auditBetLevels,
   betLevelPasses,
+  betLevelRowFromRun,
   buildGates,
+  cascadeGates,
   composeAuditResult,
   maxWinThreshold,
+  pickAuditSpins,
   rtpGate,
   runAudit,
 } from './compute.js'
@@ -35,8 +41,28 @@ export {
   resolveMethod,
 } from './distribution.js'
 export type { AnalyzeOptions } from './distribution.js'
-export { DEFAULT_MC_SAMPLE_SPINS, DEFAULT_SAMPLE_SPINS, sampleDistribution } from './sampleDistribution.js'
-export type { SampleOptions } from './sampleDistribution.js'
+export {
+  DEFAULT_MC_SAMPLE_SPINS,
+  DEFAULT_SAMPLE_SPINS,
+  collectSample,
+  finishSample,
+  mergeEngineMeasurements,
+  mergeSampleStates,
+  sampleDistribution,
+} from './sampleDistribution.js'
+export type { EngineMcMeasurement, SampleOptions, SampleState } from './sampleDistribution.js'
+export { CascadeAccumulator, buildCascadeReport } from './cascadeStats.js'
+export type { CascadeAccumulatorData } from './cascadeStats.js'
+export {
+  finishAuditParts,
+  mergeConvergence,
+  mergeMonteCarlo,
+  planShards,
+  runAuditPart,
+  shardSeed,
+  shardSeedLabel,
+} from './parts.js'
+export type { AuditPart, AuditPartOptions, ShardPlan } from './parts.js'
 export { Accumulators, SCATTER_FALLBACK_KEY, comboCount } from './contributions.js'
 export {
   MAX_FREE_SPINS_PER_ROUND,
@@ -63,6 +89,15 @@ export {
 } from './ruin.js'
 export type { RuinOptions } from './ruin.js'
 export { createSampleSpinner, sampleSpins } from './sample.js'
-export { AGREEMENT_SIGMA, Z95, agreementVerdict, confidenceInterval95, pp, standardError } from './stats.js'
+export {
+  AGREEMENT_SIGMA,
+  Z95,
+  agreementVerdict,
+  confidenceInterval95,
+  pp,
+  requiredAuditSpins,
+  roundAuditSpins,
+  standardError,
+} from './stats.js'
 export type { ConfidenceInterval } from './stats.js'
 export type * from './types.js'
