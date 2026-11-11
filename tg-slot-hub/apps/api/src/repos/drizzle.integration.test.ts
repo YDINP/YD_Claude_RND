@@ -33,6 +33,8 @@ import type { GamePack } from '../games/packs.js'
 import type { ApiConfig } from '../config.js'
 import { JACKPOT_ODDS_DENOMINATOR } from '../economy/config.js'
 import type { Clock } from '../economy/time.js'
+import { applyCascadeScript, orderRoundEntry } from '../testing/cascadeScript.js'
+import type { CascadeScript } from '../testing/cascadeScript.js'
 
 const GAME_ID = 'classic-777'
 const BET = 100
@@ -76,18 +78,27 @@ const noJackpotRng = (): Rng => ({ nextInt: (max) => (max === JACKPOT_ODDS_DENOM
 /** 스핀 당첨액을 테스트가 정해 주는 레포. memory 쪽 테스트의 ScriptedRepos와 같은 수법이다. */
 class ScriptedDrizzleRepos extends DrizzleRepos {
   private win: number | null = null
+  private cascadeScript: CascadeScript | null = null
 
   next(win: number): void {
     this.win = win
   }
 
+  /** 연쇄·주문 라운드 대본. `win`보다 우선한다. */
+  nextCascade(script: CascadeScript): void {
+    this.cascadeScript = script
+  }
+
   override applySpin(input: ApplySpinInput): Promise<ApplySpinResult> {
     const win = this.win
+    const cascadeScript = this.cascadeScript
     this.win = null
+    this.cascadeScript = null
     return super.applySpin({
       ...input,
       compute: (ctx) => {
         const computed = input.compute(ctx)
+        if (cascadeScript !== null) return applyCascadeScript(computed, cascadeScript)
         if (win === null) return computed
         return {
           ...computed,
@@ -373,6 +384,62 @@ describe('M-1: 멱등키는 Postgres에서도 게임별로 스코프된다', () 
       [harness.userId]
     )
     expect(Number(rows.rows[0]?.n)).toBe(1)
+  })
+})
+
+describe('연쇄 라운드는 Postgres에 저장되고 재전송은 재실행 없이 같은 바이트를 낸다', () => {
+  async function cascadeSpin(key: string, script: CascadeScript, totalBet = BET): Promise<Response> {
+    harness.repos.nextCascade(script)
+    return spin(key, { totalBet })
+  }
+
+  it('cascades·state_before 컬럼이 채워지고 재전송 응답이 바이트까지 같다', async () => {
+    const firstRes = await cascadeSpin('pg-cascade-0001', { cascadeSteps: 3, win: 300 })
+    const firstText = await firstRes.text()
+    expect(firstRes.status).toBe(200)
+    expect((JSON.parse(firstText) as SpinResponse).cascades).toHaveLength(3)
+
+    const stored = await harness.client.query<{ cascades: unknown[] | null; state_before: unknown }>(
+      'select cascades, state_before from rounds where user_id = $1',
+      [harness.userId]
+    )
+    expect(stored.rows[0]?.cascades).toHaveLength(3)
+    expect(stored.rows[0]?.state_before).toBeNull()
+
+    // 대본 없이 다시 부른다. 재실행했다면 cascades가 사라진다.
+    const replay = await spin('pg-cascade-0001', {})
+    expect(await replay.text()).toBe(firstText)
+  })
+
+  it('주문 carry가 game_states에 저장되고 라운드 스핀의 state_before에 직전 상태가 남는다', async () => {
+    const entry = await cascadeSpin('pg-order-000001', orderRoundEntry())
+    expect(entry.status).toBe(200)
+    const state = (await storedGameState()) as { freeSpins: { carry?: { orders?: { cards: unknown[] } } } | null }
+    expect(state.freeSpins?.carry?.orders?.cards).toHaveLength(3)
+
+    const round = (await (
+      await cascadeSpin('pg-order-000002', { nextState: orderRoundEntry().nextState, win: 0 })
+    ).json()) as SpinResponse
+    const stored = await harness.client.query<{ state_before: { freeSpinsLeft: number; carry?: unknown } | null }>(
+      'select state_before from rounds where id = $1',
+      [round.roundId]
+    )
+    expect(stored.rows[0]?.state_before).toMatchObject({ freeSpinsLeft: 8, multiplier: 1 })
+    expect(stored.rows[0]?.state_before?.carry).toBeDefined()
+  })
+})
+
+describe('당첨 없는 프리스핀', () => {
+  it('원장 항목이 없어도 스핀이 성공하고 잔액이 그대로다 (빈 insert 회귀)', async () => {
+    harness.repos.nextCascade(orderRoundEntry())
+    expect((await spin('pg-zerofs-000001')).status).toBe(200)
+    const before = await coins()
+
+    harness.repos.nextCascade({ nextState: orderRoundEntry().nextState, win: 0 })
+    const res = await spin('pg-zerofs-000002')
+
+    expect(res.status).toBe(200)
+    expect(await coins()).toBe(before)
   })
 })
 

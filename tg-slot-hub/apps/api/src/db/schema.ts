@@ -118,6 +118,16 @@ export const rounds = pgTable(
     gridBefore: jsonb('grid_before'),
     /** 적용된 뮤테이션 (shared `MutationEvent[]`) */
     mutations: jsonb('mutations'),
+    /**
+     * 연쇄 단계 (`CascadeStep[]`, refill은 릴별 배열). 연쇄 팩만 채운다. 멱등 재전송은 스핀을 다시
+     * 돌리지 않고 `foldCascades(grid, cascades)`로 최종 판을 조립한다. 없으면 NULL(옛 라운드·기존 팩).
+     */
+    cascades: jsonb('cascades'),
+    /**
+     * 스핀 **직전** 라운드 상태 (`RoundState`: 남은 프리스핀·배수·carry). 시드 공개 때 재현 입력으로
+     * 쓴다. 유료 스핀이거나 이 컬럼이 없던 시절의 라운드는 NULL.
+     */
+    stateBefore: jsonb('state_before'),
     wins: jsonb('wins').notNull(),
     /** 라운드 서버 시드 (hex). 라운드가 끝난 뒤 소유자에게만 공개한다. */
     seed: text('seed').notNull(),

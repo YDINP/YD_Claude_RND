@@ -1,4 +1,4 @@
-import type { GambleConfig, SpinResult, WinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, GambleConfig, RoundState, SpinResult, WinLine } from '@tgslot/slot-engine'
 import type {
   FeatureTrigger,
   FreeSpinsState,
@@ -64,6 +64,14 @@ export class InsufficientFundsError extends Error {
   }
 }
 
+/** 프리스핀 세션 종료 요약. 주문 카드 라운드만 뒤의 두 필드가 있다. */
+export interface FreeSpinsSummaryRecord {
+  total: number
+  spins: number
+  ordersCompleted?: number
+  orderPrizeTotal?: number
+}
+
 /** 저장된 스핀 1회. `grid`는 math.json + stops로 재구성하므로 저장하지 않는다. */
 export interface RoundRecord {
   id: string
@@ -76,6 +84,13 @@ export interface RoundRecord {
   gridBefore: string[][] | null
   /** 이 스핀에 적용된 뮤테이션 */
   mutations: MutationEvent[]
+  /** 연쇄 단계. 연쇄 팩만 있고 나머지(기존 6팩·옛 라운드)는 null. 멱등 재전송이 재실행 없이 응답을 조립한다 */
+  cascades: CascadeStep[] | null
+  /**
+   * 스핀 **직전** 라운드 상태(프리스핀 남은 횟수·배수·이월 carry). 유료 스핀이거나 이 필드가 없던
+   * 옛 라운드면 null. 시드 공개로 라운드를 재현할 때 엔진에 그대로 넘기는 입력이다.
+   */
+  stateBefore: RoundState | null
   wins: WinLine[]
   seed: string
   seedHash: string
@@ -94,7 +109,7 @@ export interface RoundRecord {
   /** 스핀 직후의 프리스핀 상태. 세션이 끝났으면 null */
   freeSpinsAfter: FreeSpinsState | null
   /** 이 스핀으로 세션이 끝났을 때의 요약 */
-  freeSpinsSummary?: { total: number; spins: number }
+  freeSpinsSummary?: FreeSpinsSummaryRecord
   /** 이 라운드에서 진행한 더블업 단계 기록 (provably fair 공개용) */
   gambleSteps: GambleStepRecord[]
   createdAt: Date
@@ -175,7 +190,7 @@ export interface ApplySpinResult {
   /** 스핀 반영 후 프리스핀 상태. 세션이 끝났거나 없으면 null */
   freeSpins: FreeSpinsState | null
   /** 이 스핀으로 프리스핀 세션이 끝났을 때만 */
-  freeSpinsSummary?: { total: number; spins: number }
+  freeSpinsSummary?: FreeSpinsSummaryRecord
   /** 이 당첨을 더블업에 걸 수 있을 때만 */
   gambleOffer?: { pendingWin: number; maxSteps: number; expiresAt: string }
 }

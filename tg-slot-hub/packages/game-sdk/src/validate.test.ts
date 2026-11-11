@@ -443,3 +443,80 @@ describe('checkGamePack — git 추적', () => {
     expect(problems).toEqual([])
   })
 })
+
+describe('checkGamePack — 공개 팩의 테마 완결성', () => {
+  const live = { ...fixtureManifest, status: 'live' }
+  const fullTheme = {
+    ...fixtureTheme,
+    frame: 'frame.webp',
+    frameLayout: { window: { x: 0.05, y: 0.18, w: 0.9, h: 0.67 } },
+    celebration: { palette: { core: '#ffe7a3', edge: '#c8892c', glow: '#d8a94a80' } },
+    sound: { preset: 'bell' },
+  }
+  const checkLive = (theme: unknown, extra: FixtureOverrides = {}): PackProblem[] =>
+    check({
+      files: { [PACK_FILES.manifest]: json(live), [PACK_FILES.theme]: json(theme), ...extra.files },
+      extraBinaries: ['theme/frame.webp', ...(extra.extraBinaries ?? [])],
+    })
+
+  it('hidden 팩은 키가 비어도 문제 삼지 않는다', () => {
+    expect(check()).toEqual([])
+  })
+
+  it('공개 팩이 frame·frameLayout·celebration·sound를 빼먹으면 각각 오류다', () => {
+    const problems = checkLive(fixtureTheme)
+    for (const key of ['frame', 'frameLayout', 'celebration', 'sound']) {
+      expect(find(problems, PACK_FILES.theme, key)?.level).toBe('error')
+    }
+    expect(find(problems, PACK_FILES.theme, 'background')).toBeUndefined()
+    expect(find(problems, PACK_FILES.theme, 'palette')).toBeUndefined()
+  })
+
+  it('background를 빼면 오류다', () => {
+    const theme = { ...fullTheme } as Record<string, unknown>
+    delete theme.background
+    expect(find(checkLive(theme), PACK_FILES.theme, 'background')?.level).toBe('error')
+  })
+
+  it('키가 다 있으면 오류가 없다', () => {
+    expect(checkLive(fullTheme).filter((problem) => problem.level === 'error')).toEqual([])
+  })
+
+  it('보너스 라운드가 있는 팩의 backgroundFreeSpins 누락은 경고다', () => {
+    const math = {
+      ...fixtureMath,
+      symbols: [...fixtureMath.symbols, { id: 'scat', name: { en: 'Scatter' }, scatter: true }],
+      strips: [
+        ['wild', 'cherry', 'scat'],
+        ['wild', 'cherry', 'scat'],
+      ],
+      scatter: { symbol: 'scat', freeSpins: { trigger: 2, count: 5, multiplier: 2, retrigger: false } },
+    }
+    const problems = checkLive(fullTheme, { files: { [PACK_FILES.math]: json(math) } })
+    expect(find(problems, PACK_FILES.theme, 'backgroundFreeSpins')?.level).toBe('warn')
+    expect(checkLive(fullTheme).some((problem) => problem.field === 'backgroundFreeSpins')).toBe(false)
+  })
+})
+
+describe('checkGamePack — 연쇄 스트립 길이', () => {
+  const cascadeMath = {
+    ...fixtureMath,
+    reels: 2,
+    rows: 2,
+    payModel: 'cluster',
+    cluster: { minCluster: 3, adjacency: 'orthogonal', wildJoins: true },
+    cascade: { enabled: true, maxCascades: 3, refill: 'gravity', source: 'strip-pull', multiplierLadder: [1, 2] },
+    strips: [Array(8).fill('cherry'), Array(7).fill('cherry')],
+    paylines: [],
+    paytable: { cherry: { '3': 4 } },
+  }
+  const cascadeManifest = { ...fixtureManifest, rows: 2, lines: 0, payModel: 'cluster' }
+
+  it('strip.length < rows x (maxCascades + 1)이면 해당 릴만 경고한다', () => {
+    const problems = check({
+      files: { [PACK_FILES.math]: json(cascadeMath), [PACK_FILES.manifest]: json(cascadeManifest) },
+    })
+    expect(find(problems, PACK_FILES.math, 'strips.0')).toBeUndefined()
+    expect(find(problems, PACK_FILES.math, 'strips.1')?.level).toBe('warn')
+  })
+})
