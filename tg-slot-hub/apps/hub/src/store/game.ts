@@ -14,6 +14,8 @@ import type {
   GambleSide,
   GambleResponse,
   GambleState,
+  CascadeStep,
+  OrderRoundCarry,
 } from '@tgslot/shared'
 import {
   getGameMath,
@@ -26,12 +28,14 @@ import {
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
+import { completedOrders, type CompletedOrder } from '../game/orders'
 import {
   ROUND_FLOW_IDLE,
   ROUND_POPUP_AUTO_CLOSE_MS,
   canStartSpin,
   ceremonyFor,
   roundFlowReducer,
+  withOrderPopup,
   winHoldMs,
   winPresentationMode,
   type RoundFlowEvent,
@@ -132,6 +136,16 @@ export interface SpinToHandle extends PromiseLike<void> {
   skip?(): void
 }
 
+export interface SpinToOptionsLike {
+  durationMs?: number
+  stagger?: number
+  fast?: boolean
+  gridBefore?: string[][]
+  mutations?: MutationEvent[]
+  cascades?: CascadeStep[]
+  finalGrid?: string[][]
+}
+
 export interface SpinRenderer {
   /**
    * fast를 주면(프리스핀 중) 릴 회전을 짧게 줄인다.
@@ -141,7 +155,7 @@ export interface SpinRenderer {
    */
   spinTo(
     stops: number[],
-    options?: { durationMs?: number; stagger?: number; fast?: boolean; gridBefore?: string[][]; mutations?: MutationEvent[] },
+    options?: SpinToOptionsLike,
   ): SpinToHandle
   /**
    * totalBet을 주면 렌더러가 winTotal 이벤트의 등급(tier)을 라인 배수 추정 없이 정확히 계산한다.
@@ -155,6 +169,8 @@ export interface SpinRenderer {
       loop?: boolean
       /** 'brief'면 라인별 순차(B단계) 없이 전체 표시만 짧게 1회 — 오토스핀/프리스핀용. */
       presentation?: 'full' | 'brief'
+      /** 'cascade'면 연쇄 재생 중 강조를 이미 마친 스핀이다 — A단계와 피처만 보여 준다. */
+      mode?: 'standard' | 'cascade'
       totalBet?: number
       features?: FeatureTrigger[]
       /**
@@ -213,18 +229,41 @@ function writeStoredBetIndex(gameId: string, index: number): void {
  * spinTo()에 넘길 옵션을 만든다 — 아무것도 특별한 게 없으면(프리스핀도 아니고 gridBefore/mutations도
  * 없으면) `undefined`를 돌려준다(기존 테스트/렌더러 호출부가 기대하는 "옵션 없음" 그대로).
  */
-function buildSpinToOptions(
-  result: SpinResponse,
-): { fast?: boolean; gridBefore?: string[][]; mutations?: MutationEvent[] } | undefined {
+export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | undefined {
   const hasGridBefore = result.gridBefore !== undefined
   const hasMutations = result.mutations.length > 0
-  if (!result.isFreeSpin && !hasGridBefore && !hasMutations) return undefined
+  const hasCascades = hasCascadeSteps(result)
+  if (!result.isFreeSpin && !hasGridBefore && !hasMutations && !hasCascades) return undefined
 
-  const options: { fast?: boolean; gridBefore?: string[][]; mutations?: MutationEvent[] } = {}
+  const options: SpinToOptionsLike = {}
   if (result.isFreeSpin) options.fast = true
   if (hasGridBefore) options.gridBefore = result.gridBefore
   if (hasMutations) options.mutations = result.mutations
+  if (hasCascades) {
+    options.cascades = result.cascades
+    if (result.finalGrid !== undefined) options.finalGrid = result.finalGrid
+  }
   return options
+}
+
+/** 이번 응답이 연쇄 단계를 담고 있는가(연쇄 팩이 아니면 `cascades`가 없다). */
+export function hasCascadeSteps(result: Pick<SpinResponse, 'cascades'>): boolean {
+  return result.cascades !== undefined && result.cascades.length > 0
+}
+
+/** 서버 응답의 주문 카드 이월 상태. 쓰는 피처가 없으면 null. 값의 출처는 서버뿐이다. */
+export function orderCarryOf(freeSpins: FreeSpinsState | null | undefined): OrderRoundCarry | null {
+  return freeSpins?.carry?.orders ?? null
+}
+
+/** 라운드 동안 완료한 카드 기록. 라운드 진입 응답이면 비우고 시작한다. */
+export function nextOrderLog(
+  log: readonly CompletedOrder[],
+  result: Pick<SpinResponse, 'features'>,
+  math: GameMath | null,
+): CompletedOrder[] {
+  const base = result.features.some((f) => f.type === 'orderRound') ? [] : [...log]
+  return [...base, ...completedOrders(math, result.features)]
 }
 
 function newIdempotencyKey(): string {
@@ -289,6 +328,13 @@ export interface GameState {
   renderer: SpinRenderer | null
   /** 진행 중인 프리스핀. null이면 없음. load() 시 서버에서 이어받고, 매 spin() 응답으로 갱신된다. */
   freeSpins: FreeSpinsState | null
+  /**
+   * 주문 카드 라운드의 서버 확정 상태(`freeSpins.carry.orders`). 쓰는 곳은 load·스핀 공개·재동기화뿐이고
+   * 값은 전부 서버 응답이다. 연쇄 재생 중의 화면 진행도는 OrderBoard 안에서만 따로 센다.
+   */
+  orderRound: OrderRoundCarry | null
+  /** 이번 라운드에서 완료한 주문 카드(종료 팝업용). 서버의 orderComplete 피처에서만 쌓인다. */
+  orderCompleted: CompletedOrder[]
   /** 진행 중인 더블업. null이면 없음. load() 시 서버에서 이어받고, 스핀 응답의 gambleOffer로 새로 생긴다. */
   gambleSession: GambleSession | null
   /**
@@ -404,6 +450,8 @@ const initialState: GameState = {
   idempotencyKey: null,
   renderer: null,
   freeSpins: null,
+  orderRound: null,
+  orderCompleted: [],
   gambleSession: null,
   autoSpin: null,
   debugPreset: null,
@@ -511,7 +559,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         try {
           const state = await getGameState(token, gameId)
           const gambleSession = toGambleSession(state.state.gamble)
-          if (get().gameId === gameId) set({ freeSpins: state.freeSpins, gambleSession })
+          if (get().gameId === gameId) {
+            set({ freeSpins: state.freeSpins, orderRound: orderCarryOf(state.freeSpins), gambleSession })
+          }
         } catch (stateErr) {
           console.error('[game] failed to resume free spins/gamble state', stateErr)
         }
@@ -679,7 +729,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           try {
             const state = await getGameState(resyncToken, gameId)
             if (get().gameId === gameId) {
-              set({ freeSpins: state.freeSpins, gambleSession: toGambleSession(state.state.gamble) })
+              set({
+                freeSpins: state.freeSpins,
+                orderRound: orderCarryOf(state.freeSpins),
+                gambleSession: toGambleSession(state.state.gamble),
+              })
             }
           } catch (stateErr) {
             console.error('[game] failed to resync state after invalid_response', stateErr)
@@ -759,6 +813,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({
         lastResult: result,
         freeSpins: result.freeSpins,
+        orderRound: orderCarryOf(result.freeSpins),
+        orderCompleted: orderLogAfter,
         gambleSession,
         // 이번 스핀이 디버그 프리셋으로 강제됐을 때만 서버가 실어 보낸다(같은 idempotencyKey로
         // 재전송된 응답에는 안 실린다) — 그 외에는 항상 null이다.
@@ -780,7 +836,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 이번 판이 프리스핀 모드 경계를 넘었나(진입 또는 종료). 연출 순서를 정하는 두 자리 —
     // 빅윈 오버레이를 띄울지(아래 try)와 커튼/팝업을 걸지(finally) — 가 **같은 판정**을 봐야
     // 하므로 여기서 한 번만 계산한다. 판단의 재료(스핀 전 freeSpins + 응답)는 이미 다 나왔다.
-    const ceremony = ceremonyFor(freeSpins, result)
+    const orderLogAfter = nextOrderLog(get().orderCompleted, result, get().math)
+    const baseCeremony = ceremonyFor(freeSpins, result)
+    const ceremony = baseCeremony ? withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined) : null
 
     try {
       let reelStopAt: number | null = null
@@ -852,6 +910,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           await renderer.showWins(result.wins, {
             totalBet: result.totalBet,
             features: result.features,
+            ...(hasCascadeSteps(result) ? { mode: 'cascade' as const } : {}),
             // brief는 자기만의 짧은 홀드를 쓴다 — 여기서 늘리면 짧게 스쳐 지나간다는 약속이 깨진다.
             ...(presentation === 'brief'
               ? { presentation: 'brief' as const }

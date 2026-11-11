@@ -8,7 +8,7 @@
  */
 import type { SoundPreset } from '@tgslot/renderer'
 
-export type BgmRole = 'pad' | 'keys' | 'arp' | 'lead' | 'bass' | 'kick' | 'snare' | 'hat' | 'shaker' | 'wood' | 'tick'
+export type BgmRole = 'pad' | 'keys' | 'arp' | 'lead' | 'bass' | 'kick' | 'snare' | 'hat' | 'shaker' | 'wood' | 'tick' | 'counter'
 export type BgmVariant = 'base' | 'free'
 
 export interface BgmNote {
@@ -76,6 +76,10 @@ export interface BgmStyle {
   /** [가볍게, 꽉 차게, 필인]. */
   perc: readonly [readonly PercStep[], readonly PercStep[], readonly PercStep[]]
   freePerc: readonly PercStep[]
+  /** 변주(free)에서 음정 악기를 몇 반음 올릴지. 없으면 0. */
+  freeKeyShift?: number
+  /** 변주(free)에서만 얹는 대선율(화음 구성음 인덱스 무늬). */
+  counter?: { lo: number; patterns: readonly (readonly ArpStep[])[] }
 }
 
 export const BGM_CYCLE_BARS = 32
@@ -249,11 +253,13 @@ export function barEvents(style: BgmStyle, bar: number, variant: BgmVariant = 'b
   const chord = parseChord(style.progression[b]!)
   const nextChord = parseChord(style.progression[(b + 1) % BGM_CYCLE_BARS]!)
   const out: BgmNote[] = []
+  const shift = variant === 'free' ? (style.freeKeyShift ?? 0) : 0
   const push = (role: BgmRole, beat: number, midi: number, dur: number, vel: number, straight = false): void => {
     const jitter = style.humanize > 0 ? (rng() * 2 - 1) * style.humanize : 0
     const at = Math.max(0, (straight ? beat : swingBeat(beat, style.swing)) + jitter)
     if (at >= BEATS_PER_BAR) return
-    out.push({ beat: at, role, midi, dur, vel: Math.min(1, vel) })
+    const pitched = role === 'pad' || role === 'keys' || role === 'arp' || role === 'lead' || role === 'bass' || role === 'counter'
+    out.push({ beat: at, role, midi: pitched ? midi + shift : midi, dur, vel: Math.min(1, vel) })
   }
 
   if (layers.pad && (b === 0 || style.progression[b - 1] !== style.progression[b])) {
@@ -279,6 +285,14 @@ export function barEvents(style: BgmStyle, bar: number, variant: BgmVariant = 'b
       let midi = toneAt(tones, step.idx)
       while (midi > ceiling) midi -= 12
       push('arp', step.beat, midi, step.dur, (step.vel ?? 0.7) * (0.9 + rng() * 0.15))
+    }
+  }
+
+  if (variant === 'free' && style.counter) {
+    const tones = placeTones(chord, style.counter.lo)
+    const group = mulberry32(seedOf(style.seed + 67, cycle, Math.floor(b / 2)))()
+    for (const step of pick(style.counter.patterns, group)) {
+      push('counter', step.beat, toneAt(tones, step.idx), step.dur, (step.vel ?? 0.6) * (0.9 + rng() * 0.15))
     }
   }
 
@@ -697,12 +711,79 @@ const CLOCKWORK: BgmStyle = {
   freePerc: beats([0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75], 'hat', 0.25),
 }
 
+/** 캔디 팝: 글로켄 선율, 통통 튀는 신스 베이스, 핑거 스냅. D장조 116bpm. 라운드(free)는 반음 위 + 16분 하이햇 + 마림바 대선율. */
+const CANDY: BgmStyle = {
+  seed: 37,
+  bpm: 116,
+  swing: 0.1,
+  humanize: 0.008,
+  strum: 0,
+  key: 62,
+  scale: [0, 2, 4, 5, 7, 9, 11],
+  progression: [
+    'D', 'A', 'B:m', 'G', 'D', 'A', 'G', 'A:7',
+    'D', 'F#:m', 'G', 'A', 'B:m', 'G', 'A:sus', 'A:7',
+    'G', 'D', 'E:m', 'A', 'G', 'A', 'B:m', 'D',
+    'E:m', 'A', 'D', 'B:m', 'G', 'A:7', 'D', 'A:sus',
+  ],
+  padLo: 57,
+  keysLo: 62,
+  arpLo: 69,
+  bassLo: 38,
+  freeArpShift: 5,
+  freeTempo: 1.03,
+  freeKeyShift: 1,
+  lead: {
+    lo: 74,
+    hi: 91,
+    rest: 0.15,
+    cells: [
+      [s(0, 0.5), s(0.5, 0.5), s(1, 0.5), s(1.75, 0.25), s(2, 1.5)],
+      [s(0, 0.75), s(0.75, 0.25), s(1, 0.5), s(1.5, 0.5), s(2.5, 0.5), s(3, 0.5), s(3.5, 0.5)],
+      [s(0.5, 0.5), s(1, 0.5), s(1.5, 0.5), s(2, 0.5), s(2.75, 0.25), s(3, 1)],
+      [s(0, 1), s(1, 0.5), s(1.5, 0.5), s(2, 0.5), s(2.5, 0.5), s(3, 1)],
+    ],
+  },
+  keys: [
+    [s(0.5, 0.25, 0.55, 3), s(1.5, 0.25, 0.55, 3), s(2.5, 0.25, 0.55, 3), s(3.5, 0.25, 0.5, 3)],
+    [s(0, 0.25, 0.6, 3), s(1.5, 0.25, 0.5, 3), s(2, 0.25, 0.55, 3), s(2.75, 0.25, 0.5, 3), s(3.5, 0.25, 0.5, 3)],
+  ],
+  arp: [
+    [a(0, 2, 0.25, 0.55), a(0.5, 3, 0.25, 0.4), a(1, 4, 0.25, 0.5), a(1.5, 3, 0.25, 0.4), a(2, 2, 0.25, 0.55), a(2.5, 3, 0.25, 0.4), a(3, 4, 0.25, 0.5), a(3.5, 5, 0.25, 0.4)],
+    [a(0, 0, 0.25, 0.55), a(0.75, 2, 0.25, 0.45), a(1.5, 3, 0.25, 0.45), a(2, 4, 0.25, 0.55), a(2.75, 3, 0.25, 0.45), a(3.5, 2, 0.25, 0.4)],
+  ],
+  bass: [
+    [bs(0, 'r', 0.35), bs(0.5, 'o', 0.25), bs(1, 'r', 0.35), bs(1.75, '5', 0.25), bs(2, 'r', 0.35), bs(2.5, 'o', 0.25), bs(3, '5', 0.3), bs(3.5, 'a', 0.3)],
+    [bs(0, 'r', 0.4), bs(0.75, 'o', 0.25), bs(1.5, 'r', 0.3), bs(2, '5', 0.4), bs(2.75, 'o', 0.25), bs(3.5, 'a', 0.3)],
+  ],
+  perc: [
+    [p(0, 'kick', 0.45), p(2, 'kick', 0.4), ...beats([1, 3], 'snare', 0.5), ...beats([0.5, 1.5, 2.5, 3.5], 'shaker', 0.25)],
+    [
+      p(0, 'kick', 0.5), p(1.75, 'kick', 0.35), p(2, 'kick', 0.45),
+      ...beats([1, 3], 'snare', 0.55),
+      ...beats([0.5, 1.5, 2.5, 3.5], 'shaker', 0.3),
+    ],
+    [
+      p(0, 'kick', 0.5), p(2, 'kick', 0.45),
+      ...beats([1, 3, 3.25, 3.5, 3.75], 'snare', 0.55),
+      ...beats([0.5, 1.5, 2.5], 'shaker', 0.3),
+    ],
+  ],
+  freePerc: beats([0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 0.5, 1.5, 2.5, 3.5, 0, 1, 2, 3], 'hat', 0.28),
+  counter: {
+    lo: 67,
+    patterns: [
+      [a(0.5, 2, 0.25, 0.6), a(1.25, 3, 0.25, 0.5), a(2.5, 4, 0.25, 0.6), a(3.25, 3, 0.25, 0.5)],
+      [a(0.75, 3, 0.25, 0.55), a(1.5, 4, 0.25, 0.6), a(2.25, 2, 0.25, 0.5), a(3.5, 3, 0.25, 0.6)],
+    ],
+  },
+}
+
 export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   bell: LOUNGE,
   fruit: TROPICAL,
   western: WESTERN,
   shrine: SHRINE,
   clockwork: CLOCKWORK,
-  // candy-cluster-pop 전용 스타일이 나오기 전까지 tropical을 빌려 쓴다.
-  candy: TROPICAL,
+  candy: CANDY,
 }

@@ -50,7 +50,8 @@ describe.each(PRESETS)('score: %s', (preset) => {
     expect(style.progression).toHaveLength(BGM_CYCLE_BARS)
     for (const sym of style.progression) expect(() => parseChord(sym)).not.toThrow()
     expect(style.bpm).toBeGreaterThanOrEqual(70)
-    expect(style.bpm).toBeLessThanOrEqual(110)
+    // candy(116)가 가장 빠르다. 라운지 범위는 70..120이다.
+    expect(style.bpm).toBeLessThanOrEqual(120)
   })
 
   it('produces sorted, in-bar, in-range notes for two whole cycles', () => {
@@ -108,6 +109,36 @@ describe.each(PRESETS)('score: %s', (preset) => {
       free += barEvents(style, b, 'free').length
     }
     expect(free).toBeGreaterThan(base)
+  })
+})
+
+describe('candy score', () => {
+  const style = BGM_STYLES.candy
+  const roles = (bar: number, variant: 'base' | 'free', role: string): BgmNote[] =>
+    barEvents(style, bar, variant).filter((n) => n.role === role)
+
+  it('is its own song, not the tropical one', () => {
+    expect(style).not.toBe(BGM_STYLES.fruit)
+    expect(style.bpm).toBe(116)
+    expect(style.scale).toEqual([0, 2, 4, 5, 7, 9, 11])
+  })
+
+  it('round variation goes up one key, adds 16th hats and a marimba counter melody', () => {
+    const bar = 10
+    expect(roles(bar, 'base', 'counter')).toHaveLength(0)
+    expect(roles(bar, 'free', 'counter').length).toBeGreaterThan(0)
+    const baseBass = roles(bar, 'base', 'bass').map((n) => n.midi)
+    const freeBass = roles(bar, 'free', 'bass').map((n) => n.midi)
+    expect(freeBass).toEqual(baseBass.map((m) => m + 1))
+    const hats = (variant: 'base' | 'free'): number => roles(bar, variant, 'hat').length
+    expect(hats('base')).toBe(0)
+    expect(hats('free')).toBeGreaterThanOrEqual(16)
+  })
+
+  it('uses finger snaps on the backbeat', () => {
+    const snaps = roles(9, 'base', 'snare').map((n) => Math.round(n.beat))
+    expect(snaps).toContain(1)
+    expect(snaps).toContain(3)
   })
 })
 

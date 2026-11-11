@@ -28,6 +28,7 @@ import {
   type WinTierLabels,
 } from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
+import type { CompletedOrder } from '../../game/orders'
 import './RoundPopup.css'
 
 const TITLE_ID = 'hub-round-popup-title'
@@ -43,6 +44,8 @@ interface RoundPopupViewProps {
   labels?: WinTierLabels
   /** 게임 스킨 — 종료 팝업의 샤워·광선·금액 글자가 그 게임의 빅윈과 같은 모양이 된다. */
   skin?: ResolvedCelebrationSkin
+  /** 주문 카드 라운드 종료 요약에서 카드 한 장을 읽는 문구(심볼 이름 포함). */
+  orderText?: (order: CompletedOrder) => string
 }
 
 export function RoundPopupView({
@@ -52,6 +55,7 @@ export function RoundPopupView({
   scatterImageUrl,
   labels,
   skin,
+  orderText,
 }: RoundPopupViewProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -167,7 +171,9 @@ export function RoundPopupView({
           value={roll.value}
           labels={labels}
           skin={skin}
-          plainTitle={entry ? t('freeSpinsPopupTitle') : t('winTierPlain')}
+          plainTitle={
+            entry ? t(popup.kind === 'freeSpinsEntry' && popup.order ? 'orderRoundPopupTitle' : 'freeSpinsPopupTitle') : t('winTierPlain')
+          }
           unit={entry ? t('freeSpinsPopupCountUnit') : undefined}
           titleId={TITLE_ID}
           reducedMotion={reducedMotion}
@@ -183,6 +189,28 @@ export function RoundPopupView({
           )}
 
           {!entry && <span className="hub-win__summary">{summary}</span>}
+
+          {popup.kind === 'freeSpinsExit' && popup.orders !== undefined && (
+            <span className="hub-round-popup__orders">
+              <span className="hub-round-popup__orders-title">{t('orderExitCompleted')}</span>
+              {popup.orders.items.length === 0 ? (
+                <span className="hub-round-popup__orders-row">{t('orderExitNone')}</span>
+              ) : (
+                popup.orders.items.map((item, i) => (
+                  <span key={i} className="hub-round-popup__orders-row">
+                    <span className="hub-round-popup__orders-name">{orderText ? orderText(item) : item.id}</span>
+                    <span>+{item.prize.toLocaleString('en-US')}</span>
+                  </span>
+                ))
+              )}
+              <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
+                {t('orderExitPrizeSum', { amount: popup.orders.prizeTotal.toLocaleString('en-US') })}
+              </span>
+              <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
+                {t('orderExitRoundTotal', { amount: popup.totalWin.toLocaleString('en-US') })}
+              </span>
+            </span>
+          )}
 
           {/* 탭의 뜻이 단계마다 다르니 힌트도 그대로 따라간다 — 굴러가는 중에 "닫혀요"라고
               써 두면 탭했는데 안 닫히는 화면이 된다. */}

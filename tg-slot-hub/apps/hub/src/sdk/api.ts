@@ -31,6 +31,7 @@ import {
   type GambleSide,
   type Locale,
 } from '@tgslot/shared'
+import type { RoundState } from '@tgslot/slot-engine'
 
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 
@@ -211,6 +212,8 @@ export interface RoundSeedResponse {
   stops: number[]
   /** `createSeededRng(seedInput)`(@tgslot/slot-engine)에 그대로 넣으면 같은 stops가 나온다. */
   seedInput: string
+  /** 이 스핀을 시작하기 전의 라운드 상태(프리스핀 배수·주문 카드). 상태를 쓰는 라운드만 준다. */
+  stateBefore?: RoundState
 }
 
 function isRoundSeedResponse(data: unknown): data is RoundSeedResponse {

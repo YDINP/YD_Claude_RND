@@ -1,0 +1,114 @@
+.hub-cluster-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+}
+
+.hub-cluster-help__examples {
+  display: flex;
+  gap: var(--hub-space-lg);
+  justify-content: center;
+}
+
+.hub-cluster-help__example {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-align: center;
+}
+
+.hub-cluster-help__mini {
+  display: grid;
+  gap: 2px;
+  width: 90px;
+  height: 54px;
+}
+
+.hub-cluster-help__cell {
+  border-radius: 3px;
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-cluster-help__cell--hit {
+  background: var(--hub-gold);
+  border-color: var(--hub-gold-light);
+}
+
+.hub-cluster-help__cell--miss {
+  background: var(--hub-danger);
+  border-color: var(--hub-danger);
+  opacity: 0.7;
+}
+
+.hub-cluster-help__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--hub-font-sub);
+  text-align: center;
+}
+
+.hub-cluster-help__table th,
+.hub-cluster-help__table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--hub-border);
+}
+
+.hub-cluster-help__sym {
+  vertical-align: middle;
+}
+
+.hub-cluster-help__ladder {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 4px;
+}
+
+.hub-cluster-help__ladder-step {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--hub-secondary-bg);
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+}
+
+.hub-cluster-help__ladder-step strong {
+  color: var(--hub-gold-light);
+}
+
+.hub-cluster-help__kinds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--hub-font-sub);
+}
+
+.hub-cluster-help__kinds li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hub-cluster-help__kind-card {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+  font-weight: 700;
+  color: var(--hub-text);
+}

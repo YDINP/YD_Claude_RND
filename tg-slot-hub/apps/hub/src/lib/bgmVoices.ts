@@ -19,7 +19,7 @@ export const BGM_MAX_VOICES = 32
 const KS_RATE = 24000
 const KS_CACHE_LIMIT = 40
 const PARTIAL_CEILING = 9000
-const PAN: Partial<Record<BgmRole, number>> = { keys: -0.2, arp: 0.3, lead: 0.12, hat: 0.3, shaker: -0.35, wood: -0.15, tick: 0.2, snare: 0.1 }
+const PAN: Partial<Record<BgmRole, number>> = { keys: -0.2, arp: 0.3, lead: 0.12, hat: 0.3, shaker: -0.35, wood: -0.15, tick: 0.2, snare: 0.1, counter: -0.3 }
 
 const mtof = (m: number): number => 440 * 2 ** ((m - 69) / 12)
 
@@ -476,8 +476,95 @@ const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
   },
 }
 
-// candy-cluster-pop 전용 악기 구성이 나오기 전까지 fruit를 빌려 쓴다.
-const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: BASE_KITS.fruit }
+const GLOCK: readonly Partial3[] = [[1, 1, 0.5], [2.76, 0.35, 0.22], [5.4, 0.2, 0.1], [8.93, 0.08, 0.05]]
+
+/** 통통 튀는 신스 베이스: 톱니파가 열렸다 닫히는 짧은 옥타브 베이스. */
+function bounceBass(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const o = k.c.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.setValueAtTime(f, t)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 2.5
+  lp.frequency.setValueAtTime(Math.min(2400, f * 14), t)
+  lp.frequency.setTargetAtTime(f * 2.2, t + 0.004, 0.06)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.004)
+  g.gain.setTargetAtTime(0, t + 0.004, 0.11)
+  const end = t + 0.8
+  o.connect(lp).connect(g).connect(out)
+  o.start(t)
+  o.stop(end)
+  k.track(end)
+}
+
+/** 신스 팝 플럭: 톱니+사각 두 줄이 살짝 어긋나고 필터가 빠르게 닫힌다. 말렛과 다른 전자음. */
+function synthPluck(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 3
+  lp.frequency.setValueAtTime(Math.min(5200, f * 9), t)
+  lp.frequency.setTargetAtTime(f * 1.5, t + 0.003, 0.05)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.003)
+  g.gain.setTargetAtTime(0, t + 0.003, 0.09)
+  const end = t + 0.6
+  lp.connect(g).connect(out)
+  for (const [type, detune] of [['sawtooth', -8], ['square', 8]] as const) {
+    const o = k.c.createOscillator()
+    o.type = type
+    o.frequency.value = f
+    o.detune.value = detune
+    const og = k.c.createGain()
+    og.gain.value = type === 'square' ? 0.5 : 0.8
+    o.connect(og).connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 핑거 스냅: 대역 잡음 한 번 + 짧은 딱 소리. */
+function snap(k: Tools, t: number, vel: number, out: AudioNode): void {
+  hiss(k, t, vel, out, { type: 'bandpass', freq: 2300, q: 3, attack: 0.001, tau: 0.018 })
+  drum(k, t, 1900, 900, vel * 0.5, out, 0.006, 'triangle')
+}
+
+/** 캔디 팝: 글로켄 선율, 신스 키·셀레스타 반주, 통통 베이스, 핑거 스냅. 라운드의 대선율은 마림바. */
+const CANDY_KIT: Kit = {
+  gain: 0.95,
+  mix: {
+    pad: [0.05, 0.2],
+    keys: [0.18, 0.1],
+    arp: [0.07, 0.2],
+    lead: [0.22, 0.2],
+    counter: [0.2, 0.12],
+    bass: [0.34, 0.02],
+    kick: [0.28, 0.02],
+    snare: [0.4, 0.12],
+    hat: [0.06, 0.04],
+    shaker: [0.1, 0.05],
+  },
+  padCutoff: [1500, 2800],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sine', 'triangle'], detune: 7, attack: 0.5, release: 0.8 }),
+    keys: (k, t, m, v, d, out) => fmKey(k, t, mtof(m), v, Math.min(d, 0.3), out, 2.2, 0.14),
+    arp: (k, t, m, v, _d, out) => synthPluck(k, t, m, v, out),
+    lead: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, GLOCK, 0.001),
+    counter: (k, t, m, v, _d, out) => marimba(k, t, m, v, out),
+    bass: (k, t, m, v, _d, out) => bounceBass(k, t, m, v, out),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 125, 50, v, out, 0.07),
+    snare: (k, t, _m, v, _d, out) => snap(k, t, v, out),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...RIDE, freq: 8500, tau: 0.02 }),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, SHAKER),
+  },
+}
+
+const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 

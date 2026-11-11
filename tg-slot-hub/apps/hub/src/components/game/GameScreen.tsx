@@ -15,7 +15,7 @@ import {
 } from '@tgslot/renderer'
 import { createSeededRng, spin as replaySpin, type GameMath } from '@tgslot/slot-engine'
 import type { GambleSide, Locale } from '@tgslot/shared'
-import { useGameStore, toRendererFreeSpinsMode, AUTO_SPIN_COUNTS } from '../../store/game'
+import { useGameStore, toRendererFreeSpinsMode, hasCascadeSteps, AUTO_SPIN_COUNTS } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
@@ -28,10 +28,18 @@ import { useSettingsStore, type SpinSpeed } from '../../store/settings'
 import { groupLabel, groupMembers, symbolLabel, winLineLabel } from '../../game/labels'
 import { useDialog } from '../../hooks/useDialog'
 import { detectDebugFlag, writeStoredDebugFlag } from '../../lib/debugFlag'
+import { presetsFor } from '../../lib/debugPreset'
+import { completedOrders, ladderIndexOf, orderCardText, type CompletedOrder } from '../../game/orders'
 import { evaluateTapGesture } from '../../lib/tapGesture'
 import {
   bgmModeTransition,
+  playCascadeDrop,
+  playCascadePop,
   playFeature,
+  playLadderUp,
+  playOrderComplete,
+  playOrderDeal,
+  playOrderTick,
   playMutation,
   playReelStop,
   playRollupEnd,
@@ -55,6 +63,9 @@ import { WinCelebrationOverlay } from './WinCelebrationOverlay'
 import { WinStrip, type WinStripLineLabel } from './WinStrip'
 import { GambleModal } from './GambleModal'
 import { DebugPanel } from './DebugPanel'
+import { LadderMeter } from './LadderMeter'
+import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
+import { ClusterHelp, OrderRoundHelp } from './ClusterHelp'
 import './GameScreen.css'
 
 /** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
@@ -120,6 +131,8 @@ type VerifyState = 'idle' | 'checking' | 'done' | 'error'
 interface VerifyResult {
   hashMatch: boolean
   stopsMatch: boolean
+  /** 재생한 총 당첨이 화면에서 본 값과 같은가. 프리스핀 라운드인데 시작 상태를 못 받았으면 null(비교 불가). */
+  winMatch: boolean | null
 }
 
 function stopsEqual(a: number[], b: number[]): boolean {
@@ -150,9 +163,16 @@ type LineLabelSource =
       win: number
       /** 이긴 칸의 [reel, row] 좌표. 그룹 승리에서 «실제로 이긴 심볼»을 짚는 데 쓴다. */
       positions?: readonly (readonly [number, number])[]
+      /** 클러스터면 'cluster'. 좌표가 중간 판의 것이라 최종 그리드를 짚지 않는다. */
+      payKind?: 'line' | 'ways' | 'cluster'
+      /** 연쇄 단계(0부터)와 그 단계의 사다리 배수. */
+      cascade?: number
+      ladder?: number
       key: number
     }
   | { kind: 'cycle'; totalWin: number; key: number }
+  | { kind: 'chain'; n: number; multiplier: number; stepWin: number; key: number }
+  | { kind: 'order'; order: CompletedOrder; key: number }
 
 /**
  * 이긴 칸에 **실제로 놓여 있던** 심볼 id들 — 좌표를 이번 판 그리드에 짚어 읽는다.
@@ -173,6 +193,7 @@ function winCellSymbols(
   grid: readonly (readonly string[])[] | undefined,
 ): string[] | null {
   if (grid === undefined || source.positions === undefined) return null
+  if (source.payKind === 'cluster') return null
   if (source.positions.length !== source.count) return null
 
   const symbols: string[] = []
@@ -206,6 +227,21 @@ function winIconSymbols(
   return Array.from({ length: source.count }, () => source.symbol)
 }
 
+/** 주문 완료 줄의 카드 아이콘. popSymbol 카드만 심볼 그림이 있고, 나머지는 문구만 쓴다. */
+function buildOrderIcons(
+  theme: Theme | null,
+  order: CompletedOrder,
+  cardText: string,
+): WinStripLineLabel['icons'] | undefined {
+  const src = order.symbol === undefined ? undefined : theme?.symbols[order.symbol]
+  if (!src) return undefined
+  return {
+    srcs: [src],
+    ariaLabel: cardText,
+    suffix: `${cardText} · +${order.prize.toLocaleString('en-US')}`,
+  }
+}
+
 /**
  * 라인/ways 승리에서 심볼 이름 대신 이미지를 보여주기 위한 아이콘 목록을 만든다(사용자 요청).
  * 배당표 시트가 이미 쓰는 것과 같은 해석 경로(`theme.symbols[id]`)를 그대로 재사용한다 —
@@ -222,6 +258,16 @@ function buildWinLineIcons(
   source: Extract<LineLabelSource, { kind: 'line' }>,
   grid: readonly (readonly string[])[] | undefined,
 ): WinStripLineLabel['icons'] | undefined {
+  if (source.payKind === 'cluster') {
+    const src = theme?.symbols[source.symbol]
+    if (!src) return undefined
+    const name = symbolLabel(math, source.symbol, locale)
+    return {
+      srcs: [src],
+      ariaLabel: `${name} ×${source.count}`,
+      suffix: [`×${source.count}`, ...(source.ladder !== undefined ? [`×${source.ladder}`] : []), source.win.toLocaleString('en-US')].join(' · '),
+    }
+  }
   const symbols = winIconSymbols(source, grid)
   if (symbols === null) return undefined
   const srcs: string[] = []
@@ -313,6 +359,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const lastSpinDebug = useGameStore((s) => s.lastSpinDebug)
   const setDebugPresetAction = useGameStore((s) => s.setDebugPreset)
   const dismissDebugMessageAction = useGameStore((s) => s.dismissDebugMessage)
+  const orderRound = useGameStore((s) => s.orderRound)
+  const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const spinSpeed = useSettingsStore((s) => s.spinSpeed)
   const setSpinSpeedAction = useSettingsStore((s) => s.setSpinSpeed)
 
@@ -368,8 +416,24 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 당첨액 롤업 — 릴 위에 등급 단어 배너는 더 이상 띄우지 않는다(사용자 피드백으로 제거). 실제
   // 금액은 항상 WinStrip(컨트롤 위 고정줄)이 보여주고, winRollupValue는 렌더러의 winTotal 이벤트가
   // 주는 durationMs에 걸쳐 0→목표값으로 굴러간다. 다음 스핀이 시작되기 전까지 최종값이 그대로 남는다.
-  const [winRollupValue, setWinRollupValue] = useState(0)
+  const [winRollupValue, setWinRollupState] = useState(0)
+  /** 롤업이 단조 증가하도록 지금 값을 ref로도 들고 있는다. 값은 이 함수로만 바꾼다. */
+  const winValueRef = useRef(0)
+  const setWinRollupValue = (value: number): void => {
+    winValueRef.current = value
+    setWinRollupState(value)
+  }
   const winRafRef = useRef<number | null>(null)
+  /** 연쇄 단계마다 `cumulativeWin`까지 올리는 250ms 틱. winTotal 롤업과 같은 값을 공유하되 절대 내려가지 않는다. */
+  const chainRafRef = useRef<number | null>(null)
+  const slotRendererRef = useRef<SlotRenderer | null>(null)
+  const orderBoardRef = useRef<OrderBoardHandle | null>(null)
+  /** 사용자가 STOP으로 압축 재생을 요청했는가. 이 스핀의 토큰을 생략한다. */
+  const compressedRef = useRef(false)
+  /** 주문 완료 줄이 떠 있는 동안(이 시각까지) 라인·사이클 문구가 덮지 못하게 한다. */
+  const orderHoldUntilRef = useRef(0)
+  const ladderRef = useRef(0)
+  const [ladderIndex, setLadderIndex] = useState(0)
   /** SPIN 버튼으로 승리 연출을 건너뛸 때(handleSkipWinsAndAdvance) 롤업을 목표값으로 즉시 점프시키는 플래그. */
   const winSkipRef = useRef(false)
   /**
@@ -577,6 +641,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // - featureTriggered는 프리스핀 재발동 토스트에만 쓴다 — 최초 진입 안내는 store가 서버 응답
   //   (features/freeSpins)으로 직접 만드는 세리머니 팝업이 대신한다.
   // ref/setState만 사용하므로 렌더러 생성 시점에 캡처돼도 값이 오래돼(stale) 문제되지 않는다.
+  function tickWinTo(target: number, ms: number): void {
+    const from = winValueRef.current
+    if (target <= from) return
+    if (chainRafRef.current !== null) cancelAnimationFrame(chainRafRef.current)
+    let startTs: number | null = null
+    const step = (ts: number): void => {
+      if (startTs === null) startTs = ts
+      const progress = Math.min(1, (ts - startTs) / ms)
+      setWinRollupValue(Math.max(winValueRef.current, Math.round(from + (target - from) * progress)))
+      chainRafRef.current = progress < 1 ? requestAnimationFrame(step) : null
+    }
+    chainRafRef.current = requestAnimationFrame(step)
+  }
+
   function handleRendererEvent(event: RendererEvent): void {
     if (event.type === 'reelStop') {
       playReelStop(event.reel)
@@ -594,6 +672,55 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
     if (event.type === 'mutation') {
       if (event.phase === 'start') playMutation()
+      return
+    }
+    if (event.type === 'cascadeStep') {
+      if (event.phase === 'start') {
+        playCascadePop(event.index)
+        const ladderIndex = ladderIndexOf(
+          useGameStore.getState().math?.cascade?.multiplierLadder,
+          event.multiplier,
+          event.index,
+        )
+        if (ladderIndex > ladderRef.current) {
+          playLadderUp(ladderIndex)
+          haptic('light')
+        }
+        ladderRef.current = ladderIndex
+        setLadderIndex(ladderIndex)
+        if (event.index >= 1) {
+          lineLabelKeyRef.current += 1
+          setLineLabelSource({
+            kind: 'chain',
+            n: event.index + 1,
+            multiplier: event.multiplier,
+            stepWin: event.stepWin,
+            key: lineLabelKeyRef.current,
+          })
+        }
+        tickWinTo(event.cumulativeWin, 250)
+        return
+      }
+      playCascadeDrop()
+      const board = orderBoardRef.current
+      if (board !== null) {
+        const slotRenderer = slotRendererRef.current
+        const origin = containerRef.current?.getBoundingClientRect()
+        board.cascadeStep({
+          index: event.index,
+          removed: event.removed,
+          removedSymbols: event.removedSymbols,
+          cellRects: event.removed.map(([reel, row]) => {
+            try {
+              return slotRenderer?.getCellRect(reel, row) ?? null
+            } catch {
+              return null
+            }
+          }),
+          canvasOrigin: { x: origin?.left ?? 0, y: origin?.top ?? 0 },
+          skipTokens: compressedRef.current || useSettingsStore.getState().reducedMotion,
+        })
+      }
       return
     }
     if (event.type === 'modeTransition') {
@@ -614,6 +741,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     // 승리 연출 B단계(라인/사이클) — WinStrip 아래에 "어떤 심볼이 얼마를 땄는지" 한 줄을 채운다.
     // 렌더러는 첫 바퀴가 끝난 뒤(showWins가 resolve된 뒤)에도 다음 스핀 전까지 계속 순환하므로
     // 이 이벤트들은 phase가 'idle'로 돌아간 뒤에도 계속 들어올 수 있다 — 의도된 동작이다.
+    if ((event.type === 'winLine' || event.type === 'winCycle') && Date.now() < orderHoldUntilRef.current) {
+      if (event.type === 'winCycle') winCycleRef.current = event.cycle
+      return
+    }
+
     if (event.type === 'winLine') {
       lineLabelKeyRef.current += 1
       setLineLabelSource({
@@ -626,8 +758,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         // 그룹 승리에서 «실제로 이긴 심볼»을 그리드에 짚기 위한 좌표. 렌더러가 안 실어 주면
         // (좌표가 빈 지급) undefined 그대로 두고, 그때는 이름 문구로 폴백한다.
         positions: event.positions,
+        payKind: event.payKind,
+        cascade: event.cascade,
+        ladder: event.ladder,
         key: lineLabelKeyRef.current,
       })
+      if (event.payKind === 'cluster') orderBoardRef.current?.clusterSize(event.count)
       return
     }
 
@@ -648,6 +784,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
     if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
     winRafRef.current = null
+    if (chainRafRef.current !== null) cancelAnimationFrame(chainRafRef.current)
+    chainRafRef.current = null
+    // 연쇄 게임은 연쇄 재생 중에 이미 올려 둔 금액부터 굴린다. 어느 경우에도 지금 값 아래로 내려가지 않는다.
+    const rollFrom =
+      event.fromAmount === undefined ? 0 : Math.min(target, Math.max(event.fromAmount, winValueRef.current))
 
     // 이 스핀 결과의 승리 연출은 계속 순환(A→B→A→...)하며 매 바퀴 winTotal을 다시 내보낸다.
     // 0→목표값 롤업 애니메이션은 그 결과를 "처음 보여주는" 첫 바퀴(cycle 0)에서만 튼다 —
@@ -661,7 +802,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
 
     winSkipRef.current = false
-    setWinRollupValue(0)
+    setWinRollupValue(rollFrom)
     playWin(event.tier, duration)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
@@ -676,7 +817,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       }
       if (startTs === null) startTs = ts
       const progress = Math.min(1, (ts - startTs) / duration)
-      setWinRollupValue(Math.round(target * progress))
+      setWinRollupValue(Math.max(rollFrom, Math.round(rollFrom + (target - rollFrom) * progress)))
       if (progress < 1) {
         playRollupTick(progress)
         winRafRef.current = requestAnimationFrame(step)
@@ -694,6 +835,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     playSpinStart()
     setWinRollupValue(0)
     setLineLabelSource(null)
+    compressedRef.current = false
+    orderHoldUntilRef.current = 0
+    ladderRef.current = 0
+    setLadderIndex(0)
+    if (chainRafRef.current !== null) {
+      cancelAnimationFrame(chainRafRef.current)
+      chainRafRef.current = null
+    }
     winSkipRef.current = false
     winCycleRef.current = 0
     if (winRafRef.current !== null) {
@@ -706,6 +855,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   useEffect(() => {
     return () => {
       if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+      if (chainRafRef.current !== null) cancelAnimationFrame(chainRafRef.current)
     }
   }, [])
 
@@ -740,12 +890,17 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    * 건너뛴다). 승리 연출 중(showingWin)에는 탭이 아무 것도 하지 않는다 — 사용자 피드백에 따라
    * "연출을 끝내는" 탭 동작은 없앴다. 연출을 건너뛰고 싶으면 SPIN 버튼(또는 스페이스)을 쓴다.
    */
+  function skipSpin(): void {
+    compressedRef.current = true
+    useGameStore.getState().requestSkip()
+  }
+
   const handleStageTap = (): void => {
     // 세리머니(팝업/커튼)가 도는 동안은 탭을 무시한다 — 화면이 가려진 채로 스킵이 끼어들면
     // 커튼이 걷힌 뒤 릴이 결과와 어긋나 보인다. 팝업의 닫기 탭은 팝업 자신이 처리한다.
     if (roundBusy) return
     if (phase !== 'spinning') return
-    useGameStore.getState().requestSkip()
+    skipSpin()
     haptic('light')
   }
 
@@ -789,6 +944,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           renderer.destroy()
           return
         }
+        slotRendererRef.current = renderer
         setRenderer(renderer)
       } catch (err) {
         // 연출 로딩 실패 — 릴 그래픽 없이도 서버 권위 스핀 버튼은 계속 동작해야 한다.
@@ -805,12 +961,32 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       stopSpinLoop()
       stopBgm()
       renderer?.destroy()
+      slotRendererRef.current = null
       setRenderer(null)
     }
   }, [math, gameId, setRenderer])
 
   useEffect(() => {
     if (lastResult && lastResult.wins.length > 0) haptic('success')
+  }, [lastResult])
+
+  // 주문 카드 완료 — 서버가 준 orderComplete 피처마다 WinStrip에 "주문 완료" 줄을 잠깐씩 차례로 띄운다.
+  useEffect(() => {
+    if (!lastResult || !math?.orderRound) return
+    const done = completedOrders(math, lastResult.features)
+    if (done.length === 0) return
+    const timers: ReturnType<typeof setTimeout>[] = []
+    orderHoldUntilRef.current = Date.now() + done.length * 1000 + 600
+    done.forEach((order, i) => {
+      timers.push(
+        setTimeout(() => {
+          lineLabelKeyRef.current += 1
+          setLineLabelSource({ kind: 'order', order, key: lineLabelKeyRef.current })
+        }, i * 1000),
+      )
+    })
+    return () => timers.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 새 응답이 올 때만 다시 돈다.
   }, [lastResult])
 
   // 디버그 프리셋 요청이 거절됐을 때(DEBUG_DISABLED/DEBUG_NO_MATCH)의 비차단 토스트 — 잠깐 보여주고
@@ -836,6 +1012,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // ways 게임(payModel === 'ways')은 페이라인이 없다 — "라인당 베팅" 대신 "웨이당 베팅"을
   // 보여주고, 나누는 단위도 paylines.length가 아니라 ways.betDivisor(관례상 25)다.
   const isWays = math?.payModel === 'ways'
+  // 클러스터 게임은 페이라인도 ways도 없다 — 배당은 총 베팅액의 배수라 "라인당 베팅"을 보여 주지 않는다.
+  const isCluster = math?.payModel === 'cluster'
+  const isCascade = math?.cascade !== undefined
+  const isOrderRound = math?.orderRound !== undefined
   const betPerLine = math
     ? isWays
       ? currentBet / (math.ways?.betDivisor ?? 25)
@@ -918,11 +1098,22 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     : freeSpins && winRollupValue === 0
       ? freeSpins.accumulatedWin
       : winRollupValue
+  // 연쇄 2단계부터는 라벨이 "연쇄 n"이고, 주문 완료 때는 "주문 완료"다. 둘 다 금액이 있을 때만이다.
+  const chainStep =
+    lineLabelSource?.kind === 'chain'
+      ? lineLabelSource.n
+      : lineLabelSource?.kind === 'line' && lineLabelSource.cascade !== undefined && lineLabelSource.cascade >= 1
+        ? lineLabelSource.cascade + 1
+        : null
   const winStripLabel = showGambleActions
     ? t('gamblePendingWinLabel')
-    : freeSpins && winRollupValue === 0
-      ? t('freeSpinsTotalLabel')
-      : t('winStripLabel')
+    : lineLabelSource?.kind === 'order'
+      ? t('orderDoneLabel')
+      : chainStep !== null && winRollupValue > 0
+        ? t('chainLabel', { n: chainStep })
+        : freeSpins && winRollupValue === 0
+          ? t(isOrderRound ? 'orderRoundTotalLabel' : 'freeSpinsTotalLabel')
+          : t('winStripLabel')
 
   // WinStrip 아래 프리스핀 진행 상황("프리스핀 5/8 ×2") — 릴 위에 그리던 명판을 대신한다.
   // 렌더러 이벤트가 아니라 store의 freeSpins 상태(left/total/multiplier)를 쓰되, 커튼 전환이
@@ -930,7 +1121,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 가려 있는데 카운터만 먼저 갈아 끼워지면 어색하다. 배수는 1보다 클 때만 붙인다(×1은 정보가
   // 없고 시야만 어지럽힌다 — 릴 위 명판이 지키던 규칙을 그대로 옮겼다).
   const freeSpinsCounter = displayedFreeSpins
-    ? displayedFreeSpins.multiplier > 1
+    ? isOrderRound
+      ? t('orderRoundCounter', { left: displayedFreeSpins.left, total: displayedFreeSpins.total })
+      : displayedFreeSpins.multiplier > 1
       ? t('freeSpinsCounterWithMultiplier', {
           left: displayedFreeSpins.left,
           total: displayedFreeSpins.total,
@@ -956,13 +1149,22 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         text:
           lineLabelSource.kind === 'cycle'
             ? t('winStripCycleTotal', { amount: lineLabelSource.totalWin.toLocaleString('en-US') })
-            : math
+            : lineLabelSource.kind === 'chain'
               ? [
-                  `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
-                  ...(lineLabelSource.ways ? [`${lineLabelSource.ways} ways`] : []),
-                  lineLabelSource.win.toLocaleString('en-US'),
+                  t('chainLabel', { n: lineLabelSource.n }),
+                  `×${lineLabelSource.multiplier}`,
+                  lineLabelSource.stepWin.toLocaleString('en-US'),
                 ].join(' · ')
-              : '',
+              : lineLabelSource.kind === 'order'
+                ? `${orderCardText(lineLabelSource.order, math, locale, t, true)} · +${lineLabelSource.order.prize.toLocaleString('en-US')}`
+                : math
+                  ? [
+                      `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
+                      ...(lineLabelSource.ways ? [`${lineLabelSource.ways} ways`] : []),
+                      ...(lineLabelSource.ladder !== undefined ? [`×${lineLabelSource.ladder}`] : []),
+                      lineLabelSource.win.toLocaleString('en-US'),
+                    ].join(' · ')
+                  : '',
         // 'text'는 항상 완전한 폴백 문구로 채워 둔다(위) — 아이콘은 그 위에 얹는 표시 방식일
         // 뿐이다(사용자 요청: 심볼 이름 대신 이미지). 아이콘은 이번 판 그리드(lastResult.grid)를
         // 좌표로 짚어 «칸에 실제로 있던 것»을 보여준다 — 와일드는 와일드로, 섞인 BAR는 그
@@ -971,7 +1173,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         icons:
           lineLabelSource.kind === 'line' && math
             ? buildWinLineIcons(math, theme, locale, lineLabelSource, lastResult?.grid)
-            : undefined,
+            : lineLabelSource.kind === 'order'
+              ? buildOrderIcons(theme, lineLabelSource.order, orderCardText(lineLabelSource.order, math, locale, t, true))
+              : undefined,
       }
     : null
 
@@ -1021,7 +1225,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     // 돌아와 있어도 커튼이 다 걷히기 전까진 막는다(릴은 그때까지 완전히 멈춰 있어야 한다).
     if (roundBusy) return
     if (phase === 'spinning') {
-      useGameStore.getState().requestSkip()
+      skipSpin()
       haptic('light')
       return
     }
@@ -1067,7 +1271,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (phase === 'spinning') {
         spaceHeldRef.current = true
         event.preventDefault()
-        useGameStore.getState().requestSkip()
+        skipSpin()
         haptic('light')
         return
       }
@@ -1160,6 +1364,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     void rendererInstance.showWins(lastResult.wins, {
       totalBet: lastResult.totalBet,
       features: lastResult.features,
+      ...(hasCascadeSteps(lastResult) ? { mode: 'cascade' as const } : {}),
     })
   }
 
@@ -1268,11 +1473,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 서버가 공개한 stops와 같아야 하고(계산이 재현 가능함), 그 공개된 stops도 이미 화면에서
       // 본 결과(lastResult.stops)와 같아야 한다(서버가 다른 라운드의 증명을 준 게 아님).
       const rng = createSeededRng(seedInfo.seedInput)
-      const replay = replaySpin(math, { totalBet: lastResult.totalBet }, rng)
+      const replay = replaySpin(math, { totalBet: lastResult.totalBet }, rng, seedInfo.stateBefore)
       const stopsMatch =
         stopsEqual(replay.stops, seedInfo.stops) && stopsEqual(seedInfo.stops, lastResult.stops)
+      // 프리스핀·주문 라운드의 스핀은 시작 상태(배수·카드)가 있어야 같은 금액이 나온다. 서버가 `stateBefore`를
+      // 주지 않는 라운드는 비교하지 않는다.
+      const winMatch =
+        lastResult.isFreeSpin && seedInfo.stateBefore === undefined ? null : replay.totalWin === lastResult.totalWin
 
-      setVerifyResult({ hashMatch, stopsMatch })
+      setVerifyResult({ hashMatch, stopsMatch, winMatch })
       setVerifyState('done')
     } catch (err) {
       console.error('[game] provably fair verification failed', err)
@@ -1336,6 +1545,27 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           <Odometer value={wallet?.coins ?? 0} />
         </span>
       </div>
+
+      {isCascade && math?.cascade && (
+        <div className="hub-game-screen__cascade-hud">
+          <LadderMeter ladder={math.cascade.multiplierLadder} activeIndex={ladderIndex} />
+          {math.orderRound && (
+            <OrderBoard
+              ref={orderBoardRef}
+              cards={orderRound?.cards ?? null}
+              slots={math.orderRound.slots}
+              visible={displayedFreeSpins !== null}
+              math={math}
+              locale={locale}
+              symbols={theme?.symbols}
+              reducedMotion={reducedMotion}
+              onTick={playOrderTick}
+              onComplete={playOrderComplete}
+              onDeal={playOrderDeal}
+            />
+          )}
+        </div>
+      )}
 
       <div
         className="hub-game-screen__stage"
@@ -1444,6 +1674,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           popup={roundPopup}
           onDismiss={dismissRoundPopupAction}
           skin={celebrationSkin}
+          orderText={(order) => orderCardText(order, math, locale, t, true)}
           {...(lastResult?.freeSpinsSummary ? { freeSpinsPlayed: lastResult.freeSpinsSummary.spins } : {})}
           {...(scatterImageUrl === undefined ? {} : { scatterImageUrl })}
         />
@@ -1493,6 +1724,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           phase={phase}
           freeSpins={freeSpins}
           gambleSession={gambleSession}
+          presets={presetsFor(math)}
+          orderRoundActive={orderRound !== null && freeSpins !== null}
         />
       )}
 
@@ -1695,7 +1928,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       <span className="hub-bet-picker__amount">{level}</span>
                       <span className="hub-bet-picker__per-line">
                         {locked ? '🔒 ' : ''}
-                        {t(isWays ? 'betPerWay' : 'betPerLine', { amount: lineBet.toLocaleString('en-US') })}
+                        {isCluster ? '' : t(isWays ? 'betPerWay' : 'betPerLine', { amount: lineBet.toLocaleString('en-US') })}
                       </span>
                     </button>
                   </li>
@@ -1745,7 +1978,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {isWays ? t('tabWays') : t('paylinesTitle')}
+                {isCluster ? t('tabCluster') : isWays ? t('tabWays') : t('paylinesTitle')}
               </button>
               {hasFeaturesPage && (
                 <button
@@ -1777,7 +2010,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               {helpPage === 'paytable' && (
                 <>
                   <p className="hub-paytable__bet-per-line">
-                    {t(isWays ? 'betPerWay' : 'betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
+                    {isCluster
+                      ? t('clusterHelpBetBasis')
+                      : t(isWays ? 'betPerWay' : 'betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
                   </p>
                   <ul className="hub-paytable__list">
                     {Object.entries(math.paytable).map(([id, payrule]) => {
@@ -1853,7 +2088,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 </div>
               )}
 
-              {helpPage === 'paylines' && !isWays && (
+              {helpPage === 'paylines' && isCluster && (
+                <ClusterHelp math={math} symbols={theme?.symbols} locale={locale} />
+              )}
+
+              {helpPage === 'paylines' && !isWays && !isCluster && (
                 <div className="hub-paylines__grid-list">
                   {math.paylines.map((line, index) => (
                     <div key={index} className="hub-paylines__item">
@@ -1941,6 +2180,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       )}
                     </div>
                   )}
+                  {math.orderRound && <OrderRoundHelp math={math} locale={locale} />}
                 </>
               )}
 
@@ -1985,6 +2225,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                             {verifyResult.stopsMatch ? '✓' : '✗'} {t('fairVerifyStops')}:{' '}
                             {verifyResult.stopsMatch ? t('fairVerifyOk') : t('fairVerifyFail')}
                           </p>
+                          {verifyResult.winMatch !== null && (
+                            <p
+                              className={
+                                verifyResult.winMatch
+                                  ? 'hub-sheet__verify-status hub-sheet__verify-status--ok'
+                                  : 'hub-sheet__verify-status hub-sheet__verify-status--fail'
+                              }
+                            >
+                              {verifyResult.winMatch ? '✓' : '✗'} {t('fairVerifyWin')}:{' '}
+                              {verifyResult.winMatch ? t('fairVerifyOk') : t('fairVerifyFail')}
+                            </p>
+                          )}
                         </>
                       )}
                       {verifyState === 'error' && (
