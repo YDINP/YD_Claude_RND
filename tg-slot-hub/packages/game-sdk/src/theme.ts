@@ -63,7 +63,11 @@ export const FrameWindowSchema = z
 export type FrameWindow = z.infer<typeof FrameWindowSchema>
 
 /** 프레임 아트의 배치 정보. 지금은 릴 창 하나뿐이다. */
-export const FrameLayoutSchema = z.object({ window: FrameWindowSchema })
+export const FrameLayoutSchema = z.object({
+  window: FrameWindowSchema,
+  /** 심볼 사이 간격(심볼 크기 대비). 없으면 렌더러 기본값. 6릴 팩이 좁힐 때 쓴다. */
+  gapRatio: z.number().min(0).max(0.2).optional(),
+})
 export type FrameLayout = z.infer<typeof FrameLayoutSchema>
 
 /** 심볼 연출 종류. 각 타입이 쓰는 추가 필드는 아래 스키마의 주석을 볼 것. */
