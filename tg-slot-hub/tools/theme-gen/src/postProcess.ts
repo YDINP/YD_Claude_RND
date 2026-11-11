@@ -78,10 +78,10 @@ export async function processFrame(input: Buffer, outSize: number): Promise<Proc
 
   const colorWindow = detectFrameWindow(raw) ?? undefined
   const punched = colorWindow !== undefined ? punchWindowAlpha(raw, colorWindow) : raw
-  const keyed = chromaKey(punched)
+  const keyedFirst = chromaKey(punched)
 
   let window = colorWindow
-  const alphaWindow = detectAlphaWindow(keyed)
+  const alphaWindow = detectAlphaWindow(keyedFirst)
   if (alphaWindow !== null) {
     if (colorWindow !== undefined && maxWindowDelta(colorWindow, alphaWindow) > FRAME_WINDOW_ALPHA_MISMATCH) {
       logWarn(
@@ -91,6 +91,8 @@ export async function processFrame(input: Buffer, outSize: number): Promise<Proc
     }
     window = alphaWindow
   }
+  // 코덱스가 이미 키잉해 온 프레임은 창 가장자리에 반투명 초록 고리가 남는다. 창 안은 릴 자리이므로 통째로 비운다.
+  const keyed = window !== undefined ? punchWindowAlpha(keyedFirst, window, { cornerRadiusRatio: 0, featherPx: 0 }) : keyedFirst
 
   const png = await sharp(keyed.data, { raw: { width: keyed.width, height: keyed.height, channels: 4 } })
     .png()

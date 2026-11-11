@@ -1,0 +1,150 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "scatter": "symbols/scatter.webp",
+    "heart": "symbols/heart.webp",
+    "star": "symbols/star.webp",
+    "bean": "symbols/bean.webp",
+    "drop_red": "symbols/drop_red.webp",
+    "drop_blue": "symbols/drop_blue.webp",
+    "drop_green": "symbols/drop_green.webp",
+    "drop_purple": "symbols/drop_purple.webp",
+    "drop_yellow": "symbols/drop_yellow.webp"
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#fff1d6",
+    "reelBg": "#3b2a55",
+    "winLine": [
+      "#ff7aa8",
+      "#8fd8f2",
+      "#a8e05f",
+      "#9d7ae0",
+      "#fff1d6"
+    ],
+    "text": "#fff1d6"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 18,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#fff1d6",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#9d7ae0",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "heart": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.16,
+          "durationMs": 600
+        },
+        {
+          "type": "glow",
+          "color": "#ff7aa8",
+          "durationMs": 600
+        }
+      ]
+    }
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.0517578125,
+      "y": 0.2001953125,
+      "w": 0.900390625,
+      "h": 0.669921875
+    },
+    "gapRatio": 0.04
+  },
+  "reelBackdrop": {
+    "color": "#3b2a55",
+    "alpha": 0.78,
+    "radius": 0.12
+  },
+  "celebration": {
+    "palette": {
+      "core": "#fff1d6",
+      "edge": "#ff7aa8",
+      "glow": "#8fd8f280"
+    },
+    "particles": {
+      "shapes": [
+        "confetti",
+        "star",
+        "spark",
+        "gem"
+      ],
+      "colors": [
+        "#fff1d6",
+        "#ff7aa8",
+        "#8fd8f2",
+        "#a8e05f",
+        "#9d7ae0"
+      ],
+      "motion": "flip",
+      "size": 1.3
+    },
+    "rays": {
+      "style": "sunburst"
+    },
+    "waves": {
+      "style": "ring"
+    },
+    "title": {
+      "font": "rounded",
+      "weight": 850,
+      "stroke": 2,
+      "strokeColor": "#7a2e55cc",
+      "tracking": 0.02
+    },
+    "tiers": {
+      "surge": {
+        "density": 1.2
+      },
+      "storm": {
+        "glow": "#ff7aa880",
+        "edge": "#ff7aa8"
+      },
+      "cataclysm": {
+        "core": "#ffffff",
+        "edge": "#9d7ae0",
+        "glow": "#fff1d68a",
+        "density": 1.4
+      }
+    }
+  },
+  "sound": {
+    "preset": "candy"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "fx": {
+    "default": {
+      "win": [{ "type": "pulse", "scale": 1.1, "durationMs": 500 }]
+    },
+    "wild": {
+      "win": [
+        { "type": "burst", "particles": 18, "durationMs": 900 },
+        { "type": "glow", "color": "#fff1d6", "durationMs": 900 }
+      ]
+    },
+    "scatter": {
+      "win": [
+        { "type": "glow", "color": "#9d7ae0", "durationMs": 800 },
+        { "type": "spin", "durationMs": 400, "repeat": 1 }
+      ]
+    },
+    "heart": {
+      "win": [
+        { "type": "pulse", "scale": 1.16, "durationMs": 600 },
+        { "type": "glow", "color": "#ff7aa8", "durationMs": 600 }
+      ]
+    }
+  }
+}
