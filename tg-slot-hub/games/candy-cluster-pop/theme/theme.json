@@ -146,5 +146,18 @@
   },
   "sound": {
     "preset": "candy"
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "sheets": {
+    "scatter": {
+      "win": "sheets/scatter-win.json"
+    },
+    "heart": {
+      "win": "sheets/heart-win.json"
+    },
+    "wild": {
+      "win": "sheets/wild-win.json"
+    }
   }
 }
