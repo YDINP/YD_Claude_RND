@@ -614,6 +614,9 @@ class PixiRenderer implements RendererCore {
     }
 
     this.startAmbient()
+    // `app.renderer.resize()`가 방금 드로잉 버퍼를 비웠다. 다음 rAF를 기다리지 않고 같은 호출 안에서
+    // 다시 그린다 — 생성자의 첫 배치도 여기를 지나므로 첫 화면이 티커 첫 틱에 기대지 않는다.
+    this.app.render()
   }
 
   private drawFrame(): void {
@@ -2047,14 +2050,13 @@ class PixiRenderer implements RendererCore {
       return
     }
     this.geometry = next
-    this.applyLayout()
     // `app.renderer.resize()`(applyLayout 안에서 호출)는 캔버스의 width/height 속성을 바꾼다 —
     // 브라우저는 이 순간 드로잉 버퍼를 곧장 비운다. Pixi의 자체 티커가 다음 rAF에 다시 그릴
     // 때까지 기다리면 그 사이에 브라우저가 "방금 비워진" 캔버스를 한 프레임 그대로 페인트할 수
     // 있다 — 릴 전체가 새까맣게 한 프레임 번쩍이는 원인이었다(실측: ResizeObserver가 WinStrip
-    // 레이아웃 변화로 1px 단위 지터를 감지할 때마다 재현됐다). 리사이즈와 재렌더를 같은 동기
-    // 호출 안에서 묶어 그 틈을 아예 없앤다.
-    this.app.render()
+    // 레이아웃 변화로 1px 단위 지터를 감지할 때마다 재현됐다). 그래서 applyLayout이 리사이즈와
+    // 재렌더를 같은 동기 호출 안에서 묶는다.
+    this.applyLayout()
   }
 
   // ------------------------------------------------------------------ 해제

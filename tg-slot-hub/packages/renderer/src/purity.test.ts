@@ -301,6 +301,13 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
     expect(offenders).toEqual([])
   })
 
+  it('캔버스 크기를 바꾸는 applyLayout은 같은 호출 안에서 다시 그린다(생성자 첫 배치 포함)', () => {
+    const source = stripComments(readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
+    const body = source.slice(source.indexOf('private applyLayout(): void {'), source.indexOf('private drawFrame(): void {'))
+    expect(body).toContain('this.app.renderer.resize(')
+    expect(body.trimEnd().endsWith('this.app.render()\n  }')).toBe(true)
+  })
+
   it('이벤트 유니온에 pulseArrive가 없다', () => {
     expect(readFileSync(join(srcDir, 'types.ts'), 'utf8')).not.toContain('pulseArrive')
   })
