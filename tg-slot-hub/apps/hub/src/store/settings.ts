@@ -102,7 +102,7 @@ function writeStoredSettings(state: SettingsState): void {
 function buildInitialState(): SettingsState {
   const stored = readStoredSettings()
   return {
-    locale: stored.locale ?? 'auto',
+    locale: stored.locale ?? 'ko',
     sound: stored.sound ?? true,
     sfxVolume: stored.sfxVolume ?? 100,
     bgm: stored.bgm ?? true,

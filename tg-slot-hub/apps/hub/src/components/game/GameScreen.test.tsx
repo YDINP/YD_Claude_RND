@@ -238,7 +238,7 @@ describe('GameScreen', () => {
     mockRenderer.onEvent = null
     useGameStore.getState().reset()
     // 스핀 속도는 설정 스토어(모듈 스코프 싱글턴)에 남으므로 테스트마다 기본값으로 되돌린다.
-    useSettingsStore.setState({ spinSpeed: 'normal' })
+    useSettingsStore.setState({ spinSpeed: 'normal', locale: 'en' })
     useGamesStore.setState({ status: 'ready', games: [], errorMessage: null })
     useHubStore.setState({
       status: 'idle',
@@ -576,7 +576,7 @@ describe('GameScreen', () => {
     })
 
     it('renders the line label in Korean (symbol name localized) when locale is ko', async () => {
-      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } })); useSettingsStore.setState({ locale: 'auto' })
       mockedGetGameMath.mockResolvedValueOnce({
         ...rawMath,
         symbols: [
@@ -603,7 +603,7 @@ describe('GameScreen', () => {
     })
 
     it('renders the group label in Korean for a group win', async () => {
-      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } })); useSettingsStore.setState({ locale: 'auto' })
       mockedGetGameMath.mockResolvedValueOnce({
         ...rawMath,
         groups: { anybar: { name: { en: 'Any BAR', ko: '바 아무거나' }, members: ['bar', 'seven'] } },
@@ -637,7 +637,7 @@ describe('GameScreen', () => {
     })
 
     it('renders the ways line label in Korean, keeping the "ways" word untranslated (genre term)', async () => {
-      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } })); useSettingsStore.setState({ locale: 'auto' })
       mockedGetGameMath.mockResolvedValueOnce({
         ...waysRawMath,
         symbols: [
@@ -1289,7 +1289,7 @@ describe('GameScreen', () => {
     })
 
     it('renders the free-spins counter in Korean when locale is ko', async () => {
-      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } }))
+      useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } })); useSettingsStore.setState({ locale: 'auto' })
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 

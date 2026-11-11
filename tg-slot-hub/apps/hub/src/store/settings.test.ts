@@ -6,10 +6,10 @@ describe('settings store', () => {
     vi.resetModules()
   })
 
-  it('defaults to auto locale, sound/haptics on, reducedMotion off, and normal spin speed when nothing is stored', async () => {
+  it('defaults to ko locale, sound/haptics on, reducedMotion off, and normal spin speed when nothing is stored', async () => {
     const { useSettingsStore } = await import('./settings')
     const state = useSettingsStore.getState()
-    expect(state.locale).toBe('auto')
+    expect(state.locale).toBe('ko')
     expect(state.sound).toBe(true)
     expect(state.haptics).toBe(true)
     expect(state.reducedMotion).toBe(false)
@@ -120,7 +120,7 @@ describe('settings store', () => {
     const { useSettingsStore } = await import('./settings')
     const state = useSettingsStore.getState()
 
-    expect(state.locale).toBe('auto')
+    expect(state.locale).toBe('ko')
     expect(state.sound).toBe(true)
   })
 

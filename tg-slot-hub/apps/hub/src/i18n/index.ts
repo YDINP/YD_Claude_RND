@@ -26,8 +26,8 @@ function interpolate(template: string, vars?: Vars): string {
  * 순수 번역 함수. 지원하지 않는 로케일이거나 키가 비어있으면 en으로 폴백한다.
  */
 export function t(locale: Locale, key: TranslationKey, vars?: Vars): string {
-  const dict = dictionaries[locale] ?? dictionaries[DEFAULT_LOCALE]
-  const template = dict[key] ?? dictionaries[DEFAULT_LOCALE][key] ?? key
+  const dict = dictionaries[locale] ?? dictionaries.en
+  const template = dict[key] ?? dictionaries.en[key] ?? key
   return interpolate(template, vars)
 }
 

@@ -8,4 +8,4 @@ export const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60
 export const JWT_TTL = '7d'
 export const SUPPORTED_LOCALES = ['en', 'ko'] as const
 export type Locale = (typeof SUPPORTED_LOCALES)[number]
-export const DEFAULT_LOCALE: Locale = 'en'
+export const DEFAULT_LOCALE: Locale = 'ko'
