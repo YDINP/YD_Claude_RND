@@ -22,6 +22,8 @@ export interface ApiConfig {
   spinLockTimeoutMs: number
 }
 
+/** 프로덕션 JWT_SECRET 최소 길이. HS256 키는 해시 출력(256bit=32바이트) 이상이어야 한다. */
+const MIN_PROD_JWT_SECRET_LENGTH = 32
 const DEFAULT_PORT = 8787
 const DEFAULT_DEV_CORS_ORIGIN = '*'
 
@@ -71,6 +73,11 @@ function assertProductionSafe(env: NodeJS.ProcessEnv): void {
   if (!env.CORS_ORIGIN) {
     // 개발 기본값 `*`가 프로덕션까지 따라오면, 환경변수를 빠뜨린 것만으로 전면 개방이 된다.
     problems.push('CORS_ORIGIN 미설정 (미니앱 도메인을 명시해야 한다)')
+  } else if (env.CORS_ORIGIN.trim() === '*') {
+    problems.push('CORS_ORIGIN=* (와일드카드 금지, 허브 origin 하나를 명시해야 한다)')
+  }
+  if ((env.JWT_SECRET ?? '').length < MIN_PROD_JWT_SECRET_LENGTH) {
+    problems.push(`JWT_SECRET이 ${MIN_PROD_JWT_SECRET_LENGTH}자 미만 (HS256 서명키가 추측·무차별 대입에 약하다)`)
   }
   if (!env.DATABASE_URL) {
     // in-memory 레포는 프로세스 메모리에만 살아서 인스턴스를 여러 개 띄우면 상태가 갈라지고,
@@ -113,9 +120,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     assertProductionSafe(env)
   }
 
-  const port = env.API_PORT ? Number(env.API_PORT) : DEFAULT_PORT
+  // Render/Heroku 같은 PaaS는 포트를 `PORT`로 주입한다. 명시한 API_PORT가 우선.
+  const rawPort = env.API_PORT || env.PORT
+  const port = rawPort ? Number(rawPort) : DEFAULT_PORT
   if (!Number.isFinite(port)) {
-    throw new Error(`[config] API_PORT must be a number, got: ${env.API_PORT}`)
+    throw new Error(`[config] API_PORT must be a number, got: ${rawPort}`)
   }
 
   const spinLockTimeoutMs = env.SPIN_LOCK_TIMEOUT_MS

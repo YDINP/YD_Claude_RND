@@ -83,6 +83,19 @@ describe('프로덕션에서는 경고가 아니라 부팅 거부다', () => {
     expect(() => loadConfig(env)).toThrow(/CORS_ORIGIN/)
   })
 
+  it('CORS_ORIGIN이 *이면 뜨지 않는다', () => {
+    expect(() => loadConfig(productionEnv({ CORS_ORIGIN: '*' }))).toThrow(/CORS_ORIGIN/)
+  })
+
+  it('JWT_SECRET이 32자 미만이면 뜨지 않는다', () => {
+    expect(() => loadConfig(productionEnv({ JWT_SECRET: 'short-secret' }))).toThrow(/JWT_SECRET/)
+  })
+
+  it('PaaS가 주입하는 PORT를 쓰되 API_PORT가 우선한다', () => {
+    expect(loadConfig(productionEnv({ PORT: '10000' })).port).toBe(10000)
+    expect(loadConfig(productionEnv({ PORT: '10000', API_PORT: '9000' })).port).toBe(9000)
+  })
+
   it('DATABASE_URL이 없으면 in-memory 레포로 폴백하지 않고 뜨지 않는다', () => {
     // in-memory 레포 + 인스턴스 다중화는 상태도 갈라지고 인프로세스 스핀 락도 무력해진다.
     // 그 조합이 프로덕션에서 애초에 성립하지 못하게 여기서 막는다.

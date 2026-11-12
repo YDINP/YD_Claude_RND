@@ -40,7 +40,8 @@ function errorMessageOf(err: unknown, fallback: string): string {
 /** bootstrap()과 reauth()가 공유하는 initData 판별 로직. 실기기 initData가 없으면 dev mock으로 폴백한다 */
 function resolveInitData(): string | null {
   const realInitData = getInitDataRaw()
-  const devMockEnabled = import.meta.env.VITE_DEV_MOCK_TMA === 'true'
+  // 프로덕션 빌드(PROD)에서는 환경변수가 실수로 켜져 있어도 mock 경로가 죽은 코드가 된다.
+  const devMockEnabled = !import.meta.env.PROD && import.meta.env.VITE_DEV_MOCK_TMA === 'true'
   return realInitData ?? (devMockEnabled ? DEV_MOCK_INIT_DATA : null)
 }
 

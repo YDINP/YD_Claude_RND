@@ -1,0 +1,42 @@
+# Render Blueprint: tg-slot-hub API (무료 웹 서비스).
+# 이 저장소(YD_Claude_RND, 배포 브랜치 YDINP/타이쿤)는 여러 프로젝트가 섞여 있어 rootDir로 tg-slot-hub만 본다.
+# 자세한 절차: tg-slot-hub/docs/DEPLOY.md
+services:
+  - type: web
+    name: tg-slot-hub-api
+    runtime: node
+    plan: free
+    branch: YDINP/타이쿤
+    rootDir: tg-slot-hub
+    # NODE_ENV=production 이 빌드 단계에도 적용되어 devDependencies(tsup)가 빠지므로 --prod=false 필수.
+    buildCommand: >-
+      corepack enable &&
+      corepack prepare pnpm@10.34.5 --activate &&
+      pnpm install --frozen-lockfile --prod=false --filter "@tgslot/api..." &&
+      pnpm --filter @tgslot/api build
+    # rootDir(= tg-slot-hub)가 cwd 이므로 GAMES_DIR=games 가 게임 팩 폴더를 가리킨다.
+    startCommand: node apps/api/dist/index.js
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # Render 가 PORT 를 자동 주입한다 (config.ts 가 API_PORT 없으면 PORT 를 읽는다).
+      - key: GAMES_DIR
+        value: games
+      # 개발 전용 스위치는 프로덕션에서 true 면 부팅이 거부된다. 그래도 명시적으로 끈다.
+      - key: API_ALLOW_DEV_AUTH
+        value: "false"
+      - key: API_ALLOW_DEBUG_SPIN
+        value: "false"
+      # 아래 3개는 대시보드에서 직접 입력한다 (저장소에 값을 두지 않는다).
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
