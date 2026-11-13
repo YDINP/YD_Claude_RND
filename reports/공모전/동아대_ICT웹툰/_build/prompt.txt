@@ -1,0 +1,18 @@
+Use your image generation tool to create ONE image, landscape 1536x1024. Do not write any code, just generate the image and finish.
+
+A single Korean webtoon comic page laid out as a clean grid of 8 equal panels: 4 columns x 2 rows, thin black panel borders, white gutters about 14px, read left-to-right top row then bottom row. Warm, friendly Korean webtoon style: clean line art, soft flat colors, gentle cel shading. ABSOLUTELY NO TEXT, NO LETTERS, NO SPEECH BUBBLES, NO captions anywhere (I will add Korean dialogue later), so leave some calm empty space in the upper part of each panel for speech bubbles.
+
+Same two characters in every panel, keep them consistent:
+- GRANDMA: Korean woman about 75, short permed grey hair, round glasses, lilac cardigan over a floral blouse.
+- GRANDSON: Korean man about 20, messy black hair, navy hoodie.
+Setting: a cozy Korean apartment living room, low table, sofa, TV cabinet, afternoon light.
+
+Panels:
+1. Grandma sits at the low table holding a smartphone, asking it a question. On the table: a small white pill bottle and a whole grapefruit. The phone screen glows with a cheerful chat bubble shape (no readable text).
+2. Close-up of the smartphone screen: a cute friendly round AI chatbot mascot icon giving a confident thumbs-up (no text on screen).
+3. Grandson glances over her shoulder at the phone with a lazy, dismissive smile, already turning away toward his game controller.
+4. Grandma alone, head tilted, big question mark feeling (draw a small floating "?" symbol only, no words), puzzled face, holding the grapefruit.
+5. Grandma happily cutting the grapefruit in half on a cutting board, a spoon ready, the pill bottle beside it.
+6. Grandson rushing back into the room in alarm, hand raised to stop her, wide eyes.
+7. Grandson kneeling beside Grandma, explaining earnestly and pointing at the phone; Grandma's face shows sudden understanding and surprise, hand on her cheek.
+8. Warm ending: Grandma on a phone call (to a pharmacist) holding the pill bottle and nodding; the grapefruit halves set aside on a plate; Grandson beside her smiling with relief.
