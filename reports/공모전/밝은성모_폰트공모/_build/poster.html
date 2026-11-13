@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../공고/SmileLasik.ttf")}
+@font-face{font-family:VC;src:url("../공고/VisionCorrection.ttf")}
+:root{--ink:#1d2433;--red:#e0483a;--paper:#fbf8f1;--line:#d9d2c3}
+html,body{margin:0}
+body{width:1240px;height:1754px;background:var(--paper);font-family:SL;color:var(--ink);position:relative;overflow:hidden}
+.frame{position:absolute;left:110px;top:150px;width:1020px;height:1360px;background:#fff;border-radius:18px;box-shadow:0 2px 0 var(--line),0 30px 60px -30px rgba(40,30,10,.25)}
+.hd{position:absolute;left:0;right:0;top:46px;text-align:center;font-size:30px;letter-spacing:18px;color:#8a8f9c}
+.row{position:absolute;left:120px;right:40px;display:flex;align-items:center;justify-content:center}
+.row .n{position:absolute;left:-70px;font-size:26px;letter-spacing:0;color:#a3a8b3;font-family:SL}
+.r1{top:150px;font-size:320px;letter-spacing:60px;line-height:1}
+.r2{top:560px;font-size:92px;letter-spacing:20px}
+.r3{top:730px;font-size:70px;letter-spacing:12px}
+.r4{top:865px;font-size:56px;letter-spacing:9px}
+.r5{top:982px;font-size:45px;letter-spacing:6px}
+.r6{top:1082px;font-size:36px;letter-spacing:4px}
+.r7{top:1166px;font-size:28px;letter-spacing:3px;color:#3a4152}
+.r8{top:1236px;font-size:18px;letter-spacing:1.5px;color:#5b6273}
+.hl{color:var(--red)}
+.stick{position:absolute;width:560px;height:16px;transform:rotate(-18deg);transform-origin:0 50%}
+.stick i{position:absolute;inset:0;background:linear-gradient(#f2efe6,#cdc6b4);border-radius:8px;box-shadow:0 3px 6px rgba(0,0,0,.18)}
+.stick b{position:absolute;left:-6px;top:-4px;width:24px;height:24px;border-radius:50%;background:var(--red)}
+.occ{position:absolute;right:70px;top:1560px}
+.cap{position:absolute;left:110px;top:1560px;width:760px}
+.cap .t{font-family:VC;font-size:40px;line-height:1.5;color:var(--ink)}
+.cap .s{font-family:SL;font-size:25px;color:#7a7f8b;margin-top:16px;letter-spacing:1px}
+.logo{position:absolute;left:0;right:0;top:66px;text-align:center;font-family:SL;font-size:44px;color:#c9c2b2}
+</style></head><body>
+<div class="logo">!%</div>
+<div class="frame">
+ <div class="hd">나 의 ㅅ ㅁ 시 력 표</div>
+ <div class="row r1"><span class="n">0.1</span>선명</div>
+ <div class="row r2"><span class="n">0.2</span>손 뻗지 않아도</div>
+ <div class="row r3"><span class="n">0.3</span>머리맡 시계가 보이는</div>
+ <div class="row r4"><span class="n">0.5</span>눈 뜨자마자 맞이한 아침</div>
+ <div class="row r5"><span class="n">0.7</span>안경을 더듬던 열여덟 해 끝에</div>
+ <div class="row r6"><span class="n">0.8</span>천장 무늬까지 또렷하던 그날부터</div>
+ <div class="row r7"><span class="n">0.9</span>나를 밝게 만드는 나의 단어,&nbsp;<span class="hl">선명</span></div>
+ <div class="row r8"><span class="n">1.0</span>가장 작은 글씨까지 읽히는 하루가, 오늘보다 선명한 내일이 되기를</div>
+ <div class="stick"><i></i><b></b></div>
+</div>
+<div class="cap"><div class="t">손을 뻗지 않아도 보이는 아침,<br>나의 ㅅㅁ은 ‘선명’입니다.</div>
+<div class="s">밝은성모 스마일라식체 · 시력교정체</div></div>
+
+<script>document.fonts.ready.then(()=>{const h=document.querySelector('.hl').getBoundingClientRect(),f=document.querySelector('.frame').getBoundingClientRect(),st=document.querySelector('.stick');st.style.left=(h.right-f.left+8)+'px';st.style.top=(h.top+h.height/2-f.top-8)+'px';document.body.dataset.ok=1});</script></body></html>
