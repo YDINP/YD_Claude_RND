@@ -1,0 +1,972 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<hs:sec xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" xmlns:hp10="http://www.hancom.co.kr/hwpml/2016/paragraph" xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section" xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" xmlns:hhs="http://www.hancom.co.kr/hwpml/2011/history" xmlns:hm="http://www.hancom.co.kr/hwpml/2011/master-page" xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf/" xmlns:ooxmlchart="http://www.hancom.co.kr/hwpml/2016/ooxmlchart" xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0">
+<hp:p id="0" paraPrIDRef="16" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="10">
+<hp:secPr id="" textDirection="HORIZONTAL" spaceColumns="1134" tabStop="8000" tabStopVal="4000" tabStopUnit="HWPUNIT" outlineShapeIDRef="0" memoShapeIDRef="1" textVerticalWidthHead="0" masterPageCnt="0">
+<hp:grid lineGrid="0" charGrid="0" wonggojiFormat="0"/>
+<hp:startNum pageStartsOn="BOTH" page="0" pic="0" tbl="0" equation="0"/>
+<hp:visibility hideFirstHeader="0" hideFirstFooter="0" hideFirstMasterPage="0" border="SHOW_ALL" fill="SHOW_ALL" hideFirstPageNum="0" hideFirstEmptyLine="0" showLineNumber="0"/>
+<hp:lineNumberShape restartType="0" countBy="0" distance="0" startNumber="0"/>
+<hp:pagePr landscape="WIDELY" width="59528" height="84189" gutterType="LEFT_ONLY">
+<hp:margin header="2834" footer="2835" gutter="0" left="5669" right="5669" top="5669" bottom="5669"/>
+</hp:pagePr>
+<hp:footNotePr>
+<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>
+<hp:noteLine length="-1" type="SOLID" width="0.12 mm" color="#000000"/>
+<hp:noteSpacing betweenNotes="283" belowLine="567" aboveLine="850"/>
+<hp:numbering type="ON_SECTION" newNum="1"/>
+<hp:placement place="EACH_COLUMN" beneathText="0"/>
+</hp:footNotePr>
+<hp:endNotePr>
+<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>
+<hp:noteLine length="-4" type="SOLID" width="0.12 mm" color="#000000"/>
+<hp:noteSpacing betweenNotes="0" belowLine="567" aboveLine="850"/>
+<hp:numbering type="ON_SECTION" newNum="1"/>
+<hp:placement place="END_OF_DOCUMENT" beneathText="0"/>
+</hp:endNotePr>
+<hp:pageBorderFill type="BOTH" borderFillIDRef="2" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAGE">
+<hp:offset left="1417" right="1417" top="1417" bottom="1417"/>
+</hp:pageBorderFill>
+<hp:pageBorderFill type="EVEN" borderFillIDRef="2" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAGE">
+<hp:offset left="1417" right="1417" top="1417" bottom="1417"/>
+</hp:pageBorderFill>
+<hp:pageBorderFill type="ODD" borderFillIDRef="2" textBorder="PAPER" headerInside="0" footerInside="0" fillArea="PAGE">
+<hp:offset left="1417" right="1417" top="1417" bottom="1417"/>
+</hp:pageBorderFill>
+</hp:secPr>
+<hp:ctrl>
+<hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/>
+</hp:ctrl>
+</hp:run>
+<hp:run charPrIDRef="10">
+<hp:t>[붙임1]</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="10">
+<hp:tbl id="1239107996" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="NONE" repeatHeader="1" rowCnt="9" colCnt="5" cellSpacing="0" borderFillIDRef="2" noAdjust="1">
+<hp:sz width="48070" widthRelTo="ABSOLUTE" height="63368" heightRelTo="ABSOLUTE" protect="0"/>
+<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="0" allowOverlap="0" holdAnchorAndSO="1" vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>
+<hp:outMargin left="139" right="139" top="139" bottom="139"/>
+<hp:inMargin left="0" right="0" top="0" bottom="0"/>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="4">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="17" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="11">
+<hp:t>2026</hp:t>
+</hp:run>
+<hp:run charPrIDRef="12">
+<hp:t>년 ｢톡톡 </hp:t>
+</hp:run>
+<hp:run charPrIDRef="11">
+<hp:t>Idea</hp:t>
+</hp:run>
+<hp:run charPrIDRef="12">
+<hp:t> 공모전｣ 제안 신청서</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="0"/>
+<hp:cellSpan colSpan="5" rowSpan="1"/>
+<hp:cellSz width="48070" height="5522"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="6">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>제안제목 </hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="1"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="3436"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="7">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t> </hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="1"/>
+<hp:cellSpan colSpan="4" rowSpan="1"/>
+<hp:cellSz width="41579" height="3436"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="6">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="19" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>제안자</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="2"/>
+<hp:cellSz width="6491" height="7456"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>성명</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6999" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14074" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>생년월일</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="3" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6148" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="7">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="0" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="4" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14358" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>휴대전화</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>번호</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6999" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14074" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>전자우편</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>주소</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="3" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6148" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="9">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="20" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="4" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14358" height="3728"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="6">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="21" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>공동</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="21" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>제안자</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="21" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="15">
+<hp:t>(해당사항 </hp:t>
+</hp:run>
+<hp:run charPrIDRef="16">
+<hp:t>있을 시 작성)</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="2"/>
+<hp:cellSz width="6491" height="7026"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="17" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>성명</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6999" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="22" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14074" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="17" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>생년월일</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="3" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6148" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="7">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="22" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="4" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14358" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>휴대전화</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>번호</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="5"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6999" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="5"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14074" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="8">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>전자우편</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14">
+<hp:t>주소</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="3" rowAddr="5"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6148" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="9">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="23" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="14"/>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="4" rowAddr="5"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="14358" height="3513"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="6">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="24" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>제안배경</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="6"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="9971"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="7">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="25" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="17">
+<hp:t>･ 제안내용이 떠오르게 된 배경, 아이디어 발상 계기, 당시 상황 등</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="25" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="17">
+<hp:t>･ 제안사항에 대한 현황과 문제점 등</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="6"/>
+<hp:cellSpan colSpan="4" rowSpan="1"/>
+<hp:cellSz width="41579" height="9971"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="6">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="24" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>주요내용</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="7"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="17939"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="7">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="25" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="17">
+<hp:t>･ 제안에 대한 개선방안, 추진방법 등</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="7"/>
+<hp:cellSpan colSpan="4" rowSpan="1"/>
+<hp:cellSz width="41579" height="17939"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="10">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="24" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="13">
+<hp:t>기대효과</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="8"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="12018"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="11">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="25" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="17">
+<hp:t>･ 제안이 정책으로 반영될 시 나타날 수 있는 효과</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="8"/>
+<hp:cellSpan colSpan="4" rowSpan="1"/>
+<hp:cellSz width="41579" height="12018"/>
+<hp:cellMargin left="283" right="283" top="283" bottom="283"/>
+</hp:tc>
+</hp:tr>
+</hp:tbl>
+<hp:t/>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="16" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="10">
+<hp:t>[붙임2]</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="1">
+<hp:tbl id="1239107997" zOrder="1" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="TABLE" repeatHeader="1" rowCnt="2" colCnt="1" cellSpacing="0" borderFillIDRef="2" noAdjust="1">
+<hp:sz width="47897" widthRelTo="ABSOLUTE" height="57241" heightRelTo="ABSOLUTE" protect="0"/>
+<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="0" allowOverlap="0" holdAnchorAndSO="1" vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>
+<hp:outMargin left="283" right="283" top="283" bottom="283"/>
+<hp:inMargin left="0" right="0" top="0" bottom="0"/>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="12">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="26" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="18">
+<hp:t>개 인 정 보 수 집 동 의 서</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="0"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="47897" height="4067"/>
+<hp:cellMargin left="510" right="510" top="142" bottom="142"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="12">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="27" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t>·｢개인정보 보호법｣ 제15조(개인정보의 수집·이용)에 의거하여 개인정보처리자는 개인정보를 수집할 수 있으며, 그 수집 목적의 범위에서 이용할 수 있습니다. </hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="27" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t>·</hp:t>
+</hp:run>
+<hp:run charPrIDRef="19">
+<hp:t>개인정보처리자는 개인정보 수집 시 아래 사항을 정보주체에게 알려야</hp:t>
+</hp:run>
+<hp:run charPrIDRef="8">
+<hp:t> 하며, 정보주체의 동의를 받아야 합니다.</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="20"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t>□ 개인정보 수집･이용 목적</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="29" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t> - 강원특별자치도 2026년 ｢톡톡 Idea 공모전｣ 운영 및 심사결과 통보</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="30" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="21"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t>□ 수집항목</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="29" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t> - 성명, 전화번호, 전자우편, 생년월일 등 제안자 개인정보</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="30" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="21"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t>□ 개인정보의 보유 및 이용기간</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="29" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t> - 보유기간 : 2년</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="29" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t> - 보존사유 : 채택제안에 대한 정책추진 시, 자문요청 등 연락 필요 </hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="30" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="21"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="30" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="22"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="31" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="23">
+<hp:t>&lt;개인정보 수집․이용․제공 동의&gt;</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="32" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="24"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="25">
+<hp:t>· 개인정보의 수집 및 이용에 동의하십니까?    □ 동의함  □ 동의하지 않음</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="29" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="26"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="31" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="23">
+<hp:t>&lt;개인정보 거부권 및 거부 시 불이익&gt;</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="32" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="24"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="33" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="8">
+<hp:t> </hp:t>
+</hp:run>
+<hp:run charPrIDRef="27">
+<hp:t>제안자는 수집․이용․제공과 관련하여 개인정보 동의를 거부할 수 있으며,</hp:t>
+</hp:run>
+<hp:run charPrIDRef="8">
+<hp:t> 동의 거부 시에는 공모자 접수에서 제외됩니다.</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="34" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="21"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="28" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="25">
+<hp:t>·</hp:t>
+</hp:run>
+<hp:run charPrIDRef="28">
+<hp:t> 동의거부에 따른 불이익 내용에 동의하십니까?    □ 동의함  □ 동의하지 않음</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="1"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="47897" height="53174"/>
+<hp:cellMargin left="510" right="510" top="142" bottom="142"/>
+</hp:tc>
+</hp:tr>
+</hp:tbl>
+<hp:t/>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="1"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="35" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="29">
+<hp:t>2026년    월    일</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="35" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="30"/>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="36" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="29">
+<hp:t>동의인 :             (서명 또는 인)</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="16" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="10">
+<hp:t>[붙임3]</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="36" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="29">
+<hp:tbl id="1239107998" zOrder="2" numberingType="TABLE" textWrap="TOP_AND_BOTTOM" textFlow="BOTH_SIDES" lock="0" dropcapstyle="None" pageBreak="NONE" repeatHeader="1" rowCnt="7" colCnt="5" cellSpacing="0" borderFillIDRef="12" noAdjust="0">
+<hp:sz width="48068" widthRelTo="ABSOLUTE" height="64294" heightRelTo="ABSOLUTE" protect="0"/>
+<hp:pos treatAsChar="1" affectLSpacing="0" flowWithText="1" allowOverlap="0" holdAnchorAndSO="0" vertRelTo="PARA" horzRelTo="PARA" vertAlign="TOP" horzAlign="LEFT" vertOffset="0" horzOffset="0"/>
+<hp:outMargin left="140" right="140" top="140" bottom="140"/>
+<hp:inMargin left="283" right="283" top="283" bottom="283"/>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="13">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="26" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="31">
+<hp:t>2026년 ｢톡톡 Idea 공모전｣ 주제 안내</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="0"/>
+<hp:cellSpan colSpan="5" rowSpan="1"/>
+<hp:cellSz width="47623" height="4778"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="14">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="32">
+<hp:t>공모전</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="18" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="32">
+<hp:t>제목 </hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="1"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="15">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="37" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t> 『우리 집 안전을 부탁해!』 </hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="37" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>  우리 집 안전을 지키는 주택용 소방시설 보급·활용 활성화 아이디어 공모</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="1"/>
+<hp:cellSpan colSpan="4" rowSpan="1"/>
+<hp:cellSz width="41577" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="16">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="34">
+<hp:t>관련부서</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="6491" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="39" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="35">
+<hp:t>부서명</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="8238" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="40" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="35">
+<hp:t>예방안전과</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="13541" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="41" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="36">
+<hp:t>주제관련</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="41" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="36">
+<hp:t>문의처</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="3" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="7063" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="18">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="41" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="36">
+<hp:t>033-249-5146</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="4" rowAddr="2"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="12735" height="4113"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="19">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="42" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="32">
+<hp:t>공모<hp:lineBreak/>개요</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="0" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="4"/>
+<hp:cellSz width="6491" height="51290"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="40" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="36">
+<hp:t>공모 배경</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="3"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="8238" height="19611"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="18">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="43" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- 「소방시설 설치 및 관리에 관한 법률」 제10조 및 같은 법 시행령 제10조에 따른 주택</hp:t>
+</hp:run>
+<hp:run charPrIDRef="37">
+<hp:t>용 소방시설(소화기, 단독경보형 감지기) 의무 설치 대상</hp:t>
+</hp:run>
+<hp:run charPrIDRef="33">
+<hp:t>으로, 화재 초기 신속한 경보 및 진화를 통해 인명·재산 피해를 획기적으로 줄이는 핵심 안전 기구임.</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="44" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="38">
+<hp:t>주택용 소방시설 설치 후 단순 방치 현상을 방지하고, 도민이 </hp:t>
+</hp:run>
+<hp:run charPrIDRef="39">
+<hp:t>일상 속에서 자율적으로 설치·점검·활용할 수 있는 창의적 정책 아이</hp:t>
+</hp:run>
+<hp:run charPrIDRef="40">
+<hp:t>디어를 발굴하여 생활 밀착형 안전 문화를 정착시키고자 함.</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="3"/>
+<hp:cellSpan colSpan="3" rowSpan="1"/>
+<hp:cellSz width="33339" height="19611"/>
+<hp:cellMargin left="0" right="0" top="0" bottom="0"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>공모 주제</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="4"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="8238" height="8398"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="15">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="45" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="37">
+<hp:t>주택용 소방시설에 대한 도민의 관심 및 자발적 설치를 유도</hp:t>
+</hp:run>
+<hp:run charPrIDRef="41">
+<hp:t>하고, </hp:t>
+</hp:run>
+<hp:run charPrIDRef="42">
+<hp:t>일상생활 속 지속적인 점검과 활용을 활성화</hp:t>
+</hp:run>
+<hp:run charPrIDRef="41">
+<hp:t>할 수 있는 </hp:t>
+</hp:run>
+<hp:run charPrIDRef="42">
+<hp:t>창의적인 정책 아이디어 전반</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="4"/>
+<hp:cellSpan colSpan="3" rowSpan="1"/>
+<hp:cellSz width="33339" height="8398"/>
+<hp:cellMargin left="0" right="0" top="0" bottom="0"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="17">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="39">
+<hp:t>채택 시 </hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="39">
+<hp:t>활용방안</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="5"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="8238" height="12935"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="15">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="46" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="43">
+<hp:t>강원특별자치도 주택용 소방시설 보급 종합대책 및 연차별</hp:t>
+</hp:run>
+<hp:run charPrIDRef="33">
+<hp:t> 예방안전 추진계획 과제로 반영함.</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="47" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="44">
+<hp:t>도내 18개 시·군 소방서의 불조심 강조의 달 및 계절별</hp:t>
+</hp:run>
+<hp:run charPrIDRef="33">
+<hp:t> 민·관 합동 안전 캠페인 표준 모델로 활용함.</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="48" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="45">
+<hp:t>발굴된 우수 아이디어 대상 도정 시범 사업 검토 및 도민 접점 매체·채널을 활용한 보급·홍보 추진함.</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="5"/>
+<hp:cellSpan colSpan="3" rowSpan="1"/>
+<hp:cellSz width="33339" height="12935"/>
+<hp:cellMargin left="0" right="0" top="0" bottom="0"/>
+</hp:tc>
+</hp:tr>
+<hp:tr>
+<hp:tc name="" header="0" hasMargin="0" protect="0" editable="0" dirty="0" borderFillIDRef="20">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="39">
+<hp:t>기타</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="38" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="39">
+<hp:t>(기대효과 등)</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="1" rowAddr="6"/>
+<hp:cellSpan colSpan="1" rowSpan="1"/>
+<hp:cellSz width="8238" height="10346"/>
+<hp:cellMargin left="141" right="141" top="141" bottom="141"/>
+</hp:tc>
+<hp:tc name="" header="0" hasMargin="1" protect="0" editable="0" dirty="0" borderFillIDRef="21">
+<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="CENTER" linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" hasTextRef="0" hasNumRef="0">
+<hp:p id="2147483648" paraPrIDRef="45" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- 도민 자율 설치 문화 확산을 통한 소방시설 보급률의 획기적 제고</hp:t>
+</hp:run>
+</hp:p>
+<hp:p id="2147483648" paraPrIDRef="49" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">
+<hp:run charPrIDRef="33">
+<hp:t>- </hp:t>
+</hp:run>
+<hp:run charPrIDRef="38">
+<hp:t>주택용 소방시설의 올바른 활용 및 지속적 관리 체계 구축으로 </hp:t>
+</hp:run>
+<hp:run charPrIDRef="39">
+<hp:t>주택 화재 인명·재산 피해 최소화 및 민간 자율 안전 공동체 실현</hp:t>
+</hp:run>
+</hp:p>
+</hp:subList>
+<hp:cellAddr colAddr="2" rowAddr="6"/>
+<hp:cellSpan colSpan="3" rowSpan="1"/>
+<hp:cellSz width="33339" height="10346"/>
+<hp:cellMargin left="0" right="0" top="0" bottom="0"/>
+</hp:tc>
+</hp:tr>
+</hp:tbl>
+<hp:t/>
+</hp:run>
+</hp:p>
+</hs:sec>

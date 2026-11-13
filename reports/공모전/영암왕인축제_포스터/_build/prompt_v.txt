@@ -1,0 +1,9 @@
+Use your image generation tool to create ONE image. Do not write any code or files; just generate the image and reply "done".
+
+Image: vertical portrait 2:3 (1024x1536), a festival poster BACKGROUND illustration with NO text, NO letters, NO characters, NO watermark anywhere.
+
+Subject: a single small ancient Baekje-era wooden sailing ship with one large square sail, seen from a slight distance, sailing away from the viewer across a calm sea at dawn toward the far horizon. The sail is a large blank warm cream rectangle (like plain hanji paper), completely empty, facing the viewer, occupying the center of the image (sail roughly 22% of image width). The ship and sail are perfectly mirrored as a soft reflection in the glassy water below, so the sail appears twice: once in the sky above the horizon and once upside-down in the sea.
+Behind, on the left, the jagged granite ridges of Wolchulsan mountain in pale blue mist. Cherry blossom petals (pale pink) drift on the water, forming a long gently curving trail behind the ship from the bottom foreground toward the horizon, like a wake made of petals.
+Sky: soft gradient from deep indigo at the top to pale peach and warm gold near the horizon. Sea: indigo to teal with gentle light.
+Style: modern Korean ink-wash meets flat contemporary poster illustration, subtle paper grain, restrained palette (indigo, cream, blossom pink, warm gold), elegant and minimal, high contrast, not glossy, not 3D render, not oversaturated.
+Composition: keep the top 28% of the image as calm open sky (for a title) and the bottom 15% as calm dark sea (for information). The horizon line sits at about 52% from the top.

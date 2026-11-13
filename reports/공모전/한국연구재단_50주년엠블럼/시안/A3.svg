@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000"><defs></defs><rect width="1000" height="1000" fill="#fff"/><circle cx="500" cy="440" r="330" fill="none" stroke="#0B2E6F" stroke-width="10"/>
+<path d="M300 300 H250 V580 H300" fill="none" stroke="#0B2E6F" stroke-width="34"/>
+<text x="490" y="530" text-anchor="middle" font-family="Pretendard, 'Malgun Gothic', Arial, sans-serif" font-weight="800" font-size="230" fill="#0B2E6F" letter-spacing="-8">50</text>
+<path d="M680 300 H730 V460" fill="none" stroke="#00A6A6" stroke-width="34"/>
+<circle cx="730" cy="535" r="17" fill="#00A6A6"/><circle cx="730" cy="590" r="10" fill="#00A6A6" opacity=".5"/><text x="500" y="850" text-anchor="middle" font-family="Pretendard, 'Malgun Gothic', Arial, sans-serif" font-weight="600" font-size="44" fill="#0B2E6F" letter-spacing="8">1977 — 2027</text><text x="500" y="915" text-anchor="middle" font-family="Pretendard, 'Malgun Gothic', Arial, sans-serif" font-weight="700" font-size="44" fill="#0B2E6F">한국연구재단 창립 50주년</text></svg>

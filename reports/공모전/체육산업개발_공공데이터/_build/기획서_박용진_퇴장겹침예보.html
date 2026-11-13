@@ -1,0 +1,104 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>기획서_박용진_퇴장겹침예보</title><style>
+@page { size:A4; margin:20mm 20mm 20mm 20mm;
+  @bottom-center { content: "- " counter(page) " -"; font-family:'HY신명조','Batang',serif; font-size:9pt; color:#333; } }
+* { -webkit-print-color-adjust:exact; print-color-adjust:exact; box-sizing:border-box; }
+body { font-family:'HY신명조','Batang',serif; font-size:13pt; line-height:1.6; color:#000; margin:0; }
+p { margin:0; }
+.o { padding-left:1.5em; text-indent:-1.5em; margin:0 0 3.5pt; }
+.d { padding-left:2em; text-indent:-1em; margin:0 0 3pt; }
+.b { padding-left:3em; text-indent:-1em; margin:0 0 3pt; }
+.p { padding-left:1.5em; margin:0 0 3.5pt; }
+.h { font-size:14pt; font-weight:bold; margin:11.5pt 0 4.5pt; }
+.note { font-size:10pt; line-height:1.3; margin:0 0 2pt; }
+.sec { background:#DFE6F7; font-size:15pt; font-weight:bold; height:25pt; line-height:25pt; padding:0 8pt; margin:0 0 4pt; }
+table.t { width:100%; border-collapse:collapse; font-size:10pt; line-height:1.16; margin:0 0 5pt; }
+table.t td, table.t th { border:0.15mm solid #000; padding:4.5pt 6.5pt; vertical-align:middle; }
+table.t th { background:#1F4E79; color:#fff; font-weight:bold; text-align:center; }
+table.t td.f { background:#F5F7FA; font-weight:bold; }
+table.t td.s { background:#EAF1F8; }
+table.t td.c { text-align:center; }
+table.t td p + p { margin-top:1.5pt; }
+thead { display:table-header-group; }
+tr { break-inside:avoid; }
+.img { text-align:center; margin:2pt 0 2pt; }
+.cap { text-align:center; font-size:10pt; line-height:1.3; margin:0 0 6pt; }
+.pb { break-before:page; }
+.gap { height:10pt; }
+
+body { font-size:11pt; }
+.form table.t td, .form table.t th { padding:3pt 6pt; }
+.title { display:flex; border:0.3mm solid #000; margin-bottom:8pt; }
+.title .l { width:14%; background:#F5F7FA; font-weight:bold; text-align:center; padding:6pt 0; border-right:0.15mm solid #000; font-size:11pt; }
+.title .r { flex:1; text-align:center; font-weight:bold; font-size:15pt; padding:4pt 0; }
+.pc { text-align:center; margin:6pt 0; }
+.sw { position:relative; display:inline-block; }
+.sig { position:absolute; left:50%; top:50%; transform:translate(-50%,-55%); }
+table.t td p { text-align:left; }
+.pledge { border:0.15mm solid #000; padding:6pt 10pt; font-size:9.6pt; line-height:1.4; margin:0 0 4pt; }
+.pledge p { margin:0 0 3pt; padding-left:1.2em; text-indent:-1.2em; }
+.pledge p.lead { padding-left:0; text-indent:0; }
+body{font-size:12pt;line-height:1.55} .h{font-size:13.5pt} table.t{font-size:9.6pt}</style></head><body class="plan"><div class="title"><div class="l">붙임1</div><div class="r">2026년도 공공데이터 활용 경진대회 기획서</div></div><p class="h">o 기획 요약서</p>
+<table class="t"><colgroup><col style="width:20.00%"><col style="width:80.00%"></colgroup><tbody><tr><td colspan="1" class="f c"><p>1. 활용사례명</p></td><td colspan="1" class=""><p>같이 시작하면 같이 쏟아진다 — 공연정보로 올림픽공원 ‘퇴장 겹침’을 미리 찾아 나누는 「퇴장 겹침 예보」</p></td></tr><tr><td colspan="1" class="f c"><p>2. 사용한 공공데이터명</p></td><td colspan="1" class=""><p>【기관 개방 데이터】 한국체육산업개발주식회사_올림픽공원 공연정보 / 한국체육산업개발주식회사_올림픽공원 입출차 정보 / 한국체육산업개발주식회사_올림픽공원 대관정보 / 한국체육산업개발주식회사_주차장 혼잡도 정보 / 한국체육산업개발주식회사_실시간 주차현황</p><p>【타 기관 공동활용】 서울교통공사_역별 일별 시간대별 승하차인원 정보 / 서울교통공사_9호선 2_3단계 역별일별시간대별승하차인원</p></td></tr><tr><td colspan="1" class="f c"><p>3. 요약</p></td><td colspan="1" class=""><p>◦ <b>문제의 원인:</b> 올림픽공원 퇴장 혼잡은 관객 수만의 문제가 아니라 ‘같은 시각에 끝나는 공연’과 ‘한 역으로 모이는 동선’이 겹쳐 생깁니다. 공연장 4곳 모두 가장 가까운 역을 올림픽공원역으로 안내합니다.</p><p>◦ <b>근거(공공데이터 직접 분석):</b> 2025년 저녁 공연일 138일 중 81일은 두 곳 이상에서 공연했고 그중 54일은 시작 시각까지 같았습니다. 같은 두 공연이 7월 20일엔 같은 18시, 21일엔 1시간 엇갈려 시작했더니 올림픽공원역의 가장 붐빈 1시간 승차가 3,964명 → 2,436명(−39%)으로 달랐습니다.</p><p>◦ <b>서비스:</b> 공연정보로 공연장별 예상 퇴장 시각(예정 종료 + 입출차 정보로 배운 늦어짐)을 계산해 겹침일을 미리 찾고, 관객 웹 화면(공연장별 출구·역 안내)과 운영자 화면(겹침일 달력·대관 단계 권고)을 제공합니다. 동작하는 시제품을 함께 냅니다.</p></td></tr><tr><td colspan="1" class="f c"><p>4. 기대효과</p></td><td colspan="1" class=""><p>◦ <b>혼잡 정점 낮추기:</b> 같은 인원이라도 퇴장을 시간·역으로 나누면 가장 붐비는 1시간이 낮아집니다(7월 20·21일 비교에서 −39% 관찰).</p><p>◦ <b>운영 비용이 거의 없는 예방:</b> 겹침일을 공연 몇 주 전에 알 수 있어 인력·안내·대관 협의를 미리 준비합니다. 정적 웹이라 2028년까지 운영 부담이 작습니다.</p><p>◦ <b>공공데이터 가치 확인:</b> 공연정보·입출차 정보가 ‘언제, 어디로’ 사람이 나오는지 예측하는 데 쓰인다는 것을 실제 수치로 보입니다.</p></td></tr></tbody></table>
+<div class="pb"></div><p class="h">o 상세 기획서</p>
+<p class="h">1. 활용사례 개요</p>
+<p class="p"><b>1-1. 활용사례 명</b></p>
+<p class="o">◦ 같이 시작하면 같이 쏟아진다 — 공연정보로 올림픽공원 ‘퇴장 겹침’을 미리 찾아 나누는 「퇴장 겹침 예보」</p>
+<p class="p"><b>1-2. 활용사례 기능, 특징 등 세부내용</b></p>
+<p class="o">◦ <b>한 줄 요약:</b> 공연정보로 ‘오늘 어느 공연장들이 몇 시에 함께 퇴장하는가’를 미리 계산해, 겹치는 날에는 관객을 시간과 역으로 나눠 안내하는 웹 서비스입니다.</p>
+<p class="o">◦ <b>① 예상 퇴장 시각 계산:</b> 공연정보의 시작 시각·소요시간·장소로 예정 종료 시각을 내고, 입출차 정보에서 배운 공연장별 ‘실제 퇴장 늦어짐’(앙코르·퇴장 시간)을 더합니다.</p>
+<p class="o">◦ <b>② 겹침 판정:</b> 같은 날 두 곳 이상의 예상 퇴장 구간이 30분 안으로 겹치면 ‘겹침일’로 표시하고, 겹치는 공연장 좌석 합으로 규모를 보여 줍니다.</p>
+<p class="o">◦ <b>③ 관객 안내(웹):</b> 날짜를 고르면 공연장별 예상 퇴장 구간과 ‘퇴장 중인 좌석’ 곡선을 보여 주고, 내 공연장의 출구·역(예: 큰 공연장은 올림픽공원역 3·4번 출구, 다른 공연장은 남4문 쪽 한성백제역·몽촌토성역)을 안내합니다. 차량 관객에게는 주차장 혼잡도·실시간 주차현황을 함께 보여 줍니다.</p>
+<p class="o">◦ <b>④ 운영자 화면:</b> 앞으로의 겹침일 목록(겹치는 공연장·시작 시각·예상 퇴장·좌석 합·조치 제안)과 지난 공연일 집계를 보여 줍니다. 현장 인력 배치와 교통기관 협조 요청 시각을 미리 잡는 데 씁니다.</p>
+<p class="o">◦ <b>⑤ 대관 단계 권고:</b> 대관이 확정되기 전, 같은 날 다른 공연장과 시작 시각이 같으면 30~60분 엇갈림을 주최 측과 협의하도록 알립니다. 혼잡의 원인(같은 시각 시작)을 가장 앞에서 줄이는 장치입니다.</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/fig4_structure.png" style="width:165mm"></div>
+<p class="cap">그림 1. 서비스 구조 — 기관 개방 데이터 4종으로 퇴장 시각을 계산하고 세 가지 화면으로 나눠 씁니다</p>
+<p class="p"><b>1-3. 활용사례 서비스 확인 방법</b></p>
+<p class="o">◦ <b>시제품 파일:</b> 함께 보내는 「퇴장겹침예보_시제품.zip」을 풀고 index.html 을 웹 브라우저(크롬·엣지)로 열면 바로 동작합니다(설치·인터넷 연결 불필요). ‘관객 안내’와 ‘운영자 화면’ 두 탭이 있습니다.</p>
+<p class="o">◦ <b>들어 있는 데이터:</b> 2026년 11~12월 올림픽공원 공연정보(2026.11.8. 수집)로 계산한 예상 퇴장 시각. 예: 11월 14일(토) KSPO DOME 18:00 공연과 올림픽홀 18:00 공연의 퇴장이 20:35~21:05 무렵 겹친다고 표시합니다.</p>
+<p class="o">◦ <b>분석 재현:</b> 수치·그림을 만든 분석 코드(파이썬)와 받은 공공데이터 파일 목록을 함께 제공할 수 있습니다. 수상 시 공개 주소(무료 정적 호스팅)로 올리고 원천 소스를 제공합니다.</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/proto_audience.png" style="width:160mm"></div>
+<p class="cap">그림 2. 시제품 ‘관객 안내’ 화면 — 2026년 11월 14일(토) 실제 공연정보로 계산한 예</p>
+<div class="pb"></div><p class="h">2. 활용사례의 독창성</p>
+<p class="p"><b>2-1. 활용 공공데이터</b></p>
+<table class="t"><colgroup><col style="width:28.00%"><col style="width:30.00%"><col style="width:42.00%"></colgroup><thead><tr><th colspan="1"><p>데이터(공공데이터포털)</p></th><th colspan="1"><p>쓰는 항목</p></th><th colspan="1"><p>쓰임</p></th></tr></thead><tbody><tr><td colspan="1" class="f"><p>한국체육산업개발주식회사_올림픽공원 공연정보</p></td><td colspan="1" class=""><p>행사명, 기간, 시간, 장소, 소요시간</p></td><td colspan="1" class=""><p>예상 퇴장 시각 계산의 바탕(핵심 데이터)</p></td></tr><tr><td colspan="1" class="f"><p>한국체육산업개발주식회사_올림픽공원 입출차 정보</p></td><td colspan="1" class=""><p>입차일시, 출차일시(2024.7, 215,528건)</p></td><td colspan="1" class=""><p>예정 종료와 실제 퇴장(출차 정점)의 차이 학습</p></td></tr><tr><td colspan="1" class="f"><p>한국체육산업개발주식회사_올림픽공원 대관정보</p></td><td colspan="1" class=""><p>행사명, 행사기간, 장소</p></td><td colspan="1" class=""><p>공연정보에 없는 행사(기업행사 등) 보완</p></td></tr><tr><td colspan="1" class="f"><p>한국체육산업개발주식회사_주차장 혼잡도 정보 / 실시간 주차현황</p></td><td colspan="1" class=""><p>주차구역, 혼잡도, 주차대수</p></td><td colspan="1" class=""><p>차량 관객 출차 시각 안내</p></td></tr><tr><td colspan="1" class="f"><p>(확대) 한국체육산업개발주식회사_올림픽공원 차량입출차, 공연, 날씨정보 등 연계 데이터</p></td><td colspan="1" class=""><p>일자·시간대별 차량 대수, 공연, 날씨(2025)</p></td><td colspan="1" class=""><p>늦어짐 값을 1년치로 다시 학습·검증</p></td></tr><tr><td colspan="1" class="f"><p>(타 기관) 서울교통공사_역별 일별 시간대별 승하차인원 정보 / 9호선 2_3단계 역별일별시간대별승하차인원</p></td><td colspan="1" class=""><p>역·날짜·시간대별 승차</p></td><td colspan="1" class=""><p>역 쏠림 확인, 시범 효과 측정</p></td></tr></tbody></table>
+<p class="p"><b>2-2. 사례를 활용하게 된 배경 및 활용 우수성</b></p>
+<p class="o">◦ <b>배경 — 같은 시각에 시작한다:</b> 공연정보를 2024~2025년 2년치로 모아 대형 공연장 4곳(KSPO DOME 15,000석·티켓링크 라이브 아레나 5,003석·올림픽홀 고정 2,452석·우리금융아트홀 1,184석)의 저녁 공연을 세어 보니, 2025년 138일 중 81일은 두 곳 이상에서 공연했고 그중 <b>54일은 시작 시각까지 같았습니다</b>(주말 49일). 업계 관행인 ‘토 18시·일 17시’ 시작이 겹침을 구조적으로 만듭니다.</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/fig3_overlap_stats.png" style="width:160mm"></div>
+<p class="cap">그림 3. 저녁 공연일 가운데 두 곳 이상 공연한 날과 같은 시각에 시작한 날(공연정보 집계)</p>
+<p class="o">◦ <b>배경 — 한 역으로 나온다:</b> 누리집 공연장 안내는 네 공연장 모두 가장 가까운 지하철역을 ‘5, 9호선 올림픽공원역’으로 적습니다. 실제로 2024년 7월 공연날 밤, 평일보다 늘어난 승차의 <b>99% 이상이 올림픽공원역</b>에서 생겼고, 공원 남4문(평화의문광장) 쪽 한성백제역(9호선)·몽촌토성역(8호선)은 평일과 같았습니다(그림 4).</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/fig2_one_station.png" style="width:160mm"></div>
+<p class="cap">그림 4. 공연이 끝난 1시간, 공원 주변 세 역의 승차 인원과 평일 평균</p>
+<p class="o">◦ <b>같은 공연, 다른 시작 시각 — 자연 실험:</b> 2024년 7월 20일(토)과 21일(일)은 같은 두 공연(KSPO DOME·올림픽홀)이 열린 날입니다. 20일은 둘 다 18시에 시작해 올림픽공원역의 가장 붐빈 1시간 승차가 3,964명이었고, 21일은 1시간 엇갈려 시작해 2,436명이었습니다(−39%). 저녁(18~24시) 전체 승차는 7,238명과 6,663명으로 비슷했으니, <b>같은 인원이 ‘한꺼번에’ 나왔는지 ‘나눠서’ 나왔는지</b>가 정점을 갈랐습니다(요일 차이 등 다른 요인도 있을 수 있어 시범에서 다시 확인합니다).</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/fig1_same_vs_stagger.png" style="width:160mm"></div>
+<p class="cap">그림 5. 같은 두 공연이 같은 시각(20일)과 1시간 차(21일)로 시작한 날의 올림픽공원역 시간대별 승차</p>
+<p class="o">◦ <b>공공데이터 활용 비중·가공:</b> 핵심은 공연정보(매 공연)입니다. 자유 형식으로 적힌 ‘시간’ 칸(예: “토 오후 6시 / 일 오후 4시”, “7월 4일(금) 7PM”)을 날짜별 시작 시각으로 풀어 2024~2026년 381개 공연을 정리했습니다(해석 못 한 공연일은 연 14건). 입출차 정보 215,528건은 10분 단위 출차 수로 바꿔 공연 날 출차 정점을 찾았고, 예정 종료보다 <b>40~70분 늦게</b>(5개 사례, 가운데 값 50분) 정점이 온다는 것을 확인해 계산에 넣었습니다.</p>
+<p class="o">◦ <b>다른 서비스와의 차별점:</b> 지도 앱·혼잡도 서비스는 ‘지금 얼마나 붐비는가’를 보여 줍니다. 이 서비스는 공연정보만으로 <b>몇 주 앞서 ‘언제, 어느 공연장들이 함께 나오는가’</b>를 알려 주고, 원인인 ‘같은 시각 시작’을 대관 단계에서 바꿀 수 있게 합니다. 공모 예시인 ‘방문객 혼잡도 예측’이 전체 방문객 수를 맞히는 데 머문다면, 이 안은 퇴장 시각과 동선을 공연장 단위로 나누는 데까지 갑니다.</p>
+<p class="h">3. 활용사례의 구체성</p>
+<p class="p"><b>3-1. 계산 방법(시제품에 구현)</b></p>
+<table class="t"><colgroup><col style="width:22.00%"><col style="width:78.00%"></colgroup><tbody><tr><td colspan="1" class="f c"><p>공연 고르기</p></td><td colspan="1" class=""><p>KSPO DOME·티켓링크 라이브 아레나·올림픽홀·우리금융아트홀, 15시 이후 시작, 공연기간 7일 이하(장기 상설 공연 제외). 공연장별 그날 마지막 회차를 씁니다.</p></td></tr><tr><td colspan="1" class="f c"><p>예정 종료</p></td><td colspan="1" class=""><p>시작 시각 + 소요시간(공연정보). 소요시간이 비어 있으면 120분으로 가정하고 화면에 ‘가정’이라고 표시합니다.</p></td></tr><tr><td colspan="1" class="f c"><p>예상 퇴장 구간</p></td><td colspan="1" class=""><p>예정 종료 + 늦어짐 50분 ± 15분. 늦어짐은 2024년 7월 입출차 정보의 출차 정점에서 구했고(40~70분), 연계 데이터(2025)로 공연장·요일별 값으로 다시 맞춥니다.</p></td></tr><tr><td colspan="1" class="f c"><p>겹침 판정</p></td><td colspan="1" class=""><p>두 곳 이상 예상 퇴장 구간이 겹치면 겹침일. 10분마다 ‘퇴장 중인 좌석’ 합을 그리고 1만 5천 석을 넘는 구간을 붉게 표시합니다.</p></td></tr><tr><td colspan="1" class="f c"><p>안내 배정(예시)</p></td><td colspan="1" class=""><p>겹침일에 가장 큰 공연장은 올림픽공원역 3·4번 출구, 다른 공연장은 남4문 쪽 한성백제역(9호선 2번 출구)·몽촌토성역(8호선 1번 출구) 또는 15~20분 머문 뒤 이동. 실제 배정·보행 경로는 시범 때 실측해 확정합니다.</p></td></tr></tbody></table>
+<p class="note">※ 늦어짐 관찰 사례(2024.7, 입출차 정보의 10분 단위 출차 정점): 7/21 올림픽홀 16:00+120분 → 18:40(+40분), 7/21 KSPO DOME 17:00+150분 → 20:30(+60분), 7/20 KSPO DOME 18:00+150분 → 21:20(+50분), 7/27 KSPO DOME 18:00+120분 → 20:40(+40분), 7/28 KSPO DOME 16:00+120분 → 19:10(+70분)</p>
+<p class="p"><b>3-2. 화면 구성</b></p>
+<p class="o">◦ <b>관객 안내:</b> 날짜 띠(겹침일 붉게) → 그날 공연별 막대(회색: 공연, 색: 예상 퇴장) → 퇴장 중인 좌석 곡선 → 공연장별 안내 카드(예상 퇴장 시각, 출구·역, 차량 출차 안내). 공연 상세 페이지·예매 확인 문자에 링크로 붙일 수 있습니다.</p>
+<p class="o">◦ <b>운영자 화면:</b> 앞으로의 겹침일 표와 지난 공연일 집계. 예를 들어 2026년 11월 28일(토)·29일(일)은 KSPO DOME과 올림픽홀이 같은 시각(18시·17시)에 시작해 좌석 합 약 1만 7천 석의 퇴장이 겹칠 것으로 나옵니다.</p>
+<div class="img"><img src="file:///D:/park/YD_Claude_RND/reports/%EA%B3%B5%EB%AA%A8%EC%A0%84/%EC%B2%B4%EC%9C%A1%EC%82%B0%EC%97%85%EA%B0%9C%EB%B0%9C_%EA%B3%B5%EA%B3%B5%EB%8D%B0%EC%9D%B4%ED%84%B0/assets/fig/proto_operator.png" style="width:150mm"></div>
+<p class="cap">그림 6. 시제품 ‘운영자 화면’ — 앞으로의 겹침일과 조치 제안</p>
+<p class="p"><b>3-3. 갱신과 운영 방식</b></p>
+<p class="o">◦ 공연정보·대관정보를 하루 한 번 받아 예상 퇴장을 다시 계산하고 정적 파일(HTML·JSON)로 내보냅니다. 서버·회원가입·개인정보 수집이 없습니다.</p>
+<p class="o">◦ 입출차 정보·연계 데이터가 새로 개방될 때마다(연 단위) 늦어짐 값을 공연장·요일·장르별로 다시 맞추고, 실제 지하철 승차와 비교해 오차를 공개합니다.</p>
+<p class="h">4. 사례의 활용 적절성</p>
+<p class="o">◦ <b>안전:</b> 1만 명 넘는 관객이 같은 시각 한 역으로 몰리는 날을 몇 주 앞서 알면, 계단·개찰구 앞 밀집을 줄이는 인력·안내를 미리 둘 수 있습니다. 2025년 기준 이런 날이 연 50일 안팎입니다.</p>
+<p class="o">◦ <b>관객 편의:</b> 관객은 ‘오늘은 퇴장이 겹치는 날’임을 알고 출구·역·출차 시각을 고를 수 있습니다. 특히 차량 관객의 출차 대기와 주변 도로 정체를 줄입니다.</p>
+<p class="o">◦ <b>운영 효율:</b> 겹치지 않는 날은 평소대로, 겹치는 날에만 인력을 더 둡니다. 원인(같은 시각 시작)을 대관 단계에서 줄이면 현장 대응 자체가 줄어듭니다.</p>
+<p class="o">◦ <b>주민·공원 이용자:</b> 공연이 끝나는 시각 올림픽공원역 주변 보행·버스 혼잡이 나뉘어 일상 이용자의 불편이 줄어듭니다.</p>
+<p class="o">◦ <b>공공데이터 확산:</b> 같은 방식은 잠실·고척·상암 등 공연장이 모인 다른 곳에도 그대로 옮길 수 있습니다(공연 일정 + 실제 퇴장 기록만 있으면 됨).</p>
+<p class="h">5. 실현가능성 및 기타</p>
+<p class="p"><b>5-1. 추진 일정 및 개발·운영 계획</b></p>
+<table class="t"><colgroup><col style="width:18.00%"><col style="width:42.00%"><col style="width:40.00%"></colgroup><thead><tr><th colspan="1"><p>시기</p></th><th colspan="1"><p>할 일</p></th><th colspan="1"><p>확인할 것</p></th></tr></thead><tbody><tr><td colspan="1" class="f c"><p>~2026.12</p></td><td colspan="1" class=""><p>시제품 완성(제출본), 공연정보 자동 수집·계산</p></td><td colspan="1" class=""><p>2026년 11~12월 겹침일 예보 공개</p></td></tr><tr><td colspan="1" class="f c"><p>2027.1~3</p></td><td colspan="1" class=""><p>연계 데이터(2025)로 늦어짐 값 재학습, 출구·역 배정안을 운영 부서와 확정(보행 경로 실측)</p></td><td colspan="1" class=""><p>예보 퇴장 시각과 실제 출차·승차 정점 차이</p></td></tr><tr><td colspan="1" class="f c"><p>2027.4~9</p></td><td colspan="1" class=""><p>겹침일 시범: 공연 상세 페이지·현장 안내판에 퇴장 안내, 운영자 화면 사용</p></td><td colspan="1" class=""><p>시범일 올림픽공원역 정점 1시간 승차 비율, 한성백제·몽촌토성역 분산</p></td></tr><tr><td colspan="1" class="f c"><p>2027.10~</p></td><td colspan="1" class=""><p>대관 단계 권고 시범(신규 대관 협의 때 시작 시각 엇갈림 안내)</p></td><td colspan="1" class=""><p>같은 시각 시작 일수 변화</p></td></tr></tbody></table>
+<p class="p"><b>5-2. 서비스 유지 계획(2028년까지 운영 가능 여부)</b></p>
+<p class="o">◦ <b>운영 가능합니다.</b> 정적 웹(무료 호스팅)과 하루 한 번 자동 갱신만으로 돌아가며, 서버·개인정보가 없어 유지비가 거의 들지 않습니다. 제안자가 2028년까지 갱신·오류 수정을 맡고, 원천 소스와 운영 방법 문서를 기관에 제공해 기관 누리집 안으로 옮길 수도 있게 합니다.</p>
+<p class="p"><b>5-3. 추가 개방이 필요한 공공데이터(의견)</b></p>
+<p class="d">- <b>공연별 실제 종료 시각·퇴장 완료 시각:</b> 예정 소요시간과 실제 종료의 차이를 바로 쓸 수 있어 예보 정확도가 크게 오릅니다.</p>
+<p class="d">- <b>공연별 판매 좌석 수(구간값):</b> 공연장 수용 규모 대신 실제 관객 규모로 겹침 크기를 계산할 수 있습니다.</p>
+<p class="d">- <b>출입문별 보행자 계수(10분 단위):</b> 동2문·남2문·북2문·남4문별 퇴장 흐름으로 출구 배정 효과를 직접 확인할 수 있습니다.</p>
+<p class="d">- <b>공연정보의 회차별 시작 시각 정형 항목:</b> 지금은 ‘시간’ 칸이 자유 형식이라 해석이 필요합니다. ‘날짜·회차·시작 시각’ 칸이 있으면 누구나 바로 쓸 수 있습니다.</p>
+<p class="note">자료(그림 출처 공통): 공공데이터포털 data.go.kr/data/3037877(올림픽공원 공연정보, 연결 원천 올림픽공원 누리집 공연일정 2026.11.8. 수집) · /15138735(올림픽공원 입출차 정보) · /15048032(서울교통공사 역별 일별 시간대별 승하차인원 정보) · /15060424(서울교통공사 9호선 2_3단계) · 올림픽공원 누리집 공연장 안내·오시는길(좌석 수, 가까운 역). 집계·계산은 제안자.</p></body></html>

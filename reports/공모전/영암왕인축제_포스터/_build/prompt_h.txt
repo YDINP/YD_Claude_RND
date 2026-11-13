@@ -1,0 +1,8 @@
+Use your image generation tool to create ONE image. Do not write any code or files; just generate the image and reply "done".
+
+Image: horizontal landscape 3:2 (1536x1024), a festival banner BACKGROUND illustration with NO text, NO letters, NO characters, NO watermark anywhere.
+
+Subject: same world as a companion poster — a single small ancient Baekje-era wooden sailing ship with one large square blank warm-cream sail (plain hanji paper, completely empty), sailing on a calm glassy sea at dawn, mirrored as a soft reflection in the water. Place the ship at about 62% from the left. On the far left, the jagged granite ridges of Wolchulsan mountain in pale blue mist on the near shore; on the far right horizon, a faint distant coastline of another land in pale gold mist. A long gently curving trail of pale pink cherry blossom petals floats on the water from the left shore past the ship toward the far right coastline, connecting the two shores.
+Sky: soft gradient from deep indigo at the top to pale peach and warm gold near the horizon. Horizon at 55% from top.
+Style: modern Korean ink-wash meets flat contemporary poster illustration, subtle paper grain, restrained palette (indigo, cream, blossom pink, warm gold), elegant, minimal, not glossy, not 3D render, not oversaturated.
+Keep the left 40% of the sky relatively calm and open (for a title).

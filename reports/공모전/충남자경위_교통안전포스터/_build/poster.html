@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;width:1240px;height:1754px;overflow:hidden;background:#23262b;font-family:"Noto Sans KR",sans-serif}
+.h{position:absolute;left:90px;right:90px;top:92px;color:#fff}
+.k{font-size:30px;letter-spacing:6px;color:#FFC93C;font-weight:700}
+h1{font-size:96px;line-height:1.18;margin:22px 0 0;font-weight:900;letter-spacing:-3px}
+h1 em{font-style:normal;color:#FFC93C}
+.s{font-size:40px;line-height:1.5;margin-top:30px;color:#d9dde4;font-weight:500}
+.s b{color:#fff;font-weight:800}
+svg{position:absolute;left:0;top:0}
+.cta{position:absolute;left:90px;right:90px;bottom:245px;color:#fff;font-size:60px;font-weight:900;letter-spacing:-2px;line-height:1.25}
+.cta span{color:#FF5A4E}
+.f{position:absolute;left:90px;right:90px;bottom:62px;color:#8b919b;font-size:20px;line-height:1.6;border-top:2px solid #3c4048;padding-top:18px;display:flex;justify-content:space-between}
+.f b{color:#cfd3da;font-size:26px}
+</style></head><body>
+<svg width="1240" height="1754" viewBox="0 0 1240 1754">
+ <defs>
+  <g id="fp"><ellipse cx="0" cy="0" rx="10" ry="16"/><ellipse cx="0" cy="-23" rx="8" ry="6"/></g>
+ </defs>
+ <!-- 횡단보도: 아래(출발)→위(도착) 18m, y 1440→600 -->
+ <g fill="#e9e9e4">
+  <script>/* stripes drawn below */</script>
+ </g>
+ <g id="zebra"></g>
+ <!-- 끝 표시 -->
+</svg>
+<div class="h">
+ <div class="k">횡단보도 18m · 초록불 18초</div>
+ <h1>초록불은<br><em>1초에 1m</em> 걷는<br>걸음에 맞춰져 있습니다</h1>
+ <div class="s">지팡이를 짚은 어르신은 1초에 약 <b>0.7m</b>.<br>같은 18초, 어르신 앞에는 <b>아직 약 5m</b>가 남아 있습니다.</div>
+</div>
+<div class="cta">신호가 바뀌어도<br><span>횡단보도 끝까지</span> 보고 출발하세요</div>
+<div class="f" style="display:block"><b style="display:block;margin-bottom:6px">충청남도 자치경찰위원회 · 교통안전</b><span>일반 보행신호 산정 보행속도 1.0m/s(경찰청 교통신호기 업무편람) · 보조기구 사용 노인 하위15% 보행속도 0.73m/s(한국ITS학회논문지, 2020)<br>※ 계산: 18초 × 0.73m/s ≈ 13.1m → 남은 거리 약 4.9m</span></div>
+<script>
+const NS='http://www.w3.org/2000/svg', svg=document.querySelector('svg'), z=svg.querySelector('#zebra');
+const el=(t,a,p=z)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const X0=300, X1=940, Y0=1225, Y1=705, M=(Y0-Y1)/18;   // 18m
+// 차선(가로) 줄무늬: 횡단보도 흰 띠는 진행 방향과 수직 → 가로 띠
+for(let i=0;i<18;i++){ if(i%2==0) el('rect',{x:X0,y:Y1+i*M,width:X1-X0,height:M,fill:'#e7e6df',opacity:.92}); }
+// 도착선·출발선 (보도 경계)
+el('rect',{x:0,y:Y1-26,width:1240,height:26,fill:'#5b5f66'}); el('rect',{x:0,y:Y0,width:1240,height:26,fill:'#5b5f66'});
+// 눈금
+for(let m=0;m<=18;m+=3){const y=Y0-m*M; el('line',{x1:X1+24,y1:y,x2:X1+48,y2:y,stroke:'#9aa0a8','stroke-width':3}); const t=el('text',{x:X1+60,y:y+10,fill:'#9aa0a8','font-size':28,'font-weight':700}); t.textContent=m+'m';}
+// 발자국: 왼쪽 1.0m/s (끝까지), 오른쪽 0.73m/s (13.1m에서 멈춤)
+const trail=(cx,dist,col,cane)=>{const n=Math.round(dist/1.2); for(let i=0;i<n;i++){const d=(i+0.5)*dist/n, y=Y0-d*M, x=cx+(i%2?20:-20); const g=el('use',{href:'#fp',x,y,fill:col,opacity:.95}); if(cane&&i%2==1) el('circle',{cx:cx+58,cy:y-10,r:8,fill:col});}};
+trail(470,18,'#cfd5de',false); trail(760,13.1,'#FFC93C',true);
+// 남은 거리 브래킷
+const ys=Y0-13.1*M;
+el('rect',{x:700,y:Y1,width:150,height:ys-Y1,fill:'#FF5A4E',opacity:.18});
+el('path',{d:`M700 ${Y1} H850 M700 ${ys} H850 M775 ${Y1} V${ys}`,stroke:'#FF5A4E','stroke-width':6,fill:'none'});
+const t=el('text',{x:775,y:(Y1+ys)/2+20,fill:'#FF5A4E','font-size':60,'font-weight':900,'text-anchor':'middle','paint-order':'stroke',stroke:'#23262b','stroke-width':14}); t.textContent='4.9m';
+// 라벨
+const lab=(x,y,txt,col)=>{const e=el('text',{x,y,fill:col,'font-size':30,'font-weight':800,'text-anchor':'middle'});e.textContent=txt;};
+lab(470,Y0+75,'1초에 1m','#cfd5de'); lab(760,Y0+75,'1초에 0.7m','#FFC93C');
+// 보행 신호등 (18초 → 0)
+el('rect',{x:92,y:Y1+40,width:150,height:230,rx:18,fill:'#111316'});
+
+const lb=el('text',{x:167,y:Y1+120,fill:'#9aa0a8','font-size':26,'font-weight':700,'text-anchor':'middle'}); lb.textContent='남은 초록불';
+const c=el('text',{x:167,y:Y1+235,fill:'#3be07a','font-size':74,'font-weight':900,'text-anchor':'middle','font-family':'Consolas,monospace'}); c.textContent='0초';
+// 대기 차량 앞부분(오른쪽 아래 정지선 옆)
+el('rect',{x:1120,y:Y0-200,width:140,height:160,rx:36,fill:'#3a3f47'});
+el('rect',{x:1132,y:Y0-182,width:26,height:46,rx:9,fill:'#FFE7A3'}); el('rect',{x:1132,y:Y0-104,width:26,height:46,rx:9,fill:'#FFE7A3'});
+</script></body></html>

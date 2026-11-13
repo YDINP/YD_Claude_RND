@@ -1,0 +1,6367 @@
+{
+ "records_2024_07": 215528,
+ "overlap": {
+  "2024": {
+   "year": 2024,
+   "evening_days": 126,
+   "multi_venue_days": 73,
+   "same_start_days": 42,
+   "same_start_weekend": 39,
+   "same_start_3venues": 9,
+   "median_seats_same": 20003
+  },
+  "2025": {
+   "year": 2025,
+   "evening_days": 138,
+   "multi_venue_days": 81,
+   "same_start_days": 54,
+   "same_start_weekend": 49,
+   "same_start_3venues": 8,
+   "median_seats_same": 17452
+  }
+ },
+ "profile_start": "16:00",
+ "profiles": {
+  "2024-07-20": [
+   109,
+   102,
+   103,
+   90,
+   123,
+   112,
+   169,
+   148,
+   138,
+   135,
+   139,
+   126,
+   119,
+   72,
+   89,
+   81,
+   135,
+   84,
+   68,
+   42,
+   26,
+   38,
+   29,
+   24,
+   31,
+   34,
+   40,
+   60,
+   138,
+   107,
+   115,
+   205,
+   268,
+   253,
+   218,
+   129,
+   67,
+   55,
+   35,
+   38,
+   26,
+   21,
+   11,
+   15,
+   19,
+   16,
+   11,
+   2
+  ],
+  "2024-07-21": [
+   135,
+   123,
+   146,
+   153,
+   133,
+   118,
+   106,
+   92,
+   74,
+   77,
+   71,
+   78,
+   58,
+   77,
+   55,
+   70,
+   169,
+   157,
+   87,
+   78,
+   75,
+   88,
+   108,
+   92,
+   59,
+   164,
+   251,
+   262,
+   231,
+   93,
+   70,
+   83,
+   42,
+   41,
+   76,
+   104,
+   61,
+   64,
+   48,
+   32,
+   27,
+   23,
+   24,
+   12,
+   21,
+   18,
+   38,
+   25
+  ],
+  "2024-07-27": [
+   140,
+   102,
+   108,
+   108,
+   89,
+   101,
+   117,
+   116,
+   93,
+   89,
+   142,
+   98,
+   86,
+   77,
+   37,
+   57,
+   110,
+   73,
+   38,
+   34,
+   36,
+   23,
+   25,
+   24,
+   31,
+   40,
+   34,
+   139,
+   177,
+   129,
+   93,
+   79,
+   70,
+   72,
+   51,
+   41,
+   25,
+   16,
+   8,
+   13,
+   7,
+   7,
+   7,
+   5,
+   4,
+   7,
+   4,
+   4
+  ],
+  "2024-07-28": [
+   90,
+   65,
+   64,
+   68,
+   76,
+   60,
+   85,
+   93,
+   76,
+   55,
+   75,
+   53,
+   100,
+   73,
+   54,
+   72,
+   105,
+   71,
+   75,
+   180,
+   162,
+   170,
+   107,
+   100,
+   105,
+   88,
+   68,
+   53,
+   37,
+   88,
+   62,
+   28,
+   22,
+   20,
+   30,
+   17,
+   16,
+   13,
+   11,
+   12,
+   4,
+   5,
+   2,
+   4,
+   5,
+   3,
+   3,
+   6
+  ],
+  "2024-07-13": [
+   110,
+   124,
+   138,
+   137,
+   127,
+   116,
+   81,
+   154,
+   87,
+   75,
+   101,
+   103,
+   108,
+   92,
+   71,
+   56,
+   39,
+   51,
+   40,
+   31,
+   45,
+   49,
+   37,
+   58,
+   53,
+   54,
+   129,
+   195,
+   180,
+   155,
+   109,
+   83,
+   87,
+   76,
+   65,
+   51,
+   38,
+   43,
+   31,
+   13,
+   11,
+   10,
+   10,
+   5,
+   7,
+   5,
+   3,
+   1
+  ],
+  "2024-07-14": [
+   82,
+   69,
+   47,
+   58,
+   56,
+   48,
+   60,
+   47,
+   57,
+   43,
+   68,
+   42,
+   34,
+   39,
+   36,
+   41,
+   57,
+   152,
+   128,
+   78,
+   46,
+   52,
+   49,
+   63,
+   206,
+   173,
+   126,
+   87,
+   91,
+   51,
+   53,
+   48,
+   40,
+   67,
+   49,
+   28,
+   26,
+   26,
+   18,
+   14,
+   3,
+   15,
+   12,
+   6,
+   3,
+   4,
+   2,
+   4
+  ]
+ },
+ "windows": {
+  "2024-07-20": {
+   "sum60": 1188,
+   "start": "21:00",
+   "bins_ge200": 4,
+   "peak": 268
+  },
+  "2024-07-21": {
+   "sum60": 1071,
+   "start": "20:10",
+   "bins_ge200": 3,
+   "peak": 262
+  },
+  "2024-07-27": {
+   "sum60": 687,
+   "start": "20:30",
+   "bins_ge200": 0,
+   "peak": 177
+  },
+  "2024-07-28": {
+   "sum60": 824,
+   "start": "19:10",
+   "bins_ge200": 0,
+   "peak": 180
+  },
+  "2024-07-13": {
+   "sum60": 851,
+   "start": "20:20",
+   "bins_ge200": 0,
+   "peak": 195
+  },
+  "2024-07-14": {
+   "sum60": 746,
+   "start": "19:50",
+   "bins_ge200": 1,
+   "peak": 206
+  }
+ },
+ "weekday_peak_median": 113,
+ "july_2024_shows": {
+  "2024-07-06": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    90,
+    "CHA EUN-WOO 2024 Just One 10 Minute ［Mystery Elevator］ Encore in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    100,
+    "10CM 1st Fan Concert 〈10CM YOU〉"
+   ]
+  ],
+  "2024-07-07": [
+   [
+    "올림픽홀",
+    1080,
+    100,
+    "10CM 1st Fan Concert 〈10CM YOU〉"
+   ]
+  ],
+  "2024-07-12": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ]
+  ],
+  "2024-07-13": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    180,
+    "DPR SEOUL CONCERT 2024 ［The Dream Reborn Tour］"
+   ]
+  ],
+  "2024-07-14": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ],
+   [
+    "올림픽홀",
+    960,
+    180,
+    "DPR SEOUL CONCERT 2024 ［The Dream Reborn Tour］"
+   ]
+  ],
+  "2024-07-20": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "SG워너비 콘서트 : 우리의 노래 2024 앙코르"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 Whee In 1ST WORLD TOUR : WHEE IN THE MOOD [BEYOND] ENCORE"
+   ]
+  ],
+  "2024-07-21": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "SG워너비 콘서트 : 우리의 노래 2024 앙코르"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2024 Whee In 1ST WORLD TOUR : WHEE IN THE MOOD [BEYOND] ENCORE"
+   ]
+  ],
+  "2024-07-27": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 BAEKHYUN ASIA TOUR ‘Lonsdaleite［dot］’"
+   ]
+  ],
+  "2024-07-28": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2024 BAEKHYUN ASIA TOUR ‘Lonsdaleite［dot］’"
+   ]
+  ]
+ },
+ "upcoming": {
+  "2026-11-08": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "EXO PLANET #6 - EXhOrizon [dot] -"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2026 박재정 콘서트 - 기록"
+   ],
+   [
+    "우리금융아트홀",
+    960,
+    120,
+    "코리아발레스타즈 호두까기인형"
+   ]
+  ],
+  "2026-11-13": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ]
+  ],
+  "2026-11-14": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ]
+  ],
+  "2026-11-15": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ]
+  ],
+  "2026-11-27": [
+   [
+    "KSPO DOME",
+    1140,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-11-28": [
+   [
+    "KSPO DOME",
+    1080,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-11-29": [
+   [
+    "KSPO DOME",
+    1020,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-12-04": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ]
+  ],
+  "2026-12-05": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 비 (RAIN) CONCERT [THE SMOKE]"
+   ]
+  ],
+  "2026-12-06": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 비 (RAIN) CONCERT [THE SMOKE]"
+   ]
+  ],
+  "2026-12-11": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ]
+  ],
+  "2026-12-12": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ]
+  ],
+  "2026-12-13": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ]
+  ],
+  "2026-12-18": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-19": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-20": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-24": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ],
+  "2026-12-25": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ],
+  "2026-12-26": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ]
+ },
+ "subway": {
+  "2024-07-13": {
+   "peak_hour": 20,
+   "evening_park": 10242,
+   "park_by_hour": {
+    "16": 1195,
+    "17": 901,
+    "18": 511,
+    "19": 382,
+    "20": 5855,
+    "21": 2009,
+    "22": 1360,
+    "23": 125
+   },
+   "올림픽공원역(5호선)": {
+    "v": 1872,
+    "weekday_avg": 185
+   },
+   "올림픽공원역(9호선)": {
+    "v": 3983,
+    "weekday_avg": 162
+   },
+   "한성백제역(9호선)": {
+    "v": 138,
+    "weekday_avg": 95
+   },
+   "몽촌토성역(8호선)": {
+    "v": 283,
+    "weekday_avg": 284
+   },
+   "park_share_of_excess": 99.2,
+   "excess": {
+    "올림픽공원역(5호선)": 1687,
+    "올림픽공원역(9호선)": 3821,
+    "한성백제역(9호선)": 43,
+    "몽촌토성역(8호선)": -1
+   }
+  },
+  "2024-07-14": {
+   "peak_hour": 20,
+   "evening_park": 9952,
+   "park_by_hour": {
+    "16": 750,
+    "17": 472,
+    "18": 997,
+    "19": 1225,
+    "20": 5423,
+    "21": 1758,
+    "22": 478,
+    "23": 71
+   },
+   "올림픽공원역(5호선)": {
+    "v": 1642,
+    "weekday_avg": 185
+   },
+   "올림픽공원역(9호선)": {
+    "v": 3781,
+    "weekday_avg": 162
+   },
+   "한성백제역(9호선)": {
+    "v": 153,
+    "weekday_avg": 95
+   },
+   "몽촌토성역(8호선)": {
+    "v": 250,
+    "weekday_avg": 284
+   },
+   "park_share_of_excess": 98.9,
+   "excess": {
+    "올림픽공원역(5호선)": 1457,
+    "올림픽공원역(9호선)": 3619,
+    "한성백제역(9호선)": 58,
+    "몽촌토성역(8호선)": -34
+   }
+  },
+  "2024-07-20": {
+   "peak_hour": 21,
+   "evening_park": 7238,
+   "park_by_hour": {
+    "16": 702,
+    "17": 741,
+    "18": 542,
+    "19": 423,
+    "20": 1233,
+    "21": 3964,
+    "22": 966,
+    "23": 110
+   },
+   "올림픽공원역(5호선)": {
+    "v": 1165,
+    "weekday_avg": 193
+   },
+   "올림픽공원역(9호선)": {
+    "v": 2799,
+    "weekday_avg": 199
+   },
+   "한성백제역(9호선)": {
+    "v": 96,
+    "weekday_avg": 87
+   },
+   "몽촌토성역(8호선)": {
+    "v": 264,
+    "weekday_avg": 284
+   },
+   "park_share_of_excess": 99.7,
+   "excess": {
+    "올림픽공원역(5호선)": 972,
+    "올림픽공원역(9호선)": 2600,
+    "한성백제역(9호선)": 9,
+    "몽촌토성역(8호선)": -20
+   }
+  },
+  "2024-07-21": {
+   "peak_hour": 20,
+   "evening_park": 6663,
+   "park_by_hour": {
+    "16": 633,
+    "17": 588,
+    "18": 975,
+    "19": 1100,
+    "20": 2436,
+    "21": 1104,
+    "22": 939,
+    "23": 109
+   },
+   "올림픽공원역(5호선)": {
+    "v": 762,
+    "weekday_avg": 185
+   },
+   "올림픽공원역(9호선)": {
+    "v": 1674,
+    "weekday_avg": 162
+   },
+   "한성백제역(9호선)": {
+    "v": 81,
+    "weekday_avg": 95
+   },
+   "몽촌토성역(8호선)": {
+    "v": 228,
+    "weekday_avg": 284
+   },
+   "park_share_of_excess": 100.0,
+   "excess": {
+    "올림픽공원역(5호선)": 577,
+    "올림픽공원역(9호선)": 1512,
+    "한성백제역(9호선)": -14,
+    "몽촌토성역(8호선)": -56
+   }
+  },
+  "2024-07-27": {
+   "peak_hour": 21,
+   "evening_park": 11062,
+   "park_by_hour": {
+    "16": 948,
+    "17": 1069,
+    "18": 574,
+    "19": 384,
+    "20": 4615,
+    "21": 4651,
+    "22": 777,
+    "23": 61
+   },
+   "올림픽공원역(5호선)": {
+    "v": 1500,
+    "weekday_avg": 193
+   },
+   "올림픽공원역(9호선)": {
+    "v": 3151,
+    "weekday_avg": 199
+   },
+   "한성백제역(9호선)": {
+    "v": 87,
+    "weekday_avg": 87
+   },
+   "몽촌토성역(8호선)": {
+    "v": 236,
+    "weekday_avg": 284
+   },
+   "park_share_of_excess": 100.0,
+   "excess": {
+    "올림픽공원역(5호선)": 1307,
+    "올림픽공원역(9호선)": 2952,
+    "한성백제역(9호선)": 0,
+    "몽촌토성역(8호선)": -48
+   }
+  },
+  "2024-07-28": {
+   "peak_hour": 19,
+   "evening_park": 10894,
+   "park_by_hour": {
+    "16": 584,
+    "17": 507,
+    "18": 532,
+    "19": 6058,
+    "20": 3377,
+    "21": 672,
+    "22": 218,
+    "23": 37
+   },
+   "올림픽공원역(5호선)": {
+    "v": 1521,
+    "weekday_avg": 238
+   },
+   "올림픽공원역(9호선)": {
+    "v": 4537,
+    "weekday_avg": 228
+   },
+   "한성백제역(9호선)": {
+    "v": 75,
+    "weekday_avg": 119
+   },
+   "몽촌토성역(8호선)": {
+    "v": 205,
+    "weekday_avg": 357
+   },
+   "park_share_of_excess": 100.0,
+   "excess": {
+    "올림픽공원역(5호선)": 1283,
+    "올림픽공원역(9호선)": 4309,
+    "한성백제역(9호선)": -44,
+    "몽촌토성역(8호선)": -152
+   }
+  }
+ },
+ "all_days": {
+  "2024-01-06": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 박은빈 FAN CONCERT 〈은빈노트 : DIVA〉"
+   ]
+  ],
+  "2024-01-08": [
+   [
+    "KSPO DOME",
+    1200,
+    120,
+    "2024 K-청년 PEACE FESTIVAL"
+   ]
+  ],
+  "2024-01-13": [
+   [
+    "우리금융아트홀",
+    1080,
+    120,
+    "2024 김필 앵콜 콘서트 < LIFE >"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2024 하현상 콘서트 〈With All My Heart〉"
+   ]
+  ],
+  "2024-01-14": [
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "2024 김필 앵콜 콘서트 < LIFE >"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2024 하현상 콘서트 〈With All My Heart〉"
+   ]
+  ],
+  "2024-01-20": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "리베란테 1st Concert ‘La Liberta’ (팬텀싱어4 리베란테 서울콘서트)"
+   ]
+  ],
+  "2024-01-21": [
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "리베란테 1st Concert ‘La Liberta’ (팬텀싱어4 리베란테 서울콘서트)"
+   ]
+  ],
+  "2024-01-26": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "[서울] 2023 멜로망스 전국투어 콘서트 〈Roman’ce Town〉"
+   ]
+  ],
+  "2024-01-27": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2023 멜로망스 전국투어 콘서트 〈Roman’ce Town〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "10CM WINTER CONCERT ‘9+1’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 KEYLAND ON：AND ON"
+   ]
+  ],
+  "2024-01-28": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2023 멜로망스 전국투어 콘서트 〈Roman’ce Town〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "10CM WINTER CONCERT ‘9+1’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2024 KEYLAND ON：AND ON"
+   ]
+  ],
+  "2024-02-03": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 윤하 20주년 기념 콘서트 〈스물〉"
+   ]
+  ],
+  "2024-02-04": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024 윤하 20주년 기념 콘서트 〈스물〉"
+   ]
+  ],
+  "2024-02-17": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2024 Loco Concert 'ALL I NEED'"
+   ],
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2024 영탁 단독 콘서트 〈TAK SHOW2: TAK'S WORLD〉 - 앵콜"
+   ]
+  ],
+  "2024-02-18": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 Loco Concert 'ALL I NEED'"
+   ],
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2024 영탁 단독 콘서트 〈TAK SHOW2: TAK'S WORLD〉 - 앵콜"
+   ]
+  ],
+  "2024-02-24": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "ENHYPEN WORLD TOUR ‘FATE PLUS’ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 10CM ENCORE CONCERT ‘=10’"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2024 TAEYONG CONCERT 〈TY TRACK〉"
+   ]
+  ],
+  "2024-02-25": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "ENHYPEN WORLD TOUR ‘FATE PLUS’ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 10CM ENCORE CONCERT ‘=10’"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2024 TAEYONG CONCERT 〈TY TRACK〉"
+   ]
+  ],
+  "2024-03-02": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 TXT FANLIVE PRESENT X TOGETHER"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "비보쇼 오리지널 2024"
+   ]
+  ],
+  "2024-03-03": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 TXT FANLIVE PRESENT X TOGETHER"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "비보쇼 오리지널 2024"
+   ]
+  ],
+  "2024-03-09": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 IVE 2nd FANMEETING 〈MAGAZINE IVE〉"
+   ]
+  ],
+  "2024-03-10": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 IVE 2nd FANMEETING 〈MAGAZINE IVE〉"
+   ]
+  ],
+  "2024-03-15": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 권진아 단독 공연 〈꽃말〉"
+   ],
+   [
+    "올림픽홀",
+    1170,
+    150,
+    "〈미스터트롯2〉 TOP7 콘서트 - 앵콜"
+   ]
+  ],
+  "2024-03-16": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 권진아 단독 공연 〈꽃말〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 BAEKHYUN ASIA TOUR 〈Lonsdaleite〉 in SEOUL"
+   ]
+  ],
+  "2024-03-17": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 권진아 단독 공연 〈꽃말〉"
+   ],
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2024 BAEKHYUN ASIA TOUR 〈Lonsdaleite〉 in SEOUL"
+   ]
+  ],
+  "2024-03-22": [
+   [
+    "KSPO DOME",
+    1170,
+    150,
+    "2024 SG워너비 콘서트 : 우리의 노래"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 BTOB FAN-CON ［OUR DREAM］"
+   ]
+  ],
+  "2024-03-23": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "2024 SG워너비 콘서트 : 우리의 노래"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 BTOB FAN-CON ［OUR DREAM］"
+   ]
+  ],
+  "2024-03-24": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2024 SG워너비 콘서트 : 우리의 노래"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 BTOB FAN-CON ［OUR DREAM］"
+   ]
+  ],
+  "2024-03-29": [
+   [
+    "KSPO DOME",
+    1170,
+    null,
+    "Stray Kids 4TH FANMEETING ‘SKZ’S MAGIC SCHOOL’"
+   ]
+  ],
+  "2024-03-30": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "Stray Kids 4TH FANMEETING ‘SKZ’S MAGIC SCHOOL’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "LUCY 1st WORLD TOUR written by FLOWER in SEOUL"
+   ]
+  ],
+  "2024-03-31": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "Stray Kids 4TH FANMEETING ‘SKZ’S MAGIC SCHOOL’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "LUCY 1st WORLD TOUR written by FLOWER in SEOUL"
+   ]
+  ],
+  "2024-04-06": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 CRAVITY FAN－CON 〈LUVITY GAMES〉"
+   ]
+  ],
+  "2024-04-07": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 CRAVITY FAN－CON 〈LUVITY GAMES〉"
+   ]
+  ],
+  "2024-04-13": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "PLAVE THE 1ST FAN CONCERT ‘Hello, Asterum!’"
+   ]
+  ],
+  "2024-04-14": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "PLAVE THE 1ST FAN CONCERT ‘Hello, Asterum!’"
+   ]
+  ],
+  "2024-04-19": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "King Gnu Asia Tour ‘THE GREATEST UNKNOWN’ in Seoul"
+   ]
+  ],
+  "2024-04-20": [
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "King Gnu Asia Tour ‘THE GREATEST UNKNOWN’ in Seoul"
+   ]
+  ],
+  "2024-04-27": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2024 P1Harmony LIVE TOUR［P1ustage H：UTOP1A］IN SEOUL"
+   ]
+  ],
+  "2024-04-28": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 P1Harmony LIVE TOUR［P1ustage H：UTOP1A］IN SEOUL"
+   ]
+  ],
+  "2024-04-30": [
+   [
+    "올림픽홀",
+    1200,
+    90,
+    "프렙 내한공연（PREP LIVE IN SEOUL）"
+   ]
+  ],
+  "2024-05-03": [
+   [
+    "KSPO DOME",
+    1140,
+    180,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1170,
+    150,
+    "〈미스트롯3〉 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2024-05-04": [
+   [
+    "KSPO DOME",
+    1080,
+    180,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 IN SEOUL"
+   ]
+  ],
+  "2024-05-05": [
+   [
+    "KSPO DOME",
+    1020,
+    180,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 IN SEOUL"
+   ]
+  ],
+  "2024-05-10": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "황영웅 서울콘서트 〈봄날의 고백〉"
+   ],
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "HIGHLIGHT LIVE 2024 ［LIGHTS GO ON, AGAIN］"
+   ]
+  ],
+  "2024-05-11": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "황영웅 서울콘서트 〈봄날의 고백〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "HIGHLIGHT LIVE 2024 ［LIGHTS GO ON, AGAIN］"
+   ]
+  ],
+  "2024-05-12": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "황영웅 서울콘서트 〈봄날의 고백〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "HIGHLIGHT LIVE 2024 ［LIGHTS GO ON, AGAIN］"
+   ]
+  ],
+  "2024-05-18": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "PITTA 강형호 콘서트: New Normal Life "
+   ]
+  ],
+  "2024-05-19": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "PITTA 강형호 콘서트: New Normal Life "
+   ]
+  ],
+  "2024-05-23": [
+   [
+    "KSPO DOME",
+    1200,
+    140,
+    "월드 유니온 오케스트라 슈퍼 클래식 "
+   ]
+  ],
+  "2024-05-24": [
+   [
+    "KSPO DOME",
+    1200,
+    140,
+    "월드 유니온 오케스트라 슈퍼 클래식 "
+   ]
+  ],
+  "2024-05-25": [
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    120,
+    "RADWIMPS WORLD TOUR: The way you yawn, and the outcry of Peace [서울]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2024 SUHO CONCERT 〈SU：HOME〉"
+   ]
+  ],
+  "2024-05-26": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2024 SUHO CONCERT 〈SU：HOME〉"
+   ]
+  ],
+  "2024-06-01": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    " 2024 BOYNEXTDOOR FANMEETING ‘ONEDOORful Day’"
+   ]
+  ],
+  "2024-06-02": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    " 2024 BOYNEXTDOOR FANMEETING ‘ONEDOORful Day’"
+   ]
+  ],
+  "2024-06-08": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 비 (RAIN) 콘서트：STILL RAINING - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024 이찬원 콘서트 ‘ 찬가（燦歌）’"
+   ]
+  ],
+  "2024-06-09": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 비 (RAIN) 콘서트：STILL RAINING - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024 이찬원 콘서트 ‘ 찬가（燦歌）’"
+   ]
+  ],
+  "2024-06-15": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024 AKMU 10th ANNIVERSARY CONCERT ［10VE］"
+   ]
+  ],
+  "2024-06-16": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2024 AKMU 10th ANNIVERSARY CONCERT ［10VE］"
+   ]
+  ],
+  "2024-06-22": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "2024 SUPER JUNIOR 〈SUPER SHOW SPIN－OFF：Halftime〉 in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "LAY ZHANG WORLD TOUR GRANDLINE4:STEP IN SEOUL"
+   ]
+  ],
+  "2024-06-23": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "2024 SUPER JUNIOR 〈SUPER SHOW SPIN－OFF：Halftime〉 in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "LAY ZHANG WORLD TOUR GRANDLINE4:STEP IN SEOUL"
+   ]
+  ],
+  "2024-06-29": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2024 이승철 전국투어 콘서트 \"Rock'n All\" - 서울"
+   ]
+  ],
+  "2024-06-30": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 이승철 전국투어 콘서트 \"Rock'n All\" - 서울"
+   ]
+  ],
+  "2024-07-06": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    90,
+    "CHA EUN-WOO 2024 Just One 10 Minute ［Mystery Elevator］ Encore in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    100,
+    "10CM 1st Fan Concert 〈10CM YOU〉"
+   ]
+  ],
+  "2024-07-07": [
+   [
+    "올림픽홀",
+    1080,
+    100,
+    "10CM 1st Fan Concert 〈10CM YOU〉"
+   ]
+  ],
+  "2024-07-12": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ]
+  ],
+  "2024-07-13": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    180,
+    "DPR SEOUL CONCERT 2024 ［The Dream Reborn Tour］"
+   ]
+  ],
+  "2024-07-14": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "THE BOYZ WORLD TOUR : ZENERATION Ⅱ"
+   ],
+   [
+    "올림픽홀",
+    960,
+    180,
+    "DPR SEOUL CONCERT 2024 ［The Dream Reborn Tour］"
+   ]
+  ],
+  "2024-07-20": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "SG워너비 콘서트 : 우리의 노래 2024 앙코르"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 Whee In 1ST WORLD TOUR : WHEE IN THE MOOD [BEYOND] ENCORE"
+   ]
+  ],
+  "2024-07-21": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "SG워너비 콘서트 : 우리의 노래 2024 앙코르"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2024 Whee In 1ST WORLD TOUR : WHEE IN THE MOOD [BEYOND] ENCORE"
+   ]
+  ],
+  "2024-07-27": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 BAEKHYUN ASIA TOUR ‘Lonsdaleite［dot］’"
+   ]
+  ],
+  "2024-07-28": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2024 BAEKHYUN ASIA TOUR ‘Lonsdaleite［dot］’"
+   ]
+  ],
+  "2024-08-02": [
+   [
+    "올림픽홀",
+    1170,
+    130,
+    "더매직스타 전국투어 콘서트 (서울)"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 Red Velvet FANCON TOUR <HAPPINESS : My Dear, ReVe1uv> in SEOUL"
+   ]
+  ],
+  "2024-08-03": [
+   [
+    "올림픽홀",
+    1140,
+    130,
+    "더매직스타 전국투어 콘서트 (서울)"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 Red Velvet FANCON TOUR <HAPPINESS : My Dear, ReVe1uv> in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024 (G)I-DLE WORLD TOUR [iDOL] IN SEOUL"
+   ]
+  ],
+  "2024-08-04": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2024 Red Velvet FANCON TOUR <HAPPINESS : My Dear, ReVe1uv> in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2024 (G)I-DLE WORLD TOUR [iDOL] IN SEOUL"
+   ]
+  ],
+  "2024-08-10": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "IVE THE 1ST WORLD TOUR 'SHOW WHAT I HAVE' - ENCORED-8"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    130,
+    "2024 싱어게인3 TOP10 전국투어 앵콜 - 서울"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    100,
+    "2024 박서준 팬미팅 ‘서준시（時）’－서울"
+   ]
+  ],
+  "2024-08-11": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "IVE THE 1ST WORLD TOUR 'SHOW WHAT I HAVE' - ENCORED-8"
+   ]
+  ],
+  "2024-08-15": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024 TREASURE RELAY TOUR [REBOOT] FINAL IN SEOUL"
+   ]
+  ],
+  "2024-08-17": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 LEE GIKWANG SOLO CONCERT ［OBSESSED］"
+   ]
+  ],
+  "2024-08-18": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2024 LEE GIKWANG SOLO CONCERT ［OBSESSED］"
+   ]
+  ],
+  "2024-08-24": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    130,
+    "LUCY 1st WORLD TOUR written by FLOWER ENCORE in SEOUL"
+   ]
+  ],
+  "2024-08-25": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    130,
+    "LUCY 1st WORLD TOUR written by FLOWER ENCORE in SEOUL"
+   ]
+  ],
+  "2024-08-31": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "TAEYANG 2024 TOUR ［THE LIGHT YEAR］ IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "2024 서울문화재단 공연장상주단체육성지원사업 코리아발레스타즈 기획공연 지젤"
+   ]
+  ],
+  "2024-09-01": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "TAEYANG 2024 TOUR ［THE LIGHT YEAR］ IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    900,
+    120,
+    "2024 서울문화재단 공연장상주단체육성지원사업 코리아발레스타즈 기획공연 지젤"
+   ]
+  ],
+  "2024-09-07": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 성시경 with friends ［자, 오늘은］"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    200,
+    "dingo music concert 〈Killing Voice〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "AAA TOUR BY HYUKOH ＆ SUNSET ROLLERCOASTER"
+   ]
+  ],
+  "2024-09-08": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024 성시경 with friends ［자, 오늘은］"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    200,
+    "dingo music concert 〈Killing Voice〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "AAA TOUR BY HYUKOH ＆ SUNSET ROLLERCOASTER"
+   ]
+  ],
+  "2024-09-13": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "2024 RIIZE FAN－CON ‘RIIZING DAY’ FINALE in SEOUL"
+   ]
+  ],
+  "2024-09-14": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 RIIZE FAN－CON ‘RIIZING DAY’ FINALE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 KEYLAND ON：AND ON 〈＃〉"
+   ]
+  ],
+  "2024-09-15": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2024 RIIZE FAN－CON ‘RIIZING DAY’ FINALE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2024 KEYLAND ON：AND ON 〈＃〉"
+   ]
+  ],
+  "2024-09-20": [
+   [
+    "KSPO DOME",
+    1110,
+    120,
+    "2024 ZEROBASEONE THE FIRST TOUR ［TIMELESS WORLD］ IN SEOUL"
+   ]
+  ],
+  "2024-09-21": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 ZEROBASEONE THE FIRST TOUR ［TIMELESS WORLD］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 CNBLUE LIVE－VOYAGE into X"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "2024 NAM WOO HYUN CONCERT <식목일4 - TREEWORLD>"
+   ]
+  ],
+  "2024-09-22": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024 ZEROBASEONE THE FIRST TOUR ［TIMELESS WORLD］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 CNBLUE LIVE－VOYAGE into X"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "2024 NAM WOO HYUN CONCERT <식목일4 - TREEWORLD>"
+   ]
+  ],
+  "2024-09-24": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "나일 로저스 앤 시크 내한공연"
+   ]
+  ],
+  "2024-09-27": [
+   [
+    "KSPO DOME",
+    1200,
+    150,
+    "god 2024 CONCERT 〈CHAPTER 0〉"
+   ]
+  ],
+  "2024-09-28": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "god 2024 CONCERT 〈CHAPTER 0〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 SUPER JUNIOR-D&E WORLD TOUR：ECLIPSE"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 CRAVITY FAN－CON 〈BEYOND YOUR MEMORIES〉"
+   ]
+  ],
+  "2024-09-29": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "god 2024 CONCERT 〈CHAPTER 0〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2024 SUPER JUNIOR-D&E WORLD TOUR：ECLIPSE"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 CRAVITY FAN－CON 〈BEYOND YOUR MEMORIES〉"
+   ]
+  ],
+  "2024-10-05": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2024 2NE1 CONCERT ［WELCOME BACK］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    100,
+    "2024 ONEW FAN CONCERT ‘Hola！’"
+   ]
+  ],
+  "2024-10-06": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2024 2NE1 CONCERT ［WELCOME BACK］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    100,
+    "2024 ONEW FAN CONCERT ‘Hola！’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    100,
+    "2024 ONEW FAN CONCERT ‘Hola！’"
+   ]
+  ],
+  "2024-10-12": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "BoA LIVE TOUR－BoA：One’s Own"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2024 송골매 콘서트 ‘열망’ 두번째 [늘-봄]"
+   ]
+  ],
+  "2024-10-13": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "BoA LIVE TOUR－BoA：One’s Own"
+   ],
+   [
+    "올림픽홀",
+    900,
+    150,
+    "2024 송골매 콘서트 ‘열망’ 두번째 [늘-봄]"
+   ]
+  ],
+  "2024-10-25": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 영탁 단독 콘서트 “TAK SHOW3”"
+   ]
+  ],
+  "2024-10-26": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2024 영탁 단독 콘서트 “TAK SHOW3”"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 KISS OF LIFE 1ST WORLD TOUR ［KISS ROAD］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 JAEHYUN FAN－CON 〈Mute〉"
+   ]
+  ],
+  "2024-10-27": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2024 영탁 단독 콘서트 “TAK SHOW3”"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 KISS OF LIFE 1ST WORLD TOUR ［KISS ROAD］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2024 JAEHYUN FAN－CON 〈Mute〉"
+   ]
+  ],
+  "2024-11-01": [
+   [
+    "KSPO DOME",
+    1140,
+    160,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 ENCORE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2024 DOYOUNG CONCERT［Dearest Youth，］"
+   ]
+  ],
+  "2024-11-02": [
+   [
+    "KSPO DOME",
+    1080,
+    160,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 ENCORE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 DOYOUNG CONCERT［Dearest Youth，］"
+   ]
+  ],
+  "2024-11-03": [
+   [
+    "KSPO DOME",
+    1020,
+    160,
+    "TOMORROW X TOGETHER WORLD TOUR 〈ACT : PROMISE〉 ENCORE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2024 DOYOUNG CONCERT［Dearest Youth，］"
+   ]
+  ],
+  "2024-11-08": [
+   [
+    "KSPO DOME",
+    1170,
+    null,
+    "JX 2024 CONCERT < IDENTITY > in Seoul"
+   ]
+  ],
+  "2024-11-09": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "JX 2024 CONCERT < IDENTITY > in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2024 적재 전국투어 콘서트 〈CLICHE〉"
+   ],
+   [
+    "우리금융아트홀",
+    1080,
+    120,
+    "2024 리베란테 콘서트 ARCOLIBELANTE : The last color is Blue."
+   ]
+  ],
+  "2024-11-10": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "JX 2024 CONCERT < IDENTITY > in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2024 적재 전국투어 콘서트 〈CLICHE〉"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "2024 리베란테 콘서트 ARCOLIBELANTE : The last color is Blue."
+   ]
+  ],
+  "2024-11-15": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2024 윤하 연말 콘서트 〈GROWTH THEORY〉"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "Xdinary Heroes Concert"
+   ]
+  ],
+  "2024-11-16": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "2024 윤하 연말 콘서트 〈GROWTH THEORY〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "Xdinary Heroes Concert"
+   ]
+  ],
+  "2024-11-17": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024 윤하 연말 콘서트 〈GROWTH THEORY〉"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "Xdinary Heroes Concert"
+   ]
+  ],
+  "2024-11-23": [
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "ZICO LIVE : JOIN THE PARADE"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "ZICO LIVE : JOIN THE PARADE"
+   ]
+  ],
+  "2024-11-24": [
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "ZICO LIVE : JOIN THE PARADE"
+   ]
+  ],
+  "2024-11-30": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 하현상 콘서트 〈Elegy〉"
+   ]
+  ],
+  "2024-12-01": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "2024 하현상 콘서트 〈Elegy〉"
+   ]
+  ],
+  "2024-12-06": [
+   [
+    "KSPO DOME",
+    1200,
+    150,
+    "INFINITE 15TH ANNIVERSARY CONCERT : LIMITED EDITION"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2024 다이나믹 듀오 단독 콘서트 “가끔씩 오래 보자” - 서울"
+   ]
+  ],
+  "2024-12-07": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "INFINITE 15TH ANNIVERSARY CONCERT : LIMITED EDITION"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2024 다이나믹 듀오 단독 콘서트 “가끔씩 오래 보자” - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2024 로이킴 콘서트 〈R♥y actually〉"
+   ]
+  ],
+  "2024-12-08": [
+   [
+    "KSPO DOME",
+    1200,
+    150,
+    "INFINITE 15TH ANNIVERSARY CONCERT : LIMITED EDITION"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "INFINITE 15TH ANNIVERSARY CONCERT : LIMITED EDITION"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "INFINITE 15TH ANNIVERSARY CONCERT : LIMITED EDITION"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2024 다이나믹 듀오 단독 콘서트 “가끔씩 오래 보자” - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "2024 로이킴 콘서트 〈R♥y actually〉"
+   ]
+  ],
+  "2024-12-13": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "[서울 앵콜] 2024 이찬원 콘서트 ‘ 찬가（燦歌）’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 권진아 연말 콘서트 〈This Winter〉"
+   ]
+  ],
+  "2024-12-14": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "[서울 앵콜] 2024 이찬원 콘서트 ‘ 찬가（燦歌）’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 권진아 연말 콘서트 〈This Winter〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "GUMMY Tour Concert 2024 〈LOVE〉-서울"
+   ]
+  ],
+  "2024-12-15": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "[서울 앵콜] 2024 이찬원 콘서트 ‘ 찬가（燦歌）’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 권진아 연말 콘서트 〈This Winter〉"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "GUMMY Tour Concert 2024 〈LOVE〉-서울"
+   ]
+  ],
+  "2024-12-20": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1200,
+    120,
+    "2024 CRUSH CONCERT ［CRUSH HOUR : O］"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "KYUHYUN 10th Anniversary Asia Tour ［COLORS］ in SEOUL"
+   ]
+  ],
+  "2024-12-21": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "2024 CRUSH CONCERT ［CRUSH HOUR : O］"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "KYUHYUN 10th Anniversary Asia Tour ［COLORS］ in SEOUL"
+   ]
+  ],
+  "2024-12-22": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 에픽하이 콘서트"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 에픽하이 콘서트"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2024 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 CRUSH CONCERT ［CRUSH HOUR : O］"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "KYUHYUN 10th Anniversary Asia Tour ［COLORS］ in SEOUL"
+   ]
+  ],
+  "2024-12-27": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1260,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "박진영 30주년 콘서트 〈Still JYP〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2024 LEE SEUNG YOON CONCERT ［YEOK SEONG : 끝을 거슬러］"
+   ]
+  ],
+  "2024-12-28": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "박진영 30주년 콘서트 〈Still JYP〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2024 LEE SEUNG YOON CONCERT ［YEOK SEONG : 끝을 거슬러］"
+   ]
+  ],
+  "2024-12-29": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "박진영 30주년 콘서트 〈Still JYP〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2024 LEE SEUNG YOON CONCERT ［YEOK SEONG : 끝을 거슬러］"
+   ]
+  ],
+  "2024-12-30": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ]
+  ],
+  "2024-12-31": [
+   [
+    "KSPO DOME",
+    1260,
+    120,
+    "2024 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "김희재 콘서트 ‘HEERE WE GO’"
+   ]
+  ],
+  "2025-01-01": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "김희재 콘서트 ‘HEERE WE GO’"
+   ]
+  ],
+  "2025-01-04": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "김희재 콘서트 ‘HEERE WE GO’"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    150,
+    "로드 투 킹덤 : ACE OF ACE 콘서트"
+   ]
+  ],
+  "2025-01-05": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "김희재 콘서트 ‘HEERE WE GO’"
+   ]
+  ],
+  "2025-01-10": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "나훈아 ‘2024 고마웠습니다-라스트 콘서트(LAST CONCERT)’"
+   ]
+  ],
+  "2025-01-11": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "나훈아 ‘2024 고마웠습니다-라스트 콘서트(LAST CONCERT)’"
+   ],
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "나훈아 ‘2024 고마웠습니다-라스트 콘서트(LAST CONCERT)’"
+   ]
+  ],
+  "2025-01-12": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "나훈아 ‘2024 고마웠습니다-라스트 콘서트(LAST CONCERT)’"
+   ],
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "나훈아 ‘2024 고마웠습니다-라스트 콘서트(LAST CONCERT)’"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "벤슨 분 첫 단독 내한공연"
+   ]
+  ],
+  "2025-01-17": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "I.M WORLD TOUR 〈Off The Beat〉 FINAL IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "GFRIEND 10th Anniversary < Season of Memories >"
+   ]
+  ],
+  "2025-01-18": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "I.M WORLD TOUR 〈Off The Beat〉 FINAL IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "GFRIEND 10th Anniversary < Season of Memories >"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 DAVICHI CONCERT 〈A Stitch in Time〉"
+   ]
+  ],
+  "2025-01-19": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "I.M WORLD TOUR 〈Off The Beat〉 FINAL IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "GFRIEND 10th Anniversary < Season of Memories >"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "GFRIEND 10th Anniversary < Season of Memories >"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "GFRIEND 10th Anniversary < Season of Memories >"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 DAVICHI CONCERT 〈A Stitch in Time〉"
+   ]
+  ],
+  "2025-01-25": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 BABYMONSTER 1st WORLD TOUR 〈HELLO MONSTERS〉 IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 SUHO CONCERT 〈SU:HOMME〉 ENCORE"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    110,
+    "터치드(TOUCHED) 단독 콘서트 ‘HIGHLIGHT Ⅲ’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    110,
+    "터치드(TOUCHED) 단독 콘서트 ‘HIGHLIGHT Ⅲ’"
+   ]
+  ],
+  "2025-01-26": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 BABYMONSTER 1st WORLD TOUR 〈HELLO MONSTERS〉 IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 SUHO CONCERT 〈SU:HOMME〉 ENCORE"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025 SUHO CONCERT 〈SU:HOMME〉 ENCORE"
+   ]
+  ],
+  "2025-01-31": [
+   [
+    "KSPO DOME",
+    1140,
+    150,
+    "THE BOYZ FAN-CON 〈THE B LAND〉"
+   ]
+  ],
+  "2025-02-01": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "THE BOYZ FAN-CON 〈THE B LAND〉"
+   ]
+  ],
+  "2025-02-02": [
+   [
+    "KSPO DOME",
+    960,
+    150,
+    "THE BOYZ FAN-CON 〈THE B LAND〉"
+   ]
+  ],
+  "2025-02-07": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2025 LEECHANGSUB SOLO CONCERT 〈The Wayfarer〉 ENCORE"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2025 검정치마 단독공연 ＂SONGS TO BRING YOU HOME＂"
+   ]
+  ],
+  "2025-02-08": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 LEECHANGSUB SOLO CONCERT 〈The Wayfarer〉 ENCORE"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2025 검정치마 단독공연 ＂SONGS TO BRING YOU HOME＂"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 황영웅 앨범 발매 쇼케이스 PANORAMA : SHOWKING"
+   ]
+  ],
+  "2025-02-09": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025 LEECHANGSUB SOLO CONCERT 〈The Wayfarer〉 ENCORE"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 검정치마 단독공연 ＂SONGS TO BRING YOU HOME＂"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 황영웅 앨범 발매 쇼케이스 PANORAMA : SHOWKING"
+   ]
+  ],
+  "2025-02-14": [
+   [
+    "KSPO DOME",
+    1200,
+    120,
+    "2025 윤하 앵콜 콘서트 〈GROWTH THEORY : Final Edition〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    120,
+    "2025 TWS 1ST FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ]
+  ],
+  "2025-02-15": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "2025 윤하 앵콜 콘서트 〈GROWTH THEORY : Final Edition〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 TWS 1ST FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 박지현 콘서트 쇼맨쉽 ‘SHOWMANSHIP’"
+   ]
+  ],
+  "2025-02-16": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 윤하 앵콜 콘서트 〈GROWTH THEORY : Final Edition〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025 TWS 1ST FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 박지현 콘서트 쇼맨쉽 ‘SHOWMANSHIP’"
+   ]
+  ],
+  "2025-02-22": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2025 영탁 단독 콘서트 “TAK SHOW3” - 앙코르"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 ONEW CONCERT [ONEW THE LIVE : CONNECTION] IN SEOUL"
+   ]
+  ],
+  "2025-02-23": [
+   [
+    "KSPO DOME",
+    900,
+    120,
+    "2025 영탁 단독 콘서트 “TAK SHOW3” - 앙코르"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2025 ONEW CONCERT [ONEW THE LIVE : CONNECTION] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 ONEW CONCERT [ONEW THE LIVE : CONNECTION] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 ONEW CONCERT [ONEW THE LIVE : CONNECTION] IN SEOUL"
+   ]
+  ],
+  "2025-02-28": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "j-hope Tour ‘HOPE ON THE STAGE’ in SEOUL"
+   ]
+  ],
+  "2025-03-01": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "j-hope Tour ‘HOPE ON THE STAGE’ in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "keshi: REQUIEM TOUR IN SEOUL"
+   ]
+  ],
+  "2025-03-02": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "j-hope Tour ‘HOPE ON THE STAGE’ in SEOUL"
+   ]
+  ],
+  "2025-03-06": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "KEHLANI - CRASH WORLD TOUR in Seoul"
+   ]
+  ],
+  "2025-03-07": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "TAEYEON CONCERT - The TENSE"
+   ]
+  ],
+  "2025-03-08": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TAEYEON CONCERT - The TENSE"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 LEE MINHO ASIA FANMEETING TOUR ‘MINHOVERSE’ IN SEOUL"
+   ]
+  ],
+  "2025-03-09": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "TAEYEON CONCERT - The TENSE"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TAEYEON CONCERT - The TENSE"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "TAEYEON CONCERT - The TENSE"
+   ]
+  ],
+  "2025-03-15": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024-25 aespa LIVE TOUR－SYNK：PARALLEL LINE－ENCORE"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    150,
+    "2025년 이승환 콘서트 〈HEAVEN〉 - 서울"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    90,
+    "보이위드우크 첫 단독 내한공연 BoyWithUke BURNOUT WORLD TOUR 2025"
+   ]
+  ],
+  "2025-03-16": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2024-25 aespa LIVE TOUR－SYNK：PARALLEL LINE－ENCORE"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2024-25 aespa LIVE TOUR－SYNK：PARALLEL LINE－ENCORE"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    150,
+    "2025년 이승환 콘서트 〈HEAVEN〉 - 서울"
+   ]
+  ],
+  "2025-03-21": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2025 NCT WISH ASIA TOUR LOG in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2025 BTOB FAN-CON ‘3,2,1 GO! MELympic’"
+   ]
+  ],
+  "2025-03-22": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 NCT WISH ASIA TOUR LOG in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 BTOB FAN-CON ‘3,2,1 GO! MELympic’"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 ATEEZ WORLD TOUR [TOWARDS THE LIGHT : WILL TO POWER] FINALE IN SEOUL"
+   ]
+  ],
+  "2025-03-23": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2025 NCT WISH ASIA TOUR LOG in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 NCT WISH ASIA TOUR LOG in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025 NCT WISH ASIA TOUR LOG in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 BTOB FAN-CON ‘3,2,1 GO! MELympic’"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 ATEEZ WORLD TOUR [TOWARDS THE LIGHT : WILL TO POWER] FINALE IN SEOUL"
+   ]
+  ],
+  "2025-03-28": [
+   [
+    "올림픽홀",
+    1140,
+    150,
+    "정동원棟동 이야기話화 3rd 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2025-03-29": [
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "정동원棟동 이야기話화 3rd 전국투어 콘서트 - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "〈미스터트롯3〉 전국투어 콘서트"
+   ]
+  ],
+  "2025-03-30": [
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "정동원棟동 이야기話화 3rd 전국투어 콘서트 - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "〈미스터트롯3〉 전국투어 콘서트"
+   ]
+  ],
+  "2025-04-05": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 IVE THE 3RD FAN CONCERT 〈IVE SCOUT〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "EUNHYUK LIVE TOUR 2025 -Limitless: Time- Special in SEOUL"
+   ]
+  ],
+  "2025-04-06": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 IVE THE 3RD FAN CONCERT 〈IVE SCOUT〉"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "EUNHYUK LIVE TOUR 2025 -Limitless: Time- Special in SEOUL"
+   ]
+  ],
+  "2025-04-12": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 2NE1 CONCERT ［WELCOME BACK］ ENCORE IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 STAYC TOUR ‘STAY TUNED’"
+   ]
+  ],
+  "2025-04-13": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 2NE1 CONCERT ［WELCOME BACK］ ENCORE IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 STAYC TOUR ‘STAY TUNED’"
+   ]
+  ],
+  "2025-04-18": [
+   [
+    "KSPO DOME",
+    1170,
+    140,
+    "2025 ZEROBASEONE FAN-CON［BLUE MANSION］"
+   ]
+  ],
+  "2025-04-19": [
+   [
+    "KSPO DOME",
+    1080,
+    140,
+    "2025 ZEROBASEONE FAN-CON［BLUE MANSION］"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 OH MY GIRL CONCERT [Milky Way]"
+   ]
+  ],
+  "2025-04-20": [
+   [
+    "KSPO DOME",
+    1020,
+    140,
+    "2025 ZEROBASEONE FAN-CON［BLUE MANSION］"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 OH MY GIRL CONCERT [Milky Way]"
+   ]
+  ],
+  "2025-04-26": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2024-25 TAEMIN WORLD TOUR [Ephemeral Gaze] Finale"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    100,
+    "DAESUNG 2025 ASIA TOUR：D’s WAVE IN SEOUL"
+   ]
+  ],
+  "2025-04-27": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2024-25 TAEMIN WORLD TOUR [Ephemeral Gaze] Finale"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    100,
+    "DAESUNG 2025 ASIA TOUR：D’s WAVE IN SEOUL"
+   ]
+  ],
+  "2025-05-02": [
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "Xdinary Heroes〈Beautiful Mind〉World Tour in SEOUL"
+   ]
+  ],
+  "2025-05-03": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "Xdinary Heroes〈Beautiful Mind〉World Tour in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    90,
+    "YUURI ARENA LIVE 2025 at SEOUL"
+   ]
+  ],
+  "2025-05-04": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "Xdinary Heroes〈Beautiful Mind〉World Tour in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    90,
+    "YUURI ARENA LIVE 2025 at SEOUL"
+   ]
+  ],
+  "2025-05-05": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "Xdinary Heroes〈Beautiful Mind〉World Tour in SEOUL"
+   ]
+  ],
+  "2025-05-09": [
+   [
+    "올림픽홀",
+    1170,
+    120,
+    "2025 N.Flying LIVE ‘＆CON4 : FULL CIRCLE’"
+   ]
+  ],
+  "2025-05-10": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 N.Flying LIVE ‘＆CON4 : FULL CIRCLE’"
+   ]
+  ],
+  "2025-05-11": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 N.Flying LIVE ‘＆CON4 : FULL CIRCLE’"
+   ]
+  ],
+  "2025-05-16": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2025 BIBI 1st WORLD TOUR ［EVE］ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2025 BIBI 1st WORLD TOUR ［EVE］ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2025 BIBI 1st WORLD TOUR ［EVE］ IN SEOUL"
+   ]
+  ],
+  "2025-05-17": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2025 BIBI 1st WORLD TOUR ［EVE］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 KAI SOLO CONCERT TOUR 〈KAION〉 IN SEOUL"
+   ]
+  ],
+  "2025-05-18": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2025 BIBI 1st WORLD TOUR ［EVE］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025 KAI SOLO CONCERT TOUR 〈KAION〉 IN SEOUL"
+   ]
+  ],
+  "2025-05-23": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "SHINee WORLD Ⅶ [E.S.S.A.Y] (Every Stage Shines Around You)"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "[서울] 2025 멜로망스 전국투어 콘서트 〈Romance Station〉"
+   ]
+  ],
+  "2025-05-24": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "SHINee WORLD Ⅶ [E.S.S.A.Y] (Every Stage Shines Around You)"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "[서울] 2025 멜로망스 전국투어 콘서트 〈Romance Station〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 Jay Park World Tour [Serenades & Body Rolls]"
+   ]
+  ],
+  "2025-05-25": [
+   [
+    "KSPO DOME",
+    1045,
+    null,
+    "SHINee WORLD Ⅶ [E.S.S.A.Y] (Every Stage Shines Around You)"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2025 멜로망스 전국투어 콘서트 〈Romance Station〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025 Jay Park World Tour [Serenades & Body Rolls]"
+   ]
+  ],
+  "2025-06-07": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 BAEKHYUN WORLD TOUR 〈Reverie〉 in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2025 ILLIT GLITTER DAY IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "윤종신 전국투어 콘서트 ‘그때’ - 서울"
+   ]
+  ],
+  "2025-06-08": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2025 BAEKHYUN WORLD TOUR 〈Reverie〉 in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2025 ILLIT GLITTER DAY IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "윤종신 전국투어 콘서트 ‘그때’ - 서울"
+   ],
+   [
+    "우리금융아트홀",
+    960,
+    120,
+    "윤종신 전국투어 콘서트 ‘그때’ - 서울"
+   ]
+  ],
+  "2025-06-14": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 IRENE & SEULGI Concert Tour [ BALANCE ] in SEOUL"
+   ]
+  ],
+  "2025-06-15": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 IRENE & SEULGI Concert Tour [ BALANCE ] in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 IRENE & SEULGI Concert Tour [ BALANCE ] in SEOUL"
+   ]
+  ],
+  "2025-06-20": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "[서울 앵콜] 2025 박지현 콘서트 쇼맨쉽 ‘SHOWMANSHIP’"
+   ]
+  ],
+  "2025-06-21": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "[서울 앵콜] 2025 박지현 콘서트 쇼맨쉽 ‘SHOWMANSHIP’"
+   ]
+  ],
+  "2025-06-22": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "[서울 앵콜] 2025 박지현 콘서트 쇼맨쉽 ‘SHOWMANSHIP’"
+   ]
+  ],
+  "2025-06-27": [
+   [
+    "올림픽홀",
+    1170,
+    150,
+    "2025 PALMTREE ISLAND 3rd GALA CONCERT"
+   ]
+  ],
+  "2025-06-28": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "2025 PALMTREE ISLAND 3rd GALA CONCERT"
+   ]
+  ],
+  "2025-06-29": [
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2025 PALMTREE ISLAND 3rd GALA CONCERT"
+   ]
+  ],
+  "2025-07-04": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 RIIZE CONCERT TOUR [RIIZING LOUD] IN SEOUL"
+   ]
+  ],
+  "2025-07-05": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 RIIZE CONCERT TOUR [RIIZING LOUD] IN SEOUL"
+   ]
+  ],
+  "2025-07-06": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 RIIZE CONCERT TOUR [RIIZING LOUD] IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 RIIZE CONCERT TOUR [RIIZING LOUD] IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "2025 RIIZE CONCERT TOUR [RIIZING LOUD] IN SEOUL"
+   ]
+  ],
+  "2025-07-11": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "HIGHLIGHT LIVE 2025 [RIDE OR DIE]"
+   ]
+  ],
+  "2025-07-12": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "HIGHLIGHT LIVE 2025 [RIDE OR DIE]"
+   ]
+  ],
+  "2025-07-13": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "HIGHLIGHT LIVE 2025 [RIDE OR DIE]"
+   ]
+  ],
+  "2025-07-18": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 MONSTA X CONNECT X"
+   ],
+   [
+    "올림픽홀",
+    1170,
+    120,
+    "2025 JUNG YONG HWA LIVE ‘Director’s Cut : Our Fine Days’"
+   ]
+  ],
+  "2025-07-19": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 MONSTA X CONNECT X"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 JUNG YONG HWA LIVE ‘Director’s Cut : Our Fine Days’"
+   ]
+  ],
+  "2025-07-20": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 MONSTA X CONNECT X"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 MONSTA X CONNECT X"
+   ],
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "2025 MONSTA X CONNECT X"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 JUNG YONG HWA LIVE ‘Director’s Cut : Our Fine Days’"
+   ]
+  ],
+  "2025-07-25": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.1’ FINAL"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2025 WINNER CONCERT ［IN OUR CIRCLE］"
+   ]
+  ],
+  "2025-07-26": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.1’ FINAL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 WINNER CONCERT ［IN OUR CIRCLE］"
+   ]
+  ],
+  "2025-07-27": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.1’ FINAL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 WINNER CONCERT ［IN OUR CIRCLE］"
+   ]
+  ],
+  "2025-08-02": [
+   [
+    "KSPO DOME",
+    1020,
+    140,
+    "그룹사운드 잔나비 앵콜 콘서트 <모든소년소녀들 2125> "
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 WayV Concert Tour [NO Way OUT] in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 ONEW WORLD TOUR [ONEW THE LIVE : PERCENT (%)] IN SEOUL"
+   ]
+  ],
+  "2025-08-03": [
+   [
+    "KSPO DOME",
+    1020,
+    140,
+    "그룹사운드 잔나비 앵콜 콘서트 <모든소년소녀들 2125> "
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 WayV Concert Tour [NO Way OUT] in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2025 ONEW WORLD TOUR [ONEW THE LIVE : PERCENT (%)] IN SEOUL"
+   ]
+  ],
+  "2025-08-08": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "THE BOYZ〈THE BLAZE〉WORLD TOUR in SEOUL"
+   ]
+  ],
+  "2025-08-09": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "THE BOYZ〈THE BLAZE〉WORLD TOUR in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 10CM 단독공연 〈5.0〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 KANGDANIEL CONCERT ［ACT : NEW EPISODE］"
+   ]
+  ],
+  "2025-08-10": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "THE BOYZ〈THE BLAZE〉WORLD TOUR in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025 10CM 단독공연 〈5.0〉"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 KANGDANIEL CONCERT ［ACT : NEW EPISODE］"
+   ]
+  ],
+  "2025-08-15": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 PLAVE Asia Tour ［DASH: Quantum Leap］ in Seoul"
+   ]
+  ],
+  "2025-08-16": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 PLAVE Asia Tour ［DASH: Quantum Leap］ in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "2025 NAM WOO HYUN CONCERT <식목일5 - 나무高 :TREE HIGH SCHOOL>"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    100,
+    "2025 TAEMIN FANMEETING [CLASS-MATE]"
+   ]
+  ],
+  "2025-08-17": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 PLAVE Asia Tour ［DASH: Quantum Leap］ in Seoul"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "2025 NAM WOO HYUN CONCERT <식목일5 - 나무高 :TREE HIGH SCHOOL>"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    100,
+    "2025 TAEMIN FANMEETING [CLASS-MATE]"
+   ]
+  ],
+  "2025-08-22": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 in SEOUL"
+   ]
+  ],
+  "2025-08-23": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 in SEOUL"
+   ]
+  ],
+  "2025-08-24": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 in SEOUL"
+   ]
+  ],
+  "2025-08-29": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2025 aespa LIVE TOUR - SYNK : aeXIS LINE -"
+   ]
+  ],
+  "2025-08-30": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 aespa LIVE TOUR - SYNK : aeXIS LINE -"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "이승환 35주년 콘서트 HEAVEN [ ENCORE ] - 서울"
+   ]
+  ],
+  "2025-08-31": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 aespa LIVE TOUR - SYNK : aeXIS LINE -"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "이승환 35주년 콘서트 HEAVEN [ ENCORE ] - 서울"
+   ]
+  ],
+  "2025-09-06": [
+   [
+    "KSPO DOME",
+    1140,
+    90,
+    "크리스토퍼 내한공연 CHRISTOPHER LIVE IN SEOUL 2025"
+   ]
+  ],
+  "2025-09-13": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 IU FAN MEET-UP ［Bye, Summer］"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    110,
+    "Gen Hoshino presents MAD HOPE Asia Tour in SEOUL"
+   ]
+  ],
+  "2025-09-14": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2025 IU FAN MEET-UP ［Bye, Summer］"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    110,
+    "Gen Hoshino presents MAD HOPE Asia Tour in SEOUL"
+   ]
+  ],
+  "2025-09-26": [
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    null,
+    "2025 KEYLAND : Uncanny Valley"
+   ]
+  ],
+  "2025-09-27": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 KEYLAND : Uncanny Valley"
+   ]
+  ],
+  "2025-09-28": [
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    null,
+    "2025 KEYLAND : Uncanny Valley"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 KEYLAND : Uncanny Valley"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025 KEYLAND : Uncanny Valley"
+   ]
+  ],
+  "2025-10-03": [
+   [
+    "KSPO DOME",
+    1170,
+    null,
+    "2025 ZEROBASEONE WORLD TOUR ［HERE ＆ NOW］ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1110,
+    120,
+    "허용별 콘서트 : 보컬 전쟁 시즌2 “The War of Vocalists II“ - 서울 앵콜"
+   ]
+  ],
+  "2025-10-04": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 ZEROBASEONE WORLD TOUR ［HERE ＆ NOW］ IN SEOUL"
+   ]
+  ],
+  "2025-10-05": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 ZEROBASEONE WORLD TOUR ［HERE ＆ NOW］ IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025 QWER 1ST WORLDTOUR [ROCKATION]"
+   ]
+  ],
+  "2025-10-10": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2025 하현상 콘서트 〈Navy Horizon〉"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "2025-26 TREASURE TOUR［PULSE ON］IN SEOUL"
+   ]
+  ],
+  "2025-10-11": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025 하현상 콘서트 〈Navy Horizon〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025-26 TREASURE TOUR［PULSE ON］IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 쎄시봉 ［The Last］ 콘서트 - 서울"
+   ]
+  ],
+  "2025-10-12": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "2025 하현상 콘서트 〈Navy Horizon〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025-26 TREASURE TOUR［PULSE ON］IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 쎄시봉 ［The Last］ 콘서트 - 서울"
+   ]
+  ],
+  "2025-10-17": [
+   [
+    "올림픽홀",
+    1170,
+    120,
+    "비보쇼 with Friends"
+   ]
+  ],
+  "2025-10-18": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "비보쇼 with Friends"
+   ]
+  ],
+  "2025-10-19": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "비보쇼 with Friends"
+   ]
+  ],
+  "2025-10-24": [
+   [
+    "KSPO DOME",
+    1140,
+    150,
+    "ENHYPEN WORLD TOUR ‘WALK THE LINE’ : FINAL"
+   ]
+  ],
+  "2025-10-25": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "ENHYPEN WORLD TOUR ‘WALK THE LINE’ : FINAL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "NEXZ SPECIAL CONCERT〈ONE BEAT〉"
+   ]
+  ],
+  "2025-10-26": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "ENHYPEN WORLD TOUR ‘WALK THE LINE’ : FINAL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "NEXZ SPECIAL CONCERT〈ONE BEAT〉"
+   ]
+  ],
+  "2025-10-31": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "IVE WORLD TOUR [SHOW WHAT I AM]"
+   ]
+  ],
+  "2025-11-01": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "IVE WORLD TOUR [SHOW WHAT I AM]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2025 THE신승훈SHOW 〈SINCERELY 35〉"
+   ],
+   [
+    "우리금융아트홀",
+    1140,
+    120,
+    "2025 LEE JUN YOUNG ENCORE FANMEETING [Scene by JUNYOUNG : Another Scene]"
+   ]
+  ],
+  "2025-11-02": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "IVE WORLD TOUR [SHOW WHAT I AM]"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2025 THE신승훈SHOW 〈SINCERELY 35〉"
+   ]
+  ],
+  "2025-11-07": [
+   [
+    "티켓링크 라이브 아레나",
+    1170,
+    130,
+    "2025 LUCY 8TH CONCERT 〈LUCID LINE〉"
+   ]
+  ],
+  "2025-11-08": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    130,
+    "2025 LUCY 8TH CONCERT 〈LUCID LINE〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2025 ILLIT GLITTER DAY ENCORE"
+   ],
+   [
+    "우리금융아트홀",
+    1080,
+    150,
+    "뮤지컬 〈빨래〉 20주년 콘서트"
+   ]
+  ],
+  "2025-11-09": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    130,
+    "2025 LUCY 8TH CONCERT 〈LUCID LINE〉"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2025 ILLIT GLITTER DAY ENCORE"
+   ],
+   [
+    "우리금융아트홀",
+    900,
+    150,
+    "뮤지컬 〈빨래〉 20주년 콘서트"
+   ]
+  ],
+  "2025-11-15": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "유다빈밴드 단독 콘서트 ‘우리의 밤 - 커튼콜’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "유다빈밴드 단독 콘서트 ‘우리의 밤 - 커튼콜’"
+   ],
+   [
+    "우리금융아트홀",
+    1080,
+    120,
+    "박창근 장르 with Mr.아보카도 - 서울"
+   ]
+  ],
+  "2025-11-16": [
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "박창근 장르 with Mr.아보카도 - 서울"
+   ]
+  ],
+  "2025-11-22": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 이승철 콘서트 <오케스트락3> 서울공연"
+   ]
+  ],
+  "2025-11-23": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 이승철 콘서트 <오케스트락3> 서울공연"
+   ]
+  ],
+  "2025-11-29": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 어반자카파 전국투어 콘서트 '겨울' - 서울"
+   ]
+  ],
+  "2025-11-30": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 어반자카파 전국투어 콘서트 '겨울' - 서울"
+   ]
+  ],
+  "2025-12-05": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    150,
+    "2025 정승환의 안녕, 겨울"
+   ],
+   [
+    "KSPO DOME",
+    1200,
+    150,
+    "2025 god CONCERT < ICONIC BOX > - 서울"
+   ]
+  ],
+  "2025-12-06": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    150,
+    "2025 정승환의 안녕, 겨울"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "2025 god CONCERT < ICONIC BOX > - 서울"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "［서울］ 2025 손태진 전국투어 콘서트 〈It‘s Son Time〉"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "［서울］ 2025 손태진 전국투어 콘서트 〈It‘s Son Time〉"
+   ]
+  ],
+  "2025-12-07": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    150,
+    "2025 정승환의 안녕, 겨울"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2025 god CONCERT < ICONIC BOX > - 서울"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "［서울］ 2025 손태진 전국투어 콘서트 〈It‘s Son Time〉"
+   ]
+  ],
+  "2025-12-12": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2025-26 로이킴 LIVE TOUR ［ja, daumm］ - 서울"
+   ]
+  ],
+  "2025-12-13": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025-26 로이킴 LIVE TOUR ［ja, daumm］ - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 이문세 ‘The Best’"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 박지현 팬콘서트 멤버쉽 “MEMBERSHIP”"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 박지현 팬콘서트 멤버쉽 “MEMBERSHIP”"
+   ]
+  ],
+  "2025-12-14": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025-26 로이킴 LIVE TOUR ［ja, daumm］ - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 이문세 ‘The Best’"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2025 박지현 팬콘서트 멤버쉽 “MEMBERSHIP”"
+   ]
+  ],
+  "2025-12-19": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2025 규현(KYUHYUN) Concert ‘The Classic’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1170,
+    120,
+    "2025 N.Flying LIVE ‘&CON4 ENCORE : Let’s Roll &4EVER’"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "2025 DAY6 Special Concert ‘The Present’"
+   ]
+  ],
+  "2025-12-20": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025 규현(KYUHYUN) Concert ‘The Classic’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 N.Flying LIVE ‘&CON4 ENCORE : Let’s Roll &4EVER’"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2025 DAY6 Special Concert ‘The Present’"
+   ]
+  ],
+  "2025-12-21": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025 규현(KYUHYUN) Concert ‘The Classic’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2025 N.Flying LIVE ‘&CON4 ENCORE : Let’s Roll &4EVER’"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2025 DAY6 Special Concert ‘The Present’"
+   ]
+  ],
+  "2025-12-25": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ]
+  ],
+  "2025-12-26": [
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ]
+  ],
+  "2025-12-27": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ]
+  ],
+  "2025-12-28": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2025 에픽하이 콘서트"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 성시경 연말 콘서트 〈성시경〉"
+   ]
+  ],
+  "2026-01-02": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025 BAEKHYUN WORLD TOUR ‘Reverie [dot]’"
+   ]
+  ],
+  "2026-01-03": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025 BAEKHYUN WORLD TOUR ‘Reverie [dot]’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    100,
+    "DAESUNG 2025 ASIA TOUR: D’s WAVE ENCORE - SEOUL "
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 ASH ISLAND SOLO CONCERT 〈BURN〉"
+   ]
+  ],
+  "2026-01-04": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2025 BAEKHYUN WORLD TOUR ‘Reverie [dot]’"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    100,
+    "DAESUNG 2025 ASIA TOUR: D’s WAVE ENCORE - SEOUL "
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 ASH ISLAND SOLO CONCERT 〈BURN〉"
+   ]
+  ],
+  "2026-01-09": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "2025-26년 조용필＆위대한탄생 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2026-01-10": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025-26년 조용필＆위대한탄생 전국투어 콘서트 - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "터치드(TOUCHED) 단독 콘서트 ‘HIGHLIGHT Ⅳ‘"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "터치드(TOUCHED) 단독 콘서트 ‘HIGHLIGHT Ⅳ‘"
+   ]
+  ],
+  "2026-01-11": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025-26년 조용필＆위대한탄생 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2026-01-17": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2025-26 임재범 40주년 콘서트 ＂나는 임재범이다＂ - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2026 CNBLUE LIVE ‘3LOGY’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 카더가든 단독공연〈BLUE HEART〉"
+   ]
+  ],
+  "2026-01-18": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025-26 임재범 40주년 콘서트 ＂나는 임재범이다＂ - 서울"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2026 CNBLUE LIVE ‘3LOGY’"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 카더가든 단독공연〈BLUE HEART〉"
+   ]
+  ],
+  "2026-01-24": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 다비치 콘서트 〈TIME CAPSULE : 시간을 잇다〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2026 TAEYONG CONCERT 〈TY TRACK - REMASTERED〉 "
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "[서울앵콜] 2025 김희재 전국 투어 콘서트 ‘희열 (熙熱)’"
+   ]
+  ],
+  "2026-01-25": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2026 다비치 콘서트 〈TIME CAPSULE : 시간을 잇다〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2026 TAEYONG CONCERT 〈TY TRACK - REMASTERED〉 "
+   ]
+  ],
+  "2026-01-30": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2026 MONSTA X WORLD TOUR [THE X : NEXUS]"
+   ]
+  ],
+  "2026-01-31": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 MONSTA X WORLD TOUR [THE X : NEXUS]"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025-26 ONEW WORLD TOUR [ONEW THE LIVE : PERCENT (%)] ENCORE "
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "CLOSE YOUR EYES 1ST TOUR [BEYOND YOUR EYES] IN SEOUL"
+   ]
+  ],
+  "2026-02-01": [
+   [
+    "KSPO DOME",
+    1170,
+    120,
+    "2026 MONSTA X WORLD TOUR [THE X : NEXUS]"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 MONSTA X WORLD TOUR [THE X : NEXUS]"
+   ],
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "2026 MONSTA X WORLD TOUR [THE X : NEXUS]"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2025-26 ONEW WORLD TOUR [ONEW THE LIVE : PERCENT (%)] ENCORE "
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    null,
+    "2025-26 ONEW WORLD TOUR [ONEW THE LIVE : PERCENT (%)] ENCORE "
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "CLOSE YOUR EYES 1ST TOUR [BEYOND YOUR EYES] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "CLOSE YOUR EYES 1ST TOUR [BEYOND YOUR EYES] IN SEOUL"
+   ]
+  ],
+  "2026-02-06": [
+   [
+    "티켓링크 라이브 아레나",
+    1170,
+    120,
+    "2026 이창섭 단독 콘서트 〈AndEnd〉 ［2/6~2/7 공연 지정석］"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "FAM＋ILY : FAMILY : FAM I LOVE YOU"
+   ]
+  ],
+  "2026-02-07": [
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2026 이창섭 단독 콘서트 〈AndEnd〉 ［2/6~2/7 공연 지정석］"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "FAM＋ILY : FAMILY : FAM I LOVE YOU"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "2026 CRAVITY FAN-CON 〈VITY FESTA〉"
+   ]
+  ],
+  "2026-02-08": [
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "FAM＋ILY : FAMILY : FAM I LOVE YOU"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 CRAVITY FAN-CON 〈VITY FESTA〉"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2026 이창섭 단독 콘서트 〈AndEnd〉 ［2/8 공연 스탠딩］"
+   ]
+  ],
+  "2026-02-12": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "싱어게인4 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2026-02-13": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "싱어게인4 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2026-02-14": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "싱어게인4 전국투어 콘서트 - 서울"
+   ]
+  ],
+  "2026-02-15": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "싱어게인4 전국투어 콘서트 - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    240,
+    "2025 한터 뮤직 어워즈 with MBN - 33rd Anniversary - 2025 HANTEO MUSIC AWARDS with MBN"
+   ]
+  ],
+  "2026-02-21": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2026 i-dle WORLD TOUR [Syncopation] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 Hearts2Hearts FANMEETING 〈HEARTS 2 HOUSE〉"
+   ]
+  ],
+  "2026-02-22": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2026 i-dle WORLD TOUR [Syncopation] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 Hearts2Hearts FANMEETING 〈HEARTS 2 HOUSE〉"
+   ]
+  ],
+  "2026-02-27": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "2026 TXT MOA CON"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "wave to earth - 사랑으로 0.3"
+   ]
+  ],
+  "2026-02-28": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2026 TXT MOA CON"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "wave to earth - 사랑으로 0.3"
+   ]
+  ],
+  "2026-03-01": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2026 TXT MOA CON"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "wave to earth - 사랑으로 0.3"
+   ]
+  ],
+  "2026-03-06": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "2026 RIIZE CONCERT TOUR [RIIZING LOUD] FINALE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    120,
+    "2026 P1Harmony LIVE [P1ustage H : MOST WANTED ENCORE] IN SEOUL"
+   ]
+  ],
+  "2026-03-07": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2026 RIIZE CONCERT TOUR [RIIZING LOUD] FINALE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2026 P1Harmony LIVE [P1ustage H : MOST WANTED ENCORE] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 LEE YOUNGJI WORLD TOUR 〈2.0〉 IN SEOUL"
+   ]
+  ],
+  "2026-03-08": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "2026 RIIZE CONCERT TOUR [RIIZING LOUD] FINALE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2026 P1Harmony LIVE [P1ustage H : MOST WANTED ENCORE] IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 LEE YOUNGJI WORLD TOUR 〈2.0〉 IN SEOUL"
+   ]
+  ],
+  "2026-03-13": [
+   [
+    "KSPO DOME",
+    1170,
+    150,
+    "2026 ZEROBASEONE WORLD TOUR［HERE＆NOW］ENCORE IN SEOUL"
+   ]
+  ],
+  "2026-03-14": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "2026 ZEROBASEONE WORLD TOUR［HERE＆NOW］ENCORE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "ILLIT LIVE ‘PRESS START♥’ in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2025-26 장민호 전국투어 콘서트 ‘호시절 : 9.11Mhz’ - 서울"
+   ]
+  ],
+  "2026-03-15": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2026 ZEROBASEONE WORLD TOUR［HERE＆NOW］ENCORE IN SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "ILLIT LIVE ‘PRESS START♥’ in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "2025-26 장민호 전국투어 콘서트 ‘호시절 : 9.11Mhz’ - 서울"
+   ]
+  ],
+  "2026-03-20": [
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    120,
+    "QWER 1ST WORLD TOUR 〈ROCKATION : HOMECOMING〉"
+   ]
+  ],
+  "2026-03-21": [
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "QWER 1ST WORLD TOUR 〈ROCKATION : HOMECOMING〉"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "〈미스터트롯3〉 TOP7 서울콘서트"
+   ]
+  ],
+  "2026-03-22": [
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "QWER 1ST WORLD TOUR 〈ROCKATION : HOMECOMING〉"
+   ]
+  ],
+  "2026-03-27": [
+   [
+    "올림픽홀",
+    1170,
+    150,
+    "2026 KIMSUNGKYU LIVE [LV4: Leap to Vector] in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1140,
+    null,
+    "2026 TWS 2ND FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ]
+  ],
+  "2026-03-28": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "2026 KIMSUNGKYU LIVE [LV4: Leap to Vector] in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2026 TWS 2ND FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ]
+  ],
+  "2026-03-29": [
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2026 KIMSUNGKYU LIVE [LV4: Leap to Vector] in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "2026 TWS 2ND FANMEETING 〈42:CLUB〉 IN SEOUL"
+   ]
+  ],
+  "2026-04-03": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 SJ-CORE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1200,
+    null,
+    "2026 권진아 꽃말 콘서트 ‘Peony : Another Dream’"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 HA HYUN SANG Archive Live 〈New Boat〉"
+   ]
+  ],
+  "2026-04-04": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 SJ-CORE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    null,
+    "2026 권진아 꽃말 콘서트 ‘Peony : Another Dream’"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 HA HYUN SANG Archive Live 〈New Boat〉"
+   ]
+  ],
+  "2026-04-05": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "SUPER JUNIOR 20th Anniversary TOUR 〈SUPER SHOW 10〉 SJ-CORE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    null,
+    "2026 권진아 꽃말 콘서트 ‘Peony : Another Dream’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 HA HYUN SANG Archive Live 〈New Boat〉"
+   ]
+  ],
+  "2026-04-10": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "EXO PLANET #6 - EXhOrizon in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "[서울] 2026 박지현 콘서트 쇼맨쉽 시즌2 “SHOWMANSHIP SEASON 2”"
+   ]
+  ],
+  "2026-04-11": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "EXO PLANET #6 - EXhOrizon in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울] 2026 박지현 콘서트 쇼맨쉽 시즌2 “SHOWMANSHIP SEASON 2”"
+   ]
+  ],
+  "2026-04-12": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "EXO PLANET #6 - EXhOrizon in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "[서울] 2026 박지현 콘서트 쇼맨쉽 시즌2 “SHOWMANSHIP SEASON 2”"
+   ]
+  ],
+  "2026-04-17": [
+   [
+    "KSPO DOME",
+    1200,
+    null,
+    "NCT WISH 1st CONCERT TOUR ‘INTO THE WISH : Our WISH’ ENCORE IN SEOUL"
+   ]
+  ],
+  "2026-04-18": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "NCT WISH 1st CONCERT TOUR ‘INTO THE WISH : Our WISH’ ENCORE IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "아마자라시 아시아투어 2026 in SEOUL"
+   ]
+  ],
+  "2026-04-19": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "NCT WISH 1st CONCERT TOUR ‘INTO THE WISH : Our WISH’ ENCORE IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    900,
+    120,
+    "BEAT ON STREET VOL.1 - in Seoul (비트 온 스트릿 - 서울)"
+   ]
+  ],
+  "2026-04-24": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "THE BOYZ CONCERT 〈INTER-ZECTION〉"
+   ]
+  ],
+  "2026-04-25": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "THE BOYZ CONCERT 〈INTER-ZECTION〉"
+   ]
+  ],
+  "2026-04-26": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "THE BOYZ CONCERT 〈INTER-ZECTION〉"
+   ]
+  ],
+  "2026-05-01": [
+   [
+    "올림픽홀",
+    1140,
+    null,
+    "‘응답하라 하이스쿨’ 팬미팅 투어 - Graduation Trip in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "ENHYPEN WORLD TOUR ‘BLOOD SAGA’ IN SEOUL"
+   ]
+  ],
+  "2026-05-02": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "‘응답하라 하이스쿨’ 팬미팅 투어 - Graduation Trip in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "ENHYPEN WORLD TOUR ‘BLOOD SAGA’ IN SEOUL"
+   ]
+  ],
+  "2026-05-03": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "‘응답하라 하이스쿨’ 팬미팅 투어 - Graduation Trip in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "ENHYPEN WORLD TOUR ‘BLOOD SAGA’ IN SEOUL"
+   ]
+  ],
+  "2026-05-05": [
+   [
+    "우리금융아트홀",
+    990,
+    70,
+    "뮤지컬 헬로카봇 스페셜 시즌9 〈전설의 용사를 찾아서〉어린이날 특별 공연"
+   ]
+  ],
+  "2026-05-09": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025-2026 이찬원 〈찬가 : 찬란한 하루〉 앵콜 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "우리들의 발라드 TOP6 콘서트"
+   ]
+  ],
+  "2026-05-10": [
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2025-2026 이찬원 〈찬가 : 찬란한 하루〉 앵콜 콘서트"
+   ],
+   [
+    "올림픽홀",
+    960,
+    150,
+    "우리들의 발라드 TOP6 콘서트"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "2025-26 김창옥 토크콘서트 시즌 5 - 서울"
+   ]
+  ],
+  "2026-05-16": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2025-26 임재범 40주년 콘서트 ＂나는 임재범이다＂ - 서울 ［앵콜］"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    130,
+    "2026 LUCY 9TH CONCERT 〈ISLAND〉"
+   ]
+  ],
+  "2026-05-17": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2025-26 임재범 40주년 콘서트 ＂나는 임재범이다＂ - 서울 ［앵콜］"
+   ],
+   [
+    "KSPO DOME",
+    960,
+    130,
+    "2026 LUCY 9TH CONCERT 〈ISLAND〉"
+   ]
+  ],
+  "2026-05-23": [
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "Lilas LIVE TOUR 2026 “Laugh” in Seoul"
+   ]
+  ],
+  "2026-05-24": [
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "Lilas LIVE TOUR 2026 “Laugh” in Seoul"
+   ]
+  ],
+  "2026-05-29": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "- The Trilogy I - 2026 SHINee WORLD VIII : [THE INVERT]"
+   ]
+  ],
+  "2026-05-30": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "- The Trilogy I - 2026 SHINee WORLD VIII : [THE INVERT]"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1080,
+    120,
+    "2026 양요섭 솔로 콘서트〈 잔상（Fade In）〉"
+   ]
+  ],
+  "2026-05-31": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "- The Trilogy I - 2026 SHINee WORLD VIII : [THE INVERT]"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    960,
+    120,
+    "2026 양요섭 솔로 콘서트〈 잔상（Fade In）〉"
+   ]
+  ],
+  "2026-06-07": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "[서울] 1등들 전국투어 콘서트"
+   ]
+  ],
+  "2026-06-12": [
+   [
+    "KSPO DOME",
+    1170,
+    150,
+    "2026 XIA 6TH ASIA TOUR CONCERT ‘GRAVITY’ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "NELL X REDOOR : MINTPAPER 20th SPECIAL LIVE"
+   ]
+  ],
+  "2026-06-13": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2026 XIA 6TH ASIA TOUR CONCERT ‘GRAVITY’ IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    1020,
+    120,
+    "2026 한영애 50주년 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "터치드 X 드래곤포니 : MINTPAPER 20th SPECIAL LIVE"
+   ]
+  ],
+  "2026-06-14": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2026 XIA 6TH ASIA TOUR CONCERT ‘GRAVITY’ IN SEOUL"
+   ],
+   [
+    "우리금융아트홀",
+    960,
+    120,
+    "2026 한영애 50주년 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "장기하 X 카더가든 : MINTPAPER 20th SPECIAL LIVE"
+   ]
+  ],
+  "2026-06-19": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "마마무(MAMAMOO) 2026 WORLD TOUR [4WARD] in SEOUL"
+   ]
+  ],
+  "2026-06-20": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "마마무(MAMAMOO) 2026 WORLD TOUR [4WARD] in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "King Gnu CEN+RAL Tour 2026 in Seoul"
+   ]
+  ],
+  "2026-06-21": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "마마무(MAMAMOO) 2026 WORLD TOUR [4WARD] in SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "King Gnu CEN+RAL Tour 2026 in Seoul"
+   ]
+  ],
+  "2026-06-27": [
+   [
+    "우리금융아트홀",
+    1080,
+    150,
+    "박창근 장르 on Shadow - 서울"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 무명전설 전국투어 콘서트 - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2026 TWS TOUR＇24/7:FOR:YOU＇IN SEOUL"
+   ]
+  ],
+  "2026-06-28": [
+   [
+    "우리금융아트홀",
+    1020,
+    150,
+    "박창근 장르 on Shadow - 서울"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2026 TWS TOUR＇24/7:FOR:YOU＇IN SEOUL"
+   ]
+  ],
+  "2026-07-03": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "DAY6 10th Anniversary Tour〈The DECADE〉FINALE in SEOUL"
+   ]
+  ],
+  "2026-07-04": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "DAY6 10th Anniversary Tour〈The DECADE〉FINALE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    1020,
+    120,
+    "2025-26 박서진 전국투어 콘서트< MY NAME IS SEOJIN >-서울(앵콜)"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 < THE 이재훈 전국투어콘서트 - Come on > - 서울 앵콜"
+   ]
+  ],
+  "2026-07-05": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "DAY6 10th Anniversary Tour〈The DECADE〉FINALE in SEOUL"
+   ],
+   [
+    "티켓링크 라이브 아레나",
+    900,
+    120,
+    "2025-26 박서진 전국투어 콘서트< MY NAME IS SEOJIN >-서울(앵콜)"
+   ]
+  ],
+  "2026-07-10": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "TWICE 〈THIS IS FOR〉 WORLD TOUR FINALE in SEOUL"
+   ]
+  ],
+  "2026-07-11": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TWICE 〈THIS IS FOR〉 WORLD TOUR FINALE in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2026 부활 40주년 콘서트 〈Where Is Here〉"
+   ]
+  ],
+  "2026-07-12": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "TWICE 〈THIS IS FOR〉 WORLD TOUR FINALE in SEOUL"
+   ]
+  ],
+  "2026-07-17": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.2’ IN SEOUL"
+   ]
+  ],
+  "2026-07-18": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.2’ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "natori ONE-MAN LIVE TOUR ‘Koshin (March)’ in Seoul"
+   ]
+  ],
+  "2026-07-19": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "BOYNEXTDOOR TOUR ‘KNOCK ON Vol.2’ IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "natori ONE-MAN LIVE TOUR ‘Koshin (March)’ in Seoul"
+   ]
+  ],
+  "2026-07-24": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 SUPER JUNIOR-83z FANCON TOUR [1983]"
+   ]
+  ],
+  "2026-07-25": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 SUPER JUNIOR-83z FANCON TOUR [1983]"
+   ]
+  ],
+  "2026-07-26": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 SUPER JUNIOR-83z FANCON TOUR [1983]"
+   ]
+  ],
+  "2026-08-01": [
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "LiVE is Smile Always～15～ in Seoul"
+   ]
+  ],
+  "2026-08-02": [
+   [
+    "올림픽홀",
+    1080,
+    90,
+    "LiVE is Smile Always～15～ in Seoul"
+   ]
+  ],
+  "2026-08-08": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "오피셜히게단디즘 아시아 투어 2026 in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "ITZY The 5th Fan Meeting 있지 믿지, 날자! “ALL IN, MIDZY”"
+   ]
+  ],
+  "2026-08-09": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "오피셜히게단디즘 아시아 투어 2026 in SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "ITZY The 5th Fan Meeting 있지 믿지, 날자! “ALL IN, MIDZY”"
+   ]
+  ],
+  "2026-08-12": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "코다라인 내한공연 Kodaline - Farewell Tour in Seoul"
+   ]
+  ],
+  "2026-08-15": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "쏜애플 콘서트 ‘나의 세기’ - 서울"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "쏜애플 콘서트 ‘나의 세기’ - 서울"
+   ]
+  ],
+  "2026-08-17": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "live ICON 9 : ONEWE X Dragon Pony"
+   ]
+  ],
+  "2026-08-19": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "스티브 레이시 첫 단독 내한공연"
+   ]
+  ],
+  "2026-08-22": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "〈현역가왕3〉 with 현역가왕 패밀리 페스티벌 - 서울"
+   ]
+  ],
+  "2026-08-23": [
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "〈현역가왕3〉 with 현역가왕 패밀리 페스티벌 - 서울"
+   ]
+  ],
+  "2026-08-29": [
+   [
+    "우리금융아트홀",
+    1080,
+    100,
+    "전유진 2nd Fan Concert ‘TWENTY-ONE’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "[서울 앵콜] 2026 박지현 콘서트 쇼맨쉽 시즌2 “SHOWMANSHIP SEASON 2” ENCORE"
+   ]
+  ],
+  "2026-08-30": [
+   [
+    "우리금융아트홀",
+    1020,
+    100,
+    "전유진 2nd Fan Concert ‘TWENTY-ONE’"
+   ]
+  ],
+  "2026-09-04": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "2026 DONGHAE 1ST SOLO ENCORE CONCERT [ALIVE] in SEOUL"
+   ]
+  ],
+  "2026-09-05": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 DONGHAE 1ST SOLO ENCORE CONCERT [ALIVE] in SEOUL"
+   ]
+  ],
+  "2026-09-06": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2026 DONGHAE 1ST SOLO ENCORE CONCERT [ALIVE] in SEOUL"
+   ]
+  ],
+  "2026-09-18": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "NCT 127 5TH TOUR ‘NEO CITY : SEOUL - THE REDLINE’"
+   ]
+  ],
+  "2026-09-19": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "NCT 127 5TH TOUR ‘NEO CITY : SEOUL - THE REDLINE’"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 izna Concert Tour: WHO DAT GIRL？in SEOUL"
+   ]
+  ],
+  "2026-09-20": [
+   [
+    "KSPO DOME",
+    960,
+    null,
+    "NCT 127 5TH TOUR ‘NEO CITY : SEOUL - THE REDLINE’"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 izna Concert Tour: WHO DAT GIRL？in SEOUL"
+   ]
+  ],
+  "2026-09-26": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "Silica Gel Asia Tour 〈Syn.THE.Size: Ballad of You〉 in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 Redoor 단독콘서트 〈Memory〉"
+   ]
+  ],
+  "2026-09-27": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "Silica Gel Asia Tour 〈Syn.THE.Size: Ballad of You〉 in Seoul"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 Redoor 단독콘서트 〈Memory〉"
+   ]
+  ],
+  "2026-10-03": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "2026 ＆TEAM CONCERT TOUR ‘BLAZE THE WAY’ ENCORE in KSPO DOME"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "＂IDOL1ST KENTY＂ ASIA TOUR 2026 in SEOUL"
+   ]
+  ],
+  "2026-10-04": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "2026 ＆TEAM CONCERT TOUR ‘BLAZE THE WAY’ ENCORE in KSPO DOME"
+   ],
+   [
+    "올림픽홀",
+    960,
+    120,
+    "＂IDOL1ST KENTY＂ ASIA TOUR 2026 in SEOUL"
+   ]
+  ],
+  "2026-10-09": [
+   [
+    "KSPO DOME",
+    1080,
+    150,
+    "2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]"
+   ]
+  ],
+  "2026-10-10": [
+   [
+    "KSPO DOME",
+    1020,
+    150,
+    "2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 10CM FAN CONCERT 〈THE MISSING TRACKS〉 사라진 곡들의 행방 "
+   ]
+  ],
+  "2026-10-11": [
+   [
+    "KSPO DOME",
+    960,
+    150,
+    "2026 AKMU CONCERT [ 소문의 낙원（Paradise of Rumors）]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 10CM FAN CONCERT 〈THE MISSING TRACKS〉 사라진 곡들의 행방 "
+   ]
+  ],
+  "2026-10-17": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "NEXZ 1ST ASIA TOUR 〈SAUCIN’ THE WORLD〉"
+   ]
+  ],
+  "2026-10-18": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "NEXZ 1ST ASIA TOUR 〈SAUCIN’ THE WORLD〉"
+   ]
+  ],
+  "2026-10-23": [
+   [
+    "KSPO DOME",
+    1170,
+    130,
+    "잔나비 발라드 컬렉션 <10월의 어느 멋진 날에> in 서울"
+   ]
+  ],
+  "2026-10-24": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 소수빈 단독공연 〈늘 그래왔던 것처럼 앞으로도〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    140,
+    "잔나비 2026 ASIA TOUR FINAL <스웨트 앤 스타더스트> in 서울"
+   ]
+  ],
+  "2026-10-25": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 소수빈 단독공연 〈늘 그래왔던 것처럼 앞으로도〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    140,
+    "잔나비 2026 ASIA TOUR FINAL <스웨트 앤 스타더스트> in 서울"
+   ]
+  ],
+  "2026-10-30": [
+   [
+    "올림픽홀",
+    1168,
+    null,
+    "2026 ONEW CONCERT [ONEW THE LIVE : Q] IN SEOUL"
+   ]
+  ],
+  "2026-10-31": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 ONEW CONCERT [ONEW THE LIVE : Q] IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 WOODZ WORLD TOUR Archive. 1 : Completed"
+   ]
+  ],
+  "2026-11-01": [
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 ONEW CONCERT [ONEW THE LIVE : Q] IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2026 WOODZ WORLD TOUR Archive. 1 : Completed"
+   ]
+  ],
+  "2026-11-06": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "EXO PLANET #6 - EXhOrizon [dot] -"
+   ]
+  ],
+  "2026-11-07": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "EXO PLANET #6 - EXhOrizon [dot] -"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    150,
+    "2026 박재정 콘서트 - 기록"
+   ],
+   [
+    "우리금융아트홀",
+    960,
+    120,
+    "코리아발레스타즈 호두까기인형"
+   ]
+  ],
+  "2026-11-08": [
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "EXO PLANET #6 - EXhOrizon [dot] -"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    150,
+    "2026 박재정 콘서트 - 기록"
+   ],
+   [
+    "우리금융아트홀",
+    960,
+    120,
+    "코리아발레스타즈 호두까기인형"
+   ]
+  ],
+  "2026-11-13": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ]
+  ],
+  "2026-11-14": [
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ],
+   [
+    "올림픽홀",
+    960,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ]
+  ],
+  "2026-11-15": [
+   [
+    "KSPO DOME",
+    1140,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    null,
+    "TOMORROW X TOGETHER WORLD TOUR 〈STEAL THE WIND〉 IN SEOUL"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 CRAVITY CONCERT 〈SONOROUS〉 in Seoul"
+   ]
+  ],
+  "2026-11-27": [
+   [
+    "KSPO DOME",
+    1140,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-11-28": [
+   [
+    "KSPO DOME",
+    1080,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-11-29": [
+   [
+    "KSPO DOME",
+    1020,
+    130,
+    "[서울] 2026 조용필 ＆ 위대한탄생 콘서트"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 다이나믹 듀오 단독 콘서트 ＂가끔씩 오래 보자＂ - 서울"
+   ]
+  ],
+  "2026-12-04": [
+   [
+    "KSPO DOME",
+    1140,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ]
+  ],
+  "2026-12-05": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "2026 비 (RAIN) CONCERT [THE SMOKE]"
+   ]
+  ],
+  "2026-12-06": [
+   [
+    "KSPO DOME",
+    960,
+    120,
+    "[서울] 2026 이승철 40주년 콘서트 [THE VOICE: LEE SEUNG CHUL]"
+   ],
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 비 (RAIN) CONCERT [THE SMOKE]"
+   ]
+  ],
+  "2026-12-11": [
+   [
+    "올림픽홀",
+    1140,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ]
+  ],
+  "2026-12-12": [
+   [
+    "올림픽홀",
+    1020,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ],
+   [
+    "KSPO DOME",
+    1020,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ]
+  ],
+  "2026-12-13": [
+   [
+    "올림픽홀",
+    960,
+    120,
+    "2026 박지현 팬콘서트 〈멤버쉽 시즌2：2026 박지현 어워즈〉"
+   ],
+   [
+    "KSPO DOME",
+    1080,
+    120,
+    "2026 DAVICHI CONCERT 〈IN OUR SCENES〉"
+   ]
+  ],
+  "2026-12-18": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-19": [
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-20": [
+   [
+    "올림픽홀",
+    1200,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ],
+   [
+    "올림픽홀",
+    1080,
+    120,
+    "자우림 단독 콘서트 ［ MIDNIGHT EXPRESS 2026-2027 ］ - 서울"
+   ]
+  ],
+  "2026-12-24": [
+   [
+    "올림픽홀",
+    1200,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ],
+  "2026-12-25": [
+   [
+    "올림픽홀",
+    1020,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ],
+  "2026-12-26": [
+   [
+    "올림픽홀",
+    1080,
+    null,
+    "2026 박진영 콘서트 〈WET〉"
+   ]
+  ]
+ }
+}
