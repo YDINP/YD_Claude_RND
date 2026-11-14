@@ -54,10 +54,6 @@
     "github",
     "supabase"
   ],
-  "enabledPlugins": {
-    "github@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -70,5 +66,13 @@
         ]
       }
     ]
-  }
+  },
+  "enabledPlugins": {
+    "github@claude-plugins-official": true,
+    "playwright@claude-plugins-official": false
+  },
+  "enabledMcpjsonServers": [
+    "playwright-b",
+    "factorio"
+  ]
 }

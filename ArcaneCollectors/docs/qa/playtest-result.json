@@ -1,75 +1,42 @@
 {
   "baseUrl": "http://localhost:3000",
   "source": "local",
-  "at": "2026-09-05T05:12:29.778Z",
+  "at": "2026-09-07T06:10:05.477Z",
   "report": [
     {
-      "id": 2,
-      "name": "명상 로비 — 마력 축적·수확·오프라인 복귀",
+      "id": 174,
+      "name": "3차 E — 오프라인 보상 모달 반복 노출·반복 지급 여부 (계정 B)",
       "source": "local",
       "checks": [
         {
           "ok": true,
-          "name": "로비 진입",
-          "detail": ""
+          "name": "[UI 경로] 전투 왕복 뒤 오프라인 보상 모달이 다시 뜨지 않는다",
+          "detail": "{\"path\":\"로비 → [보스전] → 결과 → [메인으로]\",\"reopened\":false,\"delta\":null,\"shownGold\":null,\"goldTotalDelta\":600}"
         },
         {
-          "ok": true,
-          "name": "유휴 시스템 축적 마력 읽기",
-          "detail": "{\"accumulated\":1010,\"required\":528,\"focus\":308.9887640449438,\"dps\":null,\"partyCount\":null,\"manaText\":null,\"focusText\":\"집중력 309/초\",\"etaText\":null,\"readyVisible\":false}"
+          "ok": false,
+          "name": "로비 재진입 시 오프라인 보상 모달이 다시 뜨지 않는다",
+          "detail": "3/3회 재노출 — [{\"round\":1,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5001560,\"goldAfter\":5003120,\"delta\":1560},{\"round\":2,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5003120,\"goldAfter\":5004680,\"delta\":1560},{\"round\":3,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5004680,\"goldAfter\":5006240,\"delta\":1560}]"
         },
         {
-          "ok": true,
-          "name": "마력이 시간에 따라 실제로 증가",
-          "detail": "1010 → 4887"
-        },
-        {
-          "ok": true,
-          "name": "표시 집중력/초 ↔ 실측 증가율 일치",
-          "detail": "표시 365.6/s, 실측 387.7/s (비 0.94)"
-        },
-        {
-          "ok": true,
-          "name": "수확(보상받기)이 실제 재화를 지급",
-          "detail": "골드 10009999 → 10021661"
-        },
-        {
-          "ok": true,
-          "name": "새로고침 후 로비 복귀",
-          "detail": ""
-        },
-        {
-          "ok": true,
-          "name": "오프라인 보상이 계산되어 registry 에 실린다",
-          "detail": "{\"gold\":3960,\"exp\":1890,\"duration\":360,\"formattedDuration\":\"6시간 0분\"}"
-        },
-        {
-          "ok": true,
-          "name": "오프라인 6시간 후 복귀 보상 팝업 노출",
-          "detail": "전투력 / 2,487 / 현재 모험 / 챕터 1 · 1-2 / 고블린 숲 / 고블린 왕 / 정보 보기 ▸ / 쉬움"
-        },
-        {
-          "ok": true,
-          "name": "debug.setLastOnlineTime(5) 이 오프라인 계산 필드(lastOnline)를 5시간 전으로 되돌린다",
-          "detail": "{\"hoursAgoOnLastOnline\":5,\"hoursAgoOnLastOnlineTime\":6}"
-        },
-        {
-          "ok": null,
-          "manual": true,
-          "name": "치비 4인 렌더·교단색·부유 애니메이션",
-          "detail": "02-meditation-a-lobby.png / 02-meditation-c-offline-return.png"
-        },
-        {
-          "ok": true,
-          "name": "명상 로비 콘솔 에러 없음",
-          "detail": ""
+          "ok": false,
+          "name": "재노출된 모달이 보상을 다시 지급하지 않는다",
+          "detail": "3회 재지급 — [{\"round\":1,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5001560,\"goldAfter\":5003120,\"delta\":1560},{\"round\":2,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5003120,\"goldAfter\":5004680,\"delta\":1560},{\"round\":3,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5004680,\"goldAfter\":5006240,\"delta\":1560}]"
         }
       ],
-      "issues": [],
+      "issues": [
+        {
+          "severity": "P2",
+          "title": "오프라인 보상이 데이터 없는 씬 재시작마다 다시 지급된다 (3회, 누적 +4680 골드 / UI 경로 재현=false)",
+          "repro": "[받기] → __TEST_API__.navigateTo('MainMenuScene')(데이터 없음) → 모달 재노출 → [받기] 반복. 전투 왕복(유저 경로)에서는 재현되지 않음",
+          "suspect": "src/scenes/MainMenuScene.js:95 init(data).showOfflineRewards — settings.data 가 살아남는다 / :556 [받기] 가 표시된 safeRewards 를 재계산 없이 지급 / src/scenes/PreloadScene.js:835 최초 start 데이터",
+          "evidence": "{\"uiRound\":{\"path\":\"로비 → [보스전] → 결과 → [메인으로]\",\"reopened\":false,\"delta\":null,\"shownGold\":null,\"goldTotalDelta\":600},\"rounds\":[{\"round\":1,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5001560,\"goldAfter\":5003120,\"delta\":1560},{\"round\":2,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5003120,\"goldAfter\":5004680,\"delta\":1560},{\"round\":3,\"reopened\":true,\"shownGold\":1560,\"goldBefore\":5004680,\"goldAfter\":5006240,\"delta\":1560}]}"
+        }
+      ],
       "shots": [
-        "docs/qa/playtest/02-meditation-a-lobby.png",
-        "docs/qa/playtest/02-meditation-b-harvest.png",
-        "docs/qa/playtest/02-meditation-c-offline-return.png"
+        "docs/qa/playtest/17f-offline-modal-round1.png",
+        "docs/qa/playtest/17f-offline-modal-round2.png",
+        "docs/qa/playtest/17f-offline-modal-round3.png"
       ],
       "consoleErrors": []
     }

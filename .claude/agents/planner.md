@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 복잡한 기능 개발 계획, 아키텍처 마이그레이션 계획,
   프로젝트 구조 설계, 단계적 실행 계획 수립.
   예시: "이 기능 어떻게 개발할지 계획 세워줘", "마이그레이션 전략 짜줘"
-model: claude-opus-4-6
+model: claude-opus-5
 tools: Read, Glob, Grep, WebSearch
 permissionMode: plan
 ---

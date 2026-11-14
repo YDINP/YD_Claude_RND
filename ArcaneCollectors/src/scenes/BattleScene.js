@@ -2040,7 +2040,14 @@ export class BattleScene extends Phaser.Scene {
     console.log(`[Battle] Event: ${eventType}`, data);
     this.battleEventListeners.forEach(listener => {
       if (listener.eventType === eventType) {
-        listener.callback(data);
+        try {
+          listener.callback(data);
+        } catch (error) {
+          // 리스너 하나가 던져도 나머지 리스너와 호출부(특히 endBattle → showBattleResult →
+          // 결과 화면 전환으로 이어지는 체인)는 계속 진행돼야 한다. 여기서 삼키지 않으면
+          // 예외가 endBattle()까지 전파되어 결과 화면 전환 예약 자체가 취소된다.
+          console.error(`[Battle] battleEvent(${eventType}) 리스너 실패:`, error);
+        }
       }
     });
   }
@@ -2719,78 +2726,89 @@ export class BattleScene extends Phaser.Scene {
     const levelUpResults = [];
 
     if (victory) {
-      // 성과 기반 별점 계산
-      const avgHpRatio = this.allies.reduce((sum, a) => sum + (a.isAlive ? a.currentHp / a.maxHp : 0), 0) / totalAllies;
+      // 이 블록은 저장소/타워/인벤토리 등 여러 시스템을 순서대로 건드린다. 그중 하나가
+      // 던지면(개별 ally EXP 지급은 이미 자체 try/catch로 보호돼 있지만, 그 앞의 스테이지
+      // 클리어 기록·타워 정산·골드/아이템 지급은 그렇지 않았다) 이 함수가 그 자리에서
+      // 멈추고 아래의 resultData 구성·씬 전환(transitionManager.victoryTransition)까지
+      // 아예 도달하지 못한다 — 결과 화면도 없이 BattleScene에 영원히 갇히는 것과 동일한
+      // 증상이 된다. 보상 계산이 실패해도 플레이어는 반드시 결과 화면을 봐야 하므로,
+      // 여기서 무엇이 실패하든 별점/보상은 계산된 만큼만 반영하고 아래 전환은 항상 진행한다.
+      try {
+        // 성과 기반 별점 계산
+        const avgHpRatio = this.allies.reduce((sum, a) => sum + (a.isAlive ? a.currentHp / a.maxHp : 0), 0) / totalAllies;
 
-      newStars = 1;
-      if (aliveCount === totalAllies && avgHpRatio > 0.5) {
-        newStars = 3;
-      } else if (aliveCount >= Math.ceil(totalAllies / 2)) {
-        newStars = 2;
-      }
-      if (this.turn <= 20 && newStars < 3) newStars++;
-
-      // 스테이지 클리어 기록
-      const clearedStages = this.registry.get('clearedStages') || {};
-      if (this.stage) {
-        const currentStars = clearedStages[this.stage.id] || 0;
-        if (newStars > currentStars) {
-          clearedStages[this.stage.id] = newStars;
-          this.registry.set('clearedStages', clearedStages);
-          SaveManager.clearStage(this.stage.id, newStars);
+        newStars = 1;
+        if (aliveCount === totalAllies && avgHpRatio > 0.5) {
+          newStars = 3;
+        } else if (aliveCount >= Math.ceil(totalAllies / 2)) {
+          newStars = 2;
         }
-        // 소탕 시스템에 클리어 기록
-        sweepSystem.recordStageClear(this.stage.id, newStars);
-      }
+        if (this.turn <= 20 && newStars < 3) newStars++;
 
-      // 타워 모드: 층 클리어 처리 (반환값에 보스층 보너스 젬/SR티켓 실지급 결과가 들어있다)
-      let towerClearResult = null;
-      if (this.mode === 'tower' && this.towerFloor) {
-        towerClearResult = TowerSystem.clearFloor(this.towerFloor, {
-          victory: true,
-          stars: newStars,
-          rewards
-        });
-      }
-
-      // 보상 지급 — gold/exp/items 는 모드와 무관하게 이 한 곳에서만 지급한다.
-      // (타워 모드도 TowerSystem.buildStageForFloor() 가 stage.rewards 를 채워 주므로
-      // 스테이지 전투와 동일 경로를 탄다 — 예전엔 이 필드가 없어 무조건 {gold:100,exp:50}
-      // 고정값으로 새고, TowerSystem._grantRewards() 가 별도로 또 골드를 지급해 중복 지급됐다)
-      rewards = this.stage?.rewards || { gold: 100, exp: 50 };
-      const newGold = SaveManager.addGold(rewards.gold);
-      this.registry.set('gold', newGold);
-
-      // QA P1 후속: 보상 아이템은 화면에만 표시되고 실제로 지급된 적이 없었다.
-      // grantRewardItems() 가 확률을 굴리고 실지급까지 한 뒤 "실제로 받은 것만" 돌려주므로
-      // 화면 표시(rewards.items)와 실제 인벤토리 상태가 항상 일치한다.
-      rewards = { ...rewards, items: SaveManager.grantRewardItems(rewards.items) };
-
-      // 타워 보스층 보너스(젬/SR티켓) — TowerSystem.clearFloor() 가 이미 실지급까지 마쳤다.
-      // 예전엔 이 반환값을 버려서 실제로 받은 보너스가 결과 화면엔 전혀 안 보였다.
-      if (towerClearResult?.rewards) {
-        if (towerClearResult.rewards.gems) rewards.gems = towerClearResult.rewards.gems;
-        if (towerClearResult.rewards.srTicket) rewards.srTicket = towerClearResult.rewards.srTicket;
-      }
-
-      // 캐릭터 EXP 지급
-      const expPerHero = Math.floor(rewards.exp / totalAllies);
-      this.allies.forEach(ally => {
-        if (ally.id) {
-          try {
-            const expResult = ProgressionSystem.addExp(ally.id, expPerHero);
-            if (expResult.success && expResult.levelsGained > 0) {
-              levelUpResults.push({
-                name: ally.name,
-                newLevel: expResult.newLevel,
-                gained: expResult.levelsGained
-              });
-            }
-          } catch (e) {
-            console.warn('[Battle] EXP error:', ally.id, e.message);
+        // 스테이지 클리어 기록
+        const clearedStages = this.registry.get('clearedStages') || {};
+        if (this.stage) {
+          const currentStars = clearedStages[this.stage.id] || 0;
+          if (newStars > currentStars) {
+            clearedStages[this.stage.id] = newStars;
+            this.registry.set('clearedStages', clearedStages);
+            SaveManager.clearStage(this.stage.id, newStars);
           }
+          // 소탕 시스템에 클리어 기록
+          sweepSystem.recordStageClear(this.stage.id, newStars);
         }
-      });
+
+        // 타워 모드: 층 클리어 처리 (반환값에 보스층 보너스 젬/SR티켓 실지급 결과가 들어있다)
+        let towerClearResult = null;
+        if (this.mode === 'tower' && this.towerFloor) {
+          towerClearResult = TowerSystem.clearFloor(this.towerFloor, {
+            victory: true,
+            stars: newStars,
+            rewards
+          });
+        }
+
+        // 보상 지급 — gold/exp/items 는 모드와 무관하게 이 한 곳에서만 지급한다.
+        // (타워 모드도 TowerSystem.buildStageForFloor() 가 stage.rewards 를 채워 주므로
+        // 스테이지 전투와 동일 경로를 탄다 — 예전엔 이 필드가 없어 무조건 {gold:100,exp:50}
+        // 고정값으로 새고, TowerSystem._grantRewards() 가 별도로 또 골드를 지급해 중복 지급됐다)
+        rewards = this.stage?.rewards || { gold: 100, exp: 50 };
+        const newGold = SaveManager.addGold(rewards.gold);
+        this.registry.set('gold', newGold);
+
+        // QA P1 후속: 보상 아이템은 화면에만 표시되고 실제로 지급된 적이 없었다.
+        // grantRewardItems() 가 확률을 굴리고 실지급까지 한 뒤 "실제로 받은 것만" 돌려주므로
+        // 화면 표시(rewards.items)와 실제 인벤토리 상태가 항상 일치한다.
+        rewards = { ...rewards, items: SaveManager.grantRewardItems(rewards.items) };
+
+        // 타워 보스층 보너스(젬/SR티켓) — TowerSystem.clearFloor() 가 이미 실지급까지 마쳤다.
+        // 예전엔 이 반환값을 버려서 실제로 받은 보너스가 결과 화면엔 전혀 안 보였다.
+        if (towerClearResult?.rewards) {
+          if (towerClearResult.rewards.gems) rewards.gems = towerClearResult.rewards.gems;
+          if (towerClearResult.rewards.srTicket) rewards.srTicket = towerClearResult.rewards.srTicket;
+        }
+
+        // 캐릭터 EXP 지급
+        const expPerHero = Math.floor(rewards.exp / totalAllies);
+        this.allies.forEach(ally => {
+          if (ally.id) {
+            try {
+              const expResult = ProgressionSystem.addExp(ally.id, expPerHero);
+              if (expResult.success && expResult.levelsGained > 0) {
+                levelUpResults.push({
+                  name: ally.name,
+                  newLevel: expResult.newLevel,
+                  gained: expResult.levelsGained
+                });
+              }
+            } catch (e) {
+              console.warn('[Battle] EXP error:', ally.id, e.message);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[BattleScene] 승리 보상 계산 중 오류 - 결과 화면 전환은 계속 진행합니다', error);
+      }
     }
 
     // BattleResultScene으로 전환 (PRD VFX-1.2: 승리=flash / 패배=fadeOut)

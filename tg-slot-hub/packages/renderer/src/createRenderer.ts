@@ -100,6 +100,9 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
     skipWins: () => {
       core?.skipWins()
     },
+    stopWinCycle: () => {
+      core?.stopWinCycle()
+    },
     clearWins: () => {
       core?.clearWins()
     },

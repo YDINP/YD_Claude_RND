@@ -43,6 +43,12 @@ const {
 const HEADLESS = !process.argv.includes('--headed');
 const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').replace('--only=', '');
 const VERBOSE = process.argv.includes('--verbose');
+/** 시나리오 17 하위 블록 선택 (a,b,c,d). 비우면 전부 */
+const S17 = (process.env.PLAYTEST_S17 || 'abcde').toLowerCase();
+/** 시나리오 18 하위 블록 선택 (a 전환 정지 반복 / b 장착 피커 잘림 / c M-2 유저 경로) */
+const S18 = (process.env.PLAYTEST_S18 || 'abc').toLowerCase();
+/** 18a 전투 반복 횟수 — 간헐 결함이라 1회 통과는 증거가 약하다 */
+const BATTLE_REPEATS = Number(process.env.PLAYTEST_BATTLE_REPEATS || 10);
 
 // ============================================================
 // 공용 플레이 동작
@@ -93,8 +99,103 @@ async function skipCutscenes(page, rounds = 5) {
   return n;
 }
 
+/**
+ * B-1 코치마크가 턴 순서 바를 덮는지 재고 캡처를 남긴다.
+ *
+ * B-1 은 `battle_start` 트리거라 씬 진입 직후 잠깐 떴다 사라진다. 2·3차에서 이 측정이
+ * 한 번도 실행되지 않았는데, 원인은 선폴링 루프가 B-1 을 `seen` 에 넣고 break 해
+ * 본 루프의 측정 분기를 건너뛰게 만든 것이었다(하네스 결함). 그래서 함수로 빼서
+ * **B-1 을 처음 본 지점에서 바로** 부른다.
+ *
+ * bounds 를 못 얻으면 통과로 세지 않고 캡처 육안 판정으로 넘긴다(팀 리드 지시).
+ */
+async function measureB1(page, P) {
+  const overlap = await safeEvaluate(page, () => {
+    const bs = window.game.scene.getScene('BattleScene');
+    const flow = bs?._tutorialBinding?.flow;
+    const coach = flow?.coach;
+    // ⚠ `coach.root` 는 말풍선이 **아니다**. CoachMark 는 root 컨테이너에 말풍선·안내 텍스트·
+    //   대상 강조 링·탭존·화살표·닫기를 전부 담는다(CoachMark.js). 즉 root 의 bounds 는
+    //   **설계상 대상 영역을 항상 포함**한다 — 그걸 대상과 겹쳤다고 판정하면 무조건 참이다.
+    //   (3차 1회차에서 정확히 그 이유로 "말풍선이 턴 순서 바를 덮는다 P2" 오탐이 났다.
+    //    캡처를 보면 말풍선은 턴 순서 바 **아래**에 ▲ 화살표로 붙어 있고 바는 가려지지 않는다.)
+    // → 말풍선은 **안내 텍스트를 감싸는 자식**으로 식별하고, 그 식별이 맞는지(텍스트를
+    //   실제로 포함하는지)를 함께 돌려줘 판정이 추정에 기대지 않게 한다.
+    const contains2 = (o, i) => !!(o && i) && i.x >= o.x - 1 && i.y >= o.y - 1
+      && i.right <= o.right + 1 && i.bottom <= o.bottom + 1;
+    const rootList = coach?.root?.list || [];
+    const labelObj = rootList.find((o) => o.type === 'Text' && (o.text || '').trim() && !/^[✕xX]$/.test((o.text || '').trim()));
+    const labelB = labelObj?.getBounds?.();
+    const bubbleObj = labelB ? rootList.find((o) => o !== labelObj && o.getBounds && contains2(o.getBounds(), labelB)) : null;
+    const bubble = bubbleObj?.getBounds?.();
+    const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+    const all = collect(bs.children.list, []);
+    const turnLabel = all.find((x) => x.type === 'Text' && /턴\s*순서/.test(x.text || ''));
+    const turnBar = turnLabel ? turnLabel.parentContainer?.getBounds?.() || turnLabel.getBounds() : null;
+    const closeHit = coach?.closeHit?.getBounds?.();
+    const rect = (b) => (b ? { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), r: Math.round(b.right), b: Math.round(b.bottom) } : null);
+    const intersects = (a, c) => !!(a && c) && !(a.r <= c.x || c.r <= a.x || a.b <= c.y || c.b <= a.y);
+    const contains = (outer, inner) => !!(outer && inner)
+      && inner.x >= outer.x - 1 && inner.y >= outer.y - 1
+      && inner.r <= outer.r + 1 && inner.b <= outer.b + 1;
+    const B = rect(bubble); const T = rect(turnBar); const C = rect(closeHit);
+    return {
+      hasBubble: !!B, hasTurnBar: !!T, hasClose: !!C,
+      turnLabelText: turnLabel?.text || null,
+      labelText: (labelObj?.text || '').slice(0, 40),
+      bubbleIdentified: !!bubbleObj,          // 안내 텍스트를 감싸는 자식으로 식별됐는가
+      rootBounds: rect(coach?.root?.getBounds?.()),   // 참고용 — 대상 강조를 포함하므로 판정에 쓰지 않는다
+      bubbleCoversTurnBar: intersects(B, T),
+      closeInsideBubble: C ? contains(B, C) : null,
+      bubble: B, turnBar: T, close: C,
+    };
+  });
+  await shot(page, `${P}-d-battle-B-1-coach`);
+  note(`B-1 코치마크 배치: ${JSON.stringify(overlap)}`);
+
+  if (overlap.hasBubble && overlap.hasTurnBar && overlap.bubbleIdentified) {
+    check(!overlap.bubbleCoversTurnBar, 'B-1 코치마크 말풍선이 턴 순서 바를 덮지 않는다',
+      `bubble=${JSON.stringify(overlap.bubble)} turnBar=${JSON.stringify(overlap.turnBar)}`);
+    if (overlap.bubbleCoversTurnBar) {
+      issue('P2', 'B-1 코치마크 말풍선이 턴 순서 바를 덮는다', {
+        repro: `신규 게스트 → 1-1 첫 전투 진입 직후 B-1 안내 (뷰포트 ${VIEWPORT.width}x${VIEWPORT.height}, 렌더 1080x1920)`,
+        suspect: 'src/components/tutorial/CoachMark.js 말풍선 배치, 전투 화면 턴 순서 바',
+        evidence: JSON.stringify(overlap),
+      });
+    }
+  } else {
+    // bounds 를 못 얻었다 — 통과로 세지 않는다
+    note(`B-1 말풍선 식별=${overlap.bubbleIdentified} / 턴 순서 바=${overlap.hasTurnBar} — 자동 판정 불가, 캡처 육안 판정으로 넘긴다`);
+    manual('B-1 코치마크 말풍선 ↔ 턴 순서 바 겹침 (육안)', `${P}-d-battle-B-1-coach.png`);
+  }
+
+  // 말풍선을 식별하지 못했으면 "✕ 가 말풍선 밖" 이라는 판정도 성립하지 않는다.
+  // (3차 2회차에서 bubble=null 인 채로 이 검사가 P2 오탐을 냈다)
+  if (overlap.hasClose && overlap.bubbleIdentified) {
+    check(overlap.closeInsideBubble === true, 'B-1 코치마크 닫기 ✕ 히트박스가 말풍선 안에 있다',
+      `close=${JSON.stringify(overlap.close)} bubble=${JSON.stringify(overlap.bubble)}`);
+    if (overlap.closeInsideBubble === false) {
+      issue('P2', 'B-1 코치마크 닫기 ✕ 히트박스가 말풍선 밖으로 나간다', {
+        repro: `신규 게스트 → 1-1 첫 전투 B-1 안내 (뷰포트 ${VIEWPORT.width}x${VIEWPORT.height})`,
+        suspect: 'src/components/tutorial/CoachMark.js closeHit 좌표',
+        evidence: JSON.stringify(overlap),
+      });
+    }
+  } else if (overlap.hasClose) {
+    manual('B-1 코치마크 닫기 ✕ 위치 (육안)', `${P}-d-battle-B-1-coach.png`);
+  }
+  return overlap;
+}
+
 /** 전투를 끝까지 진행한다 (자동전투 ON + 속도 부스트). 결과 씬 도달 여부 */
-async function playBattle(page, { timeout = 60000, speed = 8, beforeAuto = null } = {}) {
+/**
+ * 배속 기본값은 **게임 UI 가 제공하는 최대치(3x)** 다.
+ * 처음엔 8을 썼는데, 그 값은 유저가 만들 수 없는 상태다(전투 화면 선택지는 1x·2x·3x).
+ * 실제로 8배속에서만 "battleEnded=true 인데 결과 화면으로 안 넘어가는" 현상이 재현되고
+ * 1배속에서는 정상이었다(2026-09-07 대조 실측). 유저가 도달할 수 없는 조건으로 만든 현상을
+ * 결함으로 보고하면 안 되므로, 검증은 실사용 범위 안에서 돈다.
+ */
+async function playBattle(page, { timeout = 60000, speed = 3, beforeAuto = null } = {}) {
   const up = await (async () => {
     const t0 = Date.now();
     while (Date.now() - t0 < 25000) {
@@ -104,19 +205,60 @@ async function playBattle(page, { timeout = 60000, speed = 8, beforeAuto = null 
     }
     return false;
   })();
-  if (!up) return { entered: false };
+  if (!up) return { entered: false, sceneTrail: [] };
   await page.waitForTimeout(800);
   if (typeof beforeAuto === 'function') await beforeAuto();
+
+  // 전투 종료 흐름 계측 — src 는 건드리지 않고 페이지 안에서 메서드를 감싼다.
+  // "결과 화면이 안 뜬다" 를 보고할 때 `endBattle` 과 `showBattleResult` 가 불렸는지 여부가
+  // 없으면 원인을 못 좁힌다(전환 로직 문제 / 그 앞 단계 문제 / 컷씬이 덮은 것).
+  await safeEvaluate(page, () => {
+    const bs = window.game.scene.getScene('BattleScene');
+    if (!bs || bs.__probeWrapped) return;
+    bs.__probeWrapped = true;
+    window.__battleProbe = { endBattle: 0, showResult: 0, errors: [] };
+    const origEnd = bs.endBattle.bind(bs);
+    bs.endBattle = function (v) {
+      window.__battleProbe.endBattle += 1;
+      try { return origEnd(v); } catch (e) { window.__battleProbe.errors.push(`endBattle: ${e && e.message}`); throw e; }
+    };
+    const origShow = bs.showBattleResult.bind(bs);
+    bs.showBattleResult = function (v) {
+      window.__battleProbe.showResult += 1;
+      try { return origShow(v); } catch (e) { window.__battleProbe.errors.push(`showBattleResult: ${e && e.message}`); throw e; }
+    };
+  });
 
   await safeEvaluate(page, (s) => window.game?.registry?.set?.('battleSpeed', s), speed);
   await tapLabel(page, 'AUTO OFF', { required: false, sceneKeys: ['BattleScene'] });
 
   const t0 = Date.now();
   let forced = false;
+  // 씬 전이 이력 — 정지했을 때 "결과 화면이 안 떴다" 와 "결과 화면이 떴는데 컷씬이 덮었다" 를
+  // 구분하려면 순간 스냅샷이 아니라 **경과 이력**이 있어야 한다(2026-09-07 팀 리드 제보:
+  // stage 1-1 첫 클리어의 `cs_1_1_clear` 가 결과 화면 위를 덮어 isActive 가 false 로 떨어진다).
+  const sceneTrail = [];
+  let lastCombo = null;
+  const trail = (scenes) => {
+    const combo = scenes.slice().sort().join('+') || '(없음)';
+    if (combo !== lastCombo) { lastCombo = combo; sceneTrail.push(`${Math.round((Date.now() - t0) / 100) / 10}s ${combo}`); }
+  };
+
   while (Date.now() - t0 < timeout) {
     const scenes = await activeScenes(page);
-    if (scenes.includes('BattleResultScene')) return { entered: true, forced };
-    if (scenes.includes('CutsceneScene')) { await skipCutscenes(page, 2); continue; }
+    trail(scenes);
+    if (scenes.includes('BattleResultScene')) return { entered: true, forced, sceneTrail };
+    if (scenes.includes('CutsceneScene')) {
+      // 결과 화면 위를 덮는 컷씬(stage 1-1 첫 클리어의 `cs_1_1_clear` 등 oncePerAccount)이
+      // 있어서 넉넉히 넘긴다. 2회로는 모자라 정지로 오판한 적이 있다(2026-09-07).
+      await skipCutscenes(page, 5);
+      // 컷씬을 넘긴 **직후에** 결과 화면을 다시 본다. 컷씬이 결과 화면을 덮고 있었다면
+      // 여기서 드러난다 — 결과 화면만 기다리면 영원히 못 본다.
+      const after = await activeScenes(page);
+      trail(after);
+      if (after.includes('BattleResultScene')) return { entered: true, forced, sceneTrail, viaCutscene: true };
+      continue;
+    }
     if (!forced && Date.now() - t0 > 25000) {
       // 밸런스가 검증 대상이 아닌 시나리오에서 교착을 풀기 위한 실승리 처리
       forced = await safeEvaluate(page, () => {
@@ -133,8 +275,34 @@ async function playBattle(page, { timeout = 60000, speed = 8, beforeAuto = null 
     await page.waitForTimeout(400);
   }
   const diag = await battleState(page);
+  diag.testSpeedBoost = speed;   // 테스트가 넣은 배속 — 원인 판별에 필요하다
+  diag.sceneTrail = sceneTrail;  // 정지 구간의 씬 전이 이력
+  diag.probe = await safeEvaluate(page, () => window.__battleProbe || null);   // 종료 흐름 호출 여부
+  // `victoryTransition()` 은 `if (this.isTransitioning) return;` 으로 **조용히 무시**된다
+  // (src/utils/TransitionManager.ts:366). 정지의 직접 원인이 이것인지 값으로 확인한다.
+  //
+  // ⚠ 2026-09-07 3차에서 밝혀진 함정 — **맨 경로로 동적 import 하면 앱과 다른 인스턴스를 읽는다.**
+  // Vite dev 는 앱 모듈을 `/src/utils/TransitionManager.ts?t=1788759587926` 처럼 무효화
+  // 타임스탬프를 붙여 받는다. 쿼리 없는 `import('/src/utils/TransitionManager.ts')` 는 **다른 URL**
+  // 이라 모듈이 새로 평가되고, 싱글톤도 새로 만들어진다. 실제로 그 인스턴스의
+  // `isTransitioning` 은 씬 전이 한복판에서도 30회 연속 false 였고(대조 실측),
+  // 같은 방식으로 읽은 EnergySystem 도 HUD 102/102 인데 0 을 돌려줬다.
+  // → **앱이 실제로 받은 URL**(performance resource timing)을 찾아 그걸 import 한다.
+  diag.transition = await safeEvaluate(page, async () => {
+    try {
+      const url = performance.getEntriesByType('resource')
+        .map((e) => e.name)
+        .filter((n) => n.includes('/src/utils/TransitionManager'))
+        .pop() || '/src/utils/TransitionManager.ts';
+      const mod = await import(/* @vite-ignore */ url);
+      const tm = mod.default;
+      // private 필드지만 런타임에는 일반 속성이다 (읽기만 한다)
+      return { url, isTransitioning: tm?.isTransitioning ?? null, hasSafetyTimer: !!tm?._safetyTimer };
+    } catch (e) { return { error: String(e).slice(0, 100) }; }
+  });
   note(`전투 미종료 진단 — ${JSON.stringify(diag)}`);
-  return { entered: true, timedOut: true, forced, diag };
+  note(`씬 전이 이력 — ${sceneTrail.join(' → ')}`);
+  return { entered: true, timedOut: true, forced, diag, speed, sceneTrail };
 }
 
 /** 전투 내부 상태 (진단용) */
@@ -165,17 +333,58 @@ async function backToMain(page) {
   return false;
 }
 
+/**
+ * 팝업을 게임 자신의 API 로 강제로 닫는다.
+ *
+ * 라벨 탐색만으로는 부족하다 — `PartyEditPopup` 처럼 액션 바에 닫기 버튼이 없는 팝업이 있고,
+ * 하나가 안 닫히면 `MainMenuScene.openPopup()` 의 `if (this.activePopup) return` 때문에
+ * **그 뒤 모든 팝업 검사가 연쇄로 실패한다**(2026-09-07 실측: partyedit 이 남아 quest·tower가
+ * 전부 거짓 실패했다). 그래서 마지막에는 API 로 확실히 닫고, 그래도 안 닫히면 그 사실 자체를
+ * 호출부가 결함으로 판단할 수 있게 결과를 돌려준다.
+ *
+ * @returns {Promise<{closed: boolean, was: string|null, method: string}>}
+ */
+async function forceClosePopup(page) {
+  const before = await safeEvaluate(page, () => {
+    const mm = window.game.scene.getScene('MainMenuScene');
+    return mm?.activePopupKey || null;
+  });
+  if (!before) return { closed: true, was: null, method: 'none' };
+
+  if (await closePopup(page)) {
+    await page.waitForTimeout(600);
+    const left = await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.activePopupKey || null);
+    if (!left) return { closed: true, was: before, method: 'ui' };
+  }
+
+  const viaApi = await safeEvaluate(page, () => {
+    const mm = window.game.scene.getScene('MainMenuScene');
+    const popup = mm?.activePopup;
+    if (!popup) return true;
+    try { if (typeof popup.close === 'function') popup.close(); else if (typeof popup.hide === 'function') popup.hide(); } catch (e) { /* 계속 */ }
+    return !mm.activePopup;
+  });
+  await page.waitForTimeout(700);
+  const still = await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.activePopupKey || null);
+  return { closed: !still, was: before, method: viaApi ? 'api' : 'api-failed' };
+}
+
 /** 어떤 화면에 있든 로비로 돌아온다 (팝업 닫기 → [뒤로]/[닫기] → 씬 복귀) */
 async function backToLobby(page, timeout = 20000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
     const scenes = await activeScenes(page);
-    if (scenes.includes('MainMenuScene') && !(await findByLabel(page, '닫기', { exact: true }))) {
-      await page.waitForTimeout(500);
-      return true;
+    if (scenes.includes('MainMenuScene')) {
+      const openKey = await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.activePopupKey || null);
+      if (!openKey) {
+        await page.waitForTimeout(500);
+        await dismissLobbyOverlays(page);
+        return true;
+      }
     }
     if (scenes.includes('CutsceneScene')) { await skipCutscenes(page, 2); continue; }
-    const closed = await closePopup(page)
+    const forced = await forceClosePopup(page);
+    const closed = (forced.was && forced.closed)
       || await tapLabel(page, '뒤로', { exact: true, required: false, settle: 900 })
       || await tapLabel(page, '메인으로', { exact: true, required: false, settle: 900 });
     if (!closed) {
@@ -185,6 +394,47 @@ async function backToLobby(page, timeout = 20000) {
     }
   }
   return (await activeScenes(page)).includes('MainMenuScene');
+}
+
+/**
+ * 로비 위에 겹쳐 뜨는 **모달성 오버레이**(오프라인 보상 · 복귀 보상 등)를 치운다.
+ *
+ * 이건 `MainMenuScene.activePopupKey` 로는 잡히지 않는다 — `Modal` 을 직접 띄우는 경로라
+ * `forceClosePopup()` 이 "닫을 게 없다"고 답한다. 그런데 depth 1000 짜리 전면 모달이라
+ * **그 아래 로비 버튼의 탭을 통째로 삼킨다**.
+ *
+ * 2026-09-07 3차 실측: "보스전 진입 실패"의 실제 원인이 정확히 이것이었다. 탭 좌표는
+ * 맞았고 에너지(102/102)도 파티(4인)도 정상이었는데, 오프라인 보상 모달이 탭을 먹어
+ * 토스트도 씬 전이도 없이 아무 일도 일어나지 않았다. 게임 결함이 아니라 하네스 결함이다.
+ * → `받기` 를 눌러 치운 뒤 같은 좌표를 탭하면 즉시 보스전에 들어간다(allies 4, mode 'boss').
+ */
+const OVERLAY_DISMISS_LABELS = ['받기', '확인', '닫기', '시작하기'];
+
+async function dismissLobbyOverlays(page, rounds = 3) {
+  const dismissed = [];
+  for (let r = 0; r < rounds; r += 1) {
+    const overlay = await safeEvaluate(page, () => {
+      if (!window.game?.scene?.isActive?.('MainMenuScene')) return null;
+      const mm = window.game.scene.getScene('MainMenuScene');
+      if (!mm || mm.activePopupKey) return null;   // 일반 팝업은 forceClosePopup 담당
+      const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+      const top = collect(mm.children.list, []).filter((o) => (o.depth || 0) >= 900 && o.visible !== false);
+      if (!top.length) return null;
+      const texts = collect(top, []).filter((o) => o.type === 'Text' && (o.text || '').trim()).map((o) => o.text.trim());
+      if (!texts.length) return null;
+      return { titles: texts.slice(0, 4) };
+    });
+    if (!overlay) break;
+    let tapped = null;
+    for (const label of OVERLAY_DISMISS_LABELS) {
+      const btn = await findByLabel(page, label, { exact: true, minDepth: 900 });
+      if (btn) { await tapWorld(page, btn.x, btn.y, 1600); tapped = label; break; }
+    }
+    if (!tapped) break;
+    dismissed.push(`${overlay.titles[0]} → [${tapped}]`);
+  }
+  if (dismissed.length) note(`로비 오버레이 정리: ${dismissed.join(', ')}`);
+  return dismissed;
 }
 
 /** 도크 카테고리를 열고 하위 항목을 탭해 팝업을 연다 (로비 복귀 → 카테고리 → 항목) */
@@ -312,6 +562,7 @@ async function scenario1(browser, opts = {}) {
     let guard = 0;
     let lastStep = null;
     let stuckAt = '(none)';
+    let idleRounds = 0;
     let poke = 0;
     let battleNo = 0;
     let battleFails = 0;
@@ -322,9 +573,39 @@ async function scenario1(browser, opts = {}) {
 
       if (scenes.includes('CutsceneScene')) { await skipCutscenes(page, 2); continue; }
 
+      // 전투가 이 루프 밖에서 시작·종료되면(컷신 → 전투 → 결과) 결과 화면만 남는다.
+      // 그 분기가 없어서 결과 화면에 갇힌 채 guard 를 다 태운 적이 있다(2026-09-07 실측:
+      // guard#11~120 이 전부 BattleResultScene). 여기서 명시적으로 빠져나온다.
+      if (scenes.includes('BattleResultScene')) {
+        idleRounds = 0;
+        const returned = await backToMain(page);
+        if (!returned) {
+          note('결과 화면에서 로비로 복귀하지 못했다');
+          idleRounds += 1;
+        }
+        continue;
+      }
+
       if (scenes.includes('BattleScene')) {
-        // 첫 전투 — B-1~B-5 안내를 실제로 관찰한다
+        // 첫 전투 — B-1~B-5 안내를 실제로 관찰한다.
+        // B-1 은 `battle_start` 트리거라 씬 진입 직후 잠깐 떴다 사라진다. 일반 폴링 주기(250ms+)
+        // 로는 놓치기 쉬워서, 진입 직후에는 짧은 간격으로 먼저 훑는다
+        // (2026-09-07 실측: B-1 을 놓쳐 코치마크 겹침 판정을 못 했다).
         const seen = [];
+        // 3차 정정: 예전엔 이 선폴링이 B-1 을 `seen` 에 넣고 **break** 해 버려서, 정작 아래
+        // 본 루프의 B-1 코치마크 측정이 한 번도 실행되지 않았다(2차·3차 모두 미검증의 원인).
+        // 관측한 스텝이 B-1 이면 **여기서 바로 측정한다**.
+        let b1Measured = false;
+        for (let i = 0; i < 24; i += 1) {
+          const early = await tutorialUi(page, 'BattleScene');
+          if (!early.active) break;
+          if (early.stepId) {
+            if (!seen.includes(early.stepId)) seen.push(early.stepId);
+            if (early.stepId === 'B-1') { await measureB1(page, P); b1Measured = true; }
+            break;
+          }
+          await page.waitForTimeout(150);
+        }
         const bt0 = Date.now();
         while (Date.now() - bt0 < 20000) {
           const bu = await tutorialUi(page, 'BattleScene');
@@ -332,60 +613,7 @@ async function scenario1(browser, opts = {}) {
           if (bu.stepId && !seen.includes(bu.stepId)) {
             seen.push(bu.stepId);
             if (seen.length <= 2) await shot(page, `${P}-d-battle-${bu.stepId}`);
-            // B-1 코치마크가 턴 순서 바를 덮는지 — 좌표 계산으로는 재현이 안 돼
-            // 실전투에서 봐 달라고 지목된 항목이다(2026-09-07 팀 리드).
-            if (bu.stepId === 'B-1') {
-              const overlap = await safeEvaluate(page, () => {
-                const bs = window.game.scene.getScene('BattleScene');
-                const flow = bs?._tutorialBinding?.flow;
-                const coach = flow?.coach;
-                const bubble = coach?.root?.getBounds?.();
-                const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
-                const all = collect(bs.children.list, []);
-                const turnLabel = all.find((x) => x.type === 'Text' && /턴\s*순서/.test(x.text || ''));
-                const turnBar = turnLabel ? turnLabel.parentContainer?.getBounds?.() || turnLabel.getBounds() : null;
-                const closeHit = coach?.closeHit?.getBounds?.();
-                const rect = (b) => (b ? { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right, b: b.bottom } : null);
-                const intersects = (a, c) => !!(a && c) && !(a.r <= c.x || c.r <= a.x || a.b <= c.y || c.b <= a.y);
-                const contains = (outer, inner) => !!(outer && inner)
-                  && inner.x >= outer.x - 1 && inner.y >= outer.y - 1
-                  && inner.r <= outer.r + 1 && inner.b <= outer.b + 1;
-                const B = rect(bubble); const T = rect(turnBar); const C = rect(closeHit);
-                return {
-                  hasBubble: !!B, hasTurnBar: !!T, hasClose: !!C,
-                  turnLabelText: turnLabel?.text || null,
-                  bubbleCoversTurnBar: intersects(B, T),
-                  closeInsideBubble: C ? contains(B, C) : null,
-                  bubble: B, turnBar: T, close: C,
-                };
-              });
-              note(`B-1 코치마크 배치: ${JSON.stringify(overlap)}`);
-              if (overlap.hasBubble && overlap.hasTurnBar) {
-                check(!overlap.bubbleCoversTurnBar, 'B-1 코치마크 말풍선이 턴 순서 바를 덮지 않는다',
-                  `bubble=${JSON.stringify(overlap.bubble)} turnBar=${JSON.stringify(overlap.turnBar)}`);
-                if (overlap.bubbleCoversTurnBar) {
-                  issue('P2', 'B-1 코치마크 말풍선이 턴 순서 바를 덮는다', {
-                    repro: `신규 게스트 → 1-1 첫 전투 진입 직후 B-1 안내 (뷰포트 ${VIEWPORT.width}x${VIEWPORT.height}, 렌더 1080x1920)`,
-                    suspect: 'src/components/tutorial/CoachMark.js 말풍선 배치, src/components/battle/TurnOrderBar.js',
-                    evidence: JSON.stringify(overlap),
-                  });
-                }
-              } else {
-                note('B-1 말풍선 또는 턴 순서 바를 찾지 못해 겹침 판정 생략(미검증)');
-              }
-              if (overlap.hasClose) {
-                check(overlap.closeInsideBubble === true, 'B-1 코치마크 닫기 ✕ 히트박스가 말풍선 안에 있다',
-                  `close=${JSON.stringify(overlap.close)} bubble=${JSON.stringify(overlap.bubble)}`);
-                if (overlap.closeInsideBubble === false) {
-                  issue('P2', 'B-1 코치마크 닫기 ✕ 히트박스가 말풍선 밖으로 나간다', {
-                    repro: `신규 게스트 → 1-1 첫 전투 B-1 안내 (뷰포트 ${VIEWPORT.width}x${VIEWPORT.height})`,
-                    suspect: 'src/components/tutorial/CoachMark.js closeHit 좌표',
-                    evidence: JSON.stringify(overlap),
-                  });
-                }
-              }
-              await shot(page, `${P}-d-battle-B-1-coach`);
-            }
+            if (bu.stepId === 'B-1' && !b1Measured) await measureB1(page, P);
           }
           if (bu.hasCoach && bu.close) { await tapWorld(page, bu.close.x, bu.close.y, 500); continue; }
           if (bu.hasOverlay && bu.hole) { await tapWorld(page, bu.hole.x, bu.hole.y, 500); continue; }
@@ -427,6 +655,7 @@ async function scenario1(browser, opts = {}) {
       if (ui.stepId !== lastStep) {
         lastStep = ui.stepId;
         poke = 0;
+        idleRounds = 0;
         // 스텝이 바뀔 때마다 재화를 함께 남긴다 — 보상 지급/소실 시점을 특정하기 위함
         const r = (await readSave(page))?.resources || {};
         stepLog.push({ step: ui.stepId, at: guard, gems: r.gems, stones: r.spiritStones, seal: r.institutionSeal, shards: r.characterShards });
@@ -486,6 +715,7 @@ async function scenario1(browser, opts = {}) {
         }
         const p = POKE[Math.min(poke, POKE.length - 1)];
         poke += 1;
+        idleRounds = 0;
         await tapWorld(page, zone.x + p[0] * zone.w, zone.y + p[1] * zone.h, 900);
         continue;
       }
@@ -495,11 +725,23 @@ async function scenario1(browser, opts = {}) {
       const escape = await tapLabel(page, '확인', { required: false, settle: 800 })
         || await tapLabel(page, '메인으로', { required: false, settle: 800 })
         || await closePopup(page);
-      if (!escape) {
-        if (stuckAt === ui.stepId) break;
-        stuckAt = ui.stepId;
-        await page.waitForTimeout(1200);
+      if (escape) { idleRounds = 0; stuckAt = '(none)'; continue; }
+
+      // 전투 직후·팝업 전환 중에는 안내가 **잠깐** 사라진다(stepId null).
+      // 그 한 번을 "막혔다"로 보면 진짜 막힘이 아닌데도 온보딩을 중단하게 된다
+      // (2026-09-07 실측: guard#5 의 일시적 null 이 guard#9 에서 조기 종료를 유발했다).
+      // 그래서 **연속 무반응 횟수**로 판정하고, 같은 스텝이 반복될 때만 스텝 기준을 쓴다.
+      idleRounds += 1;
+      if (ui.stepId && stuckAt === ui.stepId && idleRounds >= 3) {
+        note(`${ui.stepId} 에서 ${idleRounds}회 연속 무반응 — 진행 중단`);
+        break;
       }
+      if (!ui.stepId && idleRounds >= 6) {
+        note(`안내가 ${idleRounds}회 연속 비어 있음 — 진행 중단`);
+        break;
+      }
+      if (ui.stepId) stuckAt = ui.stepId;
+      await page.waitForTimeout(1200);
     }
 
     const save = await readSave(page);
@@ -592,7 +834,11 @@ async function waitForLobby(page, timeout = 60000) {
   const t0 = Date.now();
   while (Date.now() - t0 < timeout) {
     const scenes = await activeScenes(page);
-    if (scenes.includes('MainMenuScene')) { await page.waitForTimeout(2000); return true; }
+    if (scenes.includes('MainMenuScene')) {
+      await page.waitForTimeout(2000);
+      await dismissLobbyOverlays(page);
+      return true;
+    }
     if (scenes.includes('CutsceneScene')) { await skipCutscenes(page, 3); continue; }
     if (scenes.includes('LoginScene')) {
       const btn = await findByLabel(page, '게스트로 시작', { sceneKeys: ['LoginScene'] });
@@ -978,6 +1224,29 @@ async function scenario4(browser) {
       await layoutAudit(page, '전투 결과');
       await backToMain(page);
     }
+
+    // --- 배속 대조 ---
+    // 전투가 `battleEnded=true` 인데 결과 화면으로 넘어가지 않는 현상이 관측됐다.
+    // 테스트가 넣은 8배속이 원인일 수 있으므로 **배속을 건드리지 않은 전투**를 한 번 더 돌려
+    // 대조한다. 배속 1에서도 재현되면 테스트 조건과 무관한 결함이다.
+    await backToLobby(page);
+    const again = await findByLabel(page, '전투 시작', { exact: true, sceneKeys: ['MainMenuScene'] })
+      || await findByLabel(page, '보스전', { exact: true, sceneKeys: ['MainMenuScene'] })
+      || await findByLabel(page, '소탕', { exact: true, sceneKeys: ['MainMenuScene'] });
+    if (again) {
+      await tapWorld(page, again.x, again.y, 2200);
+      await skipCutscenes(page, 3);
+      const res1x = await playBattle(page, { timeout: 90000, speed: 1 });
+      check(res1x.entered ? !res1x.timedOut : true, '배속 1배 전투도 결과 화면까지 도달', JSON.stringify(res1x.diag || {}));
+      if (res1x.entered && res1x.timedOut) {
+        issue('P1', '전투가 종료 처리(battleEnded=true) 후에도 결과 화면으로 넘어가지 않는다 — 배속 1배에서도 재현', {
+          repro: '로비 → 전투 진입 → 자동전투로 전멸까지. 테스트 배속 조작 없음(speed=1)',
+          suspect: 'src/scenes/BattleScene.js endBattle → showBattleResult → transitionManager.victoryTransition',
+          evidence: JSON.stringify(res1x.diag || {}),
+        });
+      }
+      await backToMain(page);
+    } else note('배속 대조용 전투 진입점을 찾지 못해 생략');
 
     // 소탕
     const sweepOpened = await (async () => {
@@ -1488,6 +1757,22 @@ const shutdownStats = (page) => safeEvaluate(page, () => ({
   errors: window.__shutdownErrors || [],
 }));
 
+/**
+ * 활성 씬이 하나도 없는 상태 = 게임이 죽었다.
+ * 이 상태가 되면 `__TEST_API__.navigateTo()` 가 `{success:false, error:'no active scene'}` 만
+ * 돌려주므로 **그 뒤 모든 씬 검사가 연쇄로 거짓 실패한다**. 2026-09-07 3차 실측에서
+ * "씬 13종 전부 진입 실패"가 정확히 이 연쇄였다(첫 대상 CutsceneScene 이 세션을 죽였다).
+ */
+const sessionDead = async (page) => (await activeScenes(page)).length === 0;
+
+/** 죽은 세션을 새로고침으로 되살린다 (연쇄 거짓 실패를 끊는다) */
+async function recoverSession(page) {
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const ok = await waitForLobby(page, 60000);
+  note(`세션 복구(새로고침) — 로비 복귀 ${ok ? '성공' : '실패'}`);
+  return ok;
+}
+
 /** 씬으로 이동하고 실제로 활성화될 때까지 기다린다 */
 async function gotoScene(page, sceneKey, timeout = 20000) {
   await safeEvaluate(page, (k) => window.__TEST_API__?.navigateTo?.(k), sceneKey);
@@ -1757,6 +2042,19 @@ async function scenario10(browser) {
     for (const key of POPUP_KEYS) {
       const errBefore = errors.length;
       await backToLobby(page);
+      // 앞 팝업이 남아 있으면 openPopup 이 조용히 무시되고(`if (this.activePopup) return`)
+      // 그 뒤 팝업 검사가 **전부 거짓 실패**한다(2026-09-07 실측: partyedit 이 남아 quest·tower 가
+      // "화면에 안 보임 P0" 로 잘못 잡혔다). 그래서 다음 검사 전에 확실히 닫고, 안 닫히면
+      // 그 사실 자체를 결함으로 기록한다.
+      const closeState = await forceClosePopup(page);
+      if (closeState.was && !closeState.closed) {
+        check(false, `직전 팝업 [${closeState.was}] 닫힘 (다음 검사 전제)`, JSON.stringify(closeState));
+        issue('P1', `팝업 [${closeState.was}] 이 닫히지 않아 다음 팝업을 열 수 없다`, {
+          repro: `openPopup('${closeState.was}') → 닫기 시도(UI 라벨 → popup.close() API)`,
+          suspect: `src/components/popups/ (${closeState.was}) 의 close 경로, src/components/PopupBase.js`,
+          evidence: JSON.stringify(closeState),
+        });
+      }
       await page.waitForTimeout(600);
       // 노이즈 기준선 — 아무 것도 하지 않고 두 번 찍는다(명상 뷰 애니메이션 폭 측정)
       const baseA = await screenSample(page, rects);
@@ -1778,14 +2076,18 @@ async function scenario10(browser) {
       });
       const px = screenChanged(baseA, baseB, after);
       const pixelUnchanged = !px.changed;
-      const ok = !!opened && isOpen.has && isOpen.key === key && stats.texts > 3;
-      popupResult[key] = { ok, texts: stats.texts, hiddenTexts: stats.hiddenTexts, alpha: vis.effectiveAlpha, pixelUnchanged, nullTextures: stats.nullTextures };
+      // 요청한 팝업이 실제로 열렸는가 — 이게 아니면 뒤 판정은 **다른 화면을 보고 내리는 결론**이라
+      // 통과로도 실패로도 쓸 수 없다. 미검증으로 남긴다.
+      const rightPopup = isOpen.has && isOpen.key === key;
+      if (!rightPopup) note(`팝업 [${key}] 요청했으나 activePopupKey=${isOpen.key} — 이 항목은 미검증`);
+      const ok = !!opened && rightPopup && stats.texts > 3;
+      popupResult[key] = { ok, rightPopup, texts: stats.texts, hiddenTexts: stats.hiddenTexts, alpha: vis.effectiveAlpha, pixelUnchanged, nullTextures: stats.nullTextures };
       check(ok, `팝업 [${key}] 열림 + 보이는 내용 렌더`, `activePopupKey=${isOpen.key}, 보이는 텍스트 ${stats.texts} (숨은 ${stats.hiddenTexts})`);
-      check(px.changed, `팝업 [${key}] 이 **화면 픽셀로** 실제 표시된다`, px.detail);
-      if (vis.open && vis.hasRoot) {
+      if (rightPopup) check(px.changed, `팝업 [${key}] 이 **화면 픽셀로** 실제 표시된다`, px.detail);
+      if (rightPopup && vis.open && vis.hasRoot) {
         check((vis.effectiveAlpha ?? 0) >= 0.05, `팝업 [${key}] 루트 누적 alpha 정상`, `alpha=${vis.effectiveAlpha} chain=${JSON.stringify(vis.chain)}`);
       }
-      if (pixelUnchanged || (vis.open && vis.hasRoot && (vis.effectiveAlpha ?? 1) < 0.05) || (stats.texts <= 3 && stats.hiddenTexts > 3)) {
+      if (rightPopup && (pixelUnchanged || (vis.open && vis.hasRoot && (vis.effectiveAlpha ?? 1) < 0.05) || (stats.texts <= 3 && stats.hiddenTexts > 3))) {
         issue('P0', `팝업 [${key}] 이 열리지만 화면에 보이지 않는다 (Modal alpha 계열)`, {
           repro: `로비에서 MainMenuScene.openPopup('${key}') → 화면 확인`,
           suspect: 'src/components/Modal.js 컨테이너 alpha 복원, src/components/PopupBase.js show()',
@@ -1895,7 +2197,16 @@ async function scenario11(browser) {
   startScenario(11, '이번 세션 신규분 — 명상 성소·치비 정렬·도크 아이콘·컷씬 가독성 (계정 B)');
   const { page, ctx, errors } = await openAccount(browser, 'B');
   try {
-    await page.waitForTimeout(2500);
+    // 명상 뷰는 로비 진입 후 조금 뒤에 붙는다 — 붙기 전에 읽으면 "치비 0명"으로 오판한다
+    for (let i = 0; i < 20; i += 1) {
+      const ready = await safeEvaluate(page, () => {
+        const v = window.game.scene.getScene('MainMenuScene')?.idleBattleView;
+        return !!v && (v.partyMembers || []).length > 0;
+      });
+      if (ready) break;
+      await page.waitForTimeout(500);
+    }
+    await page.waitForTimeout(1500);
     await shot(page, '11-new-a-meditation');
 
     // --- 명상 성소: 제단·룬·오라·수확 + 배경 폴백 ---
@@ -1907,7 +2218,9 @@ async function scenario11(browser) {
       const pick = (re) => keys.filter((k) => re.test(k));
       return {
         parts: { altar: pick(/altar|제단/i), rune: pick(/rune/i), aura: pick(/aura/i), harvest: pick(/harvest|ready/i) },
-        bgKey: v.background?.texture?.key || v.bg?.texture?.key || null,
+        // 배경은 `stageBgImage` 다(텍스처 키 `bg_sanctum`). 필드명을 추정해서 읽었다가
+        // 정상인데 "배경 없음 P1" 으로 잘못 보고한 적이 있다(2026-09-07).
+        bgKey: v.stageBgImage?.texture?.key || v.background?.texture?.key || v.bg?.texture?.key || null,
         partyMembers: (v.partyMembers || []).length,
         requiredMana: v.requiredMana,
       };
@@ -2297,13 +2610,16 @@ async function scenario13(browser) {
     // ① 치환된 영웅이 플레이 가능한 형태로 해석되는가
     const playable = await safeEvaluate(page, () => {
       const owned = window.game.registry.get('ownedHeroes') || [];
+      // 스탯은 `stats` 아래에 있다. 예전엔 `h.hp` 를 읽어 전부 null 이 나왔고,
+      // 그 결과 **정상 동작을 P0 로 잘못 보고했다**(2026-09-07). 필드 경로를 추정하지 말 것.
       return owned.slice(0, 6).map((h) => ({
         id: h.id,
         name: h.name || null,
         rawName: !h.name || /^(char_|base_|asc_)/.test(String(h.name)),
-        hp: h.hp ?? h.maxHp ?? null,
-        atk: h.atk ?? null,
-        portrait: h.portrait || h.portraitId || h.texture || null,
+        hp: h.stats?.hp ?? h.hp ?? h.maxHp ?? null,
+        atk: h.stats?.atk ?? h.atk ?? null,
+        statsResolved: h.statsResolved ?? null,
+        rarity: h.rarity ?? null,
       }));
     });
     note(`해석된 영웅: ${JSON.stringify(playable)}`);
@@ -2579,12 +2895,21 @@ async function scenario14(browser) {
     await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.openPopup('pvp'));
     await page.waitForTimeout(6000);
     await shot(page, '14b-regress-pvp');
+    // **팝업이 실제로 열렸는지 먼저 확인한다.** 안 열렸는데 화면 전체 텍스트에서 '로딩 중'이
+    // 없다는 이유로 통과시키면, 검사하지 않은 것을 통과로 보고하는 셈이 된다
+    // (2026-09-07 실측: PvP 가 안 열렸는데 로비 텍스트만 보고 PASS 가 났다).
+    const pvpOpen = await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.activePopupKey || null);
     const pvpTexts = (await visibleTexts(page)).map((t) => t.text);
     const stillLoading = pvpTexts.some((t) => /로딩 중/.test(t));
     const pvpErrors = errors.slice(errBeforePvp).filter((e) => /warn is not a function|is not a function/.test(e));
-    check(!stillLoading, '[회귀] PvP 본문이 로딩 중에서 멈추지 않는다', pvpTexts.slice(0, 8).join(' / '));
+    check(pvpOpen === 'pvp', '[회귀] PvP 팝업이 열린다 (이후 판정의 전제)', `activePopupKey=${pvpOpen}`);
+    if (pvpOpen !== 'pvp') {
+      note('PvP 팝업이 열리지 않아 로딩 정지 여부는 미검증으로 남긴다');
+    } else {
+      check(!stillLoading, '[회귀] PvP 본문이 로딩 중에서 멈추지 않는다', pvpTexts.filter((t) => /로딩|티어|점수|전적|대전/.test(t)).slice(0, 6).join(' / '));
+    }
     check(pvpErrors.length === 0, '[회귀] PvP 조회 중 함수 부재 예외 없음', pvpErrors.slice(0, 2).join(' | '));
-    if (stillLoading || pvpErrors.length) {
+    if ((pvpOpen === 'pvp' && stillLoading) || pvpErrors.length) {
       issue('P1', '[회귀 미해소] PvP 상대 조회가 여전히 실패한다', {
         repro: '교류 → PvP → 본문 6초 관찰',
         suspect: 'src/utils/GameLogger.ts warn 정의, src/systems/PvPSystem.js findOpponents',
@@ -2604,12 +2929,15 @@ async function scenario14(browser) {
     await waitForLobby(page);
     await shot(page, '14b-regress-offline');
     const offTexts = (await visibleTexts(page)).map((t) => t.text);
-    const offShown = offTexts.some((t) => /오프라인|자리를 비운|그동안|복귀/.test(t));
+    // 매칭된 문구를 그대로 증거로 남긴다 — `slice(0, 8)` 로 앞부분만 찍으면 무엇 때문에
+    // 통과했는지 알 수 없고, 실제로는 로비 텍스트를 보고 통과할 수도 있다.
+    const offHits = offTexts.filter((t) => /오프라인|자리를 비운|그동안|복귀|받기/.test(t));
+    const offShown = offHits.length > 0;
     const offModel = await safeEvaluate(page, () => {
       const mm = window.game.scene.getScene('MainMenuScene');
       return { passed: mm?.showOfflineRewards ? mm.showOfflineRewards.gold : null };
     });
-    check(offShown, '[회귀] 6시간 오프라인 복귀 시 보상 팝업이 뜬다', offTexts.slice(0, 8).join(' / '));
+    check(offShown, '[회귀] 6시간 오프라인 복귀 시 보상 팝업이 뜬다', `매칭 문구: ${offHits.join(' / ') || '없음'}`);
     if (!offShown && offModel.passed) {
       issue('P1', `[회귀 미해소] 오프라인 보상(${offModel.passed})이 전달되는데 팝업이 뜨지 않는다`, {
         repro: '세이브 lastOnline/lastLogoutTime 을 6시간 전으로 → 새로고침',
@@ -2629,12 +2957,18 @@ async function scenario14(browser) {
     await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.openPopup('tower'));
     await page.waitForTimeout(2500);
     await shot(page, '14b-regress-tower');
-    const towerTexts = (await visibleTexts(page)).map((t) => t.text);
+    // 팝업이 열렸는지 먼저 — 안 열렸는데 "undefined 가 없다"는 건 아무 것도 검사하지 않은 것이다
+    const towerOpen = await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.activePopupKey || null);
+    check(towerOpen === 'tower', '[회귀] 무한탑 팝업이 열린다 (이후 판정의 전제)', `activePopupKey=${towerOpen}`);
+    const towerTexts = towerOpen === 'tower' ? (await visibleTexts(page)).map((t) => t.text) : [];
+    if (towerOpen !== 'tower') note('무한탑 팝업이 열리지 않아 표기 검사는 미검증으로 남긴다');
     const undef = towerTexts.filter((t) => /undefined|NaN|null/i.test(t));
-    check(undef.length === 0, '[회귀] 무한탑에 undefined/NaN 표기 없음', undef.slice(0, 4).join(' / '));
     // 적 이름이 내부 ID 로 새는지 (wolf_alpha 같은 소문자 스네이크)
     const rawEnemy = towerTexts.filter((t) => /^[a-z][a-z0-9]*_[a-z0-9_]+(\s*x\d+)?$/.test(t.trim()));
-    check(rawEnemy.length === 0, '[회귀] 무한탑 적 이름이 내부 ID 가 아니다', rawEnemy.slice(0, 4).join(' / '));
+    if (towerOpen === 'tower') {
+      check(undef.length === 0, '[회귀] 무한탑에 undefined/NaN 표기 없음', undef.slice(0, 4).join(' / '));
+      check(rawEnemy.length === 0, '[회귀] 무한탑 적 이름이 내부 ID 가 아니다', rawEnemy.slice(0, 4).join(' / '));
+    }
     if (undef.length || rawEnemy.length) {
       issue('P1', '[회귀 미해소] 무한탑에 undefined 또는 내부 ID 노출', {
         repro: '도전 → 무한탑',
@@ -2694,14 +3028,17 @@ async function scenario15(browser) {
       const list = Array.isArray(invField?.equipment) ? invField.equipment
         : (Array.isArray(save.equipment) ? save.equipment
           : (Array.isArray(invField) ? invField : []));
-      return list.slice(0, 8).map((it) => ({ id: it.id, type: it.type, slot: it.slot, name: it.name }));
+      // QA P1 후속 정정: 장비 레코드(EquipmentSystem.createEquipment)의 슬롯 분류 필드는
+      // `slotType` 이다 — `type`/`slot` 이 아니다. 예전 체크가 존재하지 않는 필드를 읽어
+      // "전부 null" 오탐을 냈다(실제 데이터는 처음부터 정상이었다).
+      return list.slice(0, 8).map((it) => ({ id: it.id, slotType: it.slotType, name: it.name }));
     });
     note(`장비 레코드: ${JSON.stringify(inv)}`);
-    const typed = inv.filter((i) => i.type && !/^기타$|^etc$|^other$/i.test(String(i.type)));
+    const typed = inv.filter((i) => i.slotType && !/^기타$|^etc$|^other$/i.test(String(i.slotType)));
     check(inv.length > 0, '장비를 보유하고 있다', `${inv.length}종`);
-    check(typed.length > 0, '장비에 실제 슬롯 타입이 지정돼 있다(기타 아님)', JSON.stringify(inv.map((i) => i.type)));
+    check(typed.length > 0, '장비에 실제 슬롯 타입이 지정돼 있다(기타 아님)', JSON.stringify(inv.map((i) => i.slotType)));
     if (inv.length > 0 && typed.length === 0) {
-      issue('P1', '장비 타입이 전부 `기타` 라 무기/방어구/액세서리/유물 슬롯에 매칭되지 않는다', {
+      issue('P1', '장비 slotType 이 전부 비어 있어 무기/방어구/액세서리/유물 슬롯에 매칭되지 않는다', {
         repro: '성장 → 가방 → 장비 탭 / 영웅 상세 → 장비 탭',
         suspect: 'src/systems/EquipmentSystem.js 타입 매핑, src/data/equipment.json',
         evidence: JSON.stringify(inv),
@@ -2736,20 +3073,21 @@ async function scenario15(browser) {
       const before = await heroPower(page);
       const ssotBefore = heroId ? await finalStatsOf(page, [heroId]) : null;
 
-      // 빈 슬롯을 눌러 장착 목록을 열고 첫 후보를 장착한다
+      // 빈 슬롯을 눌러 장착 목록을 열고 첫 후보를 장착한다.
+      // QA P1 후속: 피커는 "후보를 고르면 그 자리에서 바로 장착"하는 1탭 방식이라
+      // (선택→별도 [장착] 확인 버튼 없음) 후보 행 자체를 찾아 탭한다. 각 행에는 항상
+      // 스탯 요약(`ATK+n` 등)이 있어 이 패턴으로 행을 특정할 수 있다.
       const slot = await findByLabel(page, '무기', { exact: true }) || await findByLabel(page, '+');
       if (slot) {
         await tapWorld(page, slot.x, slot.y, 1800);
         await shot(page, '15-retry-b-equip-picker');
         const pickerTexts = (await visibleTexts(page)).map((t) => t.text);
         note(`장착 목록: ${pickerTexts.slice(0, 10).join(' / ')}`);
-        const equipBtn = await findByLabel(page, '장착', { exact: true });
-        if (equipBtn) {
-          await tapWorld(page, equipBtn.x, equipBtn.y, 2000);
-        } else {
-          // 목록의 첫 항목을 눌러 본다
-          const firstItem = await findByLabel(page, '초보자');
-          if (firstItem) { await tapWorld(page, firstItem.x, firstItem.y, 1500); await tapLabel(page, '장착', { required: false, settle: 1800 }); }
+        // 무기 슬롯 후보는 EquipmentSystem.generateBaseStats() 상 항상 ATK 를 갖는다.
+        const candidateRow = await findByLabel(page, 'ATK+', { sceneKeys: ['HeroDetailScene'] })
+          || await findByLabel(page, '장착', { exact: true });
+        if (candidateRow) {
+          await tapWorld(page, candidateRow.x, candidateRow.y, 2000);
         }
         await shot(page, '15-retry-c-equipped');
         const after = await heroPower(page);
@@ -3156,6 +3494,1153 @@ async function scenario16(browser) {
 }
 
 // ============================================================
+// 17. 3차 재검수 — 미검증 5건 재시도 + 장비 전 경로(장착→해제→재장착)
+// ============================================================
+
+/**
+ * 보스전에 실제로 들어가 아군 스탯을 SSOT 와 대조한다.
+ *
+ * 2차에서 "진입 실패"로 미검증에 남긴 항목이다. 3차 실측 결과 원인은 게임이 아니라
+ * **하네스**였다 — 오프라인 보상 모달(depth 1000)이 로비를 덮은 채였고, 보스전 버튼
+ * 좌표를 정확히 눌러도 그 탭을 모달이 삼켰다. 에너지(102/102)도 파티(4인 해석 성공)도
+ * 정상이었고 토스트조차 뜨지 않았다. `dismissLobbyOverlays()` 로 치운 뒤 같은 탭을 하면
+ * 즉시 들어간다. 그 구분을 결과에 남기려고 정리 건수를 함께 기록한다.
+ */
+async function scenario17(browser) {
+  // ---------------- 17a. 보스전 실플레이 스탯 대조 ----------------
+  if (S17.includes('a')) {
+    startScenario(17, '3차 A — 보스전 실플레이 스탯 대조 (계정 B, 코드가 아니라 실제 전투로 확인)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      await page.waitForTimeout(2000);
+
+      // 진입 전제 2종을 먼저 못 박는다 — "게임이 막은 것"과 "하네스가 못 간 것"을 가르는 근거
+      const pre = await safeEvaluate(page, async () => {
+        const out = {};
+        try {
+          const mm = window.game.scene.getScene('MainMenuScene');
+          const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+          const raw = save && save.parties && save.parties[0];
+          out.heroIds = (raw && raw.heroIds) || (Array.isArray(raw) ? raw : []);
+          // 에너지는 **한 곳만 믿지 않는다**. 3차 1회차에서 모듈 싱글톤을 읽어 0 이 나왔는데
+          // 실제로는 보스전(20 소모)에 정상 진입했다 — 즉 그 값이 화면·게임과 달랐다.
+          // 세 출처를 같이 남기고, 판정은 **유저가 보는 HUD 표기**를 기준으로 한다.
+          const mod = await import('/src/systems/EnergySystem.js');
+          const es = mod.default || mod.energySystem;
+          out.energyModule = es && es.getCurrentEnergy ? es.getCurrentEnergy() : null;
+          out.energyStatus = es && es.getStatus ? es.getStatus() : null;
+          out.maxEnergy = es && es.getMaxEnergy ? es.getMaxEnergy() : null;
+          out.resolved = (mm._resolvePartyByIds ? mm._resolvePartyByIds(out.heroIds, save) : []).map((h) => h.id);
+        } catch (e) { out.err = String(e).slice(0, 120); }
+        return out;
+      });
+      // HUD 표기 (유저가 실제로 보는 값)
+      const hudEnergy = await safeEvaluate(page, () => {
+        const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+        for (const sc of window.game.scene.getScenes(true)) {
+          for (const o of collect(sc.children.list, [])) {
+            if (o.type === 'Text' && /^\d+\s*\/\s*\d+$/.test((o.text || '').trim())) return o.text.trim();
+          }
+        }
+        return null;
+      });
+      const hudCur = hudEnergy ? Number(hudEnergy.split('/')[0].trim()) : null;
+      note(`보스전 전제: ${JSON.stringify({ ...pre, hudEnergy })}`);
+      if (hudCur !== null) {
+        check(hudCur >= 20, `에너지 전제 충족 — HUD ${hudEnergy} (필요 20)`);
+        if (pre.energyModule !== null && Number(pre.energyModule) !== hudCur) {
+          note(`⚠ 에너지 출처 불일치: HUD ${hudCur} vs EnergySystem 싱글톤 ${pre.energyModule} — 아래 진입 결과로 어느 쪽이 실제인지 판정한다`);
+        }
+      } else {
+        note('HUD 에너지 표기를 찾지 못해 에너지 전제는 미검증 — 진입 성공/실패로 대신 판정한다');
+      }
+      check((pre.resolved || []).length > 0, `파티 편성 전제 충족 (${(pre.resolved || []).length}인 해석)`, JSON.stringify(pre.resolved));
+
+      const overlayDismissed = await dismissLobbyOverlays(page);
+      note(`탭 전 로비 오버레이 ${overlayDismissed.length}건 정리 (2차 진입 실패의 실제 원인)`);
+
+      const ssot = await finalStatsOf(page, pre.heroIds || []);
+      note(`SSOT 출처: ${ssot.source}`);
+
+      const boss = await findByLabel(page, '보스전', { exact: true, sceneKeys: ['MainMenuScene'] });
+      check(!!boss, '로비에 [보스전] 진입점 노출 (진행도 게이트 없음)');
+      if (boss) {
+        await tapWorld(page, boss.x, boss.y, 2500);
+        // 보스 앞에는 스토리 컷씬이 붙어 BattleScene 이 pause 될 수 있다. 그래서 isActive 가
+        // 아니라 **allies 가 채워졌는가**로 진입을 판정한다(boss-battle-party-smoke.mjs 와 같은 기준).
+        const built = await (async () => {
+          const t0 = Date.now();
+          while (Date.now() - t0 < 30000) {
+            const ok = await safeEvaluate(page, () => {
+              const bs = window.game.scene.getScene('BattleScene');
+              return !!(bs && Array.isArray(bs.allies) && bs.allies.length > 0);
+            });
+            if (ok) return true;
+            await skipCutscenes(page, 1);
+            await page.waitForTimeout(400);
+          }
+          return false;
+        })();
+        check(built, '보스전 진입 → 파티/전투유닛 생성');
+
+        if (built) {
+          await skipCutscenes(page, 5);
+          await page.waitForTimeout(1200);
+          await shot(page, '17a-boss-party');
+
+          const snap = await safeEvaluate(page, () => {
+            const bs = window.game.scene.getScene('BattleScene');
+            return {
+              mode: bs && bs.mode,
+              party: ((bs && bs.party) || []).map((h) => ({ id: h.id, name: h.name, level: h.level, stats: h.stats })),
+              allies: ((bs && bs.allies) || []).map((a) => ({
+                id: a.id, name: a.name, level: a.level,
+                maxHp: a.maxHp, atk: a.atk ?? a.attack, def: a.def, spd: a.spd,
+              })),
+            };
+          });
+          note(`전투 아군: ${JSON.stringify(snap.allies)}`);
+          check(snap.mode === 'boss', '보스전 모드로 진입', String(snap.mode));
+
+          const rawIdNames = snap.allies.filter((a) => /^(base_|asc_|char_)/.test(String(a.name || '')));
+          check(rawIdNames.length === 0, '[회귀] 아군 이름이 내부 ID 가 아니다', JSON.stringify(snap.allies.map((a) => a.name)));
+          const flat100 = snap.allies.length > 0 && snap.allies.every((a) => a.maxHp === 100);
+          check(!flat100, '[회귀] 아군 최대 HP 가 폴백 100 이 아니다', JSON.stringify(snap.allies.map((a) => a.maxHp)));
+
+          // 전투 유닛(allies)은 SSOT 스탯 **그대로가 아니다** — BattleScene 이 진입 시
+          // 파티 시너지 버프를 곱해 넣는다(`applySynergyBuffs()`; 화면에도 "ATK +10%" 로 표기된다).
+          // 2026-09-07 3차 1회차에서 이걸 모르고 allies.atk 를 SSOT 와 직접 비교해 "P0 미해소"를
+          // 냈다가 오탐으로 판명됐다(312×1.1=343.2→343 이 네 명 모두 정확히 맞았다).
+          // → 기대값을 **추정하지 말고** 게임이 선언한 버프율(`synergyBuffs`)을 읽어 같은 식으로 되돌린다.
+          const syn = await safeEvaluate(page, () => {
+            const bs = window.game.scene.getScene('BattleScene');
+            return {
+              buffs: (bs && bs.synergyBuffs) || null,
+              active: (bs && bs.activeSynergies) ? bs.activeSynergies.length : 0,
+            };
+          });
+          note(`시너지: active=${syn.active} buffs=${JSON.stringify(syn.buffs)}`);
+          const fallbackOnly = syn.active === 0 && !!syn.buffs;
+          const scaled = (base, rate) => Math.floor(base * (1 + (rate || 0)));
+
+          const mismatch = [];
+          for (const a of snap.allies) {
+            const s = ssot.stats[a.id];
+            if (!s) { mismatch.push(`${a.id}: SSOT 없음`); continue; }
+            // HP 는 시너지 대상이 아니다 — 여기는 항상 정확히 같아야 한다
+            if (Number(a.maxHp) !== Number(s.hp)) mismatch.push(`${a.id}: maxHp ${a.maxHp} != ${s.hp}`);
+            if (fallbackOnly) {
+              const eAtk = scaled(Number(s.atk), syn.buffs.atk);
+              const eDef = scaled(Number(s.def), syn.buffs.def);
+              const eSpd = scaled(Number(s.spd), syn.buffs.spd);
+              if (s.atk != null && Number(a.atk) !== eAtk) mismatch.push(`${a.id}: atk ${a.atk} != ${eAtk} (SSOT ${s.atk} × ${1 + (syn.buffs.atk || 0)})`);
+              if (s.def != null && Number(a.def) !== eDef) mismatch.push(`${a.id}: def ${a.def} != ${eDef}`);
+              if (s.spd != null && Number(a.spd) !== eSpd) mismatch.push(`${a.id}: spd ${a.spd} != ${eSpd}`);
+            } else if (s.atk != null && Number(a.atk) < Number(s.atk)) {
+              // 데이터 기반 시너지(SynergySystem)는 배율을 여기서 재현할 수 없다. 추정 비교 대신
+              // "시너지는 스탯을 깎지 않는다"는 최소 불변식만 걸고, 정확 비교는 party 기준으로 한다.
+              mismatch.push(`${a.id}: atk ${a.atk} < SSOT ${s.atk} (시너지가 스탯을 깎았다)`);
+            }
+          }
+          if (!fallbackOnly) note('데이터 기반 시너지가 걸려 있어 allies 는 하한(SSOT 이상)만 검증한다 — 정확 비교는 party 기준');
+          check(mismatch.length === 0, '[회귀 해소 확인] 보스전 아군 스탯 == getFinalStats() (선언된 시너지 버프 반영)',
+            mismatch.length ? mismatch.slice(0, 4).join(' / ')
+              : `${snap.allies.length}인 전 항목 일치 (시너지 ATK +${Math.round(((syn.buffs && syn.buffs.atk) || 0) * 100)}%)`);
+          if (mismatch.length > 0) {
+            issue('P0', '[회귀 미해소] 보스전 파티 스탯이 SSOT 와 다르다', {
+              repro: '로비 → (오프라인 보상 모달 닫기) → [보스전] → BattleScene.allies vs getFinalStats()',
+              suspect: 'src/scenes/MainMenuScene.js prepareBossBattle() → _resolvePartyByIds()',
+              evidence: `${JSON.stringify(snap.allies)} vs ${JSON.stringify(ssot.stats)} (${ssot.source})`,
+            });
+          }
+
+          // party(표시용)도 같은 SSOT 를 봐야 한다 — 화면 카드는 allies 가 아니라 party 를 읽는다
+          const partyMismatch = [];
+          for (const h of snap.party) {
+            const s = ssot.stats[h.id];
+            if (!s || !h.stats) { partyMismatch.push(`${h.id}: 비교 불가`); continue; }
+            for (const k of ['hp', 'atk', 'def', 'spd']) {
+              if (s[k] != null && Number(h.stats[k]) !== Number(s[k])) partyMismatch.push(`${h.id}.${k} ${h.stats[k]}!=${s[k]}`);
+            }
+          }
+          check(partyMismatch.length === 0, '[회귀 해소 확인] BattleScene.party 스탯 == getFinalStats()',
+            partyMismatch.length ? partyMismatch.slice(0, 4).join(' / ') : `${snap.party.length}인 전 항목 일치`);
+
+          // 실제로 끝까지 싸워 결과 화면까지 본다
+          const res = await playBattle(page, { timeout: 120000 });
+          note(`보스전 진행 결과: ${JSON.stringify({ entered: res.entered, timedOut: !!res.timedOut, forced: res.forced, trail: res.sceneTrail })}`);
+          if (res.entered && !res.timedOut) {
+            await page.waitForTimeout(1200);
+            await shot(page, '17a-boss-result');
+            const rt = (await visibleTexts(page)).map((t) => t.text);
+            const myPower = rt.find((t) => /내 파티\s*[\d,]+/.test(t));
+            // 문구를 못 찾았는데 통과로 세면 거짓 통과다(2차에 PvP 에서 같은 실수를 했다).
+            if (myPower) {
+              check(!/내 파티\s*0\b/.test(myPower), '결과 화면의 내 파티 전투력이 0 이 아니다', myPower);
+            } else {
+              note('결과 화면에서 "내 파티 N" 문구를 찾지 못해 이 항목은 미검증으로 남긴다');
+              manual('결과 화면 내 파티 전투력 표기', '17a-boss-result.png');
+            }
+            check(rt.filter((t) => t.trim() === '???').length === 0, '결과 화면 편성 목록에 ??? 없음');
+            await backToMain(page);
+          } else {
+            note('전투가 시간 안에 끝나지 않아 결과 화면 항목은 미검증으로 남긴다');
+          }
+        }
+      }
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 17b. 씬 직접 진입 — 순서 역전 대조 ----------------
+  // 2차에서 "팝업 전수 직후 navigateTo 실패"로 미검증에 남긴 항목이다.
+  // 팝업이 남긴 상태가 원인인지 가리려면 **순서를 뒤집어 같은 걸 두 번** 재야 한다.
+  if (S17.includes('b')) {
+    startScenario(171, '3차 B — 씬 직접 진입 (① 팝업 전 ② 팝업 후, 순서 역전 대조)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      await instrumentShutdown(page);
+      // `CutsceneScene` 은 진입 데이터(scenes/parentKey)가 **필수**인 씬이다. 데이터 없이
+      // `navigateTo` 로 맨몸 진입시키면 create() 가 실패 → close() → `scene.stop()` 인데
+      // parentKey 가 없어 되돌아갈 곳이 없다 → **활성 씬 0개**. 그때부터 navigateTo 는
+      // 'no active scene' 만 돌려주므로 뒤따르는 모든 씬이 연쇄로 실패한다.
+      // 2차의 "씬 16종 직접 진입 실패"는 팝업 때문이 아니라 이 연쇄였다(3차 단독 실측으로 확인).
+      // → 맨몸 진입 대상에서 빼고, 그 사실 자체를 아래에서 따로 계측한다.
+      //   (컷씬 자체는 온보딩·보스전 앞 등 실플레이 경로에서 이미 반복 검증된다)
+      const DATA_REQUIRED = ['CutsceneScene'];
+      const VISITABLE = SCENE_KEYS.filter((k) => ![
+        'BootScene', 'PreloadScene', 'LoginScene', ...DATA_REQUIRED,
+      ].includes(k));
+
+      const sweepScenes = async (tag) => {
+        const out = {};
+        for (const key of VISITABLE) {
+          const entered = await gotoScene(page, key);
+          const stats = entered ? await renderStats(page) : null;
+          out[key] = { entered, texts: (stats && stats.texts) || 0, nullTextures: stats ? stats.nullTextures : null };
+          if (await sessionDead(page)) {
+            out[key].killedSession = true;
+            note(`씬 [${key}] 진입 뒤 활성 씬이 0개가 됐다 — 세션을 되살려 뒤 검사의 연쇄 실패를 막는다`);
+            await recoverSession(page);
+          } else {
+            await backToLobby(page);
+          }
+        }
+        note(`씬 진입(${tag}): ${Object.entries(out).map(([k, v]) => `${k}=${v.entered ? 'OK' : 'FAIL'}${v.killedSession ? '(세션사망)' : ''}`).join(' ')}`);
+        return out;
+      };
+
+      // 맨몸 진입이 세션을 죽이는 씬 — 사실 자체를 계측해 남긴다(유저 도달 경로는 아니다)
+      for (const key of DATA_REQUIRED) {
+        await backToLobby(page);
+        await safeEvaluate(page, (k) => window.__TEST_API__?.navigateTo?.(k), key);
+        await page.waitForTimeout(3000);
+        const dead = await sessionDead(page);
+        note(`[${key}] 데이터 없이 맨몸 진입 → 활성 씬 ${dead ? '0개(세션 사망)' : '있음'}`);
+        if (dead) {
+          // 유저가 만들 수 있는 조건이 아니다(StoryManager 는 항상 parentKey 를 넘긴다).
+          // 다만 컷씬 로드가 실패하면 "컷씬 로드 실패" 문구 뒤 되돌아갈 곳이 없어지는
+          // 구조라는 뜻이므로, 결함이 아니라 **견고성 지적**으로 남긴다.
+          issue('P2', 'CutsceneScene 의 로드 실패 경로가 되돌아갈 곳 없이 끝난다(활성 씬 0개)', {
+            repro: `__TEST_API__.navigateTo('CutsceneScene') — 데이터 없이 시작 (유저 도달 경로 아님)`,
+            suspect: 'src/scenes/CutsceneScene.js close() — parentKey 가 없으면 scene.stop() 후 아무 씬도 재개하지 않는다',
+            evidence: '활성 씬 0개 → 이후 navigateTo 가 전부 {success:false, error:"no active scene"}',
+          });
+        }
+        await recoverSession(page);
+      }
+
+      // ① 팝업을 열기 전
+      const before = await sweepScenes('팝업 전');
+      const failBefore = Object.entries(before).filter(([, v]) => !v.entered).map(([k]) => k);
+      check(failBefore.length === 0, `씬 ${VISITABLE.length}종 직접 진입 — 팝업 전`, failBefore.join(', ') || '전부 성공');
+      for (const [k, v] of Object.entries(before)) {
+        if (v.entered) check(v.nullTextures === 0, `씬 [${k}] 텍스처 정상 (팝업 전)`, `${v.nullTextures}건`);
+      }
+
+      // ② 팝업 17종을 전부 열고 닫은 뒤 같은 순회를 반복
+      const popupTrouble = [];
+      for (const key of POPUP_KEYS) {
+        await backToLobby(page);
+        const opened = await safeEvaluate(page, (k) => {
+          const mm = window.game.scene.getScene('MainMenuScene');
+          if (!mm) return false;
+          mm.openPopup(k);
+          return true;
+        }, key);
+        await page.waitForTimeout(1200);
+        const closeState = await forceClosePopup(page);
+        if (!opened || (closeState.was && !closeState.closed)) popupTrouble.push(`${key}:${JSON.stringify(closeState)}`);
+      }
+      await backToLobby(page);
+      await safeEvaluate(page, () => window.game.scene.getScene('MainMenuScene')?.openPopup('gacha'));
+      await page.waitForTimeout(1500);
+      await tapLabel(page, RATE_PANEL_LABEL, { required: false, settle: 1500 });
+      await backToLobby(page);
+      note(`팝업 전수 통과 (문제 ${popupTrouble.length}건: ${popupTrouble.slice(0, 3).join(' | ') || '없음'})`);
+
+      const after = await sweepScenes('팝업 후');
+      const failAfter = Object.entries(after).filter(([, v]) => !v.entered).map(([k]) => k);
+      check(failAfter.length === 0, `씬 ${VISITABLE.length}종 직접 진입 — 팝업 후`, failAfter.join(', ') || '전부 성공');
+
+      // 순서가 원인인가 — 팝업 전엔 됐는데 팝업 후엔 안 되는 씬이 있으면 그게 증거다
+      const regressed = failAfter.filter((k) => !failBefore.includes(k));
+      check(regressed.length === 0, '팝업 전수 통과가 이후 씬 전환을 막지 않는다', regressed.join(', ') || '없음');
+      if (regressed.length > 0) {
+        issue('P1', `팝업 전수 통과 뒤 씬 ${regressed.length}종의 직접 진입이 막힌다 (팝업이 남긴 상태)`, {
+          repro: '로비 → 팝업 17종 개폐 → __TEST_API__.navigateTo(씬)',
+          suspect: 'src/components/PopupBase.js 정리 경로, src/scenes/MainMenuScene.js activePopup 해제, TransitionManager 잠금',
+          evidence: `팝업 전 실패=${failBefore.join(',') || '없음'} / 팝업 후 실패=${regressed.join(',')}`,
+        });
+      }
+
+      const st = await shutdownStats(page);
+      note(`shutdown() 호출: ${JSON.stringify(st.counts)}`);
+      const swallowed = [...st.errors, ...errors.filter((e) => /shutdown\(\) 실패/.test(e))];
+      check(swallowed.length === 0, '순서 역전 순회 중 shutdown() 삼켜진 예외 0건', swallowed.slice(0, 3).join(' | '));
+      if (swallowed.length) {
+        issue('P1', `씬 순회 중 shutdown() 정리가 조용히 실패한다 (${swallowed.length}건)`, {
+          repro: '씬 순회 ×2 + 팝업 17종 개폐',
+          suspect: 'src/main.js 정리 배선 + 해당 씬 shutdown()',
+          evidence: swallowed.join(' | ').slice(0, 800),
+        });
+      }
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 17c. shutdown 왕복 후 영웅 목록(공용 텍스처 오해제) ----------------
+  if (S17.includes('c')) {
+    startScenario(172, '3차 C — shutdown 왕복 5씬 x3 후 영웅 목록 재확인 (공용 텍스처 오해제)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      await instrumentShutdown(page);
+
+      const readHeroList = async () => {
+        const ok = await gotoScene(page, 'HeroListScene');
+        if (!ok) return null;
+        await page.waitForTimeout(1200);
+        const stats = await renderStats(page);
+        const cards = await safeEvaluate(page, () => {
+          const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+          const sc = window.game.scene.getScene('HeroListScene');
+          const all = collect(sc.children.list, []);
+          const imgs = all.filter((o) => o.texture && o.texture.key && o.texture.key !== '__MISSING' && /Image|Sprite/.test(o.type));
+          return {
+            images: imgs.length,
+            missing: imgs.filter((o) => !(o.texture.source && o.texture.source[0] && o.texture.source[0].glTexture))
+              .map((o) => o.texture.key).slice(0, 8),
+            keys: [...new Set(imgs.map((o) => o.texture.key))].slice(0, 12),
+          };
+        });
+        return { texts: stats.texts, nullTextures: stats.nullTextures, ...cards };
+      };
+
+      const base = await readHeroList();
+      note(`영웅 목록 기준선: ${JSON.stringify(base)}`);
+      check(!!base && base.images > 0, '왕복 전 영웅 목록에 이미지가 그려진다', JSON.stringify(base));
+      await shot(page, '17c-herolist-before');
+      await backToLobby(page);
+
+      for (let round = 0; round < 3; round += 1) {
+        for (const key of SHUTDOWN_RISK_SCENES) {
+          const entered = await gotoScene(page, key);
+          if (!entered) check(false, `[${round + 1}회차] 씬 [${key}] 진입`);
+          await backToLobby(page);
+        }
+      }
+      const st = await shutdownStats(page);
+      note(`shutdown() 호출 횟수: ${JSON.stringify(st.counts)}`);
+      for (const key of SHUTDOWN_RISK_SCENES) {
+        check((st.counts[key] || 0) >= 3, `[${key}] shutdown() 이 3회 이상 실제로 돌았다`, `${st.counts[key] || 0}회`);
+      }
+      const swallowed = [...st.errors, ...errors.filter((e) => /shutdown\(\) 실패/.test(e))];
+      check(swallowed.length === 0, '왕복 중 shutdown() 삼켜진 예외 0건', swallowed.slice(0, 3).join(' | '));
+      if (swallowed.length) {
+        issue('P1', `shutdown 왕복 중 정리가 조용히 실패한다 (${swallowed.length}건)`, {
+          repro: 'Tower/Quest/Inventory/PartyEdit/Settings 각 3회 왕복',
+          suspect: 'src/main.js 정리 배선 + 각 씬 shutdown()',
+          evidence: swallowed.join(' | ').slice(0, 800),
+        });
+      }
+
+      // 핵심 — 왕복 뒤 영웅 목록이 여전히 그려지는가(공용 텍스처를 누가 해제했다면 여기서 깨진다)
+      const after = await readHeroList();
+      note(`영웅 목록 왕복 후: ${JSON.stringify(after)}`);
+      await shot(page, '17c-herolist-after');
+      check(!!after && after.images > 0, '왕복 후에도 영웅 목록에 이미지가 그려진다', JSON.stringify(after));
+      check(!!after && after.missing.length === 0, '왕복 후 해제된 텍스처를 물고 있는 표시 객체 0건', JSON.stringify(after && after.missing));
+      if (base && after) {
+        check(after.images >= Math.floor(base.images * 0.9), `왕복 후 이미지 수 유지 (${base.images} → ${after.images})`);
+        const lost = base.keys.filter((k) => !after.keys.includes(k));
+        check(lost.length === 0, '왕복 후 사라진 텍스처 키 없음', lost.join(', ') || '없음');
+        if (after.missing.length > 0 || lost.length > 0) {
+          issue('P1', '5씬 왕복 후 영웅 목록의 공용 텍스처가 해제됐다', {
+            repro: 'Tower/Quest/Inventory/PartyEdit/Settings 3회 왕복 → 영웅 목록',
+            suspect: '각 씬 shutdown() 의 textures.remove 범위 — 자기가 로드한 것만 해제해야 한다',
+            evidence: JSON.stringify({ base, after }),
+          });
+        }
+      }
+      await backToLobby(page);
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 17d. 치비 4인 정렬 + 17e. 장비 전 경로 ----------------
+  if (S17.includes('d')) {
+    startScenario(173, '3차 D — 치비 4인 정렬(캡처 육안) · 장비 장착→해제→재장착 (계정 B)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      for (let i = 0; i < 24; i += 1) {
+        const ready = await safeEvaluate(page, () => {
+          const v = window.game.scene.getScene('MainMenuScene')?.idleBattleView;
+          if (!v) return false;
+          for (const k of Object.keys(v)) {
+            const val = v[k];
+            if (Array.isArray(val) && val.length >= 2 && val.some((x) => x && (typeof x.getBounds === 'function' || x.sprite || x.image || x.container))) return true;
+          }
+          return false;
+        });
+        if (ready) break;
+        await page.waitForTimeout(500);
+      }
+      await page.waitForTimeout(1500);
+
+      // 2차에서는 `partyMembers` 만 봤다가 빈 배열이라 판정을 못 했다. 이번엔 필드명을
+      // 추정하지 않고 **뷰 객체 전체를 훑어** getBounds() 를 가진 배열을 찾는다.
+      const chibi = await safeEvaluate(page, () => {
+        const v = window.game.scene.getScene('MainMenuScene')?.idleBattleView;
+        if (!v) return { field: null, items: [], viewKeys: [] };
+        const viewKeys = Object.keys(v);
+        let field = null; let arr = null;
+        for (const k of viewKeys) {
+          const val = v[k];
+          if (Array.isArray(val) && val.length >= 2
+            && val.every((x) => x && (typeof x.getBounds === 'function' || x.sprite || x.image || x.container))) {
+            field = k; arr = val; break;
+          }
+        }
+        if (!arr) return { field: null, items: [], viewKeys };
+        const items = arr.map((m) => {
+          const obj = (typeof m.getBounds === 'function') ? m : (m.sprite || m.image || m.container);
+          const b = obj && obj.getBounds ? obj.getBounds() : null;
+          return b ? {
+            id: m.heroId || m.id || (obj.texture && obj.texture.key) || null,
+            bottom: Math.round(b.bottom), x: Math.round(b.centerX),
+            w: Math.round(b.width), h: Math.round(b.height),
+          } : null;
+        }).filter(Boolean);
+        return { field, items, viewKeys };
+      });
+      note(`명상 뷰 필드: ${JSON.stringify(chibi.viewKeys)}`);
+      note(`치비 배치(필드 ${chibi.field}): ${JSON.stringify(chibi.items)}`);
+      await shot(page, '17d-chibi-alignment');
+
+      if (chibi.items.length >= 2) {
+        const bottoms = chibi.items.map((c) => c.bottom);
+        const heights = chibi.items.map((c) => c.h);
+        const spread = Math.max(...bottoms) - Math.min(...bottoms);
+        check(chibi.items.length === 4, `명상 뷰 치비 ${chibi.items.length}인 렌더`);
+        check(spread <= Math.max(...heights) * 1.2, '치비 발밑 선이 규격 안에서 정렬',
+          `bottom 편차 ${spread}px / 높이 ${heights.join('/')}`);
+      } else {
+        // 자동 판정이 안 되면 캡처만 남기고 육안 판정으로 넘긴다 (통과로 세지 않는다)
+        manual('치비 4인 발밑 선 정렬 — 표시 객체를 얻지 못해 캡처 육안 판정', '17d-chibi-alignment.png');
+        note('치비 표시 객체 미획득 — 필드명을 추정하지 않고 캡처 육안 판정으로 넘긴다');
+      }
+
+      // --- 장비 전 경로: 장착 → 해제 → 재장착 ---
+      await safeEvaluate(page, () => window.debug?.giveAllEquipment?.());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await waitForLobby(page);
+
+      const opened = await openMenu(page, '성장', '영웅');
+      check(opened, '성장 → 영웅 진입');
+      if (opened) {
+        await page.waitForTimeout(1200);
+        const card = await safeEvaluate(page, () => {
+          const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+          for (const sc of window.game.scene.getScenes(true)) {
+            for (const o of collect(sc.children.list, [])) {
+              if (!o.input?.enabled || o.type !== 'Rectangle') continue;
+              let top = o.depth; for (let n = o; n; n = n.parentContainer) top = Math.max(top, n.depth || 0);
+              if (top < 2000) continue;
+              const b = o.getBounds();
+              if (b.width > 120 && b.width < 260 && b.height > 150 && b.height < 300) return { x: b.centerX, y: b.centerY };
+            }
+          }
+          return null;
+        });
+        if (card) await tapWorld(page, card.x, card.y, 2000);
+        await tapLabel(page, '상세 보기', { required: false, settle: 2500 });
+        await tapLabel(page, '장비', { exact: true, required: false, settle: 1500 });
+
+        const heroId = await safeEvaluate(page, () => {
+          const hd = window.game.scene.getScene('HeroDetailScene');
+          return (hd && (hd.hero?.id || hd.heroId)) || null;
+        });
+        const equippedOf = () => safeEvaluate(page, (id) => {
+          const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+          const rec = (save.characters || []).find((c) => c.id === id);
+          return (rec && (rec.equipment || rec.equipped)) || null;
+        }, heroId);
+        // 해제 정합성의 핵심 — 해제한 장비가 다시 후보에 뜨는가.
+        // `equippedBy` 가 안 지워지면 그 장비는 영구히 "장착 중"이 돼 후보에서 사라진다.
+        const candidatesOf = () => safeEvaluate(page, () => {
+          const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+          const list = Array.isArray(save.inventory?.equipment) ? save.inventory.equipment
+            : (Array.isArray(save.equipment) ? save.equipment : (Array.isArray(save.inventory) ? save.inventory : []));
+          return list.map((it) => ({ id: it.id, slotType: it.slotType, equippedBy: it.equippedBy ?? null }));
+        });
+
+        const p0 = await heroPower(page);
+        const invBefore = await candidatesOf();
+        check(invBefore.length > 0, '장비 보유 (지급 확인)', `${invBefore.length}종`);
+
+        // ① 장착
+        // 라벨은 **추정하지 않고 소스에서 확인한 문자열**을 쓴다 (HeroDetailScene.js):
+        //   슬롯 탭 → 빈 칸이면 `showEquipmentList()` = 제목 `무기 장착` / 부제 `보유 N개`,
+        //   행 두 번째 줄은 `R +0  atk+15` 처럼 **소문자 스탯 키**다(예전 'ATK+' 탐색은 틀렸다).
+        //   찬 칸이면 `showEquipmentOptions()` = 버튼 `장비 해제`.
+        // 슬롯의 탭 대상은 네모 칸(hit area)이지 그 아래 캡션('무기')이 아니다 —
+        // 3차 1회차에서 캡션을 눌러 피커가 안 열렸고 그걸 "장착 불가"로 볼 뻔했다.
+        const weaponSlot = async () => {
+          const plus = await findByLabel(page, '+', { exact: true, sceneKeys: ['HeroDetailScene'], nth: 0 });
+          if (plus) return plus;
+          const capt = await findByLabel(page, '무기', { exact: true, sceneKeys: ['HeroDetailScene'] });
+          return capt ? { x: capt.x, y: capt.y - 140 } : null;
+        };
+        const pickerRow = async () => {
+          const texts = await visibleTexts(page);
+          return texts.find((t) => /(atk|hp|def|spd)\+\d+/i.test(t.text)) || null;
+        };
+        const heldCount = async () => {
+          const t = (await visibleTexts(page)).map((x) => x.text).find((x) => /^보유\s*\d+개$/.test(x.trim()));
+          return t ? Number(t.replace(/[^\d]/g, '')) : null;
+        };
+
+        const slot = await weaponSlot();
+        check(!!slot, '영웅 상세 장비 탭에 슬롯 진입점(빈 칸)');
+        let equippedId = null;
+        if (slot) {
+          await tapWorld(page, slot.x, slot.y, 1800);
+          await shot(page, '17e-equip-1-picker');
+          const pickerTexts = (await visibleTexts(page)).map((t) => t.text);
+          const held1 = await heldCount();
+          note(`장착 피커: 제목=${pickerTexts.find((t) => /장착$/.test(t)) || '(없음)'} 보유=${held1} / 상위 ${pickerTexts.slice(0, 8).join(' / ')}`);
+          check(pickerTexts.some((t) => /무기 장착/.test(t)), '① 빈 슬롯 탭 → 장착 피커가 열린다', pickerTexts.slice(0, 6).join(' / '));
+          const emptyMsg = pickerTexts.find((t) => /장비가 없습니다/.test(t));
+          if (emptyMsg) note(`피커가 후보 0개를 정직하게 표시: "${emptyMsg}"`);
+
+          const row = await pickerRow();
+          check(!!row, '① 피커에 장착 후보 행이 있다', row ? row.text : pickerTexts.slice(0, 8).join(' / '));
+          if (row) await tapWorld(page, row.x, row.y, 2200);
+          await shot(page, '17e-equip-2-equipped');
+          const msg1 = (await visibleTexts(page)).map((t) => t.text);
+          if (msg1.some((t) => /장비 장착 완료/.test(t))) note('토스트: 장비 장착 완료!');
+
+          const eq1 = await equippedOf();
+          equippedId = eq1 ? Object.values(eq1).find(Boolean) : null;
+          const p1 = await heroPower(page);
+          note(`장착 결과: ${JSON.stringify(eq1)} / 전투력 ${p0.power} → ${p1.power}`);
+          check(!!equippedId, '① 장착 — 세이브에 반영', JSON.stringify(eq1));
+          if (equippedId) {
+            check(p1.power > p0.power, '① 장착 — 화면 전투력 상승', `${p0.power} → ${p1.power}`);
+            const invMid = await candidatesOf();
+            const recMid = invMid.find((i) => i.id === equippedId);
+            check(!!recMid && !!recMid.equippedBy, '① 장착 — 장비 레코드에 equippedBy 가 찍힌다', JSON.stringify(recMid));
+          }
+
+          // ② 해제 — 찬 칸을 다시 눌러 `장비 해제`
+          if (equippedId) {
+            const filled = await findByLabel(page, '무기', { exact: true, sceneKeys: ['HeroDetailScene'] });
+            if (filled) await tapWorld(page, filled.x, filled.y - 140, 1800);
+            await shot(page, '17e-equip-3-unequip-ui');
+            const optTexts = (await visibleTexts(page)).map((t) => t.text);
+            check(optTexts.some((t) => /장비 해제/.test(t)), '② 찬 슬롯 탭 → 해제 메뉴가 열린다', optTexts.slice(0, 8).join(' / '));
+            const unequipBtn = await findByLabel(page, '장비 해제', { exact: true });
+            if (unequipBtn) await tapWorld(page, unequipBtn.x, unequipBtn.y, 2400);
+            const msg2 = (await visibleTexts(page)).map((t) => t.text);
+            if (msg2.some((t) => /장비 해제 완료/.test(t))) note('토스트: 장비 해제 완료!');
+
+            const eq2 = await equippedOf();
+            const p2 = await heroPower(page);
+            const stillOn = eq2 ? Object.values(eq2).some(Boolean) : false;
+            note(`해제 결과: ${JSON.stringify(eq2)} / 전투력 ${p2.power}`);
+            check(!stillOn, '② 해제 — 세이브에서 슬롯이 비워진다', JSON.stringify(eq2));
+            check(p2.power <= p0.power + 1, '② 해제 — 전투력이 장착 전으로 되돌아온다', `${p2.power} (장착 전 ${p0.power})`);
+
+            // 해제 정합성의 핵심 — equippedBy 가 지워졌는가(안 지워지면 후보에서 영구 실종)
+            const invAfter = await candidatesOf();
+            const rec = invAfter.find((i) => i.id === equippedId);
+            note(`해제된 장비 레코드: ${JSON.stringify(rec)}`);
+            check(!!rec && !rec.equippedBy, '② 해제 — 해제된 장비의 equippedBy 가 지워진다', JSON.stringify(rec));
+            if (rec && rec.equippedBy) {
+              issue('P1', '해제한 장비의 equippedBy 가 남아 후보 목록에서 영구히 사라진다', {
+                repro: '영웅 상세 → 장비 → 무기 슬롯 장착 → 같은 슬롯 → [장비 해제] → 슬롯 다시 열기',
+                suspect: 'src/scenes/HeroDetailScene.js showEquipmentOptions → EquipmentSystem.unequip()',
+                evidence: JSON.stringify(rec),
+              });
+            }
+
+            // ③ 재장착 — 해제한 그 장비가 후보에 다시 뜨는가 (핵심)
+            const slot3 = await weaponSlot();
+            if (slot3) await tapWorld(page, slot3.x, slot3.y, 1800);
+            await shot(page, '17e-equip-4-repicker');
+            const pt3 = (await visibleTexts(page)).map((t) => t.text);
+            const held3 = await heldCount();
+            note(`재장착 피커: 보유=${held3} / ${pt3.slice(0, 8).join(' / ')}`);
+            check(!pt3.some((t) => /장비가 없습니다/.test(t)),
+              '③ 재장착 — 후보 목록이 비어 있지 않다', pt3.slice(0, 6).join(' / '));
+            check(held1 !== null && held3 !== null && held3 === held1,
+              '③ 재장착 — 후보 수가 장착 전과 같다(해제분이 되돌아왔다)', `장착 전 ${held1} → 해제 후 ${held3}`);
+
+            const row3 = await pickerRow();
+            if (row3) await tapWorld(page, row3.x, row3.y, 2400);
+            await shot(page, '17e-equip-5-reequipped');
+            const eq3 = await equippedOf();
+            const p3 = await heroPower(page);
+            note(`재장착 결과: ${JSON.stringify(eq3)} / 전투력 ${p3.power}`);
+            check(!!eq3 && Object.values(eq3).some(Boolean), '③ 재장착 — 세이브에 반영', JSON.stringify(eq3));
+            check(p3.power > p0.power, '③ 재장착 — 전투력이 다시 오른다', `${p0.power} → ${p3.power}`);
+          }
+        }
+        await backToLobby(page);
+      }
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 17f. 오프라인 보상 모달이 로비 재진입마다 다시 뜨는가 ----------------
+  // 3차 실측 중 부수적으로 잡힌 현상이다. 17c 의 5씬 ×3 왕복에서 로비로 돌아올 때마다
+  // (16회) 오프라인 보상 모달이 다시 떴다. 두 가지가 걸린다.
+  //   ① 표시만 반복되는가, **지급까지 반복되는가**(반복 지급이면 골드 무한 증식이다)
+  //   ② 반복 표시 자체가 로비 조작을 매번 가로막는다(내 하네스의 보스전 진입을 삼킨 그 모달이다)
+  // 팀 기준("지급되지 않는 보상은 화면에 표시하지 않는다")의 역방향 — 표시가 실지급을
+  // 넘어서는지 본다. 추정하지 않고 **표시 금액과 세이브 증가분을 매 회차 함께** 잰다.
+  if (S17.includes('e')) {
+    startScenario(174, '3차 E — 오프라인 보상 모달 반복 노출·반복 지급 여부 (계정 B)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      const goldOf = () => safeEvaluate(page, () => {
+        const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+        return save?.resources?.gold ?? null;
+      });
+      // 모달이 떠 있는지 + 표시 금액
+      const modalState = () => safeEvaluate(page, () => {
+        if (!window.game?.scene?.isActive?.('MainMenuScene')) return { open: false };
+        const mm = window.game.scene.getScene('MainMenuScene');
+        const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+        const texts = collect(mm.children.list, [])
+          .filter((o) => (o.depth || 0) >= 900 || (o.parentContainer && (o.parentContainer.depth || 0) >= 900))
+          .filter((o) => o.type === 'Text' && (o.text || '').trim())
+          .map((o) => o.text.trim());
+        const all = collect(mm.children.list, []).filter((o) => o.type === 'Text').map((o) => (o.text || '').trim());
+        const goldLine = all.find((t) => /골드:\s*\+[\d,]+/.test(t));
+        return {
+          open: all.some((t) => /오프라인 보상/.test(t)),
+          shownGold: goldLine ? Number(goldLine.replace(/[^\d]/g, '')) : null,
+          topTexts: texts.slice(0, 5),
+        };
+      });
+
+      // 1회차 — openAccount 안의 waitForLobby 가 이미 [받기] 를 눌렀다.
+      // 그 직후 상태부터 재고, 이어서 씬 왕복 3회를 돈다.
+      const gold = await goldOf();
+      note(`시작 골드: ${gold}`);
+
+      // --- 페이즈 1: 데이터 없는 씬 재시작(디버그 API) 왕복 3회 ---
+      // 이게 제일 중요하다. `navigateTo`(디버그 API)는 `scene.start('MainMenuScene')` 를
+      // 데이터 없이 호출하는데, Phaser 는 데이터를 안 주면 **직전 settings.data 를 그대로
+      // 재사용**한다. PreloadScene 이 `{ showOfflineRewards }` 로 시작했으므로 그 값이
+      // 되살아난다. 반면 정상 뒤로가기는 `navigationManager.goBack()` → `target.data || {}`
+      // 라 데이터가 교체된다. **어느 쪽이 실제 유저 경로인지는 눌러 봐야 안다.**
+      const rounds = [];
+      for (let i = 0; i < 3; i += 1) {
+        const entered = await gotoScene(page, 'SettingsScene');
+        if (!entered) { note(`[${i + 1}회차] SettingsScene 진입 실패 — 이 회차는 건너뛴다`); continue; }
+        // backToLobby 안의 dismissLobbyOverlays 가 눌러 버리기 전에 상태부터 읽는다
+        await safeEvaluate(page, () => window.__TEST_API__?.navigateTo?.('MainMenuScene'));
+        await page.waitForTimeout(2500);
+        const before = await goldOf();
+        const st = await modalState();
+        let after = before;
+        if (st.open) {
+          await shot(page, `17f-offline-modal-round${i + 1}`);
+          const recv = await findByLabel(page, '받기', { exact: true, minDepth: 900 });
+          if (recv) { await tapWorld(page, recv.x, recv.y, 1800); after = await goldOf(); }
+        }
+        rounds.push({ round: i + 1, reopened: st.open, shownGold: st.shownGold, goldBefore: before, goldAfter: after, delta: after - before });
+        note(`[${i + 1}회차] 재노출=${st.open} 표시=${st.shownGold} 골드 ${before} → ${after} (Δ${after - before})`);
+        await backToLobby(page);
+      }
+
+      // --- 페이즈 2: **유저 조작만으로도** 재현되는가 ---
+      // 로비에서 씬을 여는 유저 조작은 전투다(도크 항목은 대부분 팝업이라 씬이 안 바뀐다).
+      // 그래서 보스전 → 결과 → [메인으로] 왕복으로 잰다. 이게 유저가 하루에 수십 번 도는 길이다.
+      const uiRound = { path: '로비 → [보스전] → 결과 → [메인으로]', reopened: null, delta: null };
+      const bossBtn = await findByLabel(page, '보스전', { exact: true, sceneKeys: ['MainMenuScene'] });
+      if (bossBtn) {
+        const goldBefore = await goldOf();
+        await tapWorld(page, bossBtn.x, bossBtn.y, 2500);
+        const res = await playBattle(page, { timeout: 120000 });
+        if (res.entered && !res.timedOut) {
+          await backToMain(page);
+          await page.waitForTimeout(2000);
+          const st0 = await modalState();
+          uiRound.reopened = st0.open;
+          uiRound.shownGold = st0.shownGold;
+          if (st0.open) {
+            await shot(page, '17f-offline-modal-ui-back');
+            const recv = await findByLabel(page, '받기', { exact: true, minDepth: 900 });
+            if (recv) await tapWorld(page, recv.x, recv.y, 1800);
+          }
+          // 전투 보상 골드가 섞이므로 "모달로 들어온 몫"만 따로 본다 — 표시 금액과 대조한다
+          uiRound.goldTotalDelta = (await goldOf()) - goldBefore;
+          note(`[UI] 전투 왕복 후 재노출=${uiRound.reopened} 표시=${uiRound.shownGold} 총 골드Δ=${uiRound.goldTotalDelta}(전투 보상 포함)`);
+        } else {
+          note('[UI] 전투가 끝나지 않아 UI 경로 판정은 미검증');
+        }
+      } else {
+        note('[UI] 로비에서 [보스전] 진입점을 찾지 못해 UI 경로 판정은 미검증');
+      }
+      if (uiRound.reopened === null) {
+        manual('오프라인 보상 모달 — 유저 조작(전투 왕복)만으로 재노출되는지', '17f-offline-modal-ui-back.png');
+      } else {
+        check(uiRound.reopened === false, '[UI 경로] 전투 왕복 뒤 오프라인 보상 모달이 다시 뜨지 않는다', JSON.stringify(uiRound));
+      }
+      await backToLobby(page);
+
+      const reopened = rounds.filter((r) => r.reopened);
+      const regranted = rounds.filter((r) => r.delta > 0);
+      check(reopened.length === 0, '로비 재진입 시 오프라인 보상 모달이 다시 뜨지 않는다',
+        `${reopened.length}/${rounds.length}회 재노출 — ${JSON.stringify(rounds)}`);
+      check(regranted.length === 0, '재노출된 모달이 보상을 다시 지급하지 않는다',
+        `${regranted.length}회 재지급 — ${JSON.stringify(regranted)}`);
+
+      if (regranted.length > 0) {
+        // 표시와 지급이 함께 반복되면 재화 증식이다 — 팀 기준의 반대 방향 위반.
+        // 원인 후보(코드 확인): Phaser 의 `scene.start(key)` 는 **data 를 안 주면 직전
+        // settings.data 를 그대로 재사용**한다. PreloadScene 이 `{ showOfflineRewards }` 로
+        // MainMenuScene 을 시작했으므로, 이후 데이터 없이 다시 start 되는 경로마다
+        // `init()` 이 같은 값을 다시 받아 모달을 띄운다. `받기` 는 재계산이 아니라 **표시된
+        // safeRewards 를 그대로 지급**하므로 누를 때마다 같은 금액이 또 들어간다.
+        // 유저 경로 재현 여부는 위 [UI 경로] 체크가 판정한다.
+        // 심각도 판단 — 3차 실측 결과 **유저 조작만으로는 재현되지 않았다.**
+        //   · `navigateTo`(디버그 API)로 데이터 없이 MainMenuScene 을 다시 start 하면 3/3 재지급.
+        //   · 반면 전투 왕복(보스전 → 결과 → [메인으로])은 BattleResultScene 이 payload 를
+        //     넘기며 start 하므로 settings.data 가 교체돼 0/3, 그 뒤 navigateTo 도 0/3.
+        // 기전: Phaser 는 `scene.start(key)` 에 data 를 안 주면 **직전 settings.data 를 재사용**한다.
+        // PreloadScene 이 `{ showOfflineRewards }` 로 시작했으므로, 그 값이 교체되기 전까지는
+        // 데이터 없는 start 마다 `init()` 이 같은 보상을 다시 받고, [받기] 는 재계산 없이
+        // 표시된 safeRewards 를 그대로 지급한다.
+        // 유저 도달 가능성: 각 씬의 `create()` 실패 폴백이 데이터 없이 `scene.start('MainMenuScene')`
+        // 를 부른다(HeroList/Gacha/Inventory/Quest/Settings/Tower/PartyEdit/HeroDetail/BattleResult).
+        // 그 경로로는 재현될 수 있으나 이번 검수에서 **실제로 재현하지는 못했다**.
+        issue('P2', `오프라인 보상이 데이터 없는 씬 재시작마다 다시 지급된다 (${regranted.length}회, 누적 +${regranted.reduce((a, r) => a + r.delta, 0)} 골드 / UI 경로 재현=${uiRound.reopened})`, {
+          repro: `[받기] → __TEST_API__.navigateTo('MainMenuScene')(데이터 없음) → 모달 재노출 → [받기] 반복. 전투 왕복(유저 경로)에서는 재현되지 않음`,
+          suspect: 'src/scenes/MainMenuScene.js:95 init(data).showOfflineRewards — settings.data 가 살아남는다 / :556 [받기] 가 표시된 safeRewards 를 재계산 없이 지급 / src/scenes/PreloadScene.js:835 최초 start 데이터',
+          evidence: JSON.stringify({ uiRound, rounds }),
+        });
+      } else if (reopened.length > 0) {
+        issue('P2', `오프라인 보상 모달이 로비로 돌아올 때마다 다시 뜬다 (${reopened.length}/${rounds.length}회, 지급은 0)`, {
+          repro: '로비 → [받기] → 다른 씬 진입 → 로비 복귀',
+          suspect: 'src/scenes/MainMenuScene.js — 수령 후에도 표시 조건이 다시 참이 된다',
+          evidence: JSON.stringify(rounds),
+        });
+      }
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+}
+
+// ============================================================
+// 18. 전환 정지 반복 회귀 · 장착 피커 잘림 (슬롯별 · 후보 수별)
+// ============================================================
+
+/**
+ * `TransitionManager` 싱글톤 상태를 **앱이 실제로 쓰는 인스턴스**에서 읽는다.
+ *
+ * 쿼리 없는 경로로 import 하면 별도 인스턴스를 받는다(3차 실증:
+ * `tests/e2e/module-identity-verify.mjs`). resource timing 에서 앱이 받은 URL 을 찾아 쓴다.
+ */
+const transitionState = (page) => safeEvaluate(page, async () => {
+  try {
+    const url = performance.getEntriesByType('resource')
+      .map((e) => e.name)
+      .filter((n) => n.includes('/src/utils/TransitionManager'))
+      .pop() || '/src/utils/TransitionManager.ts';
+    const mod = await import(/* @vite-ignore */ url);
+    const tm = mod.default;
+    return {
+      url,
+      isTransitioning: tm?.isTransitioning ?? null,
+      hasSafetyTimer: !!tm?._safetyTimer,
+    };
+  } catch (e) { return { error: String(e).slice(0, 120) }; }
+});
+
+async function scenario18(browser) {
+  // ---------------- 18a. 전환 정지 — 같은 전투 반복 ----------------
+  // 간헐 결함이라 1회 통과는 증거가 약하다(팀 리드). **몇 회 돌렸는지**를 결과에 남긴다.
+  // 회차마다 전투 전/후의 `isTransitioning` 을 앱 인스턴스에서 재서, 정지가 나면
+  // "그 순간 잠겨 있었는가"가 추측이 아니라 값으로 남게 한다.
+  if (S18.includes('a')) {
+    startScenario(18, `3.5차 A — 전투 종료 → 결과 화면 전환 반복 회귀 (${BATTLE_REPEATS}회, 계정 B)`);
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      const rounds = [];
+      let stalls = 0;
+      for (let i = 0; i < BATTLE_REPEATS; i += 1) {
+        const label = `${i + 1}/${BATTLE_REPEATS}`;
+        const backOk = await backToLobby(page);
+        if (!backOk) { note(`[${label}] 로비 복귀 실패 — 세션을 되살린다`); await recoverSession(page); }
+
+        // 보스전은 1회 20 에너지다. 반복하려면 채워야 한다(치트는 앱의 energySystem 을 쓴다).
+        // 보스전 1회 = 20 에너지. 반복하려면 채워야 한다. 치트는 앱의 energySystem 을
+        // 직접 갱신하므로(DebugManager.refillEnergy/setEnergy) 인스턴스 불일치 문제가 없다.
+        // 다만 `isDebugMode` 가 꺼져 있으면 false 를 돌려주므로 결과를 확인한다.
+        const refilled = await safeEvaluate(page, () => {
+          const r1 = window.debug?.refillEnergy?.();
+          if (r1) return 'refill';
+          const r2 = window.debug?.setEnergy?.(999);
+          return r2 ? 'setEnergy' : 'failed';
+        });
+        if (refilled === 'failed') note(`[${label}] 에너지 충전 치트가 듣지 않는다(디버그 모드 확인 필요) — 에너지 부족으로 진입이 막힐 수 있다`);
+        const before = await transitionState(page);
+
+        const boss = await findByLabel(page, '보스전', { exact: true, sceneKeys: ['MainMenuScene'] });
+        if (!boss) {
+          note(`[${label}] 로비에 [보스전] 진입점 없음 — 이 회차 건너뜀`);
+          rounds.push({ round: i + 1, entered: false, reason: 'no-entry' });
+          continue;
+        }
+        await tapWorld(page, boss.x, boss.y, 2500);
+        const res = await playBattle(page, { timeout: 90000 });
+        const after = await transitionState(page);
+
+        const rec = {
+          round: i + 1,
+          entered: !!res.entered,
+          stalled: !!res.timedOut,
+          viaCutscene: !!res.viaCutscene,
+          forced: !!res.forced,
+          trail: res.sceneTrail,
+          lockBefore: before.isTransitioning,
+          lockAfter: after.isTransitioning,
+        };
+        if (res.timedOut) {
+          stalls += 1;
+          rec.diag = res.diag;
+          await shot(page, `18a-stall-round${i + 1}`);
+          note(`[${label}] ★정지★ trail=${(res.sceneTrail || []).join(' → ')} lock(전=${before.isTransitioning}, 후=${after.isTransitioning}) diag=${JSON.stringify(res.diag?.transition)}`);
+        } else {
+          note(`[${label}] 정상 — trail=${(res.sceneTrail || []).join(' → ')} lock(전=${before.isTransitioning}, 후=${after.isTransitioning})${res.viaCutscene ? ' (컷씬 경유)' : ''}`);
+          await backToMain(page);
+        }
+        rounds.push(rec);
+      }
+
+      const attempted = rounds.filter((r) => r.entered).length;
+      const viaCut = rounds.filter((r) => r.viaCutscene).length;
+      note(`반복 결과: 진입 ${attempted}/${BATTLE_REPEATS}회, 정지 ${stalls}회, 컷씬 경유 ${viaCut}회`);
+      check(attempted > 0, `전투 진입 성공 (${attempted}/${BATTLE_REPEATS}회)`);
+      // 한 번도 못 들어갔는데 "정지 0회" 를 통과로 세면 거짓 통과다. 진입이 0이면 미검증으로 남긴다.
+      if (attempted === 0) {
+        note('전투에 한 번도 진입하지 못해 전환 정지 판정은 미검증 — 통과로 세지 않는다');
+      } else {
+        check(stalls === 0, `전투 ${attempted}회 반복 중 결과 화면 미전환 0회`, `정지 ${stalls}회`);
+      }
+      if (stalls > 0) {
+        const evidence = rounds.filter((r) => r.stalled);
+        issue('P1', `전투 종료 후 결과 화면 미전환 재현 (${stalls}/${attempted}회)`, {
+          repro: `계정 B → 로비 [보스전] → 자동전투 3배속 → 승리 후 90초 관찰. ${BATTLE_REPEATS}회 반복`,
+          suspect: 'src/utils/TransitionManager.ts victoryTransition 의 isTransitioning 조기 반환 / 잠금 해제 경로',
+          evidence: JSON.stringify(evidence).slice(0, 1200),
+        });
+      }
+      // 잠금이 전투 사이에 남아 있는지 — 정지가 없어도 이 값이 true 로 굳으면 전조다
+      const stuck = rounds.filter((r) => r.lockBefore === true);
+      check(stuck.length === 0, '다음 전투 시작 시점에 isTransitioning 이 잠긴 채로 남아 있지 않다',
+        stuck.length ? JSON.stringify(stuck.map((r) => r.round)) : '전 회차 false');
+
+      currentScenario().consoleErrors = errors.slice(0, 30);
+      currentScenario().repeats = { attempted, stalls, rounds };
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 18b. 장착 피커 잘림 — 슬롯 4종 × 후보 수 ----------------
+  // 팀 리드가 캡처에서 "후보 3개일 때 세 번째 항목 하단이 닫기 줄에 잘린다"를 지적했다.
+  // 소스(HeroDetailScene.showEquipmentList)는 팝업을 고정 높이로 두고 목록만 ScrollContainer
+  // 로 돌리는 구조다(`rowH=76, headerH=72, closeAreaH=96, panelH=min(640, H-160)`).
+  // → **후보가 뷰포트에 다 들어가는 경우에는 어느 행도 잘리면 안 된다**가 판정 기준이다.
+  //   다 안 들어가면 잘리는 게 스크롤의 정상 동작이므로 그때는 첫 행만 온전하면 통과로 본다.
+  // 슬롯마다 후보 수가 달라 잘림 조건도 다르므로 4슬롯을 각각 연다.
+  if (S18.includes('b')) {
+    startScenario(181, '3.5차 B — 장착 피커 잘림 (무기·방어구·액세서리·유물, 후보 수별)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      await safeEvaluate(page, () => window.debug?.giveAllEquipment?.());
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await waitForLobby(page);
+
+      // 슬롯별 후보 수를 먼저 세이브에서 확인한다(화면 표기와 대조할 기준값)
+      const bySlot = await safeEvaluate(page, () => {
+        const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+        const list = Array.isArray(save.inventory?.equipment) ? save.inventory.equipment
+          : (Array.isArray(save.equipment) ? save.equipment : (Array.isArray(save.inventory) ? save.inventory : []));
+        const out = {};
+        for (const it of list) {
+          if (it.equippedBy) continue;
+          out[it.slotType || '(없음)'] = (out[it.slotType || '(없음)'] || 0) + 1;
+        }
+        return out;
+      });
+      note(`슬롯별 미장착 후보 수(세이브 기준): ${JSON.stringify(bySlot)}`);
+
+      const opened = await openMenu(page, '성장', '영웅');
+      check(opened, '성장 → 영웅 진입');
+      if (!opened) return;
+      await page.waitForTimeout(1200);
+      const card = await safeEvaluate(page, () => {
+        const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+        for (const sc of window.game.scene.getScenes(true)) {
+          for (const o of collect(sc.children.list, [])) {
+            if (!o.input?.enabled || o.type !== 'Rectangle') continue;
+            let top = o.depth; for (let n = o; n; n = n.parentContainer) top = Math.max(top, n.depth || 0);
+            if (top < 2000) continue;
+            const b = o.getBounds();
+            if (b.width > 120 && b.width < 260 && b.height > 150 && b.height < 300) return { x: b.centerX, y: b.centerY };
+          }
+        }
+        return null;
+      });
+      if (card) await tapWorld(page, card.x, card.y, 2000);
+      await tapLabel(page, '상세 보기', { required: false, settle: 2500 });
+      await tapLabel(page, '장비', { exact: true, required: false, settle: 1500 });
+
+      /** 피커 기하 측정 — 마스크(스크롤 뷰포트) · 닫기 줄 · 후보 행 */
+      const pickerGeometry = () => safeEvaluate(page, () => {
+        const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+        const sc = window.game.scene.getScene('HeroDetailScene');
+        if (!sc) return null;
+        const all = collect(sc.children.list, []);
+        const rect = (b) => (b ? { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), r: Math.round(b.right), b: Math.round(b.bottom) } : null);
+
+        const title = all.find((o) => o.type === 'Text' && /\s장착$/.test((o.text || '').trim()));
+        const held = all.find((o) => o.type === 'Text' && /^보유\s*\d+개$/.test((o.text || '').trim()));
+        const close = all.find((o) => o.type === 'Text' && (o.text || '').trim() === '닫기');
+        // 후보 행 두 번째 줄은 `R +0  atk+15` 형태다(소스 확인). 이름 줄은 그 위 28px.
+        const rows = all.filter((o) => o.type === 'Text' && /(atk|hp|def|spd|crit)[_a-z]*\+\d+/i.test(o.text || ''));
+
+        // 스크롤 뷰포트 = 행에 걸린 마스크의 도형 bounds
+        let viewport = null;
+        for (const r of rows) {
+          for (let n = r; n; n = n.parentContainer) {
+            if (n.mask && n.mask.geometryMask && typeof n.mask.geometryMask.getBounds === 'function') {
+              viewport = rect(n.mask.geometryMask.getBounds());
+              break;
+            }
+          }
+          if (viewport) break;
+        }
+
+        return {
+          title: title ? title.text.trim() : null,
+          heldText: held ? held.text.trim() : null,
+          heldCount: held ? Number(held.text.replace(/[^\d]/g, '')) : null,
+          close: close ? rect(close.getBounds()) : null,
+          viewport,
+          rows: rows.map((o) => ({ text: (o.text || '').slice(0, 40), ...rect(o.getBounds()) })),
+        };
+      });
+
+      // 표기는 소스가 정본이다 — `src/config/equipmentConfig.js` EQUIPMENT_SLOTS 는
+      // weapon/armor/accessory/relic → 무기·방어구·**악세서리**·유물 이다('액세서리' 아님).
+      // 순서는 `EQUIP_SLOT_ORDER = ['weapon','armor','accessory','relic']` 와 같다.
+      const SLOTS = [
+        { name: '무기', key: 'weapon' },
+        { name: '방어구', key: 'armor' },
+        { name: '악세서리', key: 'accessory' },
+        { name: '유물', key: 'relic' },
+      ];
+      for (let i = 0; i < SLOTS.length; i += 1) {
+        const { name: slotName, key: slotKey } = SLOTS[i];
+        // 슬롯 칸(hit area)을 눌러야 한다 — 아래 캡션이 아니다.
+        const plus = await findByLabel(page, '+', { exact: true, sceneKeys: ['HeroDetailScene'], nth: i });
+        const capt = plus ? null : await findByLabel(page, slotName, { exact: true, sceneKeys: ['HeroDetailScene'] });
+        const target = plus || (capt ? { x: capt.x, y: capt.y - 140 } : null);
+        if (!target) { check(false, `[${slotName}] 슬롯 진입점`); continue; }
+
+        await tapWorld(page, target.x, target.y, 1800);
+        const texts = (await visibleTexts(page)).map((t) => t.text);
+        const emptyMsg = texts.find((t) => new RegExp(`보유한 ${slotName} 장비가 없습니다`).test(t));
+        if (emptyMsg) {
+          note(`[${slotName}] 후보 0개 — "${emptyMsg}" (정직한 표시, 잘림 검사 대상 아님)`);
+          check(true, `[${slotName}] 후보 0개를 문구로 알린다`, emptyMsg);
+          continue;
+        }
+
+        const g = await pickerGeometry();
+        await shot(page, `18b-picker-${i}-${slotName}`);
+        if (!g || !g.close || g.rows.length === 0) {
+          note(`[${slotName}] 피커 기하를 못 읽었다 — 자동 판정 생략, 캡처 육안으로 넘긴다`);
+          manual(`[${slotName}] 장착 피커 잘림 (육안)`, `18b-picker-${i}-${slotName}.png`);
+          await tapLabel(page, '닫기', { exact: true, required: false, settle: 1200 });
+          continue;
+        }
+        note(`[${slotName}] ${g.title} / ${g.heldText} / 행 ${g.rows.length}개 / viewport=${JSON.stringify(g.viewport)} / 닫기=${JSON.stringify(g.close)}`);
+
+        // ① 스크롤 영역이 닫기 줄을 침범하지 않는다
+        if (g.viewport) {
+          check(g.viewport.b <= g.close.y + 1, `[${slotName}] 목록 뷰포트가 [닫기] 줄 위에서 끝난다`,
+            `viewport.bottom=${g.viewport.b} close.top=${g.close.y}`);
+        }
+
+        // ② 후보가 다 들어가는 경우엔 어느 행도 잘리면 안 된다
+        if (g.viewport) {
+          const clipped = g.rows.filter((r) => r.b > g.viewport.b + 1 || r.y < g.viewport.y - 1);
+          // 행 높이는 상수(76)가 아니라 **실측 간격**으로 잡는다 — 렌더 해상도(1080x1920)와
+          // 기준 해상도(720x1280)의 배율이 곱해지므로 소스 상수를 그대로 쓰면 틀린다.
+          const rowPitch = g.rows.length >= 2 ? Math.abs(g.rows[1].y - g.rows[0].y) : null;
+          const fits = g.heldCount !== null && rowPitch !== null
+            ? (g.heldCount * rowPitch) <= g.viewport.h
+            : g.rows.length <= 1;
+          if (rowPitch) note(`[${slotName}] 행 간격 실측 ${rowPitch}px / 뷰포트 높이 ${g.viewport.h}px`);
+          if (fits) {
+            check(clipped.length === 0, `[${slotName}] 후보 ${g.heldCount}개가 뷰포트에 다 들어가는데 잘린 행 0건`,
+              clipped.length ? JSON.stringify(clipped) : `viewport.h=${g.viewport.h}`);
+            if (clipped.length > 0) {
+              issue('P2', `[${slotName}] 장착 피커에서 후보 ${g.heldCount}개가 다 들어갈 높이인데 ${clipped.length}행이 잘린다`, {
+                repro: `계정 B → debug.giveAllEquipment() → 영웅 상세 → 장비 탭 → [${slotName}] 슬롯 (뷰포트 ${VIEWPORT.width}x${VIEWPORT.height}, 렌더 1080x1920)`,
+                suspect: 'src/scenes/HeroDetailScene.js showEquipmentList() 의 listHeight / closeAreaH 계산',
+                evidence: JSON.stringify({ heldCount: g.heldCount, viewport: g.viewport, close: g.close, clipped }),
+              });
+            }
+          } else {
+            // 스크롤이 필요한 상태 — 잘리는 건 정상이다. 첫 행만 온전하면 된다.
+            const first = g.rows[0];
+            check(first && first.y >= g.viewport.y - 1 && first.b <= g.viewport.b + 1,
+              `[${slotName}] 후보 ${g.heldCount}개(스크롤 필요) — 첫 행은 온전히 보인다`, JSON.stringify(first));
+            note(`[${slotName}] 후보가 뷰포트를 넘어 스크롤이 필요하다(${g.heldCount}개 × ${rowPitch} > ${g.viewport.h}) — 잘림은 정상`);
+          }
+        } else {
+          manual(`[${slotName}] 장착 피커 잘림 (마스크 미획득, 육안)`, `18b-picker-${i}-${slotName}.png`);
+        }
+
+        // ③ 화면 표기와 실제 후보 수 대조
+        if (g.heldCount !== null) {
+          const expect = bySlot[slotKey];
+          if (expect !== undefined) {
+            check(g.heldCount === expect, `[${slotName}] 화면 표기 "보유 ${g.heldCount}개" == 세이브의 미장착 후보 ${expect}개`);
+          } else {
+            note(`[${slotName}] 세이브에 해당 slotType 이 없어 후보 수 대조는 생략`);
+          }
+        }
+
+        await tapLabel(page, '닫기', { exact: true, required: false, settle: 1200 });
+        await page.waitForTimeout(500);
+      }
+
+      await backToLobby(page);
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+
+  // ---------------- 18c. M-2 유저 도달 경로 재현 시도 ----------------
+  // 3차에는 "유저 조작으로는 재현 안 됨"으로 P2 에 뒀는데, 그 뒤 호출부를 전수로 훑다가
+  // **catch 폴백이 아닌 두 곳**을 찾았다. 여기가 열려 있으면 M-2 의 등급이 달라진다.
+  //
+  //   ① src/scenes/StageSelectScene.js — [뒤로] 버튼:
+  //        `if (!navigationManager.goBack(this)) this.scene.start('MainMenuScene');`
+  //      내비 스택이 비어 있으면 **평범한 뒤로가기 한 번**이 데이터 없는 start 다.
+  //   ② src/scenes/BattleScene.js — 파티 해석 실패 가드:
+  //        `if (this.party.length === 0) { warn; this.scene.start('MainMenuScene'); return; }`
+  //      예외가 아니라 정상 분기다. 오늘 고친 P0(보스전 파티 미해석)가 살아 있었다면
+  //      유저가 매 전투마다 이 문으로 나왔을 것이다.
+  //
+  // 이 블록은 ①의 폴백 분기가 실제로 재화를 새게 하는지 본다. **분기 도달 자체는
+  // 재현하되, 유저가 그 분기에 닿는 조건(스택이 비는 상황)까지 증명하지는 못한다** —
+  // 그 한계를 결과에 그대로 남긴다.
+  if (S18.includes('c')) {
+    startScenario(182, '3.5차 C — M-2 오프라인 보상 재지급의 유저 도달 경로 (StageSelect [뒤로] 폴백)');
+    const { page, ctx, errors } = await openAccount(browser, 'B');
+    try {
+      const goldOf = () => safeEvaluate(page, () => {
+        const save = JSON.parse(localStorage.getItem('arcane_collectors_save'));
+        return save?.resources?.gold ?? null;
+      });
+      const modalOpen = () => safeEvaluate(page, () => {
+        if (!window.game?.scene?.isActive?.('MainMenuScene')) return { open: false };
+        const mm = window.game.scene.getScene('MainMenuScene');
+        const collect = (l, o) => { l.forEach((x) => { if (!x) return; o.push(x); if (Array.isArray(x.list)) collect(x.list, o); }); return o; };
+        const all = collect(mm.children.list, []).filter((o) => o.type === 'Text').map((o) => (o.text || '').trim());
+        const goldLine = all.find((t) => /골드:\s*\+[\d,]+/.test(t));
+        return { open: all.some((t) => /오프라인 보상/.test(t)), shownGold: goldLine ? Number(goldLine.replace(/[^\d]/g, '')) : null };
+      });
+
+      // 진입은 디버그 API 로 한다(로비에 StageSelect 직행 버튼이 없다). 중요한 건 **나오는 길**이다 —
+      // 나올 때 누르는 [뒤로] 는 유저가 실제로 누르는 그 버튼이고, 내비 스택이 비어 있어
+      // 폴백 분기(`scene.start('MainMenuScene')` 데이터 없음)를 탄다.
+      const entered = await gotoScene(page, 'StageSelectScene');
+      check(entered, 'StageSelectScene 진입');
+      if (entered) {
+        const goldBefore = await goldOf();
+        const stackEmpty = await safeEvaluate(page, async () => {
+          try {
+            const url = performance.getEntriesByType('resource').map((e) => e.name)
+              .filter((n) => n.includes('/src/systems/NavigationManager')).pop();
+            if (!url) return null;
+            const mod = await import(/* @vite-ignore */ url);
+            const nm = mod.default;
+            return { stack: (nm?.stack || []).map((x) => `${x.type}:${x.name || ''}`), canGoBack: nm?.canGoBack?.() ?? null };
+          } catch (e) { return { error: String(e).slice(0, 100) }; }
+        });
+        note(`내비 스택: ${JSON.stringify(stackEmpty)}`);
+
+        // 헤더의 [뒤로] 히트 영역은 라벨이 아니라 좌상단 좌표다(StageSelectScene.createHitArea).
+        const backLabel = await findByLabel(page, '뒤로', { sceneKeys: ['StageSelectScene'] })
+          || await findByLabel(page, '←', { sceneKeys: ['StageSelectScene'] });
+        if (backLabel) await tapWorld(page, backLabel.x, backLabel.y, 3000);
+        else await tapWorld(page, 84, 172, 3000);   // s(56), 헤더 중앙 — 히트 영역 144x90
+
+        const back = (await activeScenes(page)).includes('MainMenuScene');
+        check(back, '[뒤로] 탭으로 로비 복귀');
+        if (back) {
+          await page.waitForTimeout(2000);
+          const st = await modalOpen();
+          await shot(page, '18c-stageselect-back');
+          let after = goldBefore;
+          if (st.open) {
+            const recv = await findByLabel(page, '받기', { exact: true, minDepth: 900 });
+            if (recv) { await tapWorld(page, recv.x, recv.y, 1800); after = await goldOf(); }
+          }
+          note(`[뒤로] 폴백 결과: 모달 재노출=${st.open} 표시=${st.shownGold} 골드 ${goldBefore} → ${after}`);
+          check(!st.open, 'StageSelect [뒤로] 뒤 오프라인 보상 모달이 다시 뜨지 않는다',
+            JSON.stringify({ reopened: st.open, shownGold: st.shownGold, delta: after - goldBefore }));
+          if (st.open && after > goldBefore) {
+            issue('P1', 'StageSelect [뒤로] 폴백 분기로 오프라인 보상이 다시 지급된다 (유저가 누르는 버튼이다)', {
+              repro: 'StageSelectScene 진입(내비 스택 비어 있음) → 헤더 [뒤로] 탭 → 로비에서 모달 재노출 → [받기]',
+              suspect: 'src/scenes/StageSelectScene.js [뒤로] 의 `if (!navigationManager.goBack(this)) this.scene.start(\'MainMenuScene\')` — 데이터 없는 start / src/scenes/MainMenuScene.js init(data).showOfflineRewards',
+              evidence: JSON.stringify({ stack: stackEmpty, shownGold: st.shownGold, goldBefore, after }),
+            });
+          } else if (st.open) {
+            issue('P2', 'StageSelect [뒤로] 폴백 분기에서 오프라인 보상 모달이 다시 뜬다(지급은 없음)', {
+              repro: '위와 동일',
+              suspect: 'src/scenes/StageSelectScene.js [뒤로] 폴백, src/scenes/MainMenuScene.js init(data)',
+              evidence: JSON.stringify({ shownGold: st.shownGold, goldBefore, after }),
+            });
+          }
+        }
+      }
+      note('한계 — 이 블록은 폴백 분기의 결과만 확인한다. 유저가 "내비 스택이 빈 채로 StageSelect 에 있는" 상태에 닿는지는 별도 확인이 필요하다(미검증).');
+      currentScenario().consoleErrors = errors.slice(0, 30);
+    } finally { await ctx.close(); }
+  }
+}
+
+// ============================================================
 // 실행기
 // ============================================================
 
@@ -3176,6 +4661,8 @@ const SCENARIOS = [
   { id: 14, run: scenario14 },   // 회귀 확인 (14 + 14b)
   { id: 15, run: scenario15 },   // 이전 미검증 4건 재시도
   { id: 16, run: scenario16 },   // 표시된 보상 == 실지급 (팀 기준)
+  { id: 17, run: scenario17 },   // 3차 재검수 — 미검증 5건 재시도 + 장비 전 경로
+  { id: 18, run: scenario18 },   // 전환 정지 반복 회귀 + 장착 피커 잘림
 ];
 
 (async () => {

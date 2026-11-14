@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 다국어 지원 추가, 번역 파일 관리, 날짜/통화/복수형 처리,
   Android strings.xml 관리, RTL 레이아웃 지원, 번역 누락 탐지.
   예시: "다국어 지원 추가해줘", "번역 파일 만들어줘", "누락된 번역 찾아줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, Glob, Grep
 ---
 

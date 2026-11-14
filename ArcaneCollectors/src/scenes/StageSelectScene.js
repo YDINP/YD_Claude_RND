@@ -1448,6 +1448,12 @@ export class StageSelectScene extends Phaser.Scene {
     const isChapterFirstStage = typeof stageId === 'string' && stageId.endsWith('-1');
     const triggers = isChapterFirstStage ? ['chapter_enter', 'stage_enter'] : ['stage_enter'];
 
+    // 스테이지 선택 화면에서 막 누른 시점에 진행 중인 전환은 있을 수 없다. 이전 전환이
+    // 중간에 끊겨 isTransitioning이 잠긴 채로 남아 있었다면 여기서 선제적으로 풀어 준다
+    // (MainMenuScene.startOnboardingBattle()과 동일한 방어. 잠긴 채로 두면
+    // battleEntryTransition이 조용히 무시되어 전투가 시작되지 않는다).
+    transitionManager.reset?.();
+
     StoryManager.triggerSequence(triggers, {
       scene: this,
       stageId,

@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 시스템 프롬프트 작성, 프롬프트 품질 개선, Few-shot 예시 설계,
   Chain-of-Thought 적용, 프롬프트 A/B 테스트 설계, 에이전트 시스템 프롬프트 최적화.
   예시: "이 프롬프트 개선해줘", "시스템 프롬프트 짜줘", "Few-shot 예시 만들어줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, WebSearch, WebFetch
 ---
 

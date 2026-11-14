@@ -6,7 +6,7 @@ description: |
   네트워크 지연 분석, 배터리 소모 최적화, 번들 사이즈 축소.
   예시: "앱이 느려졌어 분석해줘", "메모리 누수 찾아줘", "렌더링 최적화해줘"
   ※ 실제 코드 수정은 `executor` 에이전트에 위임
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash
 ---
 

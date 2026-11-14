@@ -69,6 +69,18 @@ export const ROUND_FLOW_IDLE: RoundFlowState = { kind: 'idle' }
  */
 export const ROUND_POPUP_AUTO_CLOSE_MS = 10_000
 
+/**
+ * **뒤에 다른 화면이 줄 서 있는** 오버레이가 붙드는 시간(ms). 위 10초는 "지금 화면의 주인은
+ * 당신이고, 우리는 기다린다"는 약속이라 그 자리에 쓸 수 없다 — 프리스핀 진입 판은 오버레이가
+ * 닫히면 곧바로 진입 팝업이 다시 10초를 요구하고, 그 뒤로 커튼까지 이어져 한 판이 27~31초가
+ * 된다. 20초를 넘기면 "게임이 멈춘 것"으로 읽힌다는 것은 이 저장소가 두 번(여기 아래 winPresentationMode
+ * 주석, `winTiers.ts`의 BIG_WIN_HURRIED_HOLD_MS) 같은 결론으로 적어 둔 실측이다.
+ *
+ * 값이 `AUTO_SPIN_DELAY_MS`(store/game.ts)와 같은 1.2초인 것은 우연이 아니라 같은 뜻이기
+ * 때문이다 — "판과 판 사이의 한 호흡". 네 번째 숫자를 새로 만들지 말 것.
+ */
+export const ROUND_CHAINED_HOLD_MS = 1_200
+
 export type RoundFlowEvent =
   /** 릴·승리 연출이 다 끝났고 이번 판이 모드 경계를 넘었다 — 팝업부터 띄운다. */
   | { readonly type: 'ceremonyStarted'; readonly popup: RoundPopup; readonly to: CurtainTarget; readonly withCurtain: boolean }

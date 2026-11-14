@@ -6,7 +6,7 @@ description: |
   설계 결정 트레이드오프 심층 분석, 근본 원인이 불분명한 문제.
   예시: "왜 이 문제가 반복되는지 근본 원인 분석해줘", "이 설계 결정의 장단점 깊게 분석해줘",
   "여러 접근법 중 최적을 논리적으로 판단해줘"
-model: claude-opus-4-6
+model: claude-opus-5
 tools: Read, Glob, Grep, Bash, WebSearch
 ---
 

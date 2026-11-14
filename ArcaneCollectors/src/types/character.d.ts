@@ -110,11 +110,13 @@ export interface Character {
   voiceLines: VoiceLines;
 }
 
-/** 장비 슬롯 구조 (COMPAT-1.3) */
+/** 장비 슬롯 구조 (COMPAT-1.3). QA P1 후속: relic 슬롯이 타입에서도 누락돼 있었다 —
+ *  EquipmentSystem.SLOTS(weapon/armor/accessory/relic) 4종과 항상 맞춰야 한다. */
 export interface EquipmentSlots {
   weapon: string | null;
   armor: string | null;
   accessory: string | null;
+  relic: string | null;
 }
 
 /** 소유한 영웅 인스턴스 (세이브 데이터) */

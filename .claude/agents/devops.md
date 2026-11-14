@@ -6,7 +6,7 @@ description: |
   배포 파이프라인 구축, 환경 변수 관리, 클라우드 인프라 설정, IaC(Terraform/Ansible).
   예시: "GitHub Actions 워크플로우 만들어줘", "Docker 설정해줘", "배포 자동화해줘"
   ※ 빌드 컴파일 오류는 `build-fixer` 에이전트 사용
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

@@ -4,7 +4,7 @@ description: |
   executor→qa-tester 자동 반복 루프 오케스트레이터.
   다음 상황에서 사용: 구현 후 자동 QA 검증, QA 루프 실행, 코드 작성 후 자동 테스트/수정 반복.
   예시: "이 기능 구현하고 QA까지 자동으로 해줘", "QA 루프 실행해줘", "구현부터 테스트까지 자동"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Task
 ---
 

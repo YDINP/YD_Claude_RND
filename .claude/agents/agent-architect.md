@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 새 에이전트 설계/생성, 에이전트 시스템 프롬프트 작성,
   모델/툴 선택, 에이전트 추가 요청.
   예시: "테스트 전문 에이전트 만들어줘", "API 통합 에이전트 설계해줘", "새 에이전트 추가"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Glob, Grep, Bash
 ---
 
@@ -51,8 +51,8 @@ tools: Read, Write, Glob, Grep, Bash
 | 모델 | 사용 기준 |
 |------|----------|
 | `claude-haiku-4-5-20251001` | 단순 반복, 포맷 변환, 빠른 룩업 |
-| `claude-sonnet-4-6` | 표준 개발, 분석, 코드 생성 **(기본값)** |
-| `claude-opus-4-6` | 복잡한 추론, 아키텍처 결정, 심층 분석 |
+| `claude-sonnet-5` | 표준 개발, 분석, 코드 생성 **(기본값)** |
+| `claude-opus-5` | 복잡한 추론, 아키텍처 결정, 심층 분석 |
 
 **툴 선택 기준 (최소 권한 원칙):**
 
@@ -126,7 +126,7 @@ tools: {최소 필요 툴}
 
 **설계 결정:**
 - 역할: 느린 쿼리 분석 및 최적화 제안
-- 모델: `claude-sonnet-4-6` (분석 + 코드 생성)
+- 모델: `claude-sonnet-5` (분석 + 코드 생성)
 - 툴: `Read, Glob, Grep, Bash`
 
 **생성 파일** `.claude/agents/sql-optimizer.md`:
@@ -137,7 +137,7 @@ description: |
   SQL 쿼리 성능 최적화 전문가.
   다음 상황에서 사용: 느린 쿼리 최적화, 실행 계획 분석, 인덱스 전략.
   예시: "이 쿼리 왜 느려?", "JOIN 최적화해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash
 ---
 ...
@@ -149,7 +149,7 @@ tools: Read, Glob, Grep, Bash
   "name": "sql-optimizer",
   "tier": "sub",
   "file": "sql-optimizer.md",
-  "model": "claude-sonnet-4-6",
+  "model": "claude-sonnet-5",
   "description": "SQL 쿼리 성능 분석 및 최적화",
   "capabilities": ["query-optimization", "index-strategy", "execution-plan"],
   "triggers": ["쿼리 최적화", "SQL 느려", "인덱스 추가"]

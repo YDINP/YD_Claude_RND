@@ -417,6 +417,33 @@ describe('승리 연출 순환·스킵', () => {
     expect(source).toContain('this.winSkip = null')
   })
 
+  // 결함: 순환을 끊는 자리가 clearWins뿐이었고 그건 다음 spinTo 안에서만 불렸다 — 허브가
+  // 서버 응답을 기다리는 50~300ms 동안 지난 판의 winCycle/winTotal이 계속 나갔다. 그렇다고
+  // 요청 시점에 clearWins를 부르면 릴 위 화면까지 그 시간 내내 비어 버린다.
+  it('«그만 말하기»와 «지우기»가 갈라져 있다 — stopWinCycle은 화면을 건드리지 않는다', () => {
+    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+
+    const stopAt = source.indexOf('stopWinCycle(): void {')
+    const clearAt = source.indexOf('clearWins(): void {', stopAt)
+    expect(stopAt).toBeGreaterThan(-1)
+    expect(clearAt).toBeGreaterThan(stopAt)
+
+    // 순환을 끊는 것은 취소 토큰과 손잡이뿐이다.
+    const stopBody = source.slice(stopAt, clearAt)
+    expect(stopBody).toContain('this.winToken += 1')
+    expect(stopBody).toContain('this.winSkip = null')
+    // 화면을 만지는 것이 하나라도 섞이면 요청 왕복 내내 릴 위가 비어 버린다.
+    for (const screenTouch of ['winGraphics', 'stopSymbolFx', 'clearTimers', 'drawMode', 'stopCoins']) {
+      expect(stopBody).not.toContain(screenTouch)
+    }
+
+    // clearWins는 그 위에 «지우기»를 얹는다 — 토큰을 올리는 자리가 둘로 갈라지면 안 된다.
+    const clearBody = source.slice(clearAt, source.indexOf('private wait(', clearAt))
+    expect(clearBody).toContain('this.stopWinCycle()')
+    expect(clearBody).toContain('this.winGraphics.clear()')
+    expect(clearBody).not.toContain('this.winToken += 1')
+  })
+
   it('타이머를 걷어 갈 때 기다리던 쪽을 깨운다', () => {
     // 깨우지 않으면 순환 한 바퀴가 매달린 약속에 붙잡혀 그대로 남는다.
     const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')

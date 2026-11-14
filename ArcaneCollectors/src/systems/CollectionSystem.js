@@ -610,7 +610,8 @@ export class CollectionSystem {
       stars: rarityStars[route.resultRarity] || 3,
       skillLevels: [1, 1, 1],
       equipped: null,
-      equipment: { weapon: null, armor: null, accessory: null },
+      // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
+      equipment: { weapon: null, armor: null, accessory: null, relic: null },
       constellation: 0,
       acquiredAt: now,
       isAscended: true,

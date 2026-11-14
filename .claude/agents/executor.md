@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 기능 구현, 버그 수정, 리팩토링, 파일 생성/수정.
   예시: "이 기능 구현해줘", "버그 고쳐줘", "이 파일 리팩토링해줘"
   주의: 서브에이전트 생성 불가 (단독 실행 전용)
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

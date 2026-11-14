@@ -28,10 +28,13 @@
   flex-shrink: 0;
 }
 
+/* 44px 접근성 감사(LOW-4) — 예전엔 32×32였다. 제목(.hub-game-screen__title)이 flex: 1 +
+   ellipsis라 여유를 스스로 내주므로(360px에서도 버튼이 밀려나거나 줄바꿈되지 않고 제목만
+   조금 더 잘린다) 헤더가 찌그러지지 않으면서 키울 수 있다. */
 .hub-game-screen__back,
 .hub-game-screen__icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -292,6 +295,13 @@
   font-size: var(--hub-font-small);
   font-weight: 600;
   color: var(--hub-text-sub);
+}
+
+/* 애니메이션은 모디파이어로 뺀다(기본 클래스에 걸지 않는다) — Modal/RoundPopup/WinCelebration과
+   같은 두 겹짜리 판단: WinStrip.tsx가 앱 설정(settings.reducedMotion)일 때 이 클래스 자체를
+   안 붙이고, 아래 미디어 쿼리가 OS의 prefers-reduced-motion을 한 번 더 존중한다(둘 중 하나만
+   맞아도 꺼진다). */
+.hub-win-strip__line-label--animate {
   animation: hub-win-strip-line-pop 260ms ease-out;
 }
 
@@ -323,9 +333,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hub-win-strip__line-label {
+  .hub-win-strip__line-label--animate {
     animation: none;
   }
+}
+
+/* 스크린리더 전용 — 정산 안내(§접근성 감사 HIGH-1)가 담기는 영역. WinCelebration.css의
+   .hub-win__live와 같은 시각적 숨김 처리(위치만 잡아 화면 밖으로 보내지 않는다 — display:none은
+   VoiceOver/TalkBack이 아예 무시한다). */
+.hub-win-strip__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* 더블업 세션 중(Wave 1) — 한 번 나타나면 사용자가 받기/더블을 누르거나 만료될 때까지 고정이다
@@ -517,9 +542,12 @@
   overflow: hidden;
 }
 
+/* 44px 접근성 감사(LOW-4) — 예전엔 40px(≤400px에서는 36px)였다. flex: 1로 폭을 셋이 나눠
+   가지므로 높이만 키우는 이 변경은 360px 폭에서도 가로 레이아웃에 영향이 없다(세 칸이 줄바꿈되거나
+   좁아지지 않는다) — 그래서 좁은 화면 전용 축소값도 없앤다(아래 미디어 쿼리 참고). */
 .hub-game-screen__speed-seg-btn {
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   background: none;
   color: var(--hub-text-sub);
   font-size: var(--hub-font-sub);
@@ -596,10 +624,6 @@
   .hub-game-screen__spin {
     min-height: 46px;
     font-size: 15px;
-  }
-
-  .hub-game-screen__speed-seg-btn {
-    min-height: 36px;
   }
 
   .hub-game-screen__auto-btn {

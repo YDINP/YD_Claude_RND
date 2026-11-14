@@ -30,6 +30,7 @@ import {
   WIN_HIGHLIGHT_STROKE_PX,
   WIN_LINE_ALPHA,
   WIN_LINE_STROKE_PX,
+  TRANSITION_CLIP_WARM_TIMEOUT_MS,
 } from '../constants.js'
 import {
   dedupePositions,
@@ -158,6 +159,12 @@ import {
   SheetSpritePool,
   type LoadedSheet,
 } from './sheetFx.js'
+import {
+  packAssetUrls,
+  packTextureSnapshot,
+  releasePackTextures,
+  retainPackTextures,
+} from './packTextures.js'
 import { ParticlePool } from './particles.js'
 import type { RendererDiagnostics } from '../diagnostics.js'
 import { planReelBackdrop } from '../backdrop.js'
@@ -276,6 +283,12 @@ class PixiRenderer implements RendererCore {
    * "이 게임 화면이 살아 있는 동안"과 맞는다 — 만든 쪽이 아니라 쓰는 쪽을 따르는 규칙이다.
    */
   private readonly retainedSheets = new Set<string>()
+  /**
+   * 이 화면이 붙잡고 있는 게임팩 이미지의 열쇠. 붙잡은 곳은 `createPixiRendererCore`이고
+   * (불러오기 **전**이어야 한다) 놓는 곳은 `destroy()`다. 같은 팩을 보는 화면이 더 없을 때만
+   * 전역 캐시로 돌아간다.
+   */
+  private readonly packKey: string | null
   /** 스캐터 링. 맥동하느라 alpha가 계속 움직여서 다른 것과 섞으면 안 된다. */
   private readonly featureGraphics = new Graphics()
   /** 프리스핀 창 테두리. 전환이 이 층의 alpha를 0에서 끌어올린다. */
@@ -349,6 +362,10 @@ class PixiRenderer implements RendererCore {
   private clipShowing = false
   /** 아직 준비되지 않은 클립을 기다리는 중이면 그 대기를 취소하는 손잡이. */
   private cancelTransitionClipWait: (() => void) | null = null
+  /** 클립 미리 받기를 이미 예약했는지. 스핀마다 다시 걸지 않기 위한 표식이다. */
+  private clipWarmScheduled = false
+  /** 예약해 둔 미리 받기를 취소하는 손잡이. 첫 스핀 직후에 화면을 떠나면 한 바이트도 받지 않는다. */
+  private cancelClipWarm: (() => void) | null = null
   /**
    * 전환 클립 진단 로거. 이 화면(게임 하나)의 수명 동안 같은 사유는 한 번만 남긴다 —
    * "이 방향엔 클립이 없다" 같은 예상된 폴백이 전환마다 찍히면 콘솔이 잠긴다.
@@ -396,8 +413,10 @@ class PixiRenderer implements RendererCore {
     frameTexture: Texture | null,
     freeSpinsTexture: Texture | null,
     ownedTextures: TextureRegistry,
+    packKey: string | null,
   ) {
     this.options = options
+    this.packKey = packKey
     // 시트 스프라이트 상한은 격자에서 유도한다. 한 심볼이 동시에 점등될 수 있는 최대가
     // 곧 격자 칸 수다 — 4x5 팩 실측 최대 20이 정확히 이 값이었다(2백만 스핀).
     this.sheetSprites = new SheetSpritePool(options.math.reels * options.math.rows)
@@ -467,13 +486,49 @@ class PixiRenderer implements RendererCore {
     this.reelsLayer.addChild(this.cascadeLayer)
     this.applyLayout()
     this.observeResize()
-    this.warmTransitionClips()
   }
 
   /**
-   * 테마가 건 전환 클립을 **미리** 받아 둔다. 전환이 시작된 뒤에 받기 시작하면 덮기 구간
-   * 안에 첫 프레임이 오지 못한다(실측 320ms+ vs 덮기 380ms, 그마저 메인 스레드가 한가할 때).
-   * 모션 축소에서는 어차피 틀지 않으므로 대역폭도 쓰지 않는다.
+   * 클립 미리 받기를 **첫 스핀 뒤 한가한 틈**으로 미룬다.
+   *
+   * 미리 받는 것 자체는 옳다 — 전환이 시작된 뒤에 받으면 덮기 구간 안에 첫 프레임이 오지
+   * 못한다(실측 320ms+ vs 덮기 380ms). 틀린 것은 **시점**이었다. 생성자에서 받으면 화면을
+   * 열자마자 421~1093KB가 내려오는데, 실측 RTP로 첫 전환까지는 43.9~93.2스핀(2분42초~4분21초)이
+   * 걸린다. 정작 9초 뒤 필요한 시트 아틀라스와 같은 회선을 두고 다투고, 그 다툼이 시트를
+   * 제때 못 붙잡게 만드는 원인이기도 했다.
+   *
+   * 첫 스핀을 신호로 삼고 실행은 유휴 콜백에 맡긴다. 유휴가 끝내 오지 않아도
+   * `TRANSITION_CLIP_WARM_TIMEOUT_MS` 안에는 시작한다 — 2분 넘는 여유에서 몇 초는 공짜다.
+   *
+   * **"스캐터 두 개가 보이면"으로 당기지 않는다.** 세 번째 스캐터가 떨어지는 바로 그 스핀에서
+   * 전환이 시작되므로, 그 방식은 승리 연출 몇 초 안에 1MB를 밀어 넣게 된다 — 클립이 접혀
+   * 단색 커튼만 남던 그 실패 그대로다.
+   */
+  private scheduleTransitionClipWarm(): void {
+    if (this.clipWarmScheduled || this.destroyed) return
+    // 모션 축소에서는 어차피 틀지 않으므로 예약조차 하지 않는다. 대역폭도 쓰지 않는다.
+    if (this.options.reducedMotion) return
+    this.clipWarmScheduled = true
+
+    const warm = (): void => {
+      this.cancelClipWarm = null
+      if (this.destroyed) return
+      this.warmTransitionClips()
+    }
+
+    const idle = globalThis.requestIdleCallback
+    if (typeof idle === 'function') {
+      const handle = idle(warm, { timeout: TRANSITION_CLIP_WARM_TIMEOUT_MS })
+      this.cancelClipWarm = () => globalThis.cancelIdleCallback?.(handle)
+      return
+    }
+    // 사파리/구형 웹뷰에는 유휴 콜백이 없다. 상한 시간 그대로 타이머로 대신한다.
+    const timer = setTimeout(warm, TRANSITION_CLIP_WARM_TIMEOUT_MS)
+    this.cancelClipWarm = () => clearTimeout(timer)
+  }
+
+  /**
+   * 테마가 건 전환 클립을 실제로 받아 둔다. 호출 시점은 `scheduleTransitionClipWarm`이 정한다.
    */
   private warmTransitionClips(): void {
     if (this.options.reducedMotion) return
@@ -721,6 +776,9 @@ class PixiRenderer implements RendererCore {
   // ------------------------------------------------------------------ 스핀
 
   spinTo(stops: number[], opts?: SpinToOptions): SpinHandle {
+    // 첫 스핀이 걸린 순간에 클립 미리 받기를 예약한다. 생성자에서 받지 않는 이유는
+    // `scheduleTransitionClipWarm`에 적어 두었다.
+    this.scheduleTransitionClipWarm()
     const done = this.runSpin(stops, opts)
     void done.catch(() => undefined)
     // runSpin은 첫 await 전에 토큰을 올린다. 그래서 여기서 이 스핀의 토큰을 붙잡을 수 있다.
@@ -1656,9 +1714,21 @@ class PixiRenderer implements RendererCore {
     this.winGraphics.stroke({ width: WIN_HIGHLIGHT_STROKE_PX, color: brass, alpha: 0.95, join: 'round' })
   }
 
-  clearWins(): void {
+  /**
+   * 순환만 멈춘다 — 화면은 그대로 둔다.
+   *
+   * 취소 토큰을 올리는 것이 곧 "이 라운드 얘기는 여기서 끝"이라는 뜻이다(`showWins`의 cancelled
+   * 참고). 지금 그려져 있는 하이라이트·코인·모드는 손대지 않으므로, 서버 응답을 기다리는 동안
+   * (릴이 아직 돌지도 않은 구간) 불러도 화면이 통째로 비지 않는다. 허브가 새 라운드를 «선언하는»
+   * 순간에 부르는 것이 바로 이쪽이고, 실제로 «걷어내는» 것은 아래 `clearWins()`다.
+   */
+  stopWinCycle(): void {
     this.winToken += 1
     this.winSkip = null
+  }
+
+  clearWins(): void {
+    this.stopWinCycle()
     this.winGraphics.clear()
     this.stopSymbolFx()
     this.clearTimers()
@@ -2064,6 +2134,9 @@ class PixiRenderer implements RendererCore {
     this.destroyed = true
     // 대기 중인 쪽이 영영 매달리지 않도록 전환의 끝을 먼저 알린다.
     this.finishModeTransition()
+    // 아직 시작도 안 한 미리 받기를 먼저 접는다. 이미 받는 중이면 아래 dispose가 끊는다.
+    this.cancelClipWarm?.()
+    this.cancelClipWarm = null
     // 미리 받아 둔 클립까지 여기서 전부 반납한다 — 텍스처(540x960x4 ≈ 2MB)와 디코더.
     this.disposeTransitionClips()
     this.clearWins()
@@ -2091,6 +2164,9 @@ class PixiRenderer implements RendererCore {
     // 마지막 사용자였다면 축출 후보가 되어 상한을 넘는 순간 아틀라스까지 돌아간다.
     for (const url of this.retainedSheets) releaseSheet(url)
     this.retainedSheets.clear()
+    // 팩 이미지(심볼·배경·베젤)도 여기서 놓는다. 같은 팩을 보는 화면이 더 없으면 그 순간
+    // 전역 캐시에서 내려간다 — 이 한 줄이 없어서 팩 하나당 18~28MB가 영구 상주했다.
+    releasePackTextures(this.packKey)
   }
 
   // ------------------------------------------------------------------ 진단
@@ -2118,6 +2194,7 @@ class PixiRenderer implements RendererCore {
       textures: {
         owned: this.ownedTextures.snapshot,
         sheets: sheetTextureSnapshot(),
+        pack: packTextureSnapshot(),
       },
     }
   }
@@ -2144,22 +2221,34 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
 
   const symbolIds = options.math.symbols.map((symbol) => symbol.id)
   const ownedTextures = new TextureRegistry()
-  const [textures, backgroundTexture, frameTexture, freeSpinsTexture] = await Promise.all([
-    loadSymbolTextures(options.theme, symbolIds, ownedTextures),
-    loadBackgroundTexture(options.theme),
-    loadFrameTexture(options.theme.frame, ownedTextures),
-    loadImageTexture(options.theme.backgroundFreeSpins),
-  ])
-  const coinTexture = createCoinTexture(options.theme, ownedTextures)
+  // 팩 이미지를 **불러오기 전에** 장부에 올린다. 순서가 반대면, 같은 팩을 동시에 여는 두
+  // 화면 중 먼저 끝난 쪽이 참조를 0으로 떨구면서 아직 받고 있는 쪽의 캐시를 걷어 간다.
+  const packKey = retainPackTextures(packAssetUrls(options.theme, symbolIds))
+  try {
+    const [textures, backgroundTexture, frameTexture, freeSpinsTexture] = await Promise.all([
+      loadSymbolTextures(options.theme, symbolIds, ownedTextures),
+      loadBackgroundTexture(options.theme),
+      loadFrameTexture(options.theme.frame, ownedTextures),
+      loadImageTexture(options.theme.backgroundFreeSpins),
+    ])
+    const coinTexture = createCoinTexture(options.theme, ownedTextures)
 
-  return new PixiRenderer(
-    options,
-    app,
-    textures,
-    coinTexture,
-    backgroundTexture,
-    frameTexture,
-    freeSpinsTexture,
-    ownedTextures,
-  )
+    return new PixiRenderer(
+      options,
+      app,
+      textures,
+      coinTexture,
+      backgroundTexture,
+      frameTexture,
+      freeSpinsTexture,
+      ownedTextures,
+      packKey,
+    )
+  } catch (error) {
+    // 렌더러를 못 만들면 놓을 주인도 없다. 붙잡은 것을 여기서 되돌리지 않으면 그대로 영구 상주다.
+    releasePackTextures(packKey)
+    ownedTextures.destroyAll()
+    app.destroy({ removeView: true }, { children: true })
+    throw error
+  }
 }

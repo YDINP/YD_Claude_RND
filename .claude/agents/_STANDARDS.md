@@ -50,7 +50,7 @@ description: |                 # 필수. 멀티라인 권장
   [한 줄 목적 요약].
   다음 상황에서 사용: [트리거 조건들].
   예시: "[사용 예시 1]", "[사용 예시 2]"
-model: claude-sonnet-4-6       # 필수. 아래 모델 선택 기준 참조
+model: claude-sonnet-5       # 필수. 아래 모델 선택 기준 참조
 tools: Read, Write, Bash       # 필수. 최소 권한 원칙 적용
 ---
 ```
@@ -60,8 +60,8 @@ tools: Read, Write, Bash       # 필수. 최소 권한 원칙 적용
 | 모델 | 사용 기준 |
 |------|----------|
 | `claude-haiku-4-5-20251001` | 단순 반복, 포맷 변환, 빠른 룩업 |
-| `claude-sonnet-4-6` | 표준 개발, 분석, 코드 생성 **(기본값)** |
-| `claude-opus-4-6` | 복잡한 추론, 아키텍처 결정, 심층 분석 |
+| `claude-sonnet-5` | 표준 개발, 분석, 코드 생성 **(기본값)** |
+| `claude-opus-5` | 복잡한 추론, 아키텍처 결정, 심층 분석 |
 
 ### 툴 선택 기준 (최소 권한 원칙)
 
@@ -105,7 +105,7 @@ tools: Read, Write, Bash       # 필수. 최소 권한 원칙 적용
   "name": "agent-name",
   "tier": "sub",
   "file": "agent-name.md",
-  "model": "claude-sonnet-4-6",
+  "model": "claude-sonnet-5",
   "description": "한 줄 설명 (50자 이내)",
   "capabilities": ["capability-1", "capability-2"],
   "triggers": ["트리거 문구 1", "트리거 문구 2"]

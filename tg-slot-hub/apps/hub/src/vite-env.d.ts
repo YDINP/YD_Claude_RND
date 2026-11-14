@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_DEV_MOCK_TMA?: string
   /** 설정 시트에 표시할 앱 버전. vite.config.ts가 package.json 버전으로 채워준다 (없으면 'dev') */
   readonly VITE_APP_VERSION?: string
+  /** 'true'면 서버 없이 같은 탭 안에서 API를 돌리는 브라우저 체험판 빌드 (`--mode demo`) */
+  readonly VITE_BROWSER_DEMO?: string
 }
 
 interface ImportMeta {

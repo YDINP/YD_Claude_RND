@@ -6,7 +6,7 @@ description: |
   API 버전 전략, 요청/응답 스키마 정의, API 보안 설계.
   예시: "이 기능 API 설계해줘", "OpenAPI 스펙 작성해줘", "API 버전 전략 잡아줘"
   ※ 실제 API 구현은 `executor` 에이전트에 위임
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, Glob, Grep, WebSearch
 ---
 

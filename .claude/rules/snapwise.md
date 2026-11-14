@@ -29,10 +29,16 @@ paths:
 title: string          # 카드 제목 (공개용)
 category: string       # science|psychology|people|history|life|business|culture
 description: string    # 카드 설명 (SEO용)
+pubDate: string        # 생성 당일 날짜 — date +%Y-%m-%d 실행값 (하드코딩 금지)
 steps:                 # 최소 6개, 최대 15개
   - type: StepType
     content: string
 ```
+
+## 날짜 규칙
+- `pubDate`는 카드 생성 시점의 **실제 오늘 날짜**를 사용
+- 에이전트는 Bash로 `date +%Y-%m-%d` 실행 후 삽입 (고정값 하드코딩 금지)
+- 자동 생성(card-batch-runner)도 동일하게 적용
 
 ## 카테고리 & 파일 경로
 - 7개 카테고리: science, psychology, people, history, life, business, culture

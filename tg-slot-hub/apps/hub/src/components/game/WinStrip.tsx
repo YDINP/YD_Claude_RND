@@ -98,6 +98,22 @@ interface WinStripProps {
    * 남겨 높이만 유지한다(진입/이탈 시 아래 금액·버튼 줄이 들썩이지 않도록).
    */
   freeSpinsCounter?: string | null
+  /**
+   * 앱 설정의 모션 축소 플래그(store/settings.ts) — Modal/RoundPopup/WinCelebration과 같은 두
+   * 겹짜리 판단(OS의 prefers-reduced-motion + 이 값) 중 앱 설정 쪽. 이 컴포넌트는 store를 직접
+   * 구독하지 않는 순수 표시 컴포넌트라(도큐블록 참고) GameScreen이 읽어서 내려준다. true면 라인
+   * 문구가 순환마다 다시 트는 페이드/팝(hub-win-strip-line-pop)을 끈다 — OS 설정과 무관하게
+   * 앱 안에서 모션 축소를 켠 사용자에게도 이 애니메이션이 순환 내내 반복 재생되면 안 된다.
+   */
+  reducedMotion?: boolean
+  /**
+   * 스크린리더 전용 정산 안내(§접근성 감사 HIGH-1) — "당첨 없음" 또는 최종 금액을 라운드가
+   * 정산될 때 한 번만 실어 준다. GameScreen이 winCelebration/roundPopup을 이미 알고 있으므로
+   * 중복 안내 억제 판단도 그쪽에서 끝내고, 이 컴포넌트는 완성된 문구(또는 빈 문자열)를 그대로
+   * aria-live 영역에 얹기만 한다 — 순환 연출 중 값이 바뀌지 않으므로 사이클마다 다시 읽히지
+   * 않는다.
+   */
+  settleAnnouncement?: string
 }
 
 export function WinStrip({
@@ -107,8 +123,15 @@ export function WinStrip({
   gambleActions,
   lineLabel,
   freeSpinsCounter,
+  reducedMotion,
+  settleAnnouncement = '',
 }: WinStripProps): ReactNode {
   const formattedAmount = amount.toLocaleString('en-US')
+  // 순환마다 다시 트는 페이드/팝은 모션 축소 설정에서는 끈다(위 프롭 docblock 참고) — 아이콘/
+  // 텍스트 두 변형 모두 같은 클래스를 쓴다.
+  const lineLabelClassName = reducedMotion
+    ? 'hub-win-strip__line-label'
+    : 'hub-win-strip__line-label hub-win-strip__line-label--animate'
 
   // 라벨과 한 블록으로 읽히도록 라벨 바로 아래, 금액 위에 둔다. 프리스핀이 아니면 내용 없이
   // 높이만 유지해(min-height) 진입/이탈 때 금액·버튼 줄이 튀지 않게 한다.
@@ -132,7 +155,7 @@ export function WinStrip({
     <div className="hub-win-strip__line-row">
       {lineLabel &&
         (lineLabel.icons ? (
-          <span key={lineLabel.key} className="hub-win-strip__line-label">
+          <span key={lineLabel.key} className={lineLabelClassName}>
             <span className="hub-win-strip__line-icons" aria-label={lineLabel.icons.ariaLabel}>
               {lineLabel.icons.srcs.map((src, i) => (
                 <img key={i} className="hub-win-strip__line-icon" src={src} alt="" aria-hidden="true" />
@@ -141,7 +164,7 @@ export function WinStrip({
             {lineLabel.icons.suffix && <span> · {lineLabel.icons.suffix}</span>}
           </span>
         ) : (
-          <span key={lineLabel.key} className="hub-win-strip__line-label">
+          <span key={lineLabel.key} className={lineLabelClassName}>
             {lineLabel.text}
           </span>
         ))}
@@ -180,6 +203,15 @@ export function WinStrip({
     </div>
   )
 
+  // 스크린리더 전용 정산 안내(§접근성 감사 HIGH-1) — GameScreen이 억제 판단까지 끝내고 완성된
+  // 문구(또는 빈 문자열)를 그대로 넘긴다. aria-atomic으로 영역 전체를 한 문장으로 읽게 한다 —
+  // 안 그러면 브라우저에 따라 텍스트가 부분적으로만 갱신됐다고 보고 일부만 읽을 수 있다.
+  const liveRegion = (
+    <span className="hub-win-strip__live" aria-live="polite" aria-atomic="true">
+      {settleAnnouncement}
+    </span>
+  )
+
   if (gambleActions) {
     return (
       <div className="hub-win-strip hub-win-strip--gamble">
@@ -188,6 +220,7 @@ export function WinStrip({
         <span className="hub-win-strip__amount">{formattedAmount}</span>
         {lineRow}
         {gambleActionsRow}
+        {liveRegion}
       </div>
     )
   }
@@ -205,6 +238,7 @@ export function WinStrip({
       {freeSpinsRow}
       <span className="hub-win-strip__amount">{formattedAmount}</span>
       {lineRow}
+      {liveRegion}
     </div>
   )
 }

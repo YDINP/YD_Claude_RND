@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: PR 리뷰, 코드 품질 검사, 보안 취약점 스캔,
   작업 계획 검증, 구현이 요구사항을 충족하는지 확인.
   예시: "이 코드 리뷰해줘", "보안 취약점 있어?", "작업 계획 검토해줘"
-model: claude-opus-4-6
+model: claude-opus-5
 tools: Read, Glob, Grep, Bash
 ---
 

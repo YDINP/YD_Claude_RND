@@ -6,7 +6,7 @@ description: |
   시장 조사, 경쟁사 분석, 다중 소스 데이터 수집 및 정리.
   예시: "이 기술 최신 논문 찾아줘", "경쟁 서비스 분석해줘", "이 주제 웹에서 조사해줘"
   ※ 개발 문서/API 조사는 `researcher` 에이전트 사용
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: WebSearch, WebFetch, Write
 ---
 

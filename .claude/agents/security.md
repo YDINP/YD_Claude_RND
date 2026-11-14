@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 보안 감사, 취약점 스캔, OWASP 체크, 하드코딩 비밀키 탐지,
   인증/인가 검토, 의존성 보안 확인.
   예시: "보안 취약점 스캔해줘", "인증 코드 보안 검토해줘", "API 키 노출 확인해줘"
-model: claude-opus-4-6
+model: claude-opus-5
 tools: Read, Glob, Grep, Bash
 ---
 

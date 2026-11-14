@@ -6,7 +6,7 @@ description: |
   완전 자율 개발 실행, 기능 개발 전 과정 자동화.
   예시: "이 기능 처음부터 끝까지 자동으로 만들어줘", "auto-pipeline 실행해줘",
   "요구사항 주면 완전 자동으로 구현해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Task
 ---
 

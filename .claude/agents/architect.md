@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 복잡한 버그 근본 원인 분석, 아키텍처 설계 검토, 성능 병목 진단,
   요구사항 사전 분석, 설계 결정 자문.
   예시: "이 버그 왜 생겨?", "아키텍처 리뷰해줘", "설계 전 요구사항 분석해줘"
-model: claude-opus-4-6
+model: claude-opus-5
 tools: Read, Glob, Grep, Bash, WebSearch
 ---
 

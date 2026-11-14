@@ -6,7 +6,7 @@ description: |
   주제 목록을 받아 병렬로 card-scenario 위임 + mdx-validator 검증.
   예시: "psychology 카드 5개 만들어줘", "이 주제들로 카드 일괄 생성해줘",
   "science 카테고리 카드 3개 배치 생성", "카드 대량 생산해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Glob, Grep, Bash, Task
 ---
 

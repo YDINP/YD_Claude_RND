@@ -105,6 +105,17 @@ export class MainMenuScene extends Phaser.Scene {
     this.activePopupKey = null;
     // 빈 화면 방지: shutdown()이 호출되지 않는 비정상 경로 대비
     this._uiCreated = false;
+
+    // P0 수정(2026-09-07): Phaser는 `scene.start(key)`를 data 없이 호출하면
+    // `settings.data`를 지우지 않고 직전 값을 그대로 들고 있는다
+    // (Systems.start: `if (data) settings.data = data;` — data가 falsy면 그냥 유지).
+    // 그래서 위에서 읽은 일회성 플래그(showOfflineRewards/bossVictory/bossDefeat/
+    // openPopup)를 여기서 비우지 않으면, 이후 아무나 data 없이
+    // `scene.start('MainMenuScene')`만 호출해도(뒤로가기, 파티 미해석 가드 등 정상
+    // 분기 포함) 오프라인 보상이 재지급되고 보스전 승리로 스테이지가 또 진행된다.
+    // 이미 instance 프로퍼티로 복사했으니 원본은 즉시 비운다 — 다음 재시작부터는
+    // 명시적으로 data를 넘기지 않는 한 아무 것도 되살아나지 않는다.
+    this.sys.settings.data = null;
   }
 
   create() {
@@ -188,7 +199,11 @@ export class MainMenuScene extends Phaser.Scene {
         ...this.showOfflineRewards,
         items: dpsRewards.items || [],
         progressGained: dpsRewards.progressGained || 0,
-        bossReady: dpsRewards.bossReady || false
+        bossReady: dpsRewards.bossReady || false,
+        // P0 수정(2026-09-07): "받기" 클릭 시점에 이 값과 세이브의 현재 lastOnline을
+        // 대조해 이미 수령된 건지 판정한다(claimOfflineRewardsSafely 참고). 씬 재시작
+        // 경로가 아니라 지급 그 자체를 멱등으로 만드는 마지막 방어선이다.
+        claimAnchor: fullSaveData?.lastOnline ?? null
       };
       // 진행도 즉시 저장
       this.idleSystem.saveProgress();
@@ -487,7 +502,8 @@ export class MainMenuScene extends Phaser.Scene {
       exp: rewards?.exp ?? 0,
       progressGained: rewards?.progressGained ?? 0,
       bossReady: rewards?.bossReady ?? false,
-      items: rewards?.items || []
+      items: rewards?.items || [],
+      claimAnchor: rewards?.claimAnchor ?? null
     };
 
     const contentContainer = this.add.container(0, 0);
@@ -552,6 +568,23 @@ export class MainMenuScene extends Phaser.Scene {
         {
           text: '받기',
           onClick: () => {
+            // P0 수정(2026-09-07): 화면 표시(safeRewards)가 "여전히 유효한 미수령 건"인지
+            // 세이브의 현재 lastOnline과 대조해 확인한다. Phaser는 scene.start(key)를
+            // data 없이 호출하면 settings.data(=showOfflineRewards)를 지우지 않고 재사용하는데,
+            // init()에서 즉시 비우도록 고쳤어도 그 방어를 우회하는 경로가 또 생길 수 있다.
+            // claimAnchor는 이 보상을 계산한 시점의 lastOnline 스냅샷이다 — 지급은 항상
+            // SaveManager.save()를 거치고, save()는 매번 lastOnline을 "지금"으로 되돌리므로
+            // 한 번이라도 지급된 뒤에는 claimAnchor와 절대 다시 일치할 수 없다. 즉 이 비교가
+            // "씬 파라미터가 아니라 세이브에 남는 사실"에 기대는 멱등성 검사다.
+            const freshData = SaveManager.load();
+            const alreadyClaimed = safeRewards.claimAnchor != null && freshData?.lastOnline !== safeRewards.claimAnchor;
+            if (alreadyClaimed) {
+              this.registry.remove('pendingOfflineRewards');
+              this.showOfflineRewards = null;
+              this.showToast('이미 수령한 보상입니다');
+              return;
+            }
+
             // P1 수정(2026-09-05): SaveManager.claimOfflineRewards()는 lastOnline 기준으로
             // 보상을 다시 계산한다. 그런데 이 화면을 띄우기 전 idleSystem.saveProgress()가
             // SaveManager.save()를 호출해 lastOnline이 "지금"으로 갱신돼 있어(모든 save()가
@@ -562,7 +595,7 @@ export class MainMenuScene extends Phaser.Scene {
             const data = SaveManager.load();
             data.player.exp = (data.player.exp || 0) + safeRewards.exp;
             data.lastLogoutTime = Date.now(); // 오프라인 보상 중복 지급 방지
-            SaveManager.save(data);
+            SaveManager.save(data); // lastOnline이 "지금"으로 갱신되어 claimAnchor를 영구히 무효화한다
             safeRewards.items.forEach((item) => {
               SaveManager.addToInventory({ itemId: item.id, name: item.name, type: item.type, stackable: true, count: 1 });
             });

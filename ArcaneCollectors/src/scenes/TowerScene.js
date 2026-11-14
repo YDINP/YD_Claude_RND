@@ -402,6 +402,11 @@ export class TowerScene extends Phaser.Scene {
     const floor = this.progress.currentFloor;
     const stage = TowerSystem.buildStageForFloor(floor, this.currentFloorInfo);
 
+    // 타워 화면에서 막 누른 시점에 진행 중인 전환은 있을 수 없다. 이전 전환이 중간에
+    // 끊겨 isTransitioning이 잠긴 채로 남아 있었다면 여기서 선제적으로 풀어 준다
+    // (MainMenuScene.startOnboardingBattle()과 동일한 방어).
+    transitionManager.reset?.();
+
     transitionManager.battleEntryTransition(this, {
       mode: 'tower',
       towerFloor: floor,

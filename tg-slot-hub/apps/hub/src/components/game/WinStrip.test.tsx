@@ -263,10 +263,11 @@ describe('WinStrip', () => {
     expect(panel!.querySelector('.hub-win-strip__gamble-btn--collect')).not.toBeNull()
   })
 
-  it('adds exactly one child (the overlay panel) to the strip when gambleActions appears — the other four rows (label/free-spins/amount/line) are unchanged, so the strip keeps the same in-flow content whether or not gambling is active', () => {
+  it('adds exactly one child (the overlay panel) to the strip when gambleActions appears — the other rows (label/free-spins/amount/line/live-region) are unchanged, so the strip keeps the same in-flow content whether or not gambling is active', () => {
     const { container: idle } = render(<WinStrip label="WIN" amount={0} />)
     const idleStrip = idle.querySelector('.hub-win-strip')
-    expect(idleStrip!.children).toHaveLength(4)
+    // label/freeSpinsRow/amount/lineRow/liveRegion(스크린리더 전용 정산 안내) — 5개.
+    expect(idleStrip!.children).toHaveLength(5)
 
     const { container: gambling } = render(
       <WinStrip
@@ -281,10 +282,38 @@ describe('WinStrip', () => {
       />,
     )
     const gambleStrip = gambling.querySelector('.hub-win-strip--gamble')
-    expect(gambleStrip!.children).toHaveLength(5)
+    expect(gambleStrip!.children).toHaveLength(6)
     // 다섯 번째 자식이 바로 그 오버레이 패널이다 — position: absolute라 flex 레이아웃의 높이
     // 계산에서 빠지므로, 이 자식이 있고 없고는 strip의 렌더링 높이를 바꾸지 않는다.
     expect(gambleStrip!.children[4]).toHaveClass('hub-win-strip__gamble-panel')
+  })
+
+  it('renders an empty, visually-hidden aria-live region by default (no settle announcement yet)', () => {
+    const { container } = render(<WinStrip label="WIN" amount={0} />)
+    const live = container.querySelector('.hub-win-strip__live')
+    expect(live).not.toBeNull()
+    expect(live).toHaveAttribute('aria-live', 'polite')
+    expect(live?.textContent).toBe('')
+  })
+
+  it('shows the settle announcement text passed down from GameScreen', () => {
+    render(<WinStrip label="WIN" amount={50} settleAnnouncement="Win 50" />)
+    const live = document.querySelector('.hub-win-strip__live')
+    expect(live?.textContent).toBe('Win 50')
+  })
+
+  it('plays the line-pop animation by default but not when reducedMotion is set (MEDIUM-3 a11y fix)', () => {
+    const { rerender } = render(
+      <WinStrip label="WIN" amount={20} lineLabel={{ text: 'Whiskey ×3 · 20', key: 1 }} />,
+    )
+    expect(screen.getByText('Whiskey ×3 · 20')).toHaveClass('hub-win-strip__line-label--animate')
+
+    rerender(
+      <WinStrip label="WIN" amount={20} lineLabel={{ text: 'Whiskey ×3 · 20', key: 2 }} reducedMotion />,
+    )
+    const label = screen.getByText('Whiskey ×3 · 20')
+    expect(label).toHaveClass('hub-win-strip__line-label')
+    expect(label).not.toHaveClass('hub-win-strip__line-label--animate')
   })
 
   it('shows the free-spins counter alongside the gamble Collect/Double buttons too', () => {

@@ -169,7 +169,17 @@ export function richSave() {
  * `page.addInitScript` 안에서 실행되므로 외부 스코프를 참조하지 않는다.
  */
 export function seedScript({ saveData, guest = true, debug = true }) {
+  // **최초 로드에서만 심는다.**
+  // `addInitScript` 는 `page.reload()` 를 포함한 **모든** 내비게이션에서 실행된다.
+  // 매번 `localStorage.clear()` 후 픽스처를 다시 쓰면, 검증 중 새로고침이 끼는 순간
+  // 그때까지 게임이 저장한 것이 전부 지워진다 — "설정이 새로고침 후 유지되지 않는다",
+  // "장비가 0종이다" 같은 **거짓 결함**이 여기서 나왔다(2026-09-07 실측).
+  // 새로고침 뒤 상태 유지를 보는 검사가 여럿이라, 시드는 반드시 1회여야 한다.
+  try {
+    if (localStorage.getItem('__playtest_seeded') === '1') return;
+  } catch (e) { /* storage 차단 환경 */ }
   try { localStorage.clear(); } catch (e) { /* noop */ }
+  try { localStorage.setItem('__playtest_seeded', '1'); } catch (e) { /* noop */ }
   if (debug) {
     try { localStorage.setItem('arcane_debug_enabled', 'true'); } catch (e) { /* noop */ }
   }

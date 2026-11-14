@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 테스트 코드 작성, TDD 워크플로우, 기능 검증,
   엣지 케이스 발굴, 테스트 커버리지 개선.
   예시: "이 기능 테스트 작성해줘", "TDD로 개발해줘", "테스트 커버리지 높여줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Write, Edit
 ---
 

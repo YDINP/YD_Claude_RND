@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: UI 컴포넌트 설계/구현, 스타일링, 애니메이션, 디자인 시스템,
   Jetpack Compose UI, React/Vue 컴포넌트.
   예시: "이 화면 디자인해줘", "컴포넌트 만들어줘", "스타일 개선해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

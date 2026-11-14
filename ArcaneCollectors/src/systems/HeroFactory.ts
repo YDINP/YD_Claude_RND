@@ -77,11 +77,13 @@ export class HeroFactory {
       skillLevels: options?.skillLevels || [1, 1, 1],
 
       // 장비 (COMPAT-1.3: 표준 스키마 보장)
+      // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
       equipped: options?.equipped ?? null,
       equipment: options?.equipment || {
         weapon: null,
         armor: null,
-        accessory: null
+        accessory: null,
+        relic: null
       },
 
       // 진화 및 성좌 (COMPAT-1.3)
@@ -208,7 +210,8 @@ export class HeroFactory {
         skills: hero.skills || [],
         skillLevels: hero.skillLevels || [1, 1, 1],
         equipped: hero.equipped || null,
-        equipment: hero.equipment || { weapon: null, armor: null, accessory: null },
+        // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
+        equipment: hero.equipment || { weapon: null, armor: null, accessory: null, relic: null },
         evolutionCount: hero.evolutionCount || 0,
         constellation: hero.constellation || 0,
         acquiredAt: hero.acquiredAt || Date.now()

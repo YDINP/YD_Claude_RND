@@ -6,7 +6,7 @@ description: |
   랜딩 페이지 텍스트, 마케팅 이메일 초안, 제품 설명 페이지.
   예시: "앱 스토어 설명 써줘", "README 마케팅 섹션 추가해줘", "기능 소개 카피 작성해줘",
   "랜딩 페이지 텍스트 써줘", "제품 소개 문구 만들어줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, WebSearch
 ---
 

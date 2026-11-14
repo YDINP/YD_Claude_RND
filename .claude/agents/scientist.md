@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 데이터 탐색/분석, 통계 분석, 지표 계산,
   데이터 기반 의사결정, 성능 지표 분석.
   예시: "이 데이터 분석해줘", "사용자 행동 패턴 파악해줘", "성능 지표 계산해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Write
 ---
 

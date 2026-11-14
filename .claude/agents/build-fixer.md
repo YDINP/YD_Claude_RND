@@ -4,7 +4,7 @@ description: |
   빌드 오류, 컴파일 에러, 의존성 문제 해결 전문가.
   다음 상황에서 사용: 빌드 실패, 컴파일 에러, 타입 오류, 의존성 충돌, Gradle/npm 오류.
   예시: "빌드가 안 돼", "컴파일 에러 고쳐줘", "Gradle 에러 해결해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Edit, Write
 ---
 

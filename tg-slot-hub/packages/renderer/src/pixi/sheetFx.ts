@@ -17,6 +17,12 @@ export interface LoadedSheet {
   frames: Texture[]
 }
 
+/** 시트 장부 스냅샷. 장부 밖에 남은 것이 있는지까지 한눈에 읽히도록 `loaded`를 더한다. */
+export interface SheetTextureSnapshot extends TextureRegistrySnapshot {
+  /** 지금 메모리에 올라와 있는 시트 수. `cached`보다 크면 그만큼이 되돌릴 수 없는 고아다. */
+  loaded: number
+}
+
 /**
  * URL별 캐시.
  *
@@ -26,6 +32,13 @@ export interface LoadedSheet {
  *
  * 대신 시트는 **자기 수명 장부**(`sheetTextures`)를 따로 가진다. 게임을 오갈수록 아틀라스가
  * 쌓이는 것이 진짜 문제였고, 그것은 렌더러 하나의 수명으로는 풀 수 없다.
+ *
+ * **장부에 오르는 기준은 "불러왔는가"다. "누가 붙잡았는가"가 아니다.**
+ * 붙잡힐 때 처음 장부를 만들면, 붙잡히지 못한 시트는 메모리에 올라와 있으면서도 장부 밖에 있어
+ * 상한 계산에도 축출 대상에도 들지 못한다 — 영영 되돌릴 수 없다. 시트를 붙잡을 수 있는 창은
+ * 승리 연출의 A스텝 하나뿐이라(보통 1260ms, 터보 693ms, 요약 연출 756ms) 놓치는 일이 드물지
+ * 않고, 특히 렌더러가 이미 내려간 뒤에 도착한 시트는 붙잡을 주인 자체가 없다.
+ * 그래서 `enrollSheet`가 도착 즉시 장부에 올리고 곧바로 놓는다 — 참조 0으로 축출 후보에 눕는다.
  */
 const sheetCache = new Map<string, Promise<LoadedSheet | null>>()
 const readySheets = new Map<string, LoadedSheet>()
@@ -56,6 +69,23 @@ const sheetLifetimes = new Map<string, SheetLifetime>()
 /** 시트 아틀라스 장부. 참조가 끊긴 것부터 상한을 넘는 만큼 밀려난다. */
 const sheetTextures = new TextureRegistry({ cacheCapacity: SHEET_TEXTURE_CACHE_CAPACITY })
 
+/**
+ * 도착한 시트를 장부에 올린다. **아직 아무도 쓰지 않으므로 올리자마자 놓는다** —
+ * 참조 0인 축출 후보로 눕는 것이 정확한 상태다. 아무도 끝내 붙잡지 않아도 상한을 넘기는
+ * 순간 정상적으로 밀려난다.
+ */
+function enrollSheet(url: string, loaded: LoadedSheet): SheetLifetime {
+  const existing = sheetLifetimes.get(url)
+  if (existing !== undefined) return existing
+
+  const lifetime = new SheetLifetime(url, loaded)
+  sheetLifetimes.set(url, lifetime)
+  readySheets.set(url, loaded)
+  sheetTextures.retain(lifetime)
+  sheetTextures.release(lifetime)
+  return lifetime
+}
+
 /** 이미 준비된 시트만 즉시 돌려준다. 없으면 null이고 호출 측이 절차적 연출로 간다. */
 export function peekSheet(url: string): LoadedSheet | null {
   return readySheets.get(url) ?? null
@@ -71,10 +101,7 @@ export function retainSheet(url: string): LoadedSheet | null {
   const loaded = readySheets.get(url)
   if (loaded === undefined) return null
 
-  const existing = sheetLifetimes.get(url)
-  const lifetime = existing ?? new SheetLifetime(url, loaded)
-  if (existing === undefined) sheetLifetimes.set(url, lifetime)
-  sheetTextures.retain(lifetime)
+  sheetTextures.retain(enrollSheet(url, loaded))
   return loaded
 }
 
@@ -85,33 +112,54 @@ export function releaseSheet(url: string): void {
   sheetTextures.release(lifetime)
 }
 
-/** 시트 아틀라스 장부의 읽기 전용 스냅샷. */
-export function sheetTextureSnapshot(): TextureRegistrySnapshot {
-  return sheetTextures.snapshot
+/**
+ * 시트 아틀라스 장부의 읽기 전용 스냅샷.
+ * `loaded`와 `cached`가 어긋나면 그 차이가 곧 장부 밖 고아 수다 — 정상이면 언제나 0이다.
+ */
+export function sheetTextureSnapshot(): SheetTextureSnapshot {
+  return { ...sheetTextures.snapshot, loaded: readySheets.size }
+}
+
+/** 사이드카 JSON 한 장. 실패는 던져서 위쪽 `allSettled`가 받는다. */
+async function fetchSidecar(url: string, fetchImpl: typeof fetch): Promise<SpriteSheet> {
+  const response = await fetchImpl(url)
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return parseSpriteSheet((await response.json()) as unknown)
 }
 
 async function fetchSheet(url: string, fetchImpl: typeof fetch): Promise<LoadedSheet | null> {
-  try {
-    const response = await fetchImpl(url)
-    if (!response.ok) return null
-    const sheet = parseSpriteSheet((await response.json()) as unknown)
+  const atlasUrl = atlasUrlFor(url)
+  // 사이드카와 아틀라스를 **동시에** 받는다. 아틀라스 주소는 사이드카를 열지 않아도
+  // 알 수 있고(`.json` -> `.webp`), 무거운 쪽은 아틀라스(317~411KB)다. 직렬로 받으면
+  // 모바일 RTT 한 번(300~500ms)을 아틀라스가 시작도 하기 전에 버리는데, 시트를 제때
+  // 쓸 수 있는 창은 승리 연출의 A스텝 하나(터보 693ms)라 그 절반이 넘는다.
+  // `allSettled`인 이유는 한쪽만 성공한 경우까지 정리하기 위해서다.
+  const [sidecar, atlas] = await Promise.allSettled([
+    fetchSidecar(url, fetchImpl),
+    Assets.load<Texture>(atlasUrl),
+  ])
 
-    const atlas = await Assets.load<Texture>(atlasUrlFor(url))
-    const frames = sheet.frames.map(
-      (frame) =>
-        new Texture({
-          source: atlas.source,
-          frame: new Rectangle(frame.x, frame.y, frame.w, frame.h),
-        }),
-    )
-    const loaded: LoadedSheet = { sheet, frames }
-    readySheets.set(url, loaded)
-    return loaded
-  } catch {
+  if (sidecar.status !== 'fulfilled' || atlas.status !== 'fulfilled') {
     // 사이드카가 없거나, 검증에 실패했거나, 아틀라스를 못 받은 경우.
-    // 어느 쪽이든 조용히 포기하고 절차적 연출로 돌아간다.
+    // 어느 쪽이든 조용히 포기하고 절차적 연출로 돌아간다. 다만 짝을 잃고 도착한 아틀라스는
+    // 쓸 데가 없으므로 전역 캐시에 남기지 않고 그 자리에서 돌려준다.
+    if (atlas.status === 'fulfilled') void Assets.unload(atlasUrl).catch(() => undefined)
     return null
   }
+
+  const sheet = sidecar.value
+  const frames = sheet.frames.map(
+    (frame) =>
+      new Texture({
+        source: atlas.value.source,
+        frame: new Rectangle(frame.x, frame.y, frame.w, frame.h),
+      }),
+  )
+  const loaded: LoadedSheet = { sheet, frames }
+  // 붙잡을 주인이 있든 없든 여기서 장부에 오른다. 이 한 줄이 "메모리에 있는데 장부에는 없는"
+  // 상태를 없앤다 — 렌더러가 이미 내려간 뒤 도착한 시트가 특히 그랬다.
+  enrollSheet(url, loaded)
+  return loaded
 }
 
 /** 시트를 불러온다. 같은 URL은 한 번만 받고 결과를 나눠 쓴다. */
@@ -134,6 +182,7 @@ export function clearSheetCache(): void {
   sheetCache.clear()
   readySheets.clear()
 }
+
 
 /**
  * 시트 애니메이션 스프라이트를 어디서 얻는가.

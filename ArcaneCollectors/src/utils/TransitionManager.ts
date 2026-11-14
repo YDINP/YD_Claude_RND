@@ -2,7 +2,7 @@
  * TransitionManager.ts - Scene transition effects manager
  * Singleton pattern for consistent scene transitions
  */
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/gameConfig.js';
+import { GAME_WIDTH, GAME_HEIGHT } from '../config/scaleConfig.js';
 import navigationManager from '../systems/NavigationManager.js';
 
 type SlideDirection = 'left' | 'right' | 'up' | 'down';
@@ -11,25 +11,79 @@ type ZoomDirection = 'in' | 'out';
 class TransitionManagerClass {
   private isTransitioning: boolean = false;
   private _safetyTimer: any = null;
+  /**
+   * 락이 걸려 있는 동안 들어온 전환 요청 중 가장 최근 것 (락 해제 시 재시도한다).
+   * 오래된 요청을 큐잉하면 이미 낡아버린 데이터/씬을 참조할 수 있으므로 최신 1건만 유지한다.
+   */
+  private _pending: (() => void) | null = null;
 
-  /** isTransitioning 강제 리셋 (비정상 잠금 복구용) */
+  /**
+   * isTransitioning 강제 리셋 (비정상 잠금 복구용).
+   * 대기 중인 전환은 재시도하지 않고 버린다 — 명시적 reset()은 "완전히 새로 시작"하려는
+   * 의도이므로, 그 시점에 낡아 있을 수 있는 보류 요청을 되살리지 않는다.
+   */
   reset(): void {
     this.isTransitioning = false;
+    this._pending = null;
     if (this._safetyTimer) {
       clearTimeout(this._safetyTimer);
       this._safetyTimer = null;
     }
   }
 
-  /** 안전 타이머: duration 이후에도 isTransitioning이 true면 강제 리셋 */
+  /**
+   * 전환 락 획득을 시도한다. 모든 `*Transition()` 메서드의 진입점에서 호출한다.
+   *
+   * 과거에는 `if (this.isTransitioning) return;` 한 줄로 조용히 무시했다 — 흔적이
+   * 전혀 남지 않아, 선행 전환이 중간에 끊겨 락이 새면(씬이 완료 콜백 전에 종료되는 등)
+   * 이후의 모든 전환 요청이 영원히 무시되는 소프트락으로 이어졌다(전투 승리 후 결과
+   * 화면으로 못 넘어가는 사례가 대표적).
+   *
+   * 이제는 (1) 경고를 남기고 (2) 요청을 큐에 저장해 락 해제 시 재시도하며,
+   * (3) 락 획득에 성공하면 안전 타이머를 걸어 완료 콜백이 끝내 안 불려도 스스로 풀린다.
+   *
+   * @returns 락을 획득했으면 true. false면 이 전환은 지금 실행하지 말고 반환해야 한다.
+   */
+  private _acquire(label: string, timeoutMs: number, retry: () => void): boolean {
+    if (this.isTransitioning) {
+      console.warn(`[TransitionManager] ${label} 무시됨 - 다른 전환이 진행 중입니다. 락 해제 시 재시도합니다.`);
+      this._pending = retry;
+      return false;
+    }
+    this.isTransitioning = true;
+    this._startSafetyTimer(timeoutMs);
+    return true;
+  }
+
+  /** 전환 완료 처리: 락 해제 + 안전 타이머 정리 + 보류 중이던 전환을 다음 틱에 재시도 */
+  private _release(): void {
+    this.isTransitioning = false;
+    if (this._safetyTimer) {
+      clearTimeout(this._safetyTimer);
+      this._safetyTimer = null;
+    }
+    const pending = this._pending;
+    this._pending = null;
+    if (pending) {
+      // 다음 틱으로 미룬다: 지금 막 scene.scene.start()로 씬을 전환하는 중인데 재시도를
+      // 동기로 실행하면, 같은 씬을 참조하는 재시도가 이제 막 시작한 새 애니메이션을
+      // (곧이어 실행될 scene.start()의 씬 종료로) 다시 끊어버릴 수 있다.
+      setTimeout(pending, 0);
+    }
+  }
+
+  /**
+   * 안전 타이머: timeout 이후에도 isTransitioning이 true면 강제로 풀고,
+   * 그사이 들어온 보류 요청이 있으면 재시도한다.
+   */
   private _startSafetyTimer(timeout: number): void {
     if (this._safetyTimer) clearTimeout(this._safetyTimer);
     this._safetyTimer = setTimeout(() => {
+      this._safetyTimer = null;
       if (this.isTransitioning) {
         console.warn('[TransitionManager] Safety timeout - force reset isTransitioning');
-        this.isTransitioning = false;
+        this._release();
       }
-      this._safetyTimer = null;
     }, timeout);
   }
 
@@ -42,14 +96,11 @@ class TransitionManagerClass {
    * @param skipPush - true면 navigationManager.pushScene 스킵 (goBackToScene에서 호출 시)
    */
   fadeTransition(scene: Phaser.Scene, target: string, data: any = {}, duration: number = 400, skipPush: boolean = false): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
-    this._startSafetyTimer(duration + 2000);
+    if (!this._acquire('fadeTransition', duration + 2000, () => this.fadeTransition(scene, target, data, duration, skipPush))) return;
 
     scene.cameras.main.fadeOut(duration / 2, 0, 0, 0);
     scene.cameras.main.once('camerafadeoutcomplete', () => {
-      this.isTransitioning = false;
-      if (this._safetyTimer) { clearTimeout(this._safetyTimer); this._safetyTimer = null; }
+      this._release();
       if (!skipPush) navigationManager.pushScene(target, data);
       scene.scene.start(target, data);
     });
@@ -70,8 +121,7 @@ class TransitionManagerClass {
     direction: SlideDirection = 'left',
     duration: number = 300
   ): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('slideTransition', duration + 2000, () => this.slideTransition(scene, target, data, direction, duration))) return;
 
     const cam = scene.cameras.main;
     let scrollX = 0;
@@ -112,7 +162,7 @@ class TransitionManagerClass {
       duration: duration,
       ease: 'Power2',
       onComplete: () => {
-        this.isTransitioning = false;
+        this._release();
         overlay.destroy();
         navigationManager.pushScene(target, data);
         scene.scene.start(target, data);
@@ -127,8 +177,7 @@ class TransitionManagerClass {
    * @param data - Battle data to pass
    */
   battleEntryTransition(scene: Phaser.Scene, data: any = {}): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('battleEntryTransition', 3200, () => this.battleEntryTransition(scene, data))) return;
 
     const cam = scene.cameras.main;
 
@@ -182,7 +231,7 @@ class TransitionManagerClass {
     scene.time.delayedCall(900, () => {
       cam.fadeOut(300, 0, 0, 0);
       cam.once('camerafadeoutcomplete', () => {
-        this.isTransitioning = false;
+        this._release();
         overlay.destroy();
         battleText.destroy();
         navigationManager.pushScene('BattleScene', data, { battle: true });
@@ -198,8 +247,7 @@ class TransitionManagerClass {
    * @param data - Data to pass
    */
   gachaEntryTransition(scene: Phaser.Scene, data: any = {}): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('gachaEntryTransition', 3100, () => this.gachaEntryTransition(scene, data))) return;
 
     const cam = scene.cameras.main;
 
@@ -288,7 +336,7 @@ class TransitionManagerClass {
     scene.time.delayedCall(800, () => {
       cam.fadeOut(300, 0, 0, 0);
       cam.once('camerafadeoutcomplete', () => {
-        this.isTransitioning = false;
+        this._release();
         magicCircle.destroy();
         overlay.destroy();
         navigationManager.pushScene('GachaScene', data);
@@ -316,8 +364,7 @@ class TransitionManagerClass {
     zoomDir: ZoomDirection = 'in',
     duration: number = 400
   ): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('zoomTransition', duration * 2 + 2000, () => this.zoomTransition(scene, target, data, originX, originY, zoomDir, duration))) return;
 
     const cam = scene.cameras.main;
     const targetZoom = zoomDir === 'in' ? 2.0 : 0.5;
@@ -350,7 +397,7 @@ class TransitionManagerClass {
         cam.zoom = 1;
         cam.scrollX = 0;
         cam.scrollY = 0;
-        this.isTransitioning = false;
+        this._release();
         overlay.destroy();
         navigationManager.pushScene(target, data);
         scene.scene.start(target, data);
@@ -364,8 +411,7 @@ class TransitionManagerClass {
    * @param data
    */
   victoryTransition(scene: Phaser.Scene, data: any = {}): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('victoryTransition', 2700, () => this.victoryTransition(scene, data))) return;
 
     const cam = scene.cameras.main;
     cam.flash(400, 255, 255, 200);
@@ -373,7 +419,7 @@ class TransitionManagerClass {
     scene.time.delayedCall(400, () => {
       cam.fadeOut(300, 0, 0, 0);
       cam.once('camerafadeoutcomplete', () => {
-        this.isTransitioning = false;
+        this._release();
         navigationManager.pushScene('BattleResultScene', data, { battle: true });
         scene.scene.start('BattleResultScene', data);
       });
@@ -386,13 +432,12 @@ class TransitionManagerClass {
    * @param data
    */
   defeatTransition(scene: Phaser.Scene, data: any = {}): void {
-    if (this.isTransitioning) return;
-    this.isTransitioning = true;
+    if (!this._acquire('defeatTransition', 2600, () => this.defeatTransition(scene, data))) return;
 
     const cam = scene.cameras.main;
     cam.fadeOut(600, 10, 0, 0);
     cam.once('camerafadeoutcomplete', () => {
-      this.isTransitioning = false;
+      this._release();
       navigationManager.pushScene('BattleResultScene', data, { battle: true });
       scene.scene.start('BattleResultScene', data);
     });

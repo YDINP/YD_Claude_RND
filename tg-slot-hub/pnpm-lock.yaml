@@ -34,7 +34,7 @@ importers:
         version: link:../../packages/slot-engine
       drizzle-orm:
         specifier: ^0.36.4
-        version: 0.36.4(@types/react@19.2.18)(postgres@3.4.9)(react@19.2.8)
+        version: 0.36.4(@electric-sql/pglite@0.5.8)(@types/react@19.2.18)(postgres@3.4.9)(react@19.2.8)
       hono:
         specifier: ^4.6.9
         version: 4.13.5
@@ -48,6 +48,9 @@ importers:
         specifier: ^4.1.13
         version: 4.5.4
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
       '@types/node':
         specifier: ^24.12.3
         version: 24.13.3
@@ -91,6 +94,9 @@ importers:
       '@telegram-apps/sdk-react':
         specifier: ^3.3.9
         version: 3.3.9(@types/react@19.2.18)(react@19.2.8)(typescript@5.9.3)
+      '@tgslot/game-sdk':
+        specifier: workspace:*
+        version: link:../../packages/game-sdk
       '@tgslot/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
@@ -459,6 +465,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@electric-sql/pglite@0.5.8':
+    resolution: {integrity: sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==}
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -2788,6 +2797,8 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@electric-sql/pglite@0.5.8': {}
+
   '@emnapi/runtime@1.11.3':
     dependencies:
       tslib: 2.8.1
@@ -3674,8 +3685,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.36.4(@types/react@19.2.18)(postgres@3.4.9)(react@19.2.8):
+  drizzle-orm@0.36.4(@electric-sql/pglite@0.5.8)(@types/react@19.2.18)(postgres@3.4.9)(react@19.2.8):
     optionalDependencies:
+      '@electric-sql/pglite': 0.5.8
       '@types/react': 19.2.18
       postgres: 3.4.9
       react: 19.2.8

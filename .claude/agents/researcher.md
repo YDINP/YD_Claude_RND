@@ -6,7 +6,7 @@ description: |
   기술 스택 리서치, 최신 동향 파악.
   예시: "Retrofit 사용법 알아봐줘", "Android 권장 아키텍처 패턴 조사해줘", "이 라이브러리 최신 버전"
   주의: 내부 코드 검색은 explorer 에이전트 사용
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, WebSearch, WebFetch
 ---
 

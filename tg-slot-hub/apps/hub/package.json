@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite --port 5173",
     "build": "tsc --noEmit && vite build",
+    "build:demo": "vite build --mode demo",
+    "dev:demo": "vite --port 5173 --mode demo",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tgslot/game-sdk": "workspace:*",
     "@tgslot/shared": "workspace:*",
     "@tgslot/slot-engine": "workspace:*",
     "@tgslot/renderer": "workspace:*",

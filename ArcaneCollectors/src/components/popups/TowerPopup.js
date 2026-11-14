@@ -582,6 +582,10 @@ export class TowerPopup extends PopupBase {
     this.hide();
 
     this.scene.time.delayedCall(200, () => {
+      // 팝업이 막 닫힌 시점에 진행 중인 전환은 있을 수 없다. 이전 전환이 중간에 끊겨
+      // isTransitioning이 잠긴 채로 남아 있었다면 여기서 선제적으로 풀어 준다
+      // (MainMenuScene.startOnboardingBattle()과 동일한 방어).
+      transitionManager.reset?.();
       transitionManager.battleEntryTransition(this.scene, {
         mode: 'tower',
         towerFloor: floor,

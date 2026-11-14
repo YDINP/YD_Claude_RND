@@ -7,7 +7,7 @@ description: |
   프롬프트 캐싱 절감 계산, 아키텍처별 비용 비교 매트릭스.
   예시: "이 아키텍처 비용 얼마나 들지 분석해줘", "LLM 호출 비용 줄이는 방법",
   "Firebase 비용 최적화해줘", "이번 달 비용이 갑자기 늘었는지 확인해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, WebSearch, WebFetch
 ---
 
@@ -181,7 +181,7 @@ savings_rate = savings_per_day / no_cache_cost * 100
 
 ```python
 response = client.messages.create(
-    model="claude-sonnet-4-6",
+    model="claude-sonnet-5",
     max_tokens=1024,
     system=[
         {

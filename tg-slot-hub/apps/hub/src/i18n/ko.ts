@@ -183,6 +183,10 @@ const ko: Record<TranslationKey, string> = {
   gambleTossing: '던지는 중…',
   // win strip line/cycle labels (debug + presentation)
   winStripCycleTotal: '합계 {amount}',
+  // win strip settle announcement (a11y audit HIGH-1) — 스크린리더 전용, 라운드가 정산될 때
+  // 한 번만 읽힌다. 빅윈 오버레이나 세리머니 팝업이 이미 알렸으면 억제된다.
+  winStripSettleWin: '{amount} 당첨',
+  winStripSettleNoWin: '당첨 없음',
   // debug panel (dev-only tool, gated by debug=1 / localStorage / tap gesture)
   debugButtonLabel: '디버그 패널',
   debugPanelTitle: '디버그 패널',

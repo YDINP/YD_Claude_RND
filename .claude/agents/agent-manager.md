@@ -6,7 +6,7 @@ description: |
   다음 상황에서 사용: 에이전트 시스템을 통한 작업 실행, 에이전트 목록 관리,
   새 에이전트 추가 요청, 서브 에이전트 조율.
   예시: "에이전트 목록 보여줘", "새 에이전트 추가해줘", "에이전트 관리"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Glob, Grep, Bash, Task
 ---
 
@@ -149,8 +149,8 @@ Task(
 
 | 레지스트리 model 값 | Task model 파라미터 |
 |-------------------|-------------------|
-| `claude-opus-4-6` 또는 `**opus**` | `opus` |
-| `claude-sonnet-4-6` 또는 `sonnet` | `sonnet` |
+| `claude-opus-5` 또는 `**opus**` | `opus` |
+| `claude-sonnet-5` 또는 `sonnet` | `sonnet` |
 | `claude-haiku-4-5` 또는 `haiku` | `haiku` |
 
 #### 병렬 위임 시

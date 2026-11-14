@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T06:57:59.784Z",
+  "generatedAt": "2026-09-07T07:13:38.453Z",
   "baseUrl": "http://localhost:3000",
   "budget": {
     "cycles": 8,
@@ -65,8 +65,8 @@
       "label": "cycle_1",
       "heroId": "base_iris",
       "battleOutcome": "victory",
-      "heapUsedBytes": 25928168,
-      "heapTotalBytes": 28348416,
+      "heapUsedBytes": 27170456,
+      "heapTotalBytes": 30244864,
       "domNodes": 324,
       "domListeners": 329,
       "documents": 1,
@@ -118,7 +118,7 @@
           "bytes": 12668812
         }
       },
-      "tweenCount": 10,
+      "tweenCount": 11,
       "timerCount": 3,
       "displayObjectCount": 148,
       "graphicsCount": 46,
@@ -175,7 +175,7 @@
       ],
       "perScene": {
         "MainMenuScene": {
-          "tweens": 10,
+          "tweens": 11,
           "timers": 3,
           "displayObjects": 148
         }
@@ -183,10 +183,10 @@
     },
     {
       "label": "cycle_2",
-      "heroId": "asc_sol_nature",
+      "heroId": "asc_sera_kunlun",
       "battleOutcome": "victory",
-      "heapUsedBytes": 26034276,
-      "heapTotalBytes": 29921280,
+      "heapUsedBytes": 26596788,
+      "heapTotalBytes": 27623424,
       "domNodes": 337,
       "domListeners": 329,
       "documents": 1,
@@ -303,23 +303,23 @@
     },
     {
       "label": "cycle_3",
-      "heroId": "asc_hana_helheim",
+      "heroId": "base_sera",
       "battleOutcome": "victory",
-      "heapUsedBytes": 26276060,
-      "heapTotalBytes": 28348416,
-      "domNodes": 343,
-      "domListeners": 331,
+      "heapUsedBytes": 26240320,
+      "heapTotalBytes": 31293440,
+      "domNodes": 338,
+      "domListeners": 329,
       "documents": 1,
-      "textureCount": 242,
-      "textureBytes": 169124140,
+      "textureCount": 236,
+      "textureBytes": 166296620,
       "textureBuckets": {
         "heroHires": {
           "count": 0,
           "bytes": 0
         },
         "fullbody": {
-          "count": 3,
-          "bytes": 8392704
+          "count": 2,
+          "bytes": 5595136
         },
         "chibi": {
           "count": 1,
@@ -334,12 +334,12 @@
           "bytes": 94948560
         },
         "menuIcon": {
-          "count": 49,
-          "bytes": 5101888
+          "count": 48,
+          "bytes": 5081152
         },
         "vectorIcon": {
-          "count": 30,
-          "bytes": 103760
+          "count": 26,
+          "bytes": 94544
         },
         "textCanvas": {
           "count": 32,
@@ -358,7 +358,7 @@
           "bytes": 12668812
         }
       },
-      "tweenCount": 10,
+      "tweenCount": 16,
       "timerCount": 3,
       "displayObjectCount": 148,
       "graphicsCount": 46,
@@ -415,7 +415,7 @@
       ],
       "perScene": {
         "MainMenuScene": {
-          "tweens": 10,
+          "tweens": 16,
           "timers": 3,
           "displayObjects": 148
         }
@@ -423,23 +423,143 @@
     },
     {
       "label": "cycle_4",
-      "heroId": "asc_omar_valhalla",
+      "heroId": "asc_paolo_balance",
       "battleOutcome": "victory",
-      "heapUsedBytes": 26237736,
-      "heapTotalBytes": 33329152,
-      "domNodes": 349,
-      "domListeners": 331,
+      "heapUsedBytes": 25884108,
+      "heapTotalBytes": 27361280,
+      "domNodes": 343,
+      "domListeners": 332,
       "documents": 1,
-      "textureCount": 247,
-      "textureBytes": 169137452,
+      "textureCount": 240,
+      "textureBytes": 165261356,
       "textureBuckets": {
         "heroHires": {
           "count": 0,
           "bytes": 0
         },
         "fullbody": {
-          "count": 3,
-          "bytes": 8392704
+          "count": 2,
+          "bytes": 5595136
+        },
+        "chibi": {
+          "count": 0,
+          "bytes": 0
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 48,
+          "bytes": 5081152
+        },
+        "vectorIcon": {
+          "count": 31,
+          "bytes": 107856
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 11,
+      "timerCount": 3,
+      "displayObjectCount": 147,
+      "graphicsCount": 47,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 22,
+      "sceneListeners": 439,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
+      "activeSceneKeys": [
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 11,
+          "timers": 3,
+          "displayObjects": 147
+        }
+      }
+    },
+    {
+      "label": "cycle_5",
+      "heroId": "asc_hana_helheim",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26514176,
+      "heapTotalBytes": 32079872,
+      "domNodes": 348,
+      "domListeners": 329,
+      "documents": 1,
+      "textureCount": 247,
+      "textureBytes": 166343980,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 2,
+          "bytes": 5595136
         },
         "chibi": {
           "count": 1,
@@ -458,8 +578,128 @@
           "bytes": 5101888
         },
         "vectorIcon": {
-          "count": 35,
-          "bytes": 117072
+          "count": 36,
+          "bytes": 121168
+        },
+        "textCanvas": {
+          "count": 32,
+          "bytes": 128
+        },
+        "frame": {
+          "count": 12,
+          "bytes": 6945600
+        },
+        "heroPortrait": {
+          "count": 69,
+          "bytes": 39914112
+        },
+        "other": {
+          "count": 32,
+          "bytes": 12668812
+        }
+      },
+      "tweenCount": 13,
+      "timerCount": 3,
+      "displayObjectCount": 148,
+      "graphicsCount": 46,
+      "emitterCount": 0,
+      "textCount": 32,
+      "spriteCount": 23,
+      "sceneListeners": 438,
+      "gameListeners": 20,
+      "eventBusListeners": 20,
+      "eventBusTopEvents": [
+        {
+          "event": "stage_cleared",
+          "count": 2
+        },
+        {
+          "event": "gacha_complete",
+          "count": 2
+        },
+        {
+          "event": "character_added",
+          "count": 2
+        },
+        {
+          "event": "evolve",
+          "count": 2
+        },
+        {
+          "event": "heroEvolved",
+          "count": 1
+        },
+        {
+          "event": "level_up",
+          "count": 1
+        },
+        {
+          "event": "chapter_completed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:step_committed",
+          "count": 1
+        },
+        {
+          "event": "tutorial:menus_unlocked",
+          "count": 1
+        },
+        {
+          "event": "quest_complete",
+          "count": 1
+        }
+      ],
+      "activeSceneKeys": [
+        "MainMenuScene"
+      ],
+      "perScene": {
+        "MainMenuScene": {
+          "tweens": 13,
+          "timers": 3,
+          "displayObjects": 148
+        }
+      }
+    },
+    {
+      "label": "cycle_6",
+      "heroId": "base_luca",
+      "battleOutcome": "victory",
+      "heapUsedBytes": 26275556,
+      "heapTotalBytes": 29196288,
+      "domNodes": 350,
+      "domListeners": 329,
+      "documents": 1,
+      "textureCount": 248,
+      "textureBytes": 166348076,
+      "textureBuckets": {
+        "heroHires": {
+          "count": 0,
+          "bytes": 0
+        },
+        "fullbody": {
+          "count": 2,
+          "bytes": 5595136
+        },
+        "chibi": {
+          "count": 1,
+          "bytes": 1048576
+        },
+        "enemyArt": {
+          "count": 0,
+          "bytes": 0
+        },
+        "background": {
+          "count": 14,
+          "bytes": 94948560
+        },
+        "menuIcon": {
+          "count": 49,
+          "bytes": 5101888
+        },
+        "vectorIcon": {
+          "count": 37,
+          "bytes": 125264
         },
         "textCanvas": {
           "count": 32,
@@ -542,264 +782,24 @@
       }
     },
     {
-      "label": "cycle_5",
-      "heroId": "base_kai",
-      "battleOutcome": "victory",
-      "heapUsedBytes": 26654004,
-      "heapTotalBytes": 28348416,
-      "domNodes": 349,
-      "domListeners": 331,
-      "documents": 1,
-      "textureCount": 247,
-      "textureBytes": 169137452,
-      "textureBuckets": {
-        "heroHires": {
-          "count": 0,
-          "bytes": 0
-        },
-        "fullbody": {
-          "count": 3,
-          "bytes": 8392704
-        },
-        "chibi": {
-          "count": 1,
-          "bytes": 1048576
-        },
-        "enemyArt": {
-          "count": 0,
-          "bytes": 0
-        },
-        "background": {
-          "count": 14,
-          "bytes": 94948560
-        },
-        "menuIcon": {
-          "count": 49,
-          "bytes": 5101888
-        },
-        "vectorIcon": {
-          "count": 35,
-          "bytes": 117072
-        },
-        "textCanvas": {
-          "count": 32,
-          "bytes": 128
-        },
-        "frame": {
-          "count": 12,
-          "bytes": 6945600
-        },
-        "heroPortrait": {
-          "count": 69,
-          "bytes": 39914112
-        },
-        "other": {
-          "count": 32,
-          "bytes": 12668812
-        }
-      },
-      "tweenCount": 10,
-      "timerCount": 3,
-      "displayObjectCount": 148,
-      "graphicsCount": 46,
-      "emitterCount": 0,
-      "textCount": 32,
-      "spriteCount": 23,
-      "sceneListeners": 438,
-      "gameListeners": 20,
-      "eventBusListeners": 20,
-      "eventBusTopEvents": [
-        {
-          "event": "stage_cleared",
-          "count": 2
-        },
-        {
-          "event": "gacha_complete",
-          "count": 2
-        },
-        {
-          "event": "character_added",
-          "count": 2
-        },
-        {
-          "event": "evolve",
-          "count": 2
-        },
-        {
-          "event": "heroEvolved",
-          "count": 1
-        },
-        {
-          "event": "level_up",
-          "count": 1
-        },
-        {
-          "event": "chapter_completed",
-          "count": 1
-        },
-        {
-          "event": "tutorial:step_committed",
-          "count": 1
-        },
-        {
-          "event": "tutorial:menus_unlocked",
-          "count": 1
-        },
-        {
-          "event": "quest_complete",
-          "count": 1
-        }
-      ],
-      "activeSceneKeys": [
-        "MainMenuScene"
-      ],
-      "perScene": {
-        "MainMenuScene": {
-          "tweens": 10,
-          "timers": 3,
-          "displayObjects": 148
-        }
-      }
-    },
-    {
-      "label": "cycle_6",
-      "heroId": "base_omar",
-      "battleOutcome": "victory",
-      "heapUsedBytes": 26402436,
-      "heapTotalBytes": 29396992,
-      "domNodes": 349,
-      "domListeners": 331,
-      "documents": 1,
-      "textureCount": 247,
-      "textureBytes": 169137452,
-      "textureBuckets": {
-        "heroHires": {
-          "count": 0,
-          "bytes": 0
-        },
-        "fullbody": {
-          "count": 3,
-          "bytes": 8392704
-        },
-        "chibi": {
-          "count": 1,
-          "bytes": 1048576
-        },
-        "enemyArt": {
-          "count": 0,
-          "bytes": 0
-        },
-        "background": {
-          "count": 14,
-          "bytes": 94948560
-        },
-        "menuIcon": {
-          "count": 49,
-          "bytes": 5101888
-        },
-        "vectorIcon": {
-          "count": 35,
-          "bytes": 117072
-        },
-        "textCanvas": {
-          "count": 32,
-          "bytes": 128
-        },
-        "frame": {
-          "count": 12,
-          "bytes": 6945600
-        },
-        "heroPortrait": {
-          "count": 69,
-          "bytes": 39914112
-        },
-        "other": {
-          "count": 32,
-          "bytes": 12668812
-        }
-      },
-      "tweenCount": 11,
-      "timerCount": 3,
-      "displayObjectCount": 148,
-      "graphicsCount": 46,
-      "emitterCount": 0,
-      "textCount": 32,
-      "spriteCount": 23,
-      "sceneListeners": 438,
-      "gameListeners": 20,
-      "eventBusListeners": 20,
-      "eventBusTopEvents": [
-        {
-          "event": "stage_cleared",
-          "count": 2
-        },
-        {
-          "event": "gacha_complete",
-          "count": 2
-        },
-        {
-          "event": "character_added",
-          "count": 2
-        },
-        {
-          "event": "evolve",
-          "count": 2
-        },
-        {
-          "event": "heroEvolved",
-          "count": 1
-        },
-        {
-          "event": "level_up",
-          "count": 1
-        },
-        {
-          "event": "chapter_completed",
-          "count": 1
-        },
-        {
-          "event": "tutorial:step_committed",
-          "count": 1
-        },
-        {
-          "event": "tutorial:menus_unlocked",
-          "count": 1
-        },
-        {
-          "event": "quest_complete",
-          "count": 1
-        }
-      ],
-      "activeSceneKeys": [
-        "MainMenuScene"
-      ],
-      "perScene": {
-        "MainMenuScene": {
-          "tweens": 11,
-          "timers": 3,
-          "displayObjects": 148
-        }
-      }
-    },
-    {
       "label": "cycle_7",
       "heroId": "base_iris",
       "battleOutcome": "victory",
-      "heapUsedBytes": 27236036,
-      "heapTotalBytes": 30183424,
-      "domNodes": 349,
-      "domListeners": 331,
+      "heapUsedBytes": 26519896,
+      "heapTotalBytes": 28672000,
+      "domNodes": 350,
+      "domListeners": 329,
       "documents": 1,
-      "textureCount": 247,
-      "textureBytes": 169137452,
+      "textureCount": 248,
+      "textureBytes": 166348076,
       "textureBuckets": {
         "heroHires": {
           "count": 0,
           "bytes": 0
         },
         "fullbody": {
-          "count": 3,
-          "bytes": 8392704
+          "count": 2,
+          "bytes": 5595136
         },
         "chibi": {
           "count": 1,
@@ -818,8 +818,8 @@
           "bytes": 5101888
         },
         "vectorIcon": {
-          "count": 35,
-          "bytes": 117072
+          "count": 37,
+          "bytes": 125264
         },
         "textCanvas": {
           "count": 32,
@@ -838,9 +838,9 @@
           "bytes": 12668812
         }
       },
-      "tweenCount": 10,
+      "tweenCount": 12,
       "timerCount": 3,
-      "displayObjectCount": 148,
+      "displayObjectCount": 149,
       "graphicsCount": 46,
       "emitterCount": 0,
       "textCount": 32,
@@ -895,22 +895,22 @@
       ],
       "perScene": {
         "MainMenuScene": {
-          "tweens": 10,
+          "tweens": 12,
           "timers": 3,
-          "displayObjects": 148
+          "displayObjects": 149
         }
       }
     },
     {
       "label": "cycle_8",
-      "heroId": "asc_sol_nature",
+      "heroId": "asc_sera_kunlun",
       "battleOutcome": "victory",
-      "heapUsedBytes": 27066292,
-      "heapTotalBytes": 28610560,
-      "domNodes": 349,
-      "domListeners": 331,
+      "heapUsedBytes": 26662612,
+      "heapTotalBytes": 28934144,
+      "domNodes": 350,
+      "domListeners": 329,
       "documents": 1,
-      "textureCount": 247,
+      "textureCount": 248,
       "textureKeys": [
         "__NORMAL",
         "__DEFAULT",
@@ -997,50 +997,50 @@
         "bg_main",
         "bg_main_blur",
         "bg_login",
+        "frame_popup",
         "frame_panel",
         "bg_login_blur",
-        "frame_popup",
-        "frame_card_N",
         "frame_card_R",
+        "frame_card_N",
         "frame_card_SR",
-        "frame_card_SSR",
         "frame_hex",
+        "frame_card_SSR",
         "btn_primary",
         "btn_secondary",
         "btn_ghost",
-        "icon_currency_gem",
-        "icon_currency_gold",
         "logo_arcane_collectors",
-        "icon_cult_takamagahara",
-        "icon_cult_valhalla",
-        "icon_currency_spirit_stone",
-        "icon_currency_ticket",
+        "icon_currency_gold",
+        "icon_currency_gem",
         "icon_currency_energy",
+        "icon_currency_ticket",
+        "icon_currency_spirit_stone",
+        "icon_cult_valhalla",
+        "icon_cult_takamagahara",
         "icon_cult_olympus",
         "icon_cult_asgard",
         "icon_cult_yomi",
         "icon_cult_tartarus",
         "icon_cult_avalon",
-        "icon_cult_helheim",
         "icon_cult_kunlun",
         "menu_ascension",
-        "menu_collection",
         "menu_eventdungeon",
+        "icon_cult_helheim",
+        "menu_collection",
         "menu_friends",
-        "menu_gacha",
-        "menu_guild",
-        "menu_herolist",
-        "menu_inventory",
         "menu_partyedit",
+        "menu_herolist",
+        "menu_guild",
+        "menu_gacha",
         "menu_pvp",
+        "menu_inventory",
         "menu_quest",
         "menu_raid",
-        "menu_settings",
         "menu_tower",
+        "menu_settings",
         "hero_asc_iris_olympus",
-        "hero_asc_iris_valhalla",
-        "hero_asc_iris_chaos",
         "hero_asc_sera_avalon",
+        "hero_asc_iris_chaos",
+        "hero_asc_iris_valhalla",
         "hero_asc_sera_kunlun",
         "hero_asc_sera_nature",
         "hero_asc_luca_asgard",
@@ -1062,9 +1062,9 @@
         "hero_asc_paolo_chaos",
         "hero_asc_paolo_balance",
         "hero_base_iris",
-        "hero_base_kai",
         "hero_base_sera",
         "hero_base_luca",
+        "hero_base_kai",
         "hero_base_lin",
         "hero_base_omar",
         "hero_base_sol",
@@ -1081,8 +1081,8 @@
         "vicon_quest_36_0d0f1a",
         "__mm__bg_chapter_1__1",
         "bg_chapter_1",
-        "bg_sanctum",
         "enemy_goblin_king",
+        "bg_sanctum",
         "vicon_tap_32_ffd60a",
         "vicon_warrior_32_06bbfa",
         "vicon_atk_24_ffd60a",
@@ -1095,80 +1095,81 @@
         "vicon_spd_24_06bbfa",
         "icon_star_24",
         "icon_gem_24",
-        "fb_hero_015",
-        "fx_summon_circle",
         "banner_pickup_iris",
+        "fx_summon_circle",
+        "fb_hero_015",
         "bg_gacha",
         "bg_gacha_blur",
-        "fb_hero_029",
+        "fb_hero_019",
         "enemy_sil_9b59b6_std",
         "vicon_warrior_24_06bbfa",
+        "__lazybg__bg_result_victory_blur",
         "icon_star_84",
         "icon_coin_72",
         "icon_star_72",
         "bg_result_victory",
-        "bg_result_victory_blur",
-        "vicon_archer_32_27ae60",
-        "vicon_atk_24_27ae60",
-        "vicon_hp_24_27ae60",
-        "vicon_def_24_27ae60",
-        "vicon_spd_24_27ae60",
+        "vicon_healer_32_50c878",
+        "vicon_atk_24_50c878",
+        "vicon_hp_24_50c878",
+        "vicon_def_24_50c878",
+        "vicon_spd_24_50c878",
         "vicon_collection_24_ffd60a",
+        "vicon_healer_32_06bbfa",
+        "vicon_mage_32_95a5a6",
+        "vicon_atk_24_95a5a6",
+        "vicon_hp_24_95a5a6",
+        "vicon_def_24_95a5a6",
+        "vicon_spd_24_95a5a6",
         "vicon_mage_32_b0c4de",
         "vicon_atk_24_b0c4de",
         "vicon_hp_24_b0c4de",
         "vicon_def_24_b0c4de",
         "vicon_spd_24_b0c4de",
-        "fb_hero_027",
         "icon_gem_72",
-        "vicon_warrior_32_4a90d9",
-        "vicon_atk_24_4a90d9",
-        "vicon_hp_24_4a90d9",
-        "vicon_def_24_4a90d9",
-        "vicon_spd_24_4a90d9",
-        "9af0d806-3598-4afa-b7dd-866105564192",
-        "1a4bf264-f4ed-47a9-b293-67cc9aa24411",
-        "799048d9-a8ec-4366-ae9a-16a777b1069e",
-        "87ca78c1-9187-4cf3-a251-db39f03788e5",
-        "91418e22-878d-423c-908a-90b1866a299c",
-        "31a16999-ff0f-40bf-bafb-205ebebca034",
-        "115e832a-cd04-456f-b5f6-fed49afa645c",
-        "37e1c5d7-5a61-4da9-a977-3ae7e90b2eca",
-        "16e46f61-c524-43c5-a782-8953a54bfa38",
-        "8d57ca34-def9-4001-b9cd-5fe94611d9e7",
-        "f5295a3c-1d51-4948-ae7b-d5b413372ae9",
-        "ebc7c9b6-aa93-473e-86c3-e9cf94b05f40",
-        "80cddf03-996c-4b39-9a7f-5adeb81ac0e4",
-        "f6867012-61da-4fb5-b324-d06afbc38c23",
-        "e1bb890c-1db3-47f1-a50c-cad9d0f5256c",
-        "22339abe-e35e-4cec-ad7d-2f8563dd4919",
-        "74415166-2de3-4eaa-a8b9-136761fc5bc1",
-        "915feccd-b5da-4aa4-a20d-862c48093a22",
-        "f7868129-c6d7-4a2e-b01c-7cd4fd1f1d62",
-        "08c689f3-b9ba-40aa-98c0-de6e9b120def",
-        "40513827-9669-4b42-9d25-0c992aa63940",
-        "c0ad8545-3d5b-4763-994e-3bc5ff08706c",
-        "e7cca968-430a-4b14-9b0c-ff52f6f6fe0e",
-        "e157eabf-dac8-48ab-85ce-537ef10dce27",
-        "9c5b979c-f29e-449b-8497-78ac2a19969b",
-        "220899f2-90dd-46a0-a7b9-34c473d308fb",
-        "0b85b9b2-b021-445d-b067-9cedd6736b48",
-        "15e198c2-222a-4e67-93ac-6b4ac47a2b4c",
-        "e2dc6988-2d30-4889-ab7e-a1f2831f12cd",
-        "5a1710b3-6edb-41ea-bc29-feff459629d7",
-        "cca4e656-ce0c-44cc-9c1a-737627115076",
-        "df505e0d-a676-4fd1-beb6-3c3df1a9f38d",
-        "chibi_base_iris"
+        "vicon_mage_32_06bbfa",
+        "555ffcd1-3951-42f2-99b8-9e5d95dc87b0",
+        "a53beb92-3c04-4833-9ff4-0d693443d435",
+        "e83cf015-bf86-4642-ba7b-0b7da5164de4",
+        "ddcbfeb2-8dc6-4c64-ac16-66ced346914b",
+        "83a63f65-b3c1-4a57-8b13-137e51b0914d",
+        "83ffb3e9-491d-4e74-a801-e744ba01a611",
+        "c47048b9-db92-4251-8bef-08a288110c40",
+        "a58da85c-acd1-4871-952c-2f03751e3049",
+        "51b33197-c0c5-45a4-be37-0dcfea2a8bca",
+        "d8659b92-bb5b-45b6-beea-897966dd39ef",
+        "9a707b95-9554-4d33-bd31-248fb7bcdf4b",
+        "294717ff-2e39-4245-9bd4-7848dca25df8",
+        "aa962e53-fa61-463b-ac41-fcd3399eec00",
+        "64a77f07-d215-4cf4-b80d-e3bb00e94c30",
+        "2c2af4c2-504c-4acc-9cc0-ee0d7ef6464c",
+        "0e00cff4-5c2a-4807-8305-619edf7587b9",
+        "29cd8b23-28da-42e8-9b27-2a1c80399ffc",
+        "db234bb5-f7de-4330-a8c3-a70d026a85df",
+        "bf6edc86-8dc4-43b8-9770-baa28b3e20d5",
+        "580f9b03-e1af-4d93-be10-ac61fe215547",
+        "a974db32-9f2e-424a-b132-dce6095846e5",
+        "070936bc-a381-436e-9c10-db8a39aaef49",
+        "6eca8fa7-d1d8-44eb-974f-b4d5009beb9a",
+        "cb260866-af2a-4981-ae0d-be075351930f",
+        "4a466403-0c98-4a9b-bd02-a870c2d19151",
+        "1575d55c-97b1-49cd-afe8-b9628f3b8bd4",
+        "6e723350-930b-4844-b3e6-cf69f4824832",
+        "4c1569c9-4e61-49f2-80ed-f0c8fd034be0",
+        "18ee60d6-d218-4ce4-b4a5-9946d0d040c1",
+        "chibi_base_iris",
+        "dd5a61d1-ed2a-4b3d-bef0-fae29139fd3d",
+        "6caf74d5-2bff-4d39-b8fb-f4a137c55815",
+        "50b6052f-7b1a-4143-a594-31545ee2959b"
       ],
-      "textureBytes": 169137452,
+      "textureBytes": 166348076,
       "textureBuckets": {
         "heroHires": {
           "count": 0,
           "bytes": 0
         },
         "fullbody": {
-          "count": 3,
-          "bytes": 8392704
+          "count": 2,
+          "bytes": 5595136
         },
         "chibi": {
           "count": 1,
@@ -1187,8 +1188,8 @@
           "bytes": 5101888
         },
         "vectorIcon": {
-          "count": 35,
-          "bytes": 117072
+          "count": 37,
+          "bytes": 125264
         },
         "textCanvas": {
           "count": 32,
@@ -1207,9 +1208,9 @@
           "bytes": 12668812
         }
       },
-      "tweenCount": 11,
+      "tweenCount": 12,
       "timerCount": 3,
-      "displayObjectCount": 148,
+      "displayObjectCount": 149,
       "graphicsCount": 46,
       "emitterCount": 0,
       "textCount": 32,
@@ -1264,9 +1265,9 @@
       ],
       "perScene": {
         "MainMenuScene": {
-          "tweens": 11,
+          "tweens": 12,
           "timers": 3,
-          "displayObjects": 148
+          "displayObjects": 149
         }
       }
     }
@@ -1283,109 +1284,110 @@
   ],
   "summary": {
     "baselineLabel": "cycle_2",
-    "coreTextureGrowth": 2,
+    "coreTextureGrowth": 1,
     "coreTextureBaseline": 178,
-    "coreTextureFinal": 180,
-    "vectorIconKeys": 35,
+    "coreTextureFinal": 179,
+    "vectorIconKeys": 37,
     "addedTextureKeys": [
-      "08c689f3-b9ba-40aa-98c0-de6e9b120def",
-      "0b85b9b2-b021-445d-b067-9cedd6736b48",
-      "115e832a-cd04-456f-b5f6-fed49afa645c",
-      "15e198c2-222a-4e67-93ac-6b4ac47a2b4c",
-      "16e46f61-c524-43c5-a782-8953a54bfa38",
-      "1a4bf264-f4ed-47a9-b293-67cc9aa24411",
-      "220899f2-90dd-46a0-a7b9-34c473d308fb",
-      "22339abe-e35e-4cec-ad7d-2f8563dd4919",
-      "31a16999-ff0f-40bf-bafb-205ebebca034",
-      "37e1c5d7-5a61-4da9-a977-3ae7e90b2eca",
-      "40513827-9669-4b42-9d25-0c992aa63940",
-      "5a1710b3-6edb-41ea-bc29-feff459629d7",
-      "74415166-2de3-4eaa-a8b9-136761fc5bc1",
-      "799048d9-a8ec-4366-ae9a-16a777b1069e",
-      "80cddf03-996c-4b39-9a7f-5adeb81ac0e4",
-      "87ca78c1-9187-4cf3-a251-db39f03788e5",
-      "8d57ca34-def9-4001-b9cd-5fe94611d9e7",
-      "91418e22-878d-423c-908a-90b1866a299c",
-      "915feccd-b5da-4aa4-a20d-862c48093a22",
-      "9af0d806-3598-4afa-b7dd-866105564192",
-      "9c5b979c-f29e-449b-8497-78ac2a19969b",
-      "c0ad8545-3d5b-4763-994e-3bc5ff08706c",
-      "cca4e656-ce0c-44cc-9c1a-737627115076",
-      "df505e0d-a676-4fd1-beb6-3c3df1a9f38d",
-      "e157eabf-dac8-48ab-85ce-537ef10dce27",
-      "e1bb890c-1db3-47f1-a50c-cad9d0f5256c",
-      "e2dc6988-2d30-4889-ab7e-a1f2831f12cd",
-      "e7cca968-430a-4b14-9b0c-ff52f6f6fe0e",
-      "ebc7c9b6-aa93-473e-86c3-e9cf94b05f40",
-      "f5295a3c-1d51-4948-ae7b-d5b413372ae9",
-      "f6867012-61da-4fb5-b324-d06afbc38c23",
-      "f7868129-c6d7-4a2e-b01c-7cd4fd1f1d62",
-      "fb_hero_027",
+      "070936bc-a381-436e-9c10-db8a39aaef49",
+      "0e00cff4-5c2a-4807-8305-619edf7587b9",
+      "1575d55c-97b1-49cd-afe8-b9628f3b8bd4",
+      "18ee60d6-d218-4ce4-b4a5-9946d0d040c1",
+      "294717ff-2e39-4245-9bd4-7848dca25df8",
+      "29cd8b23-28da-42e8-9b27-2a1c80399ffc",
+      "2c2af4c2-504c-4acc-9cc0-ee0d7ef6464c",
+      "4a466403-0c98-4a9b-bd02-a870c2d19151",
+      "4c1569c9-4e61-49f2-80ed-f0c8fd034be0",
+      "50b6052f-7b1a-4143-a594-31545ee2959b",
+      "51b33197-c0c5-45a4-be37-0dcfea2a8bca",
+      "555ffcd1-3951-42f2-99b8-9e5d95dc87b0",
+      "580f9b03-e1af-4d93-be10-ac61fe215547",
+      "64a77f07-d215-4cf4-b80d-e3bb00e94c30",
+      "6caf74d5-2bff-4d39-b8fb-f4a137c55815",
+      "6e723350-930b-4844-b3e6-cf69f4824832",
+      "6eca8fa7-d1d8-44eb-974f-b4d5009beb9a",
+      "83a63f65-b3c1-4a57-8b13-137e51b0914d",
+      "83ffb3e9-491d-4e74-a801-e744ba01a611",
+      "9a707b95-9554-4d33-bd31-248fb7bcdf4b",
+      "a53beb92-3c04-4833-9ff4-0d693443d435",
+      "a58da85c-acd1-4871-952c-2f03751e3049",
+      "a974db32-9f2e-424a-b132-dce6095846e5",
+      "aa962e53-fa61-463b-ac41-fcd3399eec00",
+      "bf6edc86-8dc4-43b8-9770-baa28b3e20d5",
+      "c47048b9-db92-4251-8bef-08a288110c40",
+      "cb260866-af2a-4981-ae0d-be075351930f",
+      "d8659b92-bb5b-45b6-beea-897966dd39ef",
+      "db234bb5-f7de-4330-a8c3-a70d026a85df",
+      "dd5a61d1-ed2a-4b3d-bef0-fae29139fd3d",
+      "ddcbfeb2-8dc6-4c64-ac16-66ced346914b",
+      "e83cf015-bf86-4642-ba7b-0b7da5164de4",
       "icon_gem_72",
-      "vicon_atk_24_4a90d9",
+      "vicon_atk_24_95a5a6",
       "vicon_atk_24_b0c4de",
-      "vicon_def_24_4a90d9",
+      "vicon_def_24_95a5a6",
       "vicon_def_24_b0c4de",
-      "vicon_hp_24_4a90d9",
+      "vicon_healer_32_06bbfa",
+      "vicon_hp_24_95a5a6",
       "vicon_hp_24_b0c4de",
+      "vicon_mage_32_06bbfa",
+      "vicon_mage_32_95a5a6",
       "vicon_mage_32_b0c4de",
-      "vicon_spd_24_4a90d9",
-      "vicon_spd_24_b0c4de",
-      "vicon_warrior_32_4a90d9"
+      "vicon_spd_24_95a5a6",
+      "vicon_spd_24_b0c4de"
     ],
     "removedTextureKeys": [
-      "0815201d-14c4-4ecb-979b-c39dc76d84ba",
-      "0d6ef8c9-9fbd-4b47-ba66-731fd46fd038",
-      "0efbf177-e543-49ba-b200-487cdb803142",
-      "2d1aad18-e6d1-45d4-aa00-02d7ce997e5d",
-      "3478e957-2f1c-40e5-8160-ccd4d999b1bf",
-      "3518448d-c94e-4263-a976-bf4ac44e4dfc",
-      "3e6f4adc-1cf0-4613-8c8b-c46117cf79ac",
-      "419a64b6-5cc2-41d7-845b-c18f9fbdd4c9",
-      "48bf4af7-a36f-47be-a437-ee966813186e",
-      "4acb0791-6b7d-4f9e-85db-bff54a658463",
-      "4af7e357-2e6b-4b6a-9c47-eb7ab4bfa759",
-      "4e195a46-0586-4c48-b987-3c235ca5e4d9",
-      "4f6beefc-74c3-415d-affa-356aea7c630a",
-      "590f0b89-4753-445d-8f28-1542c6ab0636",
-      "5d84cf5d-033d-4359-82c3-5523e398c7f5",
-      "6008e88d-635d-4017-ad78-a15e83347772",
-      "66fa7b6c-e32b-4230-94bd-8d18c7e19b16",
-      "6b166eea-65e9-4b90-9895-2d7b64bce146",
-      "6f40b8f9-8bf0-46e3-a6bb-7cba4e439131",
-      "70c51a1e-e5ef-4447-88f3-8e854dd9f840",
-      "75e9639e-2f30-44ba-b89a-a42d88483b3c",
-      "8545f5ce-1730-4c42-b3e2-0a62cfc7973e",
-      "8cc08868-5950-4f46-8582-4f696ac4c78f",
-      "970662b6-fe5d-409e-b975-ac7ca55e788a",
-      "97a7580a-d765-4bc8-91fb-fe802afc300c",
-      "9828e813-d759-4d02-9faa-0b824b67e9a6",
-      "9cab8a3b-ca39-4675-b400-4da7b34999a1",
-      "ad279b9b-794b-4a7b-8059-6aca09ed06e6",
-      "b9cf8398-3aba-4267-aed0-9af8574cef47",
-      "bc35ddb5-773f-4687-9029-25671c24dc0c",
-      "c9883e52-f6da-4e07-9025-479e1df6fbfc",
-      "e3780932-4830-4486-a667-64b362c2d678"
+      "00b808f7-c234-4787-aabd-dd303fd86139",
+      "05f3579a-6bd1-4625-8d34-0d551f21fb3d",
+      "06851c5a-3b8b-4806-8c98-2572205e14a1",
+      "0c77122f-cdad-4997-8257-c090e4d9a4fb",
+      "0cf7cff8-0d1d-4c57-ab3c-5831af7d4919",
+      "0f754dfc-5ddb-4951-a1c5-4b87e94ba318",
+      "12ee5037-b47f-438b-b787-6b14eb770152",
+      "15a03fc3-c768-49bd-8411-af31763d5da4",
+      "1c0354b8-da98-49b2-a1f3-8439d1bd77b3",
+      "1d85bf71-faba-4f79-ae69-469d353cb521",
+      "32ce9e50-0f2e-492f-879a-a2156ab602f7",
+      "36114568-5a18-40d4-92cd-834c5e0e32c3",
+      "43687e21-366b-4585-a0ea-dd3ace78f5d2",
+      "4c490b62-7424-4717-b39e-8d7d8c869190",
+      "5e98db17-71c5-4f5c-a431-51f2792eae18",
+      "62f243f3-ed89-4f91-832b-1db7d4b7bada",
+      "7217af2b-5fae-49db-be8b-67e6584c03e4",
+      "75660886-72a9-4870-929c-31a62f25381a",
+      "7ba98d60-745e-40cc-a820-03803970bf2d",
+      "7d3692b4-9e7c-4049-8b5f-48fcedb4f3e1",
+      "8588d233-3b88-4835-afcf-7b059419ac1f",
+      "9e6c3ab9-f376-460b-a764-d5428d126fcb",
+      "9f890853-d523-4c83-9168-6e50140db94c",
+      "b99dfba1-b2e7-4f35-8adc-b29d8f76b503",
+      "c645a77a-66cd-438c-a913-a85964d180ac",
+      "c7027f55-b367-485b-97a7-f315060a1dd8",
+      "d270ac38-cb4a-4fff-82fc-52d68047e735",
+      "d75354f5-5e8f-4494-9170-810fda13e8df",
+      "da665b37-d790-4ad8-b14b-0b9d9b47e28e",
+      "dbb5f135-1a12-42da-853d-47a49a004aad",
+      "f4026f6b-4d69-460a-a25f-eb8e252a96dd",
+      "fa8cec06-fd1d-42fc-b102-08979307f817"
     ],
     "finalLabel": "cycle_8",
-    "heapBaselineBytes": 26034276,
-    "heapFinalBytes": 27066292,
-    "heapGrowthPercent": 3.9640664484005628,
-    "textureGrowth": 12,
-    "textureBytesGrowth": 2844928,
-    "tweenGrowth": 1,
+    "heapBaselineBytes": 26596788,
+    "heapFinalBytes": 26662612,
+    "heapGrowthPercent": 0.2474885313219025,
+    "textureGrowth": 13,
+    "textureBytesGrowth": 55552,
+    "tweenGrowth": 2,
     "timerGrowth": 0,
-    "displayObjGrowth": 0,
+    "displayObjGrowth": 1,
     "graphicsGrowth": 0,
     "emitterGrowth": 0,
     "sceneListenerGrowth": 0,
     "gameListenerGrowth": 0,
     "eventBusListenerGrowth": 0,
-    "domListenerGrowth": 2,
-    "domNodeGrowth": 12,
-    "finalTweenCount": 11,
+    "domListenerGrowth": 0,
+    "domNodeGrowth": 13,
+    "finalTweenCount": 12,
     "finalTimerCount": 3,
-    "finalTextureBytes": 169137452,
+    "finalTextureBytes": 166348076,
     "pass": true
   },
   "pageErrors": []

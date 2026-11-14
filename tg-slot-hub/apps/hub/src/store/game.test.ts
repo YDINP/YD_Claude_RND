@@ -137,8 +137,9 @@ function makeRenderer() {
   const spinTo = vi.fn().mockResolvedValue(undefined)
   const showWins = vi.fn().mockResolvedValue(undefined)
   const setMode = vi.fn()
-  const renderer: SpinRenderer = { spinTo, showWins, setMode }
-  return { ...renderer, spinTo, showWins, setMode }
+  const stopWinCycle = vi.fn()
+  const renderer: SpinRenderer = { spinTo, showWins, setMode, stopWinCycle }
+  return { ...renderer, spinTo, showWins, setMode, stopWinCycle }
 }
 
 /**
@@ -1268,6 +1269,63 @@ describe('game store', () => {
       })
     })
 
+    describe('지난 판의 승리 연출은 새 스핀이 «시작될 때» 끊긴다 (요청 왕복 중 잔상)', () => {
+      it('SPIN을 누른 즉시 순환을 끊는다 — 서버 응답을 기다리는 동안 지난 판의 금액이 다시 그려지면 안 된다', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+
+        // 서버 응답을 붙들어 둔다 — 실제 왕복 50~300ms 구간을 그대로 재현한다.
+        let resolveSpin: (value: SpinResponse) => void = () => {}
+        mockedApiSpin.mockReturnValueOnce(
+          new Promise<SpinResponse>((resolve) => {
+            resolveSpin = resolve
+          }),
+        )
+
+        const round = useGameStore.getState().spin()
+        await flushPromises()
+
+        // 이 시점이 결함의 자리다: phase는 이미 spinning인데 spinTo는 아직 불리지 않았다.
+        // 예전에는 순환을 끊는 유일한 자리가 spinTo 안의 clearWins뿐이라, 이 사이에 도착한
+        // 지난 판의 winCycle/winTotal이 방금 비운 WinStrip에 지난 금액을 다시 칠했다.
+        expect(useGameStore.getState().phase).toBe('spinning')
+        expect(renderer.spinTo).not.toHaveBeenCalled()
+        expect(renderer.stopWinCycle).toHaveBeenCalledTimes(1)
+
+        resolveSpin(baseSpinResponse({ roundId: 'after-wait' }))
+        await round
+      })
+
+      it('이번 판이 «진 판»이어도 끊는다 — showWins가 없어 아무도 대신 지워 주지 않는다', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        useGameStore.getState().setRenderer(renderer)
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'loss', totalWin: 0, wins: [] }))
+
+        await useGameStore.getState().spin()
+
+        // 진 판은 showWins도 clearWins도 부르지 않는다 — 이 자리가 없으면 지난 판의 당첨 금액이
+        // 지는 판 내내 화면에 그대로 앉아 있었다.
+        expect(renderer.showWins).not.toHaveBeenCalled()
+        expect(renderer.stopWinCycle).toHaveBeenCalledTimes(1)
+      })
+
+      it('stopWinCycle이 없는 렌더러(구버전/목)에서도 스핀은 평소대로 돈다', async () => {
+        await loadGame()
+        const spinTo = vi.fn().mockResolvedValue(undefined)
+        const showWins = vi.fn().mockResolvedValue(undefined)
+        const legacy: SpinRenderer = { spinTo, showWins }
+        useGameStore.getState().setRenderer(legacy)
+        mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'legacy' }))
+
+        await useGameStore.getState().spin()
+
+        expect(spinTo).toHaveBeenCalledTimes(1)
+        expect(useGameStore.getState().phase).toBe('idle')
+      })
+    })
+
     describe('결과 공개 시점 (스포일러 방지 — 릴이 멈춘 뒤에만)', () => {
       /** 이번 판의 결과가 «화면에 드러나는» 값들. 릴이 도는 동안에는 전부 비어 있어야 한다. */
       function visibleResult() {
@@ -1275,7 +1333,7 @@ describe('game store', () => {
         return { lastResult, gambleSession, freeSpins, wallet: useSessionStore.getState().wallet }
       }
 
-      it('더블업 패널·잔액·프리스핀이 릴 정지 전에는 새지 않고, 정지 직후 한꺼번에 공개된다', async () => {
+      it('더블업 패널·잔액이 릴 정지 전에는 새지 않고, 정지 직후 한꺼번에 공개된다', async () => {
         await loadGame()
         const renderer = makeRenderer()
         const { handle, resolve } = makeControllableSpinHandle()
@@ -1289,7 +1347,6 @@ describe('game store', () => {
             totalWin: 15,
             wallet: { coins: 1005, gems: 0 },
             gambleOffer: { pendingWin: 15, maxSteps: 3, expiresAt: '2026-01-01T00:00:00.000Z' },
-            freeSpins: makeFreeSpinsState({ left: 8, total: 18 }),
           }),
         )
 
@@ -1313,10 +1370,42 @@ describe('game store', () => {
         // 릴이 멈춘 «그 순간» 한꺼번에 공개된다 — 승리 연출(showWins)을 기다리지도 않는다.
         expect(useGameStore.getState().lastResult?.roundId).toBe('spoiler')
         expect(useGameStore.getState().gambleSession?.pendingWin).toBe(15)
-        expect(useGameStore.getState().freeSpins?.total).toBe(18)
         expect(useSessionStore.getState().wallet).toEqual({ coins: 1005, gems: 0 })
 
         await round
+      })
+
+      // 프리스핀 진입은 더블업 제안과 같은 판에 설 수 없으므로(그 판은 제안 자체를 받지 않는다 —
+      // 아래 '더블업 제안 × 세리머니' 참고) 공개 시점 검증도 따로 선다.
+      it('프리스핀 진입도 릴 정지 전에는 새지 않는다 — 스캐터가 보이기도 전에 카운터가 뜨면 안 된다', async () => {
+        await loadGame()
+        const renderer = makeRenderer()
+        const { handle, resolve } = makeControllableSpinHandle()
+        renderer.spinTo.mockReturnValue(handle)
+        useGameStore.getState().setRenderer(renderer)
+
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({
+            roundId: 'spoiler-fs',
+            totalWin: 15,
+            features: [{ type: 'freeSpins', spins: 18, multiplier: 2, retrigger: false }],
+            freeSpins: makeFreeSpinsState({ left: 8, total: 18 }),
+          }),
+        )
+
+        const round = useGameStore.getState().spin()
+        await flushPromises()
+
+        expect(useGameStore.getState().phase).toBe('spinning')
+        expect(useGameStore.getState().freeSpins).toBeNull()
+
+        resolve()
+        await flushPromises()
+
+        expect(useGameStore.getState().freeSpins?.total).toBe(18)
+
+        await round
+        finishCeremony()
       })
 
       it('스탑으로 릴을 즉시 세우면 그 자리에서 공개된다 — 스킵했는데 한 박자 늦지 않는다', async () => {
@@ -1403,7 +1492,12 @@ describe('game store', () => {
         const round = useGameStore.getState().spin()
         await flushPromises()
 
-        expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 100, totalBet: 10, hurried: false })
+        expect(useGameStore.getState().winCelebration).toEqual({
+          totalWin: 100,
+          totalBet: 10,
+          hurried: false,
+          chained: false,
+        })
         // 릴은 멈췄지만 판은 아직 끝나지 않았다 — 연출이 진행 중이라는 뜻의 showingWin이다.
         expect(useGameStore.getState().phase).toBe('showingWin')
 
@@ -1447,9 +1541,13 @@ describe('game store', () => {
         expect(renderer.showWins).toHaveBeenCalledTimes(1)
       })
 
-      it('세리머니 팝업이 뜨는 판(프리스핀 진입)에서는 오버레이를 세우지 않는다 — 팝업이 이미 화면의 주인이다', async () => {
+      // 진입 팝업은 «몇 판을 받았는지»만 세고 등급도 매기지 않는다(RoundPopup.tsx의 tier 주석).
+      // 그래서 스캐터가 떨어진 판 — 대개 그 세션에서 가장 큰 당첨 — 의 금액을 축하하는 화면은
+      // 이 오버레이뿐이다. 예전에는 세리머니가 있다는 이유만으로 통째로 억눌러, 50× 한 판이
+      // 아무 축하 없이 지나갔다.
+      it('프리스핀 «진입» 판에서도 오버레이는 뜬다 — 진입 팝업은 스핀 수만 세므로 금액을 말하는 화면이 여기뿐이다', async () => {
         await loadGame()
-        // 진입을 발동시키면서 동시에 그 판 자체도 10× 이상을 터뜨린다 — 그래도 팝업 판에는 오버레이가 없다.
+        // 진입을 발동시키면서 동시에 그 판 자체도 10× 이상을 터뜨린다.
         mockedApiSpin.mockResolvedValueOnce(
           baseSpinResponse({
             roundId: 'enter-with-big-win',
@@ -1460,13 +1558,30 @@ describe('game store', () => {
           }),
         )
 
-        await useGameStore.getState().spin()
+        const round = useGameStore.getState().spin()
+        await flushPromises()
 
+        // 뒤에 진입 팝업이 줄 서 있으므로 chained다 — 붙드는 시간만 1.2초로 줄고 롤업은 온전하다.
+        expect(useGameStore.getState().winCelebration).toEqual({
+          totalWin: 200,
+          totalBet: 10,
+          hurried: false,
+          chained: true,
+        })
+        // 오버레이가 떠 있는 «동안»에는 세리머니가 아직 시작되지 않는다 — 두 화면이 겹치지 않는다.
+        expect(useGameStore.getState().roundFlow.kind).toBe('idle')
+
+        useGameStore.getState().dismissWinCelebration()
+        await round
+
+        // 닫히고 나서야 팝업이 올라온다.
         expect(useGameStore.getState().winCelebration).toBeNull()
         expect(useGameStore.getState().roundFlow.kind).toBe('popup')
       })
 
-      it('세리머니 팝업이 뜨는 판(프리스핀 종료)에서는 오버레이를 세우지 않는다 — 종료 팝업이 같은 등급 연출로 총액을 이미 보여준다', async () => {
+      // 종료 팝업의 총액에는 «이번 판의 당첨»이 이미 들어 있다(roundFlow의 ceremonyFor) —
+      // 오버레이까지 띄우면 같은 돈을 두 번 축하하는 셈이고, 사용자가 거부한 것이 그 중복이다.
+      it('프리스핀 «종료» 판에서는 오버레이를 세우지 않는다 — 종료 팝업의 총액에 이번 판 당첨이 이미 들어 있다', async () => {
         await loadGame()
         const renderer = makeRenderer()
         useGameStore.getState().setRenderer(renderer)
@@ -1490,7 +1605,12 @@ describe('game store', () => {
           useGameStore.getState().startAutoSpin(5)
           await vi.advanceTimersByTimeAsync(0)
 
-          expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 200, totalBet: 10, hurried: true })
+          expect(useGameStore.getState().winCelebration).toEqual({
+            totalWin: 200,
+            totalBet: 10,
+            hurried: true,
+            chained: false,
+          })
           // 다음 판은 오버레이가 닫히기 전까지 예약되지 않는다.
           await vi.advanceTimersByTimeAsync(3000)
           expect(mockedApiSpin).toHaveBeenCalledTimes(1)
@@ -1520,7 +1640,12 @@ describe('game store', () => {
         const round = useGameStore.getState().spin()
         await flushPromises()
 
-        expect(useGameStore.getState().winCelebration).toEqual({ totalWin: 250, totalBet: 10, hurried: true })
+        expect(useGameStore.getState().winCelebration).toEqual({
+          totalWin: 250,
+          totalBet: 10,
+          hurried: true,
+          chained: false,
+        })
 
         useGameStore.getState().dismissWinCelebration()
         await round
@@ -2054,6 +2179,50 @@ describe('game store', () => {
     })
   })
 
+  describe('더블업 제안 × 세리머니 (제안이 1.2초 깜빡이다 사라지면 안 된다)', () => {
+    async function loadGame(): Promise<void> {
+      mockedGetGameMath.mockResolvedValue(rawMath)
+      await useGameStore.getState().load('classic-777')
+    }
+
+    it('프리스핀 진입 판에서는 제안을 아예 받지 않는다 — 진입 팝업 뒤에 깔려 누를 수 없는 버튼이다', async () => {
+      await loadGame()
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({
+          roundId: 'entry-with-offer',
+          totalWin: 20,
+          totalBet: 10,
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+          features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+          freeSpins: makeFreeSpinsState({ left: 10 }),
+        }),
+      )
+
+      await useGameStore.getState().spin()
+
+      // 예전에는 세션이 세팅됐고, 그 위로 포커스를 가두는 진입 팝업이 떠 받기/더블을 덮었다.
+      // 커튼이 걷힌 1.2초 뒤 다음 판이 세션을 지우는 것이 사용자가 본 전부였다.
+      expect(useGameStore.getState().gambleSession).toBeNull()
+      expect(useGameStore.getState().roundFlow.kind).toBe('popup')
+    })
+
+    it('세리머니가 없는 평범한 유료 판에서는 그대로 받는다 — 억제는 세리머니 판에만 걸린다', async () => {
+      await loadGame()
+      mockedApiSpin.mockResolvedValueOnce(
+        baseSpinResponse({
+          roundId: 'plain-with-offer',
+          totalWin: 20,
+          totalBet: 10,
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+
+      await useGameStore.getState().spin()
+
+      expect(useGameStore.getState().gambleSession?.pendingWin).toBe(20)
+    })
+  })
+
   describe('autospin (Wave 2)', () => {
     async function loadGame(): Promise<void> {
       mockedGetGameMath.mockResolvedValue(rawMath)
@@ -2217,6 +2386,43 @@ describe('game store', () => {
         expect(mockedApiSpin).toHaveBeenCalledTimes(1)
         // 잔액 부족은 "정지 조건"일 뿐이라 화면을 막는 에러로 만들지 않는다.
         expect(useGameStore.getState().errorCode).toBeNull()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    // 결함: AUTO 버튼이 스핀 중에도 눌렸고, 그렇게 무장하면 «이미 돌고 있던 수동 판»이 끝나며
+    // 카운터를 하나 깎아 버튼이 곧장 "중지 (24)"로 시작했다. 판의 소유권은 판이 시작될 때 정해진다.
+    it('스핀 도중에 무장하면 그 판은 오토스핀의 것이 아니다 — 카운터가 미리 깎이지 않는다', async () => {
+      await loadGame()
+      const renderer = makeRenderer()
+      const { handle, resolve } = makeControllableSpinHandle()
+      renderer.spinTo.mockReturnValue(handle)
+      useGameStore.getState().setRenderer(renderer)
+      mockedApiSpin.mockResolvedValue(baseSpinResponse())
+
+      vi.useFakeTimers()
+      try {
+        // 수동으로 한 판을 시작해 두고,
+        void useGameStore.getState().spin()
+        await vi.advanceTimersByTimeAsync(0)
+        expect(useGameStore.getState().phase).toBe('spinning')
+
+        // 그 판이 도는 도중에 오토스핀 25판을 무장한다. 새 판은 걸리지 않는다(phase가 idle이 아니다).
+        useGameStore.getState().startAutoSpin(25)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 25 })
+        expect(mockedApiSpin).toHaveBeenCalledTimes(1)
+
+        // 돌고 있던 수동 판이 끝난다 — 이 판은 오토스핀의 몫이 아니므로 25 그대로여야 한다.
+        resolve()
+        await vi.advanceTimersByTimeAsync(0)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 25 })
+
+        // 이어받은 첫 오토스핀 판부터 비로소 깎인다.
+        await vi.advanceTimersByTimeAsync(700)
+        expect(mockedApiSpin).toHaveBeenCalledTimes(2)
+        await vi.advanceTimersByTimeAsync(0)
+        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 24 })
       } finally {
         vi.useRealTimers()
       }

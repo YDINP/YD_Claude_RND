@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 스키마 설계, 쿼리 최적화, DB 마이그레이션,
   Room DB 설정, ORM 패턴, 인덱스 전략, 트랜잭션 설계.
   예시: "스키마 설계해줘", "이 쿼리 최적화해줘", "마이그레이션 작성해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, Glob, Grep
 ---
 

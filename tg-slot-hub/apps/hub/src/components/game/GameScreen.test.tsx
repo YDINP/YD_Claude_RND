@@ -1941,7 +1941,10 @@ describe('GameScreen', () => {
       expect(mockedApiSpin).toHaveBeenCalledTimes(2)
     })
 
-    it('세리머니 팝업(프리스핀 진입)이 뜨는 판에서는 오버레이가 동시에 뜨지 않는다 — 팝업이 화면의 주인이다', async () => {
+    // 진입 팝업은 «몇 판을 받았는지»만 세고 등급을 매기지 않으므로(RoundPopup.tsx의 tier 주석)
+    // 그 판의 금액을 말하는 화면은 이 오버레이뿐이다. 예전에는 세리머니가 있다는 이유만으로
+    // 통째로 억눌러, 스캐터가 떨어진 판 — 대개 세션에서 가장 큰 당첨 — 이 조용히 지나갔다.
+    it('세리머니 팝업(프리스핀 진입)이 뜨는 판에서는 오버레이가 «먼저» 뜨고, 닫은 뒤에야 팝업이 온다', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -1954,6 +1957,12 @@ describe('GameScreen', () => {
           freeSpins: { gameId: 'classic-777', left: 10, total: 10, multiplier: 2, totalBet: 10, accumulatedWin: 0 },
         }),
       )
+
+      // 20×는 BLAST다 — 오버레이가 금액을 말하고, 그동안 팝업은 아직 없다(둘이 겹치지 않는다).
+      expect(await screen.findByText('BLAST')).toBeInTheDocument()
+      expect(screen.queryByText('FREE SPINS!')).not.toBeInTheDocument()
+
+      dismissWinOverlay()
 
       expect(await screen.findByText('FREE SPINS!')).toBeInTheDocument()
       expect(document.querySelector('.hub-win-overlay')).not.toBeInTheDocument()
@@ -2254,6 +2263,66 @@ describe('GameScreen', () => {
 
       expect(screen.queryByRole('button', { name: /Double/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument()
+    })
+
+    // 결함: 모달은 gambleModalOpen «하나»로만 마운트된다(지는 픽이 세션을 즉시 지우므로 세션
+    // 존재를 조건으로 걸 수 없다). 그래서 세션이 사라진 뒤 픽을 누르면 store.gamble()이 null을
+    // 돌려주고, 핸들러가 그대로 물러나 모달이 «뒤집는 중»인 채로 굳었다 — 결과도 없고 앞으로
+    // 갈 길도 없이 닫기 버튼 하나만 남는 상태였다.
+    it('never leaves the modal in a dead end — a pick with no session behind it closes the modal instead of freezing it', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'r1',
+          totalWin: 20,
+          wallet: { coins: 990, gems: 0 },
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 2, win: 20, positions: [[0, 1], [1, 1], [2, 1]] }],
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Double (50%)' }))
+      expect(await screen.findByText('Double or Nothing (×2)')).toBeInTheDocument()
+
+      // 모달이 열려 있는 사이 세션이 사라진다 — 만료 회수(syncGambleExpiry)나 자동으로 걸린
+      // 다음 판이 실제로 이렇게 만든다. 여기서는 그 결과 상태만 그대로 만들어 준다.
+      act(() => {
+        useGameStore.setState({ gambleSession: null })
+      })
+
+      // 세션도 없고 뒤집는 중도 아니고 보여 줄 결과도 없다 — 그 조합은 존재할 수 없다.
+      await waitFor(() => expect(screen.queryByText('Double or Nothing (×2)')).not.toBeInTheDocument())
+      expect(mockedApiGamble).not.toHaveBeenCalled()
+    })
+
+    it('closes instead of freezing when the pick itself lands after the session is gone (store.gamble returns null)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'r1',
+          totalWin: 20,
+          wallet: { coins: 990, gems: 0 },
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 2, win: 20, positions: [[0, 1], [1, 1], [2, 1]] }],
+          gambleOffer: { pendingWin: 20, maxSteps: 3, expiresAt: '2099-01-01T00:00:10.000Z' },
+        }),
+      )
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Double (50%)' }))
+      const headsButton = await screen.findByRole('button', { name: 'Heads' })
+
+      // 픽이 날아가는 «순간» 세션이 사라진 경쟁 상황 — store.gamble()이 API를 부르지도 않고
+      // null을 돌려준다. 예전에는 여기서 handleGamblePick이 그냥 물러나 모달이 굳었다.
+      await act(async () => {
+        useGameStore.setState({ gambleSession: null })
+        fireEvent.click(headsButton)
+      })
+
+      expect(mockedApiGamble).not.toHaveBeenCalled()
+      await waitFor(() => expect(screen.queryByText('Double or Nothing (×2)')).not.toBeInTheDocument())
     })
 
     it('labels the Double button with the real chance from math.gamble.chance, and the modal title with the real payout', async () => {
@@ -3207,6 +3276,46 @@ describe('GameScreen', () => {
       await waitFor(() => expect(screen.getByRole('button', { name: '+' })).not.toBeDisabled())
     })
 
+    // 결함: AUTO가 스핀 중에도 눌렸다. startAutoSpin은 phase가 idle이 아니면 새 판을 걸지
+    // 않으므로(설계대로) 무장만 되는데, 이미 돌고 있던 «수동» 판이 끝나며 카운터를 하나 깎아
+    // 버튼이 곧장 "Stop (24)"로 시작했다 — 25판을 골랐는데 한 판이 그냥 사라진 것처럼 보인다.
+    it('cannot be armed while a round is in flight — arming mid-spin used to eat one round instantly', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+
+      await act(async () => {
+        getSpinButton().click()
+      })
+      expect(useGameStore.getState().phase).toBe('spinning')
+      expect(getAutoButton()).toBeDisabled()
+
+      await act(async () => {
+        resolveSpin(baseSpinResponse())
+      })
+      await waitFor(() => expect(getAutoButton()).not.toBeDisabled())
+
+      // 판이 끝난 뒤 무장하면 고른 회수 그대로 시작한다.
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+      await armAutoSpin(25)
+      await waitFor(() => expect(getSpinButton()).toHaveTextContent('Stop (25)'))
+
+      useGameStore.getState().stopAutoSpin()
+      await act(async () => {
+        resolveSpin(baseSpinResponse())
+      })
+    })
+
     it('cannot be armed during free spins — that loop owns the reels', async () => {
       mockedGetGameState.mockResolvedValue({
         freeSpins: {
@@ -3223,6 +3332,205 @@ describe('GameScreen', () => {
       await screen.findByText('10')
 
       await waitFor(() => expect(getAutoButton()).toBeDisabled())
+    })
+  })
+
+  describe('접근성 감사 반영 (HIGH-1 WinStrip 정산 안내 / HIGH-2 시트 accessible name / MEDIUM-3 모션 축소)', () => {
+    async function spinAndSettle(response: SpinResponse): Promise<void> {
+      mockedApiSpin.mockResolvedValueOnce(response)
+      await act(async () => {
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+    }
+
+    /** null이 아니라 항상 문자열을 돌려준다 — 마운트 직후(빈 문자열)와 미채움을 구분해 본다. */
+    function liveRegionText(): string {
+      return document.querySelector('.hub-win-strip__live')?.textContent ?? ''
+    }
+
+    it('announces the amount once the round settles', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      expect(liveRegionText()).toBe('')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'settle-win',
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      expect(liveRegionText()).toBe('Win 50')
+    })
+
+    it('announces "no win" for a losing spin', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'settle-lose', totalBet: 10, totalWin: 0 }))
+
+      expect(liveRegionText()).toBe('No win')
+    })
+
+    it('does not re-fire per presentation cycle — repeated winLine/winTotal events after settle leave the announcement unchanged', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'settle-cycle',
+          totalBet: 10,
+          totalWin: 50,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 5, win: 50, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+      expect(liveRegionText()).toBe('Win 50')
+
+      // 순환 연출은 phase가 idle로 돌아온 뒤에도 계속 winLine/winTotal을 흘려보낼 수 있다
+      // (WinStrip 자신의 도큐블록 참고) — settle 문구는 다음 스핀 전까지 그대로여야 한다.
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 50,
+          symbol: 'seven',
+          count: 3,
+          index: 0,
+          total: 1,
+          cycle: 1,
+        })
+        mockRenderer.onEvent?.({ type: 'winTotal', totalWin: 50, tier: 'none', durationMs: 10 })
+      })
+      expect(liveRegionText()).toBe('Win 50')
+    })
+
+    it('clears the announcement when the next spin starts, so the same "no win" text twice in a row is re-announced', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'lose-1', totalBet: 10, totalWin: 0 }))
+      expect(liveRegionText()).toBe('No win')
+
+      let resolveSpin: (value: SpinResponse) => void = () => {}
+      mockedApiSpin.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSpin = resolve
+        }),
+      )
+      await act(async () => {
+        getSpinButton().click()
+      })
+      // 새 스핀이 시작되면 일단 비운다 — 그래야 같은 문구가 다시 채워져도(아래) DOM이 실제로
+      // 바뀌어 스크린리더가 두 번째도 읽는다.
+      expect(liveRegionText()).toBe('')
+
+      await act(async () => {
+        resolveSpin(baseSpinResponse({ roundId: 'lose-2', totalBet: 10, totalWin: 0 }))
+      })
+      await waitFor(() => expect(liveRegionText()).toBe('No win'))
+    })
+
+    it('suppresses the settle announcement for a round the big-win overlay already announced', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(baseSpinResponse({ roundId: 'suppressed-bigwin', totalWin: 100, totalBet: 10 }))
+      expect(await screen.findByText('SURGE')).toBeInTheDocument()
+      // 오버레이가 아직 화면의 주인인 동안은 판이 정산되지 않았다 — 안내도 아직 없다.
+      expect(liveRegionText()).toBe('')
+
+      // 오버레이를 닫아야(탭 1~2회) 판이 실제로 idle로 정산된다.
+      const tapOverlay = (): void => {
+        const overlay = document.querySelector('.hub-win-overlay__tap')
+        if (overlay) fireEvent.click(overlay)
+      }
+      act(tapOverlay)
+      if (document.querySelector('.hub-win-overlay')) act(tapOverlay)
+      await waitFor(() => expect(screen.queryByText('SURGE')).not.toBeInTheDocument())
+
+      // 오버레이가 이미 100을 소리 내어 알렸다 — WinStrip은 같은 숫자를 또 안내하지 않는다.
+      expect(liveRegionText()).toBe('')
+    })
+
+    it('suppresses the settle announcement for a round a ceremony popup already announced (free spins entry)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'suppressed-ceremony',
+          totalWin: 200,
+          totalBet: 10,
+          features: [{ type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }],
+          freeSpins: { gameId: 'classic-777', left: 10, total: 10, multiplier: 2, totalBet: 10, accumulatedWin: 0 },
+        }),
+      )
+
+      // 진입 판은 빅윈 오버레이가 «먼저» 뜬다 — 그것을 닫아야 판이 정산되고 팝업이 올라온다.
+      const tapOverlay = (): void => {
+        const overlay = document.querySelector('.hub-win-overlay__tap')
+        if (overlay) fireEvent.click(overlay)
+      }
+      act(tapOverlay)
+      if (document.querySelector('.hub-win-overlay')) act(tapOverlay)
+
+      expect(await screen.findByText('FREE SPINS!')).toBeInTheDocument()
+      expect(liveRegionText()).toBe('')
+    })
+
+    it('gives the help/bet/out-of-coins bottom sheets an accessible name via aria-labelledby (HIGH-2)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      screen.getByRole('button', { name: 'Help' }).click()
+      expect(await screen.findByRole('dialog', { name: 'Help' })).toBeInTheDocument()
+      fireEvent.click(screen.getByText('Close'))
+
+      screen.getByRole('button', { name: 'Bet' }).click()
+      expect(await screen.findByRole('dialog', { name: 'Bet' })).toBeInTheDocument()
+      fireEvent.click(screen.getByText('Close'))
+
+      mockedApiSpin.mockRejectedValueOnce(new ApiClientError('not enough coins', 402, 'INSUFFICIENT_FUNDS'))
+      await act(async () => {
+        getSpinButton().click()
+      })
+      expect(await screen.findByRole('dialog', { name: "You're out of coins" })).toBeInTheDocument()
+    })
+
+    it('honours the in-app reduced-motion setting for the win-line pop animation, independently of the OS media query (MEDIUM-3)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      useSettingsStore.setState({ reducedMotion: true })
+
+      await spinAndSettle(
+        baseSpinResponse({
+          roundId: 'reduced-motion',
+          totalBet: 10,
+          totalWin: 20,
+          wins: [{ line: 0, symbol: 'seven', count: 3, multiplier: 2, win: 20, positions: [[0, 1], [1, 1], [2, 1]] }],
+        }),
+      )
+
+      act(() => {
+        mockRenderer.onEvent?.({
+          type: 'winLine',
+          line: 0,
+          win: 20,
+          symbol: 'seven',
+          count: 3,
+          index: 0,
+          total: 1,
+          cycle: 0,
+        })
+      })
+
+      const label = await screen.findByText('Seven ×3 · 20')
+      expect(label).toHaveClass('hub-win-strip__line-label')
+      expect(label).not.toHaveClass('hub-win-strip__line-label--animate')
     })
   })
 })

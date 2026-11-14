@@ -43,7 +43,7 @@ import {
   shockwaveDelaysFor,
   showerParticles,
 } from './winTiers'
-import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
+import { ROUND_CHAINED_HOLD_MS, ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import { useSettingsStore } from '../../store/settings'
 
 function amountText(): string {
@@ -151,6 +151,24 @@ describe('winTiers (pure)', () => {
       // 최악의 경우(500× + 서두름)에도 한 판이 오버레이에 붙들리는 시간은 6초를 넘지 않는다 —
       // "판 간격이 20초를 넘겨 멈춘 것처럼 보인다"는 예전 결함으로 되돌아가지 않는다.
       expect(hurried.rollupMs + hurried.emphasisMs + hurried.holdMs).toBeLessThan(6000)
+    })
+
+    // 결함: 프리스핀 «진입» 판은 오버레이(롤업 ≤6s + 강조 2.4s + 홀드 10s) 뒤에 진입 팝업 10초와
+    // 커튼 2.5초가 더 붙어 한 판이 27~31초였다. hurried는 이 자리의 답이 아니다 — 롤업까지 반으로
+    // 접는데, 진입 판의 당첨은 그 세션에서 가장 큰 축이라 숫자가 끝까지 굴러가는 것을 봐야 한다.
+    it('shortens only the hold when another screen is queued behind — the count-up stays whole', () => {
+      const normal = bigWinTimeline(200 * bet, bet)
+      const chained = bigWinTimeline(200 * bet, bet, { chained: true })
+
+      expect(chained.rollupMs).toBe(normal.rollupMs)
+      expect(chained.emphasisMs).toBe(normal.emphasisMs)
+      expect(chained.holdMs).toBe(ROUND_CHAINED_HOLD_MS)
+      expect(chained.holdMs).toBeLessThan(ROUND_POPUP_AUTO_CLOSE_MS)
+    })
+
+    it('lets hurried win over chained — an autospin run never asked us to hold the screen at all', () => {
+      const both = bigWinTimeline(200 * bet, bet, { hurried: true, chained: true })
+      expect(both.holdMs).toBe(BIG_WIN_HURRIED_HOLD_MS)
     })
 
     it('collapses the roll-up under reduced motion — length can no longer carry the amount', () => {

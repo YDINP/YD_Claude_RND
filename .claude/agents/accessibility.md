@@ -8,7 +8,7 @@ description: |
   예시: "접근성 검사해줘", "TalkBack 지원 추가해줘", "WCAG 준수 확인해줘",
   "Compose Semantics 점검해줘", "색상 대비율 계산해줘"
   ※ 실제 코드 수정은 `executor` 에이전트에 위임
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep
 ---
 

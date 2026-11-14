@@ -261,7 +261,11 @@ export async function newAccountSession(browser, accountKey) {
     const t = m.text();
     if (isIgnored(t)) return;
     // shutdown() 정리 실패는 console.warn 으로 나온다 — 이번 검수의 핵심 관심사라 함께 받는다
-    if (m.type() === 'error' || /shutdown\(\) 실패/.test(t)) errors.push(`${m.type().toUpperCase()}: ${t.slice(0, 300)}`);
+    // 경고 중에서도 **조용한 실패의 흔적**은 받는다.
+    // `TransitionManager` 의 안전 타이머는 warn 으로만 남는데, 그게 곧 "전환이 잠겨 있었다"는
+    // 증거다. error 만 받으면 이런 결함이 로그에 흔적을 남겨도 놓친다(2026-09-07).
+    const SIGNIFICANT_WARN = /shutdown\(\) 실패|Safety timeout|force reset|is not a function/;
+    if (m.type() === 'error' || SIGNIFICANT_WARN.test(t)) errors.push(`${m.type().toUpperCase()}: ${t.slice(0, 300)}`);
   });
   page.on('pageerror', (e) => {
     if (isIgnored(e.message)) return;

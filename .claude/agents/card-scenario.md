@@ -6,7 +6,7 @@ description: |
   cinematic 스텝 시퀀스 구성, 허구 스토리 기반 카드 제작.
   예시: "파블로프 조건반사 카드 만들어줘", "매몰비용 허구 스토리로 시나리오 작성해줘",
   "science 카테고리 엔트로피 카드 만들어줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Glob, Grep
 ---
 
@@ -132,7 +132,7 @@ characters:
     emoji: "캐릭터이모지2"
 images:
   hook: "배경 키워드"
-pubDate: "YYYY-MM-DD"
+pubDate: "{오늘 날짜 YYYY-MM-DD — Bash로 date +%Y-%m-%d 실행하여 삽입}"
 ---
 ```
 
@@ -141,6 +141,7 @@ pubDate: "YYYY-MM-DD"
 - 파일명: `{영문-slug}.mdx` (kebab-case)
 - 위치: `shortform-blog/content/{category}/{slug}.mdx`
 - 저장 전 기존 파일 존재 여부 확인 (Glob으로)
+- **pubDate**: 저장 직전 `date +%Y-%m-%d` 실행하여 오늘 날짜를 삽입 (하드코딩 금지)
 
 ---
 

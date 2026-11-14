@@ -678,7 +678,8 @@ export class SaveManager {
         const item = stock.find(e => e && e.id === equipId);
         if (item) item.equippedBy = null;
       });
-      character.equipment = { weapon: null, armor: null, accessory: null };
+      // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
+      character.equipment = { weapon: null, armor: null, accessory: null, relic: null };
       character.equipped = null;
     });
 
@@ -1046,10 +1047,12 @@ export class SaveManager {
       stars: this.getBaseStars(characterId),
       skillLevels: [1, 1, 1], // 기본/스킬1/스킬2
       equipped: null,
+      // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
       equipment: {
         weapon: null,
         armor: null,
-        accessory: null
+        accessory: null,
+        relic: null
       },
       constellation: 0,
       acquiredAt: Date.now()
@@ -1079,7 +1082,8 @@ export class SaveManager {
       stars: getRarityStars(BASE_HERO_RARITY),
       skillLevels: [1, 1, 1],
       equipped: null,
-      equipment: { weapon: null, armor: null, accessory: null },
+      // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
+      equipment: { weapon: null, armor: null, accessory: null, relic: null },
       constellation: 0,
       acquiredAt: now,
       isBaseHero: true
@@ -2164,7 +2168,8 @@ export class SaveManager {
         stars: rarityStars[route.resultRarity] || 3,
         skillLevels: [1, 1, 1],
         equipped: null,
-        equipment: { weapon: null, armor: null, accessory: null },
+        // QA P1 후속: relic 슬롯이 누락돼 있었다 — EquipmentSystem.SLOTS 4종과 항상 맞춰야 한다.
+        equipment: { weapon: null, armor: null, accessory: null, relic: null },
         constellation: 0,
         acquiredAt: now,
         isAscended: true,

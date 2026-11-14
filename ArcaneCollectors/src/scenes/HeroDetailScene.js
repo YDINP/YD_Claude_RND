@@ -28,11 +28,13 @@ import { getRarityKey } from '../utils/rarityUtils.js';
 import { ts } from '../utils/textStyles.ts';
 import { GlassPanel, GLASS_VARIANT } from '../components/GlassPanel.js';
 import { NineSliceFrame } from '../components/NineSliceFrame.js';
+import { ScrollContainer } from '../components/ScrollContainer.js';
 import { IconFactory } from '../utils/IconFactory.js';
 import { BackgroundFactory } from '../utils/BackgroundFactory.js';
 import { EvolutionSystem } from '../systems/EvolutionSystem.js';
 import { ProgressionSystem } from '../systems/ProgressionSystem.js';
 import { SaveManager } from '../systems/SaveManager.js';
+import { EquipmentSystem } from '../systems/EquipmentSystem.js';
 import characterRenderer from '../renderers/CharacterRenderer.js';
 import { HeroAssetLoader } from '../systems/HeroAssetLoader.js';
 import { RadarChart } from '../components/RadarChart.js';
@@ -1242,7 +1244,13 @@ export class HeroDetailScene extends Phaser.Scene {
   // ================================================================
 
   renderEquipTab() {
-    const equipped = this.hero.equipment || {};
+    // QA P1 후속: `this.hero.equipment[slot]` 은 SaveManager 상의 장비 id 참조(문자열)일 뿐
+    // 이름·스탯·강화 레벨을 담은 실물 객체가 아니다. 여기서 `item.stats`/`item.rarity` 등을
+    // 그대로 읽던 예전 코드는 한 번도 장착이 성공한 적이 없어(피커 미구현) 드러나지 않았을
+    // 뿐인 잠재 결함이었다. EquipmentSystem.getEquippedItems() 가 SaveManager 를 최신 상태로
+    // 다시 읽어 id→실물 객체로 해석해 주므로, 씬 재시작 없이도 방금 장착/해제한 결과가 바로
+    // 반영된다(표시 계층에서 추론하지 않고 SSOT 를 그대로 쓴다).
+    const equipped = EquipmentSystem.getEquippedItems(this.hero.id);
     const equippedCount = EQUIP_SLOT_ORDER.filter(key => equipped[key]).length;
 
     this.addTabTitle('장비', `${equippedCount} / ${EQUIP_SLOT_ORDER.length} 장착`);
@@ -1771,27 +1779,116 @@ export class HeroDetailScene extends Phaser.Scene {
     popup.add(this.add.text(0, s(88), '닫기', ts('label', { color: DESIGN.colors.text.secondary })).setOrigin(0.5));
 
     unequipBg.on('pointerdown', () => {
-      if (!this.hero.equipment) this.hero.equipment = {};
-      this.hero.equipment[slotKey] = null;
-
-      const heroes = this.registry.get('ownedHeroes') || [];
-      const heroIndex = heroes.findIndex(h => h.id === this.hero.id);
-      if (heroIndex >= 0) {
-        heroes[heroIndex] = this.hero;
-        this.registry.set('ownedHeroes', heroes);
-      }
-      this.persistHeroData();
-
+      // QA P1 후속: 예전엔 `this.hero.equipment[slotKey] = null` 을 직접 대입하고
+      // `persistHeroData()` 로만 저장했다 — 장비 레코드(`data.inventory.equipment`)의
+      // `equippedBy` 는 그대로 남아, 해제해도 그 장비가 영구히 "장착 중"으로 취급돼
+      // 피커 후보(`getEquipmentBySlot`)에서 계속 제외됐다. EquipmentSystem.unequip() 은
+      // 캐릭터 슬롯과 장비 레코드 양쪽을 한 번에 정합성 있게 정리한다.
+      const result = EquipmentSystem.unequip(this.hero.id, slotKey);
+      if (result.success) this.syncEquipmentCache(slotKey, null);
       popup.destroy();
-      this.showMessage('장비 해제 완료!');
+      this.showMessage(result.success ? '장비 해제 완료!' : (result.error || '장비 해제 실패'));
       this.time.delayedCall(200, () => this.refresh('equip'));
     });
 
     closeBg.on('pointerdown', () => popup.destroy());
   }
 
+  /**
+   * QA P1 후속 — 빈 슬롯 탭 시 실제 장착 후보를 보여주고 장착까지 처리한다.
+   * 예전엔 "준비 중!" 토스트만 뜨고 아무 일도 일어나지 않았다(피커 자체가 없었다) —
+   * 장비 데이터의 슬롯 타입(slotType)은 이미 정확했지만 이걸 소비하는 화면이 없었다.
+   */
   showEquipmentList(slotKey) {
-    this.showMessage(`${EQUIPMENT_SLOTS[slotKey]?.name || slotKey} 장비 선택 준비 중!`);
+    const meta = EQUIPMENT_SLOTS[slotKey] || { name: slotKey };
+    const candidates = EquipmentSystem.getEquipmentBySlot(slotKey);
+
+    if (candidates.length === 0) {
+      this.showMessage(`보유한 ${meta.name} 장비가 없습니다`);
+      return;
+    }
+
+    // 강화 레벨 높은 순 → 등급 높은 순으로 정렬해 좋은 장비가 먼저 보이게 한다.
+    const rarityRank = { SSR: 4, SR: 3, R: 2, N: 1 };
+    const sorted = [...candidates].sort((a, b) => {
+      const rDiff = (rarityRank[getRarityKey(b.rarity)] || 0) - (rarityRank[getRarityKey(a.rarity)] || 0);
+      if (rDiff !== 0) return rDiff;
+      return (b.enhanceLevel || 0) - (a.enhanceLevel || 0);
+    });
+
+    // QA 후속: 팝업 높이를 후보 수에 맞춰 늘리다가 [닫기] 영역과 겹치는 결함이 있었다
+    // (후보 3개에서도 이미 마지막 줄이 잘렸다 — 후보가 늘면 더 심해질 구조). 팝업은 고정
+    // 높이로 두고, 후보 목록만 `ScrollContainer`(QuestPopup/HeroListPopup과 동일 컴포넌트)로
+    // 스크롤시켜 후보 수와 무관하게 항상 [닫기] 위에서 멈추게 한다.
+    const rowH = s(76);
+    const panelW = s(440);
+    const panelH = Math.min(s(640), GAME_HEIGHT - s(160));
+    const panelLeft = GAME_WIDTH / 2 - panelW / 2;
+    const panelTop = GAME_HEIGHT / 2 - panelH / 2;
+    const headerH = s(72);
+    const closeAreaH = s(96);
+    const listTop = panelTop + headerH;
+    const listHeight = panelH - headerH - closeAreaH;
+
+    const popup = this.add.container(0, 0).setDepth(Z_INDEX.MODAL);
+
+    const panel = GlassPanel.create(this, {
+      x: panelLeft + panelW / 2, y: panelTop + panelH / 2, w: panelW, h: panelH,
+      variant: GLASS_VARIANT.POPUP,
+      tint: this.cultColor
+    });
+    popup.add(panel);
+
+    popup.add(this.add.text(panelLeft + panelW / 2, panelTop + s(28), `${meta.name} 장착`, ts('subtitle', {
+      color: DESIGN.colors.text.primary, align: 'center'
+    })).setOrigin(0.5));
+    popup.add(this.add.text(panelLeft + panelW / 2, panelTop + s(52), `보유 ${sorted.length}개`, ts('caption', {
+      color: DESIGN.colors.text.secondary
+    })).setOrigin(0.5));
+
+    const scroll = new ScrollContainer(this, {
+      x: panelLeft + s(20), y: listTop, width: panelW - s(40), height: listHeight,
+      fadeColor: 0x0F172A,
+      parent: popup
+    });
+
+    sorted.forEach((equipment, index) => {
+      const rowY = listTop + index * rowH + rowH / 2;
+      const rowColors = RARITY_COLORS[getRarityKey(equipment.rarity)] || RARITY_COLORS.N;
+
+      const rowBg = this.add.rectangle(panelLeft + s(20) + (panelW - s(40)) / 2, rowY, panelW - s(48), rowH - s(8),
+        rowColors.bg, 0.6).setStrokeStyle(s(2), rowColors.border, 0.9);
+      scroll.add(rowBg);
+
+      const stats = equipment.stats || {};
+      const statLine = Object.entries(stats).map(([k, v]) => `${k}+${v}`).join(' ');
+      scroll.add(this.add.text(panelLeft + s(32), rowY - s(12), equipment.name, ts('label', {
+        color: DESIGN.colors.text.primary
+      })).setOrigin(0, 0.5));
+      scroll.add(this.add.text(panelLeft + s(32), rowY + s(16), `${getRarityKey(equipment.rarity)} +${equipment.enhanceLevel || 0}  ${statLine}`, ts('caption', {
+        color: DESIGN.colors.text.secondary
+      })).setOrigin(0, 0.5));
+
+      scroll.attachTap(rowBg, () => {
+        const result = EquipmentSystem.equip(this.hero.id, slotKey, equipment.id);
+        if (result.success) this.syncEquipmentCache(slotKey, equipment.id);
+        // ScrollContainer 는 scene.input 전역 리스너를 갖고 있어 팝업보다 먼저 명시적으로
+        // 정리한다(QuestPopup 과 동일 관례).
+        scroll.destroy();
+        popup.destroy();
+        this.showMessage(result.success ? '장비 장착 완료!' : (result.error || '장비 장착 실패'));
+        this.time.delayedCall(200, () => this.refresh('equip'));
+      });
+    });
+
+    scroll.setContentHeight(sorted.length * rowH);
+
+    const closeY = panelTop + panelH - s(48);
+    const closeBg = this.add.rectangle(panelLeft + panelW / 2, closeY, s(260), s(64), DESIGN.colors.bg.surface, 0.95)
+      .setInteractive({ useHandCursor: true });
+    popup.add(closeBg);
+    popup.add(this.add.text(panelLeft + panelW / 2, closeY, '닫기', ts('label', { color: DESIGN.colors.text.secondary })).setOrigin(0.5));
+    closeBg.on('pointerdown', () => { scroll.destroy(); popup.destroy(); });
   }
 
   autoLevelUp() {
@@ -2089,6 +2186,28 @@ export class HeroDetailScene extends Phaser.Scene {
     if (this.tooltip) {
       this.tooltip.destroy();
       this.tooltip = null;
+    }
+  }
+
+  /**
+   * QA P1 후속 — 장착/해제는 EquipmentSystem 이 SaveManager 에 직접(그리고 즉시) 반영하지만,
+   * 이 씬이 들고 있는 `this.hero`(= `registry.get('ownedHeroes')` 스냅샷)는 자동으로
+   * 갱신되지 않는다. 이 스냅샷을 갱신해 두지 않으면, 이후 레벨업/진화 등 다른 동작이
+   * `persistHeroData()` 로 이 낡은 `equipment` 스냅샷을 다시 써 넣어 방금 한 장착/해제를
+   * 조용히 되돌려 버린다.
+   * @param {string} slotKey
+   * @param {string|null} equipmentId
+   */
+  syncEquipmentCache(slotKey, equipmentId) {
+    if (!this.hero) return;
+    if (!this.hero.equipment) this.hero.equipment = {};
+    this.hero.equipment[slotKey] = equipmentId;
+
+    const heroes = this.registry.get('ownedHeroes') || [];
+    const heroIndex = heroes.findIndex(h => h.id === this.hero.id);
+    if (heroIndex >= 0) {
+      heroes[heroIndex] = { ...heroes[heroIndex], equipment: { ...this.hero.equipment } };
+      this.registry.set('ownedHeroes', heroes);
     }
   }
 

@@ -8,7 +8,7 @@ description: |
   예시: "이 버그 언제 생겼는지 찾아줘", "이 코드 왜 바뀐지 이력 봐줘", "기여 현황 분석해줘",
   "API 키가 커밋에 들어갔는지 확인해줘", "커밋 메시지 컨벤션 점검해줘"
   ※ git 이력 조작(rebase, reset)은 직접 하지 않음 — 사용자에게 명령어 안내
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Bash, Glob, Grep
 ---
 

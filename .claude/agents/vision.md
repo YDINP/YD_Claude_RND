@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: UI 스크린샷 분석, 다이어그램 해석, 와이어프레임 설명,
   에러 스크린샷 분석, PDF 내용 추출.
   예시: "이 스크린샷에서 UI 문제 찾아줘", "다이어그램 설명해줘", "이 에러 화면 분석해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read
 ---
 

@@ -16,7 +16,8 @@
  * - 자동 닫힘 시계는 **마운트가 아니라 결과에 닿은 순간**부터 돈다. 그래서 건너뛰기로 일찍
  *   앉혀도 결과를 볼 시간이 줄지 않는다(예전에는 마운트에서 한 번 걸어 둔 탓에 건너뛰면 곧장
  *   닫혔다). 오토스핀·프리스핀이 도는 동안(`hurried`)에는 붙드는 시간이 짧다 — 판 사이를
- *   막지 않기 위해서다(winTiers.ts의 `BIG_WIN_HURRIED_HOLD_MS`).
+ *   막지 않기 위해서다(winTiers.ts의 `BIG_WIN_HURRIED_HOLD_MS`). 프리스핀 진입 판처럼 이 뒤에
+ *   또 다른 화면이 줄 서 있을 때도(`chained`) 붙드는 시간만 짧아진다 — 숫자는 끝까지 굴러간다.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDialog } from '../../hooks/useDialog'
@@ -42,6 +43,8 @@ interface WinCelebrationOverlayProps {
   totalBet?: number
   /** 오토스핀 또는 프리스핀 진행 중 — 롤업·강조가 줄고 붙드는 시간이 짧아진다. */
   hurried?: boolean
+  /** 닫히면 곧바로 다른 화면이 이어진다(프리스핀 진입 팝업) — 붙드는 시간만 짧아진다. */
+  chained?: boolean
   /** 게임팩이 `theme.json`으로 덮어쓴 등급 이름. 빠진 등급은 허브 기본값. */
   labels?: WinTierLabels
   /** 게임 스킨. 배경 연출과 카드가 같은 값을 입는다. */
@@ -54,6 +57,7 @@ export function WinCelebrationOverlay({
   totalWin,
   totalBet,
   hurried,
+  chained,
   labels,
   skin,
   onDismiss,
@@ -63,7 +67,7 @@ export function WinCelebrationOverlay({
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
 
   const tier = celebrationTier(totalWin, totalBet)
-  const timing = bigWinTimeline(totalWin, totalBet ?? 0, { hurried, reducedMotion })
+  const timing = bigWinTimeline(totalWin, totalBet ?? 0, { hurried, chained, reducedMotion })
   const roll = useWinRollup(totalWin, timing.rollupMs)
 
   /** 강조 비트가 지났는가. 숫자가 앉은 뒤에만 의미가 있다(그 전에는 항상 false에서 다시 시작한다). */

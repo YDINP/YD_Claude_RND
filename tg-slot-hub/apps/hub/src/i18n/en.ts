@@ -185,6 +185,10 @@ const en = {
   gambleTossing: 'Tossing…',
   // win strip line/cycle labels (debug + presentation)
   winStripCycleTotal: 'Total {amount}',
+  // win strip settle announcement (a11y audit HIGH-1) — screen-reader-only, read once when a
+  // round settles. Suppressed when the big-win overlay or a ceremony popup already announced it.
+  winStripSettleWin: 'Win {amount}',
+  winStripSettleNoWin: 'No win',
   // debug panel (dev-only tool, gated by debug=1 / localStorage / tap gesture)
   debugButtonLabel: 'Debug panel',
   debugPanelTitle: 'Debug panel',

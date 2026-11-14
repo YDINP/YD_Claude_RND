@@ -5,7 +5,7 @@ description: |
   다음 상황에서 사용: 파일/함수/패턴 검색, 아키텍처 이해, 코드 흐름 추적,
   의존성 맵핑, "어디에 있는지" 질문.
   예시: "인증 코드 어디에 있어?", "이 함수 어디서 쓰여?", "프로젝트 구조 설명해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash
 ---
 

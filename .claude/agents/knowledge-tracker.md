@@ -6,7 +6,7 @@ description: |
   다음 상황에서 사용: 세션 종료 후 지식 정리, 아키텍처 결정 기록,
   해결된 문제 패턴 저장, 반복 실수 방지 기록.
   예시: "이번 세션 지식 정리해줘", "결정사항 기록해줘", "학습 내용 저장해줘"
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Write, Edit
 ---
 
