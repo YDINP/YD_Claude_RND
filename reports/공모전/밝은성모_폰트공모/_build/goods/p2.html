@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;font-family:SL;color:#1d2433;position:relative;overflow:hidden;
+background:repeating-linear-gradient(90deg,rgba(0,0,0,.025) 0 3px,transparent 3px 41px),linear-gradient(160deg,#d8c3a3,#c9b08b)}
+.c{position:absolute;left:260px;top:190px;transform:rotate(-6deg);box-shadow:0 40px 60px -30px rgba(50,30,0,.55),0 2px 0 rgba(0,0,0,.05)}
+.g{position:absolute;left:930px;top:1180px;transform:rotate(10deg)}
+.k{position:absolute;left:90px;top:70px;font-size:28px;letter-spacing:12px;color:#5d4b33}
+.cap{position:absolute;left:90px;bottom:80px;font-family:VC;font-size:44px;color:#3b2e1c}
+</style><script src="cloth.js"></script><script src="glasses.js"></script></head><body>
+<div class="k">나 의 ㅅ ㅁ 굿 즈 · 목 업 1</div>
+<div class="c" id="c"></div><div class="g" id="g"></div>
+<div class="cap">책상 위, 매일 아침 한 줄씩</div>
+<script>c.innerHTML=cloth(950);g.innerHTML=glasses(560);document.fonts.ready.then(()=>document.body.dataset.ok=1)</script></body></html>

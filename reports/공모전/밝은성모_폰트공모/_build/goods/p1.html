@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;background:#efe9dc;font-family:SL;color:#1d2433;position:relative;overflow:hidden}
+.k{position:absolute;left:100px;top:70px;font-size:28px;letter-spacing:12px;color:#8a8f9c}
+.t{position:absolute;left:96px;top:116px;font-size:64px}
+.c{position:absolute;left:250px;top:260px;box-shadow:0 30px 60px -30px rgba(40,30,10,.35)}
+.dim{position:absolute;font-size:24px;color:#8a8f9c;letter-spacing:2px}
+</style><script src="cloth.js"></script></head><body>
+<div class="k">나 의 ㅅ ㅁ 굿 즈 · 도 안</div><div class="t">언젠가 서랍에 넣을 안경닦이</div>
+<div class="c" id="c"></div>
+<div class="dim" style="left:250px;top:1380px">극세사 150 × 150 mm · 2도 인쇄(남색·빨강) · 가장자리 박음질</div>
+<div class="dim" style="left:250px;top:1420px">스마일라식체(시력표 본문) · 시력교정체(손 글씨 한 줄) · 글꼴 윤곽 변형 없음</div>
+<script>document.getElementById('c').innerHTML=cloth(1100);document.fonts.ready.then(()=>document.body.dataset.ok=1)</script></body></html>

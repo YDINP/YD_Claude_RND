@@ -1,0 +1,25 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}
+@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;background:#efe9dc;font-family:SL;color:#1d2433;position:relative;overflow:hidden}
+.board{position:absolute;left:250px;top:110px;width:1100px;height:1300px;background:#fff;border-radius:20px;box-shadow:0 30px 60px -30px rgba(40,30,10,.3)}
+.hd{position:absolute;left:0;right:0;top:44px;text-align:center;font-size:30px;letter-spacing:18px;color:#8a8f9c}
+.row{position:absolute;left:150px;right:60px;display:flex;justify-content:center;align-items:flex-end;gap:var(--g)}
+.n{position:absolute;left:-90px;bottom:10px;font-size:26px;color:#a3a8b3}
+.cap{position:absolute;left:250px;top:1450px;width:1100px;font-family:VC;font-size:40px;text-align:center}
+.bubble{position:absolute;font-size:44px;color:#e0483a}
+.stick{position:absolute;width:520px;height:16px;transform-origin:0 50%}
+.stick i{position:absolute;inset:0;background:linear-gradient(#f2efe6,#cdc6b4);border-radius:8px;box-shadow:0 3px 6px rgba(0,0,0,.18)}
+.stick b{position:absolute;left:-6px;top:-4px;width:24px;height:24px;border-radius:50%;background:#e0483a}
+</style><script src="char.js"></script></head><body>
+<div class="board" id="b"><div class="hd">선 명 이 네  시 력 표</div></div>
+<div class="cap">맨 아래 줄 선명이까지 “오른쪽!” — 나의 ㅅㅁ, 선명</div>
+<script>
+const rows=[[0.1,1,250,['smile'],[-90],120],[0.3,2,130,['wink','tilt'],[0,180],420],[0.5,3,90,['sleepy','open','smile'],[90,-90,0],650],[0.7,4,62,['open','tilt','wink','smile'],[180,90,-90,0],840],[0.9,5,40,['smile','sleepy','open','tilt','wink'],[-90,180,90,0,-90],1000],[1.0,6,26,['open','smile','tilt','wink','sleepy','squint'],[90,180,-90,90,0,0],1130]];
+const b=document.getElementById('b');let k=0;
+rows.forEach(([n,c,s,ex,gp,top])=>{const d=document.createElement('div');d.className='row';d.style.top=top+'px';d.style.setProperty('--g',(s*0.45)+'px');
+d.innerHTML=`<span class="n">${n.toFixed(1)}</span>`+ex.map((e,i)=>`<span ${n==1&&i==5?'id="last"':''}>${sunmyeong(s,gp[i],e,'r'+(k++))}</span>`).join('');b.appendChild(d)});
+document.fonts.ready.then(()=>{const l=document.getElementById('last').getBoundingClientRect();const st=document.createElement('div');st.className='stick';st.innerHTML='<i></i><b></b>';
+st.style.left=(l.right+6)+'px';st.style.top=(l.top+l.height*0.4)+'px';st.style.transform='rotate(-14deg)';document.body.appendChild(st);
+const bb=document.createElement('div');bb.className='bubble';bb.textContent='오른쪽!';bb.style.left=(l.right+120)+'px';bb.style.top=(l.top-110)+'px';document.body.appendChild(bb);document.body.dataset.ok=1})
+</script></body></html>

@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}
+@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;background:#fbf8f1;font-family:SL;color:#1d2433;position:relative;overflow:hidden}
+.k{position:absolute;left:100px;top:90px;font-size:30px;letter-spacing:14px;color:#8a8f9c}
+.t{position:absolute;left:96px;top:140px;font-size:84px;line-height:1.1}
+.grid{position:absolute;left:100px;top:330px;width:1400px;display:grid;grid-template-columns:1fr 1fr;gap:30px}
+.cell{background:#fff;border-radius:22px;height:540px;position:relative;box-shadow:0 2px 0 #e3dccb}
+.cell .c{position:absolute;left:60px;top:70px}
+.cell .say{position:absolute;left:390px;top:120px;font-size:72px;color:#e0483a}
+.cell .feel{position:absolute;left:392px;top:220px;font-family:VC;font-size:36px;line-height:1.5;width:280px;color:#3a4152}
+</style><script src="char.js"></script></head><body>
+<div class="k">나 의 ㅅ ㅁ 캐 릭 터 · 응 용 1</div>
+<div class="t">틈이 열린 쪽이 오늘의 기분</div>
+<div class="grid" id="g"></div>
+<script>
+const L=[[-90,'smile','위!','신나는 날은<br>고개를 번쩍'],[0,'wink','오른쪽!','반가운 사람을<br>먼저 알아본 날'],[90,'sleepy','아래…','푹 자고 싶은<br>숙면 모드'],[180,'tilt','왼쪽?','헷갈릴 땐<br>한 번 더 보기']];
+document.getElementById('g').innerHTML=L.map((x,i)=>`<div class="cell"><div class="c">${sunmyeong(300,x[0],x[1],'d'+i)}</div><div class="say">${x[2]}</div><div class="feel">${x[3]}</div></div>`).join('');
+document.fonts.ready.then(()=>document.body.dataset.ok=1)</script>
+</body></html>

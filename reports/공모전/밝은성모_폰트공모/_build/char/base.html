@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}
+@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;background:#fbf8f1;font-family:SL;color:#1d2433;position:relative;overflow:hidden}
+.k{position:absolute;left:100px;top:90px;font-size:30px;letter-spacing:14px;color:#8a8f9c}
+.name{position:absolute;left:96px;top:140px;font-size:150px;line-height:1}
+.name small{font-size:44px;letter-spacing:4px;color:#e0483a;margin-left:18px}
+.hero{position:absolute;left:110px;top:380px}
+.spec{position:absolute;left:880px;top:430px;width:620px}
+.spec .row{border-top:2px solid #e3dccb;padding:22px 0;font-size:30px;line-height:1.5}
+.spec .row b{display:block;font-size:22px;color:#8a8f9c;letter-spacing:4px;margin-bottom:6px;font-weight:normal}
+.note{position:absolute;left:100px;bottom:110px;width:1400px;font-family:VC;font-size:40px;line-height:1.55}
+.dim{position:absolute;left:880px;top:1150px;font-size:22px;color:#8a8f9c;letter-spacing:2px}
+</style><script src="char.js"></script></head><body>
+<div class="k">나 의 ㅅ ㅁ 캐 릭 터 · 기 본 형</div>
+<div class="name">선명이<small>SUNMYEONG</small></div>
+<div class="hero" id="hero"></div>
+<div class="spec">
+ <div class="row"><b>태어난 곳</b>안과 시력검사표 맨 아래 줄</div>
+ <div class="row"><b>생김새</b>시력검사 고리(란돌트 고리)를 후드처럼 쓴 아이.<br>고리 두께 = 틈 너비 = 지름의 1/5</div>
+ <div class="row"><b>버릇</b>후드의 틈을 위·아래·왼쪽·오른쪽으로 돌려 놓고 어느 쪽인지 맞혀 주기를 기다린다</div>
+ <div class="row"><b>좋아하는 말</b>“오른쪽!” 하고 바로 맞히는 목소리</div>
+</div>
+<div class="note">열여덟 해 동안 나는 이 고리가 어느 쪽으로 열렸는지 몰라 눈을 찡그렸다.<br>그 고리에 처음으로 이름을 붙여 준 날, 나의 ㅅㅁ은 ‘선명’이 되었다.</div>
+<script>document.getElementById('hero').innerHTML=sunmyeong(680,0,'open','h');document.fonts.ready.then(()=>document.body.dataset.ok=1)</script>
+</body></html>

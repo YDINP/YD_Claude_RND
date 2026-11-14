@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:SL;src:url("../../공고/SmileLasik.ttf")}@font-face{font-family:VC;src:url("../../공고/VisionCorrection.ttf")}
+html,body{margin:0}body{width:1600px;height:1600px;background:#e9e4da;font-family:SL;color:#1d2433;position:relative;overflow:hidden}
+.k{position:absolute;left:90px;top:70px;font-size:28px;letter-spacing:12px;color:#8a8f9c}
+.pk{position:absolute;left:470px;top:300px;width:660px;height:960px;filter:drop-shadow(0 30px 40px rgba(40,30,10,.3))}
+.bag{position:absolute;left:0;top:200px;width:660px;height:760px;background:linear-gradient(100deg,rgba(255,255,255,.35),rgba(255,255,255,.08) 40%,rgba(255,255,255,.3));border-radius:6px;overflow:hidden}
+.in{position:absolute;left:30px;top:60px;width:600px;height:600px;overflow:hidden;border-radius:4px}
+.in>div{transform-origin:0 0}
+.shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.45) 38%,transparent 46%)}
+.card{position:absolute;left:0;top:0;width:660px;height:330px;background:linear-gradient(#c9a57a,#bf9a6c);border-radius:6px 6px 2px 2px;box-shadow:inset 0 -6px 0 rgba(0,0,0,.08)}
+.hole{position:absolute;left:300px;top:34px;width:60px;height:26px;border-radius:13px;background:#e9e4da;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.card .t{position:absolute;left:0;right:0;top:100px;text-align:center;font-size:52px;color:#2a2116}
+.card .s{position:absolute;left:0;right:0;top:186px;text-align:center;font-family:VC;font-size:38px;color:#7a2a20}
+.card .m{position:absolute;left:0;right:0;top:260px;text-align:center;font-size:20px;letter-spacing:6px;color:#5d4b33}
+.side{position:absolute;left:1170px;top:640px;width:400px;font-size:26px;line-height:1.6;color:#3a4152}
+.side b{display:block;font-size:22px;color:#8a8f9c;letter-spacing:4px;font-weight:normal;margin-top:30px}
+</style><script src="cloth.js"></script></head><body>
+<div class="k">나 의 ㅅ ㅁ 굿 즈 · 목 업 2</div>
+<div class="pk"><div class="bag"><div class="in" id="inner"></div><div class="shine"></div></div>
+ <div class="card"><div class="hole"></div><div class="t">언젠가 서랍에 넣을 안경닦이</div><div class="s">나의 ㅅㅁ, 선명</div><div class="m">극 세 사 1 5 0 × 1 5 0</div></div></div>
+<div class="side"><b>포장</b>크라프트 헤더 카드<br>+ 투명 봉투<b>쓰는 법</b>렌즈를 닦다가<br>한 줄씩 읽어 보기.<br>맨 아래 줄까지 보이면<br>그날은 맑음.</div>
+<script>inner.innerHTML=cloth(600);document.fonts.ready.then(()=>document.body.dataset.ok=1)</script></body></html>
