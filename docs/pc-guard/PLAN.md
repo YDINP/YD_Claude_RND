@@ -104,6 +104,7 @@ pc-guard/            (C:/dev/pc-guard, 비공개 저장소)
 **진행 (2026-11-09)**: P0 체크리스트 작성(사용자 조치 대기) · **P1 완료** — `C:/dev/pc-guard`, 비공개 저장소 YDINP/pc-guard, 테스트 21개, 실제 스캔 47만 파일 19초. 첫 결과: 높음 3(Claude 자격증명, `~/.ssh/owrig_ed25519`, ben_suno/.env) · 중간 3 · 긴급 0.
 **P2 완료** — `pcg check` 첫 점수 **53/100** (CFA 꺼짐, 관리자 계정, SAC 꺼짐, 브라우저 저장 비밀번호 Chrome 75·Edge 54, SSH 키 암호 없음). `pcg panic` 체크리스트는 계정→돈→배포→봇→기타 순서. 테스트 31개. 오픈소스 조사는 `OSS-RESEARCH.md` — P3는 SigmaHQ에 브라우저 자격증명 접근 룰이 없어서 4663 기반 자체 구현이 차별점.
 **P3 완료 (2026-11-14)** — 미끼 4개(AWS 자격증명·Electrum·Exodus·바탕화면 메모 숨김) + 감사 정책·SACL + Event Log Readers + 로그인 시 감시 작업. 실측: PowerShell로 `~/.aws/credentials`를 읽자 `alerts.jsonl`에 프로세스·PID·시각이 기록되고 토스트가 뜸. 설치 중 `Add-LocalGroupMember`가 Microsoft 계정에서 실패해 `net localgroup` 대체 경로 추가(b6f8a44). 문서 폴더가 `D:\park`라서 메모 미끼는 바탕화면에 둠. 다음: P4 변경 감시.
+**P4 완료 (2026-11-14)** — `pcg changes baseline/check [--accept]`. 8개 영역(시작 레지스트리 27·시작 폴더 3·예약 작업 222·서비스 312·확장 27·hosts·프록시·루트 인증서 83) 스냅샷 약 7초. 미끼 감시기 프로세스가 5분마다 비교해 중간 이상만 토스트+`changes.jsonl`. 실측: 시험용 Run 키 추가 → 상주 감시기가 "높음 시작 레지스트리 추가" 기록, 삭제 → 차이 없음. 테스트 46개. 미룬 것: 런처·업데이터 서명 감시, 트레이. 다음: P5 보관소.
 
 P1·P2만 끝나도 "털리면 뭘 바꿔야 하는지"가 생긴다. 개발 효과는 여기서 가장 크다.
 
