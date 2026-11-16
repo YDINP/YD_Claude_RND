@@ -1,0 +1,334 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>사랑의열매 배분사업 아이디어 공모전</title>
+<meta name="description" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:description" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:image" content="https://www.chest-contest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.chest-contest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1381" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="/" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="520">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >제안접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지 및 문의</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  >
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="205" bgcolor="#e3f3fb">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+				<div style="padding:0px 0 70px 0;color:#172d59;font-size:54px;font-family: 'KohiLearn';font-weight:900;">제안접수</div>
+				<div class="content_box01" valign="top" >
+				<!--시작-->	
+				
+<link rel="stylesheet" href="/include/css/receive-choices.css?v=20260919_1">
+
+
+<style>.receiveChoices-desktop .receiveChoice-title { font-size: 32px; text-align: center; }</style>
+					<nav class="receiveChoices receiveChoices-desktop" aria-label="접수 분야 선택">
+  
+					
+					
+  <a class="receiveChoice" href="/receive_agree.asp?tp=contest_1">
+  
+    <span class="receiveChoice-top" aria-hidden="true"><span class="receiveChoice-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3H7a3 3 0 0 0-3 3v22a2 2 0 0 0 2 2h19a2 2 0 0 0 2-2v-9"/><path d="M9 10h7M9 15h4M9 24h12"/><path d="m15 20 1-5L26 5a2.1 2.1 0 0 1 3 3L19 18l-4 2zM24 7l3 3"/></svg></span><span class="receiveChoice-number">01</span></span>
+    <span class="receiveChoice-title">제안접수</span>
+  </a>
+  
+					
+					
+  <a class="receiveChoice" href="/confirm.asp"><span class="receiveChoice-top" aria-hidden="true"><span class="receiveChoice-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="14" cy="14" r="10"/>
+  <path d="m21 21 8 8"/>
+</svg></span><span class="receiveChoice-number">02</span></span>
+    <span class="receiveChoice-title">접수확인</span></a>
+   
+					
+					
+					</nav>
+				<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+<link href="/include/css/user-board.css?v=20260904_10" rel="stylesheet" type="text/css">
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center" style="height:150px;" style="background-image:url(/images/bg_footer.png);background-repeat: repeat-y;background-position: top center;">
+			<table width="1381" border="0" cellspacing="0" cellpadding="0" >
+				<tr>						
+					<td  align="left" colspan="2" style="padding-top:30px;" >
+				
+						<b><a href="/Files/PP.html" class="various4">개인정보처리방침</a></b>
+					</td>
+
+				
+				</tr>	
+				<tr>						
+					<td  align="left" style="padding:10px 0 20px 0px;font-size:13px;line-height:200%;color:#242424;">
+사랑의열매 배분사업 아이디어 공모전 운영사무국 ㈜인투인미디어 / 문의전화 : 02-2233-4019<br>서울시 영등포구 양평로 21길 26 1203호 사업자등록번호 : 201-86-21825<br>copyright ⓒ 사랑의열매 배분사업 아이디어 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:26px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+		jQuery(document).ready(function() {
+
+			(function () {
+                $(".various4").modalLink({
+					title:"",
+					width:1000,
+					height:600,
+					overlayOpacity: 0.3,
+
+					showTitle: true,
+					 showClose: true,
+					 disableScroll: false
+                   
+                });
+            })();
+
+		});
+});
+</script>
+
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+

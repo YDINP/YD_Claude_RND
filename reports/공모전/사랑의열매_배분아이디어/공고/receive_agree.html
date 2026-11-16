@@ -1,0 +1,461 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>사랑의열매 배분사업 아이디어 공모전</title>
+<meta name="description" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:description" content="사랑의열매 배분사업 아이디어 공모전">
+<meta property="og:image" content="https://www.chest-contest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.chest-contest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1381" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="/" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="520">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >제안접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지 및 문의</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  >
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="205" bgcolor="#e3f3fb">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<link rel="stylesheet" href="/include/css/receive-agreement.css?v=20260905_2">
+<style>
+
+.content_box01.agreement-page {
+  width: 1200px;
+  margin: 0 auto;
+}
+</style>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+				<div style="padding:0px 0 70px 0;color:#172d59;font-size:54px;font-family: 'KohiLearn';font-weight:900;">제안접수</div>
+				
+				<div class="content_box01 agreement-page">
+				<!--시작-->
+<form action="receive.asp" name="form_board" id="form_board" method="POST" class="agreement-form" novalidate>
+<input type="hidden" name="tp" id="tp" value="contest_1">
+<label class="agreement-all"><input type="checkbox" id="agree-all"><span><strong>필수 사항 모두 동의합니다</strong><small>아래 필수 동의사항 모두 확인하고 동의합니다.<br>정보주체가 만 14세 미만에 대한 동의 부문은 14세미만만 해당되는 선택 사항입니다.</small></span><span class="agreement-count" id="agree-count">0 / 3</span></label>
+
+				
+				<section class="agreement-card" aria-labelledby="agree-title">
+				<header class="agreement-head"><h2 id="agree-title">개인정보 수집·이용 안내 <span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+
+사회복지공동모금회는 「사랑의열매 배분사업 아이디어 공모전」의 운영을 위하여 「개인정보 보호법」 등 관계 법령에 따라 다음과 같이 개인정보를 수집·이용하고자 합니다.<br><br>
+
+<b>1. 개인정보 수집·이용에 관한 사항</b><br><br>
+
+<b>가. 수집·이용 목적</b><br>
+- 공모전 참가 접수 및 참가자 확인, 응모작 심사 및 심사 관련 안내, 결과 발표, 수상자 관리등<br><br>
+
+<b>나. 수집하는 개인정보 항목</b><br>
+- 개인 및 팀 참가자 : 성명, 생년월일, 연락처, 이메일, 서명 <br>
+- 기관·단체 참가자 : 기관·단체명, 대표 제안자 성명, 생년월일, 연락처, 이메일, 서명<br><br>
+
+<b>다. 개인정보 보유·이용기간</b><br>
+- 일반 참가자 : 공모전 종료 및 이의신청 사후 절차(3개월) 종료 후 지체 없이 파기<br>
+- 수상자 : 공모전 종료 후 배분사업 기획 시 수상자 협의를 위한 3년간 보관 후 파기<br><br>
+
+<b>라. 동의를 거부할 권리 및 동의 거부에 따른 불이익</b><br>
+- 참가자는 개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다. <br>
+※ 다만, 위 개인정보는 공모전 참가 및 심사에 필요한 최소한의 정보이므로 동의하지 않을 경우 공모전 참가가 제한될 수 있습니다.
+
+
+
+							</div><fieldset class="agreement-options ui-radio-group"><legend>개인정보 수집·이용 안내 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree" id="agree" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree" id="agree_no" value="0"><span>동의하지 않음</span></label></fieldset></section>
+
+							
+
+<section class="agreement-card" aria-labelledby="agree2-title">
+				<header class="agreement-head"><h2 id="agree2-title">수상작 보존 및 활용 동의 <span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+
+- 수상작은 기관의 사업 성과 및 기록물 관리를 위해 보존할 수 있습니다.<br>
+- 기관은 수상작을 향후 사업 추진, 전시 및 홍보 등 배분사업 등의 목적으로 활용할 수 있으며,<br>
+구체적인 이용 범위와 조건은 별도 저작물 이용관련 법률에 따릅니다.<br>
+
+
+
+
+							</div><fieldset class="agreement-options ui-radio-group"><legend>수상작 보존 및 활용 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree2" id="agree2" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree2" id="agree2_no" value="0"><span>동의하지 않음</span></label></fieldset></section>							
+							
+							
+							
+
+<section class="agreement-card" aria-labelledby="agree3-title">
+				<header class="agreement-head"><h2 id="agree3-title">응모작 자동 폐기에 동의 <span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+
+<ul class="ul1" ><li>응모작은 공모전 종료일부터 3개월 이내에 모두 폐기처리 됩니다.</li>
+<li>사랑의열매 배분사업 아이디어 응모작은 전자문서이므로, 응모자에게 반환하지 않고 전부 자동폐기 됩니다.(3개월 이내)
+</li></ul>
+
+
+
+							</div><fieldset class="agreement-options ui-radio-group"><legend>응모작 자동 폐기에 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree3" id="agree3" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree3" id="agree3_no" value="0"><span>동의하지 않음</span></label></fieldset></section>								
+								
+								
+
+
+<section class="agreement-card" aria-labelledby="agree4-title"><header class="agreement-head"><h2 id="agree4-title">저작권 준수 의무 내용 명시
+<span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+
+응모된 작품(전자 파일로 제출된 경우를 포함하며, 이하 ‘응모작’이라 한다.)에 대한 저작권은 응모자에게 있으며, 수상 후에도 수상자에게 귀속됨을 원칙으로 한다.<br>
+
+주최·주관사는 응모작 중 입상작(대상/최우수상/우수상)에 한하여 수상일로부터 10년 동안 비독점적으로 아래의 방법으로 이용 할 수 있다.<br>
+
+※ [이용방법] : 입상작 또는 입상작의 본질적인 내용을 변경하지 않는 범위에서  수상작 홍보, 주최사의 홈페이지 및 SNS 게시, 홍보물 등 각종 자료 제작·배포, 신규 배분사업 기획·개발을 위한 자료 등 비영리·공익적 목적으로 복제·배포·전시·공중송신할 수 있다.<br>
+
+응모자는 응모와 동시에 추후 입상 시 공모전 요강에 기재되어 있는 이용 방법 및 조건의 범위 안에서 저작물(입상작) 이용을 허락한 것으로 보고, 입상작의 저작재산권에 대한 이용료는 입상에 따른 시상금(또는 상품)으로 대체될 수 있다.<br>
+
+주최·주관사는 공모전 요강에 명시된 이용 방법 외의 방법으로 동 건 저작물(입상작)을 변형하여 이용할 필요가 있거나 복제‧배포·전시·공중송신 외의 방법으로 저작물(입상작)의 이용이 필요할 경우, 입상작에 대한 저작재산권(전부 또는 일부)을 양수할 필요가 있는 경우에는 응모자와 별도로 합의하여 정한다.<br>
+
+향후 응모작의 저작권과 관련한 분쟁이 발생할 경우 한국-저작권위원회에 조정을 신청하여 해결할 수 있으며, 양 당사자는 원활한 분쟁해결을 위해 상호 노력한다.<br>
+
+주최·주관사는 응모작에 대한 유출 방지 등 주의 의무를 다한다.<br>
+
+응모자는 응모작이 제3자의 저작권, 초상권 및 개인정보 등을 침해하지 않도록 주의의무를 다하여야 한다.<br>
+
+응모자는 타 공모전에서 수상하지 않은 본인의 순수 창작물을 응모하여야 하며 응모작이 타인의 창작물을 모방 또는 표절한 경우 이를 심사에서 제외하거나 시상을 취소할 수 있다.<br>
+
+※ 입상작 선정 후에도 결격 사유가 발견된 경우 입상취소와 함께 시상내역(상장, 상금)을 모두 환수한다.<br>
+주최·주관사는 입상자의 저작인격권을 존중하여야 한다. 원칙적으로 저작자인 입상자의 성명을 표시하고, 입상작의 내용·형식 및 제호의 동일성을 유지하여야 한다.<br>
+
+주최·주관사는 입상하지 않은 응모작을 공모전 종료일로부터 3개월 이내에 모두 폐기한다. 
+
+
+</div><fieldset class="agreement-options ui-radio-group"><legend>정보주체가 만 14세 미만에 대한 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree4" id="agree4" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree4" id="agree4_no" value="0"><span>동의하지 않음</span></label></fieldset></section>
+
+
+
+<section class="agreement-card" aria-labelledby="agree6-title">
+				<header class="agreement-head"><h2 id="agree6-title">정보주체가 만 14세 미만에 대한 동의 <span class="agreement-required">선택</span></h2></header><div class="agreement-copy">
+
+<b><정보주체가 만 14세 미만의 아동인 경우></b><br>
+※개인정보보호법 제22조의2에 따라 만14세 미만 아동의 개인정보 처리를 위하여 법정대리인의 동의를 받아야 함. 개인정보보호법 시행령 제17조에 따라 법정대리인의 동의를 받기위한 최소한의 정보(성명, 연락처)는 법정 대리인의 동의 없이 아동으로부터 수집이 가능함. 
+
+
+<table class="receive-card-table" width="1000" border="0" cellspacing="0" cellpadding="0" height="29">
+			
+			<tr>
+				<td   height="25"    style="padding: 30px 28px 30px 0px;"    align="left" width="50%">
+					<div class="f_tl01" ><span class="c_txt"></span> 법정대리인의 성명</div>
+					<input type=text name="l_writer" id="l_writer" class="input1" style="width:460px;" value="" />
+				</td>
+				<td  height="25"    style="padding: 30px 0 30px 28px;"    align="left" >
+			
+				</td>
+			</tr>
+
+			<tr>
+				<td   height="25"    style="padding: 0px 28px 30px 0px;"    align="left" width="50%">
+					<div class="f_tl01"><span class="c_txt"></span> 법정대리인의 연락처</div>
+					<select name="l_mobile1" id="l_mobile1" class="select" style="width:80px;height:44px;vertical-align:top;margin-right:4px;">
+					<option value="">선택</option>
+					<option value="010">010</option>
+					<option value="011">011</option>
+					<option value="016">016</option>
+					<option value="017">017</option>
+					<option value="018">018</option>
+					<option value="019">019</option>
+					</select><input type=text name="l_mobile2" id="l_mobile2" class="input1" value=""  maxlength="4" style="width:180px;margin-right:4px;" /><input type=text name="l_mobile3"  id="l_mobile3" class="input1" style="width:180px;" />
+				</td>
+				<td  height="25"    style="padding: 0px 0 30px 28px;"    align="left" >
+					<div class="f_tl01"><span class="c_txt"></span> 정보주체와의 관계</div>
+					<input type=text name="l_rela" id="l_rela" class="input1" style="width:460px;" value="" />				
+				</td>
+			</tr>
+</table>
+
+
+							</div><fieldset class="agreement-options ui-radio-group"><legend>응모작 자동 폐기에 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree6" id="agree6" value="2"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree6" id="agree6_no" value="0"><span>동의하지 않음</span></label></fieldset></section>
+
+
+
+
+
+<section class="agreement-card agreement-sign"><header class="agreement-head"><h2>동의 확인 및 서명</h2><p>위 사항에 동의하는 경우 아래 서명칸에 성명을 기입해주시길 바랍니다.</p></header><div class="agreement-fields"><label for="agree5">동의 확인<input type="text" name="agree5" id="agree5" placeholder="동의합니다"></label><label for="writer">성명<input type="text" name="writer" id="writer" placeholder="홍길동" autocomplete="name"></label></div></section><p class="agreement-error" id="agreement-error" role="alert" ></p><div class="agreement-actions"><button type="submit" class="ui-button">접수하기</button></div></form>
+
+
+<script src="/include/js/receive-agreement.js?v=20260905_1"></script>
+<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+<link href="/include/css/user-board.css?v=20260904_10" rel="stylesheet" type="text/css">
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center" style="height:150px;" style="background-image:url(/images/bg_footer.png);background-repeat: repeat-y;background-position: top center;">
+			<table width="1381" border="0" cellspacing="0" cellpadding="0" >
+				<tr>						
+					<td  align="left" colspan="2" style="padding-top:30px;" >
+				
+						<b><a href="/Files/PP.html" class="various4">개인정보처리방침</a></b>
+					</td>
+
+				
+				</tr>	
+				<tr>						
+					<td  align="left" style="padding:10px 0 20px 0px;font-size:13px;line-height:200%;color:#242424;">
+사랑의열매 배분사업 아이디어 공모전 운영사무국 ㈜인투인미디어 / 문의전화 : 02-2233-4019<br>서울시 영등포구 양평로 21길 26 1203호 사업자등록번호 : 201-86-21825<br>copyright ⓒ 사랑의열매 배분사업 아이디어 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:26px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+		jQuery(document).ready(function() {
+
+			(function () {
+                $(".various4").modalLink({
+					title:"",
+					width:1000,
+					height:600,
+					overlayOpacity: 0.3,
+
+					showTitle: true,
+					 showClose: true,
+					 disableScroll: false
+                   
+                });
+            })();
+
+		});
+});
+</script>
+
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+
