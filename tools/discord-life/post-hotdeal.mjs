@@ -63,16 +63,19 @@ const d = `${+day.slice(4, 6)}월 ${+day.slice(6, 8)}일`;
 const order = [FOOD, ...GROUPS];
 const buckets = order.map((g) => ({ g, items: rows.filter((r) => groupOf(r).key === g.key) })).filter((b) => b.items.length);
 
-// 채널에는 요약(TOP5 + 분류별 개수)만 보이고, 전체 30개는 스레드 안에 분류별로 펼쳐 둔다.
-const top5 = rows.slice(0, 5).map(line).join('\n\n');
+// 채널에는 제목 한 장만 보이고(접힌 상태), 전체 30개는 스레드 안에 분류별로 펼쳐 둔다.
 const counts = buckets.map(({ g, items }) => `${g.label} ${items.length}`).join('　');
 const summary = {
   title: `🔥 ${d} 핫딜 TOP 30`,
-  description: `-# 커뮤니티(펨코·루리웹·퀘이사존 등)에서 추천이 많이 붙은 순서 · 상품명을 누르면 원글로 갑니다\n\n${top5}\n\n**📂 나머지는 아래 스레드에서 펼쳐 보세요**\n${counts}`,
+  description: `📂 **아래 스레드를 누르면 전체 30개가 펼쳐집니다**\n-# ${counts}`,
   color: 0xff5a36,
-  footer: { text: '가격·재고는 금방 바뀝니다. 사기 전에 원글에서 꼭 확인하세요.' },
 };
-const cards = buckets.map(({ g, items }) => ({ title: `${g.label} (${items.length})`, description: items.map(line).join('\n\n'), color: g.color }));
+const cards = buckets.map(({ g, items }, i) => ({
+  title: `${g.label} (${items.length})`,
+  description: (i === 0 ? '-# 커뮤니티(펨코·루리웹·퀘이사존 등) 추천순 · 상품명을 누르면 원글로 갑니다\n\n' : '') + items.map(line).join('\n\n'),
+  color: g.color,
+  footer: i === buckets.length - 1 ? { text: '가격·재고는 금방 바뀝니다. 사기 전에 원글에서 꼭 확인하세요.' } : undefined,
+}));
 
 const over = [summary, ...cards].find((e) => e.description.length > 4096);
 console.log(`${day}: ${rows.length}개 · 요약 1장 + 스레드 카드 ${cards.length}장 (${counts})`);
