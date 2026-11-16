@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>2026 대국민 경륜·경정 건전화 공모전</title>
+<meta name="description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:image" content="https://www.kracecontest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.kracecontest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PNSS6WNH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1280" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="https://www.kspo.or.kr/kspo/main/main.do" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="760">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item" >
+			<a href="intro.asp" onfocus="this.blur()">주최사 소개</a>
+
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >작품접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">커뮤니티</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+		<li class="nav-item">
+			<a href="javascript:alert('준비 중입니다.');" onfocus="this.blur()">수상작</a>
+
+		</li>
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  style="background-image:url(/images/bg_sub_line.png);background-repeat: repeat-x;background-position: bottom center;" height="199">
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="204">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+				<div style="padding:0px 0 70px 0;color:#15306e;font-size:54px;font-family: 'NanumSquareNeo';font-weight:900;">공모전 소개</div>
+				
+				<div class="content_box01" valign="top" >
+							<!--시작-->
+<h3 style="font-size:30px;">KSPO 국민체육진흥공단</h3>
+
+<p><strong style="font-size:25px;">스포츠로 건강하고 행복한 대한민국을 만들어가는 국민체육진흥공단(KSPO)</strong></p><br>
+
+<img src="images/img_intro.png" width="780px"><br><br>
+
+<p>국민체육진흥공단(KSPO)은 1988 서울올림픽의 성공적인 개최를 기념하고,<br>
+대한민국 체육 발전과 국민 건강 증진을 위해 설립된 공공기관입니다.</p><br>
+
+
+
+<p>생활체육 활성화, 전문체육 육성, 스포츠산업 지원, 체육인 복지 증진 등 다양한 사업을 추진하며,<br>
+국민 누구나 스포츠를 통해 건강하고 행복한 삶을 누릴 수 있도록 노력하고 있습니다.</p><br>
+
+
+
+<p>또한 스포츠의 사회적 가치를 확산하고 지속 가능한 체육 환경을 조성하여 대한민국 스포츠의 미래를 만들어가고 있습니다.</p>
+<br>
+
+
+<p><b>감사합니다.</b></p>
+				<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center"  style="background-image:url('/images/bg_footer.png');background-repeat: repeat-y;background-position: top center;">
+			<table width="1280" border="0" cellspacing="0" cellpadding="0" >			
+				<tr>						
+					<td  align="left" style="padding:40px 0 40px 0px;font-size:13px;line-height:200%;color:#242424;">
+2026 대국민 경륜·경정 건전화 공모전 / 문의 : 02-2233-4016<br>서울시 영등포구 양평로 21길 26 1203호 ㈜인투인미디어 : 201-86-21825<br>copyright ⓒ 2026 대국민 경륜·경정 건전화 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:52px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+
+});
+</script>
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+

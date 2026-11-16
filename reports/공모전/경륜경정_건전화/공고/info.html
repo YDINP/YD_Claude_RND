@@ -1,0 +1,673 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>2026 대국민 경륜·경정 건전화 공모전</title>
+<meta name="description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:image" content="https://www.kracecontest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.kracecontest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PNSS6WNH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1280" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="https://www.kspo.or.kr/kspo/main/main.do" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="760">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item" >
+			<a href="intro.asp" onfocus="this.blur()">주최사 소개</a>
+
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >작품접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">커뮤니티</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+		<li class="nav-item">
+			<a href="javascript:alert('준비 중입니다.');" onfocus="this.blur()">수상작</a>
+
+		</li>
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  style="background-image:url(/images/bg_sub_line.png);background-repeat: repeat-x;background-position: bottom center;" height="199">
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="204">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+				<div style="padding:0px 0 70px 0;color:#15306e;font-size:54px;font-family: 'NanumSquareNeo';font-weight:900;">공모요강</div>
+				<div class="content_box01" valign="top" >
+				<!--시작-->	
+<style>
+/* 2026년 경륜·경정 대국민 건전화 공모전 - 공모요강
+   기존 .content_box01 내부 삽입용 */
+
+.kts-info,
+.kts-info * {
+	box-sizing: border-box;
+	word-break: keep-all;
+}
+
+.kts-info {
+	width: calc(100% - 80px);
+	max-width: 1100px;
+	margin: 0 auto;
+	font-family: 'NanumSquareNeo', 'Nanum Square', 'Nanum Gothic', Arial, sans-serif;
+	color: #222;
+	font-size: 16px;
+	line-height: 1.55;
+	text-align: left;
+}
+
+/* =========================================
+   상단 타이틀
+========================================= */
+.kts-info .kts-hero {
+	position: relative;
+	overflow: hidden;
+	margin-bottom: 42px;
+	padding: 42px 44px 38px;
+	border: 1px solid #d9e5ef;
+	border-radius: 24px;
+	background: #eef8fc;
+}
+
+.kts-info .kts-hero:after {
+	content: '';
+	position: absolute;
+	right: -80px;
+	top: -90px;
+	width: 270px;
+	height: 270px;
+	border-radius: 50%;
+	background: #48b2d1;
+	opacity: .12;
+}
+
+.kts-info .kts-edition {
+	display: inline-block;
+	position: relative;
+	z-index: 1;
+	margin-bottom: 12px;
+	padding: 7px 22px;
+	border-radius: 30px;
+	background: #064d9d;
+	color: #fff;
+	font-size: 18px;
+	font-weight: 800;
+}
+
+.kts-info .kts-main-title {
+	position: relative;
+	z-index: 1;
+	margin: 0;
+	color: #064d9d;
+	font-size: 38px;
+	font-weight: 900;
+	line-height: 1.25;
+	letter-spacing: -1.5px;
+}
+
+.kts-info .kts-main-title strong {
+	color: #e65f1b;
+	text-shadow: 0 1px 0 rgba(0,0,0,.08);
+}
+
+.kts-info .kts-period {
+	position: relative;
+	z-index: 1;
+	margin-top: 23px;
+	padding-top: 20px;
+	border-top: 1px solid #c9dce9;
+	color: #064d9d;
+	font-size: 21px;
+	font-weight: 800;
+}
+
+.kts-info .kts-period .kts-date {
+	color: #e65f1b;
+	font-size: 27px;
+	font-weight: 900;
+}
+
+/* =========================================
+   공통 섹션
+========================================= */
+.kts-info .kts-section {
+	margin-bottom: 38px;
+}
+
+.kts-info .kts-section:last-child {
+	margin-bottom: 0;
+}
+
+.kts-info .kts-section-head {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	margin-bottom: 18px;
+}
+
+.kts-info .kts-label {
+	display: flex;
+	flex: 0 0 168px;
+	min-height: 49px;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 24px;
+	border-radius: 0 25px 0 0;
+	background: #064d9d;
+	color: #fff;
+	font-size: 21px;
+	font-weight: 900;
+	line-height: 1.25;
+	text-align: center;
+}
+
+.kts-info .kts-section-title {
+	color: #222;
+	font-size: 20px;
+	font-weight: 800;
+}
+
+/* =========================================
+   테이블 스타일
+========================================= */
+.kts-info .kts-table-wrap {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.kts-info .kts-custom-table {
+	width: 100%;
+	min-width: 760px;
+	border-collapse: collapse;
+	border-bottom: 2px solid #064d9d;
+}
+
+.kts-info .kts-custom-table th,
+.kts-info .kts-custom-table td {
+	padding: 12px 14px;
+	border-right: 1px solid #c9dce9;
+	border-bottom: 1px solid #c9dce9;
+	font-size: 15.5px;
+	line-height: 1.5;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.kts-info .kts-custom-table tr > *:last-child {
+	border-right: 0;
+}
+
+.kts-info .kts-custom-table thead th {
+	background: #064d9d;
+	color: #fff;
+	font-size: 17px;
+	font-weight: 800;
+}
+
+.kts-info .kts-custom-table thead th.kts-th-sub {
+	background: #9bd8e8;
+	color: #222;
+	font-weight: 800;
+}
+
+.kts-info .kts-custom-table td.kts-td-field {
+	background: #f0f3f5;
+	font-weight: 800;
+	color: #064d9d;
+}
+
+.kts-info .kts-custom-table td.kts-td-left {
+	text-align: left;
+	padding-left: 20px;
+}
+
+.kts-info .kts-custom-table strong {
+	font-weight: 900;
+}
+
+.kts-info .kts-table-note {
+	margin-top: 10px;
+	padding-left: 4px;
+	color: #555;
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+/* =========================================
+   유의사항 박스
+========================================= */
+.kts-info .kts-notice-box {
+	padding: 22px 26px;
+	border: 1px solid #d9e5ef;
+	background: #fbfdfe;
+}
+
+.kts-info .kts-notice-list {
+	margin: 0;
+	padding-left: 20px;
+	color: #444;
+	font-size: 15px;
+	line-height: 1.8;
+}
+
+.kts-info .kts-notice-list li {
+	margin-bottom: 4px;
+}
+
+/* =========================================
+   문의처
+========================================= */
+.kts-info .kts-contact {
+	display: flex;
+	align-items: center;
+	gap: 26px;
+	padding: 2px 0 6px;
+}
+
+.kts-info .kts-contact .kts-label {
+	flex-basis: 168px;
+}
+
+.kts-info .kts-contact-value {
+	font-size: 20px;
+	font-weight: 900;
+}
+
+.kts-info .kts-contact-bar {
+	color: #064d9d;
+	margin: 0 10px;
+}
+
+/* =========================================
+   하단 주최/주관
+========================================= */
+.kts-info .kts-orgs {
+	width: 100%;
+	margin-top: 25px;
+	padding: 22px 26px;
+	border-top: 1px solid #e2e2e2;
+	border-bottom: 1px solid #e2e2e2;
+	text-align: center;
+}
+
+.kts-info .kts-orgs img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin: 0 auto;
+}
+
+/* =========================================
+   모바일 반응형
+========================================= */
+@media screen and (max-width: 800px) {
+	.kts-info {
+		width: calc(100% - 40px);
+		max-width: none;
+		font-size: 15px;
+	}
+
+	.kts-info .kts-hero {
+		padding: 30px 25px 27px;
+		border-radius: 18px;
+	}
+
+	.kts-info .kts-edition {
+		font-size: 16px;
+	}
+
+	.kts-info .kts-main-title {
+		font-size: 28px;
+	}
+
+	.kts-info .kts-period {
+		font-size: 16px;
+	}
+
+	.kts-info .kts-period .kts-date {
+		font-size: 21px;
+	}
+
+	.kts-info .kts-section-head {
+		display: block;
+	}
+
+	.kts-info .kts-label {
+		display: inline-flex;
+		min-width: 145px;
+		min-height: 44px;
+		font-size: 18px;
+	}
+
+	.kts-info .kts-section-title {
+		margin-top: 10px;
+		font-size: 18px;
+	}
+
+	.kts-info .kts-contact {
+		display: block;
+	}
+
+	.kts-info .kts-contact-value {
+		padding: 16px 4px 0;
+		font-size: 17px;
+		line-height: 1.7;
+	}
+
+	.kts-info .kts-orgs {
+		padding: 18px 10px;
+	}
+}
+
+.kts-info .kts-label { margin: 0; }
+.kts-info .kts-contact-value a { color: inherit; overflow-wrap: anywhere; }
+.kts-info .kts-td-left { overflow-wrap: anywhere; }
+@media screen and (max-width: 800px) {
+  .kts-info .kts-custom-table { min-width: 0; }
+  .kts-info .kts-custom-table .kts-td-field { min-width: 0; }
+}
+</style>
+</head>
+<body>
+<main class="kts-info">
+<!--header class="kts-hero">
+<h1 class="kts-main-title">2026년 경륜·경정 대국민 건전화 공모전 <strong>공모요강</strong></h1>
+<div class="kts-period">접수기간 <span class="kts-date">2026. 11. 16.</span>(월) ~ <span class="kts-date">12. 6.</span>(일)</div>
+</header-->
+
+<div style="text-align:center;padding-bottom:30px;">
+<a  href='/pdfjs_legacy/web/viewer.html?file=/Files/가이드라인.pdf'  class="btn_s various4" style="width:230px;background-color:#d75329 !important;"/>1·3가이드라인 보기</a>
+&nbsp;
+<a  href='/pdfjs_legacy/web/viewer.html?file=/Files/희망길벗.pdf'  class="btn_s various4"  style="width:230px;background-color:#d75329 !important;"/>희망길벗 보기</a>
+</div>
+
+<section class="kts-section"><div class="kts-section-head"><h2 class="kts-label">공모개요</h2></div><div class="kts-table-wrap"><table class="kts-custom-table"><thead><tr><th scope="col">항목</th><th scope="col">내용</th></tr></thead><tbody><tr><td class="kts-td-field">공모대상</td><td class="kts-td-left">일반부 / 중·고등부</td></tr><tr><td class="kts-td-field">공모주제</td><td class="kts-td-left"><strong>일반부</strong><br>건전한 경륜ˑ경정 이용문화 조성을 위한 숏폼 및 포스터<br>희망길벗을 더 친근하게 알릴 수 있는 슬로건<br><strong>중·고등부</strong><br>청소년 도박 예방 숏폼 및 포스터</td></tr><tr><td class="kts-td-field">접수기간</td><td class="kts-td-left">2026. 11. 16.(월) ~ 12. 6.(일)</td></tr><tr><td class="kts-td-field">결과발표</td><td class="kts-td-left">2026. 12. 18.(금)</td></tr></tbody></table><div class="kts-table-note">※ 상기일정은 주최사의 사정에따라 변경될 수 있습니다. </div></div></section>
+<section class="kts-section"><div class="kts-section-head"><h2 class="kts-label">공모부문 및 규격</h2></div><div class="kts-table-wrap"><table class="kts-custom-table"><thead><tr><th scope="col">부문</th><th scope="col">제출 규격</th></tr></thead><tbody><tr><td class="kts-td-field">숏폼</td><td class="kts-td-left">30초~1분 / 세로형 9:16 / 1080×1920px 이상 / MP4, avi 등 / 최대 500MB</td></tr><tr><td class="kts-td-field">포스터</td><td class="kts-td-left">A3(297×420mm) / jpg, png등의 이미지 파일</td></tr><tr><td class="kts-td-field">슬로건(일반부)</td><td class="kts-td-left">띄어쓰기 제외 20자 내외</td></tr></tbody></table></div><div class="kts-table-note">※ 작품 제작 시 AI 활용이 가능합니다.</div></section>
+<section class="kts-section"><div class="kts-section-head"><h2 class="kts-label">접수방법</h2></div><div class="kts-table-wrap"><table class="kts-custom-table"><thead><tr><th scope="col">항목</th><th scope="col">내용</th></tr></thead><tbody><tr><td class="kts-td-field">접수처</td><td class="kts-td-left">공모전 전용 홈페이지 접수<br>(kracecontest.co.kr)</td></tr><tr><td class="kts-td-field">출품 수량</td><td class="kts-td-left">분야별 1인(1팀) 2점까지 가능</td></tr></tbody></table></div><div class="kts-table-note">*한팀에 최대 3명</div></section>
+<section class="kts-section"><div class="kts-section-head"><h2 class="kts-label">시상내역</h2><div class="kts-section-title">19건 · 총 930만원</div></div><div class="kts-table-wrap"><table class="kts-custom-table"><thead><tr><th scope="col">부문</th><th scope="col">구분</th><th scope="col">일반부</th><th scope="col">중·고등부</th></tr></thead><tbody><tr><td class="kts-td-field">숏폼</td><td>금상</td><td>1명(팀) / 150만원</td><td>1명(팀) / 80만원</td></tr><tr><td class="kts-td-field">숏폼</td><td>은상</td><td>1명(팀) / 80만원</td><td>1명(팀) / 50만원</td></tr><tr><td class="kts-td-field">숏폼</td><td>동상</td><td>2명(팀) / 50만원</td><td>2명(팀) / 30만원</td></tr><tr><td class="kts-td-field">포스터</td><td>금상</td><td>1명(팀) / 70만원</td><td>1명(팀) / 50만원</td></tr><tr><td class="kts-td-field">포스터</td><td>은상</td><td>1명(팀) / 40만원</td><td>1명(팀) / 30만원</td></tr><tr><td class="kts-td-field">포스터</td><td>동상</td><td>2명(팀) / 20만원</td><td>2명(팀) / 10만원</td></tr><tr><td class="kts-td-field">슬로건</td><td>최우수</td><td>1명(팀) / 30만원</td><td>—</td></tr><tr><td class="kts-td-field">슬로건</td><td>우수</td><td>2명(팀) / 20만원</td><td>—</td></tr></tbody></table></div><div class="kts-table-note"><span style="color:#0967b5;">참가상(추첨) 30명 · 네이버페이 3만원 상품권</span><br>
+*제세공과금 본인부담으로 제하고 지급</div></section>
+<section class="kts-section"><div class="kts-contact"><h2 class="kts-label">문의사항</h2>
+<div class="kts-contact-value"><a href="tel:0222334016">TEL. 02-2233-4016</a>
+<span class="kts-contact-bar">|</span>
+<a href="mailto:kracecontest@intoinmedia.com">E-Mail. kracecontest@intoinmedia.com</a></div></div></section>
+
+<link href="/include/css/user-board.css?v=20260904_10" rel="stylesheet" type="text/css">
+
+<script type="text/javascript">
+$(document).ready(function() {
+		jQuery(document).ready(function() {
+
+			(function () {
+                $(".various4").modalLink({
+					title:"",
+					width:1000,
+					height:600,
+					overlayOpacity: 0.3,
+
+					showTitle: true,
+					 showClose: true,
+					 disableScroll: false
+                   
+                });
+            })();
+
+		});
+});
+</script>
+				<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center"  style="background-image:url('/images/bg_footer.png');background-repeat: repeat-y;background-position: top center;">
+			<table width="1280" border="0" cellspacing="0" cellpadding="0" >			
+				<tr>						
+					<td  align="left" style="padding:40px 0 40px 0px;font-size:13px;line-height:200%;color:#242424;">
+2026 대국민 경륜·경정 건전화 공모전 / 문의 : 02-2233-4016<br>서울시 영등포구 양평로 21길 26 1203호 ㈜인투인미디어 : 201-86-21825<br>copyright ⓒ 2026 대국민 경륜·경정 건전화 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:52px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+
+});
+</script>
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+

@@ -1,0 +1,419 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>2026 대국민 경륜·경정 건전화 공모전</title>
+<meta name="description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:image" content="https://www.kracecontest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.kracecontest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PNSS6WNH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1280" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="https://www.kspo.or.kr/kspo/main/main.do" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="760">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item" >
+			<a href="intro.asp" onfocus="this.blur()">주최사 소개</a>
+
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >작품접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">커뮤니티</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+		<li class="nav-item">
+			<a href="javascript:alert('준비 중입니다.');" onfocus="this.blur()">수상작</a>
+
+		</li>
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  style="background-image:url(/images/bg_sub_line.png);background-repeat: repeat-x;background-position: bottom center;" height="199">
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="204">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<link rel="stylesheet" href="/include/css/receive-agreement.css?v=20260905_2">
+<style>
+
+.content_box01.agreement-page {
+  width: 1200px;
+  margin: 0 auto;
+}
+</style>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+				<div style="padding:0px 0 70px 0;color:#15306e;font-size:54px;font-family: 'NanumSquareNeo';font-weight:900;">작품접수</div>
+				
+				<div class="content_box01 agreement-page">
+				<!--시작-->
+<form action="receive.asp" name="form_board" id="form_board" method="POST" class="agreement-form" novalidate>
+<input type="hidden" name="tp" id="tp" value="contest_1">
+<label class="agreement-all"><input type="checkbox" id="agree-all"><span><strong>모두 동의합니다</strong><small>아래 필수 동의사항 모두 확인하고 동의합니다.</small></span><span class="agreement-count" id="agree-count">0 / 3</span></label>
+<section class="agreement-card" aria-labelledby="agree-title">
+				<header class="agreement-head"><h2 id="agree-title">개인정보 수집·이용 안내 <span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+국민체육진흥공단은 「2026 대국민 경륜·경정 건전화 공모전」의 원활한 운영을 위하여 「개인정보보호법」 제15조에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다.<br><br>
+
+<b>1. 개인정보 수집·이용 목적</b><br>
+수집된 개인정보는 「2026 대국민 경륜·경정 건전화 공모전」 참가자 관리를 위해 이용합니다.
+구체적으로는 참가자 본인 확인 및 공모전 참가자 관리, 질문 등에 대한 답변 처리, 개별 공지사항 전달, 수상자에 대한 상장 및 상금 지급, 향후 수상작 활용 시 협의 등의 목적으로 이용됩니다.<br><br>
+
+<b>2. 수집하는 개인정보 항목</b><br>
+필수항목 : 성명, 생년월일, 주소, 연락처(휴대전화), 이메일
+※ 공모전 수상자의 경우 상금 지급 및 원천징수를 위하여 「개인정보보호법」 제15조 및 「국세기본법 시행령」 제68조에 따라 계좌번호 및 주민등록번호를 최종 수상자에 한하여 별도로 추가 수집·이용합니다.<br><br>
+
+<b>3. 개인정보 이용 내역</b><br>
+수집된 개인정보는 다음의 목적으로 이용됩니다.<br>
+1)공모전 참가 접수 및 참가자 관리<br>
+2)참가자 본인 확인 및 참가자격 확인<br>
+3)참가자 문의사항에 대한 답변 처리<br>
+4)공모전 진행에 따른 개별 공지사항 전달<br>
+5)수상자에 대한 상장 및 상금 지급<br>
+6)향후 수상작 활용에 필요한 협의<br>
+또한 제공된 개인정보의 열람, 정정 또는 삭제를 원하는 경우 개인정보 관리 책임자를 통해 요청할 수 있습니다.<br><br>
+
+<b>4. 개인정보 수집 방법</b><br>
+공모전 전용 홈페이지를 통한 온라인 참가 신청 및 필수 서류를 통해 개인정보를 수집합니다.<br><br>
+
+<b>5. 개인정보 보유 및 이용기간</b><br>
+개인정보의 보유 및 이용기간은 개인정보 수집·이용·제공 동의일로부터 3년입니다.<br>
+※ 공모전 운영 용역 수행 과정에서 개인정보의 안전한 관리 및 보호조치를 시행하며, 과업 수행자는 관련 개인정보 보호 및 보안 의무를 준수하여야 합니다.<br><br>
+
+<b>6. 개인정보 수집·이용 동의 거부 권리 및 불이익</b><br>
+개인정보 수집·이용에 대한 동의를 거부할 권리가 있습니다.<br>
+다만, 필수 개인정보의 수집·이용에 동의하지 않을 경우 「2026 대국민 경륜·경정 건전화 공모전」에 참여할 수 없습니다.<br>
+또한 개인정보를 허위로 기재할 경우 추후 심사 과정에서 불이익이 발생할 수 있으며, 수상이 취소될 수 있습니다.<br>
+				
+
+							</div><fieldset class="agreement-options ui-radio-group"><legend>개인정보 수집·이용 안내 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree" id="agree" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree" id="agree_no" value="0"><span>동의하지 않음</span></label></fieldset></section>
+
+							
+							
+
+								
+								
+								
+
+
+<section class="agreement-card" aria-labelledby="agree2-title"><header class="agreement-head"><h2 id="agree2-title">공모전 참여 유의사항
+<span class="agreement-required">필수</span></h2></header><div class="agreement-copy">
+
+
+
+<b style="font-size:17px;">출품작의 저작권 및 배포 활용</b>
+<ul class="ul1" ><li>응모자는 타인의 저작재산권, 초상권, 상표권을 침해하지 않는 작품을 제출해야 합니다.</li>
+<li>응모자는 응모작이 제3자의 저작재산권을 침해하지 않도록 주의 의무를 다해야 합니다.</li>
+<li>타 공모전 수상작, 타인의 저작물, 명의 도용 등의 경우 심사에서 제외되며, 수상발표
+후 확인될 경우 수상 취소 및 시상내역 환수할 수 있습니다.
+(적발 시 향후 주관/주최기관에서 개최하는 공모전 등에 신청자격 제한 검토)</li>
+<li>수상작에 대한 저작권은 출품자가 원칙적으로 보유하며 경륜경정총괄본부 사업 관련
+홍보(온라인SNS채널 업로드, 오프라인 영업장 부착) 등을 위하여 활용하는 2차적 저작물
+작성권(수정 및 재가공) 및 그에 대한 복제전송의 권리는 공단에 있음을 수락합니다.
+공모목적에 따른 이용허용범위를 초과하여 이용허락이 필요한 경우에는 저작권법에
+따라 입상자와 별도로 합의합니다. 이에 동의하지 않은 출품자의 출품작은 수상작 선정에서
+제외될 수 있습니다.</li>
+<li>공단은 수상작에 한하여 비영리 목적으로 5년동안 독점적(온라인, 오프라인)으로 사용
+할 수 있으며 응모자는 응모와 동시에 추후 입상 시 공모전 요강에 기재되어있는 범위
+안에서 저작물 이용을 허락한 것으로 보고, 입상작의 저작재산권에 대한 이용료는 입상에
+따른 시상금으로 대체될 수 있습니다.</li>
+<li>수상작의 경우, 공단의 로고, 이미지, 사업내용 등이 부정확할 경우 공단에서 추후 수정요청을
+할 수 있으며 수상자는 이에 동의합니다. 동의하지 않을 경우, 수상작 선정에서 제외될 수
+있습니다.</li>
+<li>수상자가 경륜경정총괄본부 이외의 제3자(개인‧기업‧기관 등)에게 수상작의 저작
+재산권을 양도하는 등 수상작에 대한 경륜경정총괄본부의 이용권을 침해할 경우 수상을
+취소하고 부상에 준하는 금액을 환수합니다.</li>
+<li>응모자는 공모전의 저작권과 관련한 이의 사항이 있을 경우 국민체육진흥공단을 통해 이의
+신청을 할 수 있습니다.</li>
+<li>응모작에 대해 분쟁이 발생할 경우 한국저작권위원회에 조정을 신청하여 해결할 수
+있으며, 양 당사자는 원활한 분쟁 해결을 위해 상호 노력해야 합니다.</li>
+<li>출품하는 모든 작품은 어떠한 형태로든 상업화되지 않아야 합니다.</li>
+<li>공모전에 출품된 영상, 음원, 이미지, 사진, 폰트 등 기타 저작권, 초상권, 명예훼손, 지적
+재산권 침해 등과 관련한 분쟁이 발생할 경우 그 책임은 출품자 본인에게 있습니다.</li></ul><br>
+
+<b style="font-size:17px;">접수 및 시상 관련</b>
+<ul class="ul1" ><li>응모는 분야별 1인(1팀) 2점으로 제한합니다.</li>
+<li>심사 및 시상 일정은 조정될 수 있으며, 심사결과 적합한 수상작이 없는 경우 수상
+인원 및 상금이 조정될 수 있습니다.</li>
+<li>수상작 상금 수령에 대해 부과되는 제세공과금은 수상자 부담입니다.</li>
+<li>주관기관은 입상하지 않은 작품을 공모전 종료일로부터 2개월 이내에 폐기하며, 응모자가
+반환을 요구하면 공모전 종료 30일 이내 반환합니다.</li>
+<li>수상작에 한하여 원본이 아닐 경우 원본 제출을 요구할 수 있습니다.</li>
+<li>제출기한을 초과하여 제출한 작품에 대해서는 접수가 불가능합니다.</li>
+<li>제출서류가 누락되거나 미비한 경우 심사대상에서 제외됩니다.</li>
+<li>응모작품에는 응모자의 신원을 알 수 있는 어떠한 표기도 해서는 안 되며, 발견될 시
+심사에서 제외됩니다.</li>
+<li>팀 출품작일 경우 대표자에게 상장과 상금을 일괄 전달하며, 주관기관은 상장 및
+상금 배분에 일체 관여하지 않습니다.</li>
+<li>특정 개인･단체･기업 등을 홍보하는 내용은 제외해야 합니다.</li>
+<li>생성형 AI프로그램 등을 활용 가능하나 작품 제출 시 AI 활용여부 및 활용범위를
+기재해야 합니다. 단, 타인의 저작권·초상권 등 권리를 침해하거나 타인의 작품을
+무단으로 도용한 경우 심사 및 수상에서 제외될 수 있습니다.</li>
+<li>동일하거나 유사한 아이디어인 경우, 먼저 신청한 응모자를 우선합니다.</li>
+<li>1인(1팀)이 2점을 출품하여 2점 모두 선정되는 경우, 높은 수상금액으로 1점만 시상합니다.</li></ul>
+
+</div><fieldset class="agreement-options ui-radio-group"><legend>공모전 참여 유의사항에 대한 동의 여부</legend><label class="agreement-option ui-radio-option"><input type="radio" name="agree2" id="agree2" value="1"><span>동의함</span></label><label class="agreement-option ui-radio-option"><input type="radio" name="agree2" id="agree2_no" value="0"><span>동의하지 않음</span></label></fieldset></section>
+
+
+
+
+
+
+<section class="agreement-card agreement-sign"><header class="agreement-head"><h2>동의 확인 및 서명</h2><p>위 사항에 동의하는 경우 아래 서명칸에 성명을 기입해주시길 바랍니다.</p></header><div class="agreement-fields"><label for="agree5">동의 확인<input type="text" name="agree5" id="agree5" placeholder="동의합니다"></label><label for="writer">성명<input type="text" name="writer" id="writer" placeholder="홍길동" autocomplete="name"></label></div></section><p class="agreement-error" id="agreement-error" role="alert"></p><div class="agreement-actions"><button type="submit" class="ui-button">접수하기</button></div></form>
+
+
+<script src="/include/js/receive-agreement.js?v=20260905_1"></script>
+<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center"  style="background-image:url('/images/bg_footer.png');background-repeat: repeat-y;background-position: top center;">
+			<table width="1280" border="0" cellspacing="0" cellpadding="0" >			
+				<tr>						
+					<td  align="left" style="padding:40px 0 40px 0px;font-size:13px;line-height:200%;color:#242424;">
+2026 대국민 경륜·경정 건전화 공모전 / 문의 : 02-2233-4016<br>서울시 영등포구 양평로 21길 26 1203호 ㈜인투인미디어 : 201-86-21825<br>copyright ⓒ 2026 대국민 경륜·경정 건전화 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:52px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+
+});
+</script>
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+

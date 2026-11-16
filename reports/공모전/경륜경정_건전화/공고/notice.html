@@ -1,0 +1,462 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>2026 대국민 경륜·경정 건전화 공모전</title>
+<meta name="description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:type" content="website"> 
+<meta property="og:title" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:description" content="2026 대국민 경륜·경정 건전화 공모전">
+<meta property="og:image" content="https://www.kracecontest.co.kr/images/logo.png">
+<meta property="og:url" content="https://www.kracecontest.co.kr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1318, user-scalable=no"/>
+<link rel="stylesheet" href="/include/css/navi_menu01.css?b1" type="text/css">
+<link href="/include/css/style.css?v=20260904_4" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="/include/js/jquery.autotab-1.1b.js"></script>
+<script language="javascript" src="/include/js/action.js"></script>
+<script type="text/javascript"  src="/include/js/jquery-scrolltofixed.js"></script>
+<link rel="stylesheet" type="text/css" href="/include/css/jquery.modallink-1.0.0.css?3" />
+<script type="text/javascript" src="/include/js/jquery.modalLink-1.0.0.js?3"></script>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-PNSS6WNH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+
+
+<link rel="stylesheet" href="/include/css/ui-buttons.css?v=20260905_1">
+<link rel="stylesheet" href="/include/css/ui-radio.css?v=20260905_2">
+</head>
+
+		
+  <script type="text/javascript">
+	$(document).ready(function() {
+
+
+
+	
+        $('.header').scrollToFixed();
+	
+		//$('.pagings').scrollToFixed( {
+		//	bottom: 0,left:0,
+		//	limit: $('.footer').offset().top
+	//	});
+
+        var summaries = $('.summary1');
+        summaries.each(function(i) {
+            var summary = $(summaries[i]);
+            var next = summaries[i + 1];
+
+            summary.scrollToFixed({
+                marginTop: $('.header').outerHeight(true) + 10,
+                limit: function() {
+                    var limit = 0;
+                    if (next) {
+                        limit = $(next).offset().top - $(this).outerHeight(true) - 10;
+                    } else {
+                        limit = $('.footer').offset().top - $(this).outerHeight(true) - 10;
+                    }
+                    return limit;
+                },
+                zIndex: 999
+            });
+        });
+
+
+	});
+</script>
+<body>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" class="header" >
+  <tr>
+    <td align="center" valign="top"  height="79" bgcolor="#ffffff"  ><table width="1280" border="0" cellspacing="0" cellpadding="0">
+	  <tr>
+	   
+		<td align="left" ><a href="https://www.kspo.or.kr/kspo/main/main.do" target="_blank"><img src="images/logo.png" ></a></td>
+		<td align="left" width="760">
+<div id="siteNavWrap">
+	<ul id="siteNav">
+		<li class="nav-item">
+			<a href="/" onfocus="this.blur()">HOME</a>
+		</li>
+		<li class="nav-item" >
+			<a href="intro.asp" onfocus="this.blur()">주최사 소개</a>
+
+		</li>
+		<li class="nav-item">
+			<a href="info.asp" onfocus="this.blur()">공모요강</a>
+
+		</li>
+
+		<li class="nav-item has-sub">
+			
+			<a href="receive_intro.asp?tp=contest_1" onfocus="this.blur()">접수 및 확인</a>
+			
+			<div class="sub-menu">
+				
+			
+				<a href="receive_intro.asp?tp=contest_1"   >작품접수</a>
+				<a href="/confirm.asp"  onfocus="this.blur()" >접수확인</a> 
+			
+
+			</div>
+		</li>
+
+		<li class="nav-item has-sub">
+			<a href="/list.asp?boardcode=notice" onfocus="this.blur()">커뮤니티</a>
+
+			<div class="sub-menu">
+				<a href="/list.asp?boardcode=notice" onfocus="this.blur()">공지사항</a>
+				<a href="/faq.asp" onfocus="this.blur()">FAQ</a>
+				<a href="/list.asp?boardcode=qna" onfocus="this.blur()">Q&amp;A</a>
+				
+			</div>
+		</li>
+
+		<li class="nav-item">
+			<a href="javascript:alert('준비 중입니다.');" onfocus="this.blur()">수상작</a>
+
+		</li>
+	</ul>
+</div>	
+
+
+		</td>
+		
+	  </tr>
+     </table>
+	</td>
+  </tr>
+</table>
+  <script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function () {
+	var navItems = document.querySelectorAll("#siteNav .has-sub");
+
+	navItems.forEach(function (item) {
+		var link = item.querySelector("a");
+
+		link.addEventListener("click", function (e) {
+			// 모바일이나 터치 환경에서만 1차 클릭은 메뉴 열기
+			if (window.innerWidth <= 768) {
+				if (!item.classList.contains("is-open")) {
+					e.preventDefault();
+
+					navItems.forEach(function (otherItem) {
+						if (otherItem !== item) {
+							otherItem.classList.remove("is-open");
+							otherItem.classList.remove("is-force-close");
+						}
+					});
+
+					item.classList.remove("is-force-close");
+					item.classList.add("is-open");
+				}
+			}
+		});
+
+		// 마우스가 해당 메뉴에서 완전히 빠지면 다시 정상 hover 가능
+		item.addEventListener("mouseleave", function () {
+			item.classList.remove("is-force-close");
+		});
+	});
+
+	// alert 링크 처리
+	var alertLinks = document.querySelectorAll("#siteNav .js-alert-link");
+
+	alertLinks.forEach(function (alertLink) {
+		alertLink.addEventListener("click", function (e) {
+			e.preventDefault();
+
+			var message = alertLink.getAttribute("data-alert") || "접수 기간이 아닙니다.";
+			var parentItem = alertLink.closest(".nav-item");
+
+			alert(message);
+
+			// 모든 하위 메뉴 닫기
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+			});
+
+			// 현재 메뉴는 hover 상태여도 강제로 닫기
+			if (parentItem) {
+				parentItem.classList.add("is-force-close");
+			}
+
+			// 포커스 제거
+			alertLink.blur();
+		});
+	});
+
+	document.addEventListener("click", function (e) {
+		if (!e.target.closest("#siteNav")) {
+			navItems.forEach(function (item) {
+				item.classList.remove("is-open");
+				item.classList.remove("is-force-close");
+			});
+		}
+	});
+});
+</script>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center"  style="background-image:url(/images/bg_sub_line.png);background-repeat: repeat-x;background-position: bottom center;" height="199">
+		<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+		  <tr>
+			<td align="center" valign="top" style="background-image:url(/images/bg_sub.png);background-repeat: no-repeat;background-position: bottom center;" height="204">
+				<table width="1318" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+						<td align="left" >
+						
+						</td>
+					</tr>	
+				</table>
+			</td>
+		  </tr>
+		</table>
+	</td>
+  </tr>
+</table>
+
+<link rel="stylesheet" href="/include/css/user-board.css?v=20260913_2" type="text/css">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td align="center" valign="top" >
+		<table width="1276" border="0" cellspacing="0" cellpadding="0">
+			<tr>
+				
+				<td align="center" style="padding:70px 0;">
+					
+				<div style="padding:0px 0 70px 0;color:#15306e;font-size:54px;font-family: 'NanumSquareNeo';font-weight:900;">공지사항</div>
+				
+				<div class="content_box01 user-board-page user-board-list-page" valign="top" style="width:1198px !important;">
+				<!--시작-->	
+							  <table width="1040" border="0" cellspacing="0" cellpadding="0" >
+
+            
+		<tr>
+              
+			<td  style="margin-bottom:0;padding-bottom: 10px;">
+				
+				<div class="boardList-search-area"  style="margin-bottom:0;">
+					
+				<form name="form_searchC" id="form_searchC" method="post" action="list.asp" class="boardList-search-form">
+						
+					<input type="hidden" name="boardcode" value="notice">
+						
+					<input type="hidden" name="go" value="search">
+						
+					<select name="field" class="boardList-select">
+							
+						<option value="subject">제목</option>
+							
+						<option value="writer">작성자</option>
+						
+					</select>
+						
+					<input name="keyword" type="text" id="keyword" class="boardList-input" value="" placeholder="검색어를 입력해 주세요">
+						
+					<a href="#" onclick="$('#form_searchC').submit(); return false;" class="boardList-search-btn">검색</a>
+					
+				</form>
+				
+				</div>
+	
+			</td>
+            
+		</tr>
+          
+            <tr>
+              <td align="center" ><table width="100%" border="0" cellspacing="0" cellpadding="0"  height="29">
+				  <tr>
+						<td height="2" colspan="6" bgcolor="#666"></td>
+				  </tr>
+				  
+                  <tr>
+                    <td width="6%"  class="tr1"  height="40" height="40" align="center">번호</td>
+                    <td width="63%"  class="tr1"  height="40" align="center">제목</td>
+                    <td width="11%"  class="tr1"  height="40" align="center">작성자</td>
+                    <td width="12%"  class="tr1"  height="40" align="center">등록일자</td>
+                    <td width="8%"  class="tr1"  height="40" align="center">조회</td>
+                  </tr>
+				  
+                  <tr>
+                    <td height="1" colspan="6" bgcolor="c6c6c6"></td>
+                  </tr>
+              </table></td>
+            </tr>
+            <tr>
+              <td align="center" ><table width="100%" border="0" cellspacing="0" cellpadding="0" class="notice">
+		
+                  <tr class="tr2" onMouseOver=this.style.backgroundColor='#f9f9f9' onMouseOut=this.style.backgroundColor=''>
+                    <td width="6%" height="40px" align="center"><strong>공지</strong></td>
+                    <td width="63%" align="left"><a href="view.asp?idx=14&boardcode=notice&go=&field=&keyword=&page="><strong>[공지] 홈페이지 오픈</strong></a></td>
+                    <td width="11%" align="center"><strong>운영사무국</strong></td>
+                    <td width="12%" align="center"><strong>2026.11.16</strong></td>
+                    <td width="8%" align="center"><strong>17</strong></td>
+                  </tr>
+                  <tr>
+                    <td height="1" colspan="6" bgcolor="f5f5f5"></td>
+                  </tr>
+		
+                  <tr class="tr2" onMouseOver=this.style.backgroundColor='#f9f9f9' onMouseOut=this.style.backgroundColor=''>
+                    <td width="6%" height="40px" align="center">1</td>
+                    <td width="63%" align="left">
+					
+					<a href="view.asp?idx=14&boardcode=notice&page=">[공지] 홈페이지 오픈</a>
+					</td>
+                    <td width="11%" align="center">운영사무국</td>
+                    <td width="12%" align="center">2026.11.16</td>
+					
+						<td width="8%" align="center">17</td>
+					
+                  </tr>
+                  <tr>
+                    <td height="1" colspan="6" bgcolor="f5f5f5"></td>
+                  </tr>
+
+              
+
+
+                  <tr>
+                    <td height="1" colspan="6" bgcolor="cccccc"></td>
+                  </tr>
+				  
+              </table></td>
+            </tr>
+		
+            <tr>
+              <td align="center" height="50px" ><table width="50%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="center" style="padding:30px;">
+<style>
+.text{
+	display:inline-block;
+	box-sizing:border-box;
+	min-width:34px;
+	height:34px;
+	padding:0 10px;
+	border:1px solid #d9dee7;
+	border-radius:8px;
+	background:#fff;
+	color:#555d6d;
+	font-size:14px;
+	font-weight:700;
+	line-height:32px;
+	text-align:center;
+}
+.paging{
+	display:inline-block;
+	box-sizing:border-box;
+	min-width:34px;
+	height:34px;
+	padding:0 10px;
+	border:1px solid var(--ui-primary, #223793);
+	border-radius:8px;
+	background:var(--ui-primary, #223793);
+	color:#fff;
+	font-size:14px;
+	font-weight:900;
+	line-height:32px;
+	text-align:center;
+}
+.paging2{display:inline-block;margin-right:10px;color:#555d6d;font-size:14px;font-weight:700;line-height:34px;vertical-align:top;}
+.text:hover{border-color:var(--ui-primary, #223793);color:var(--ui-primary, #223793);}
+</style>
+
+
+		<table border=0 cellpadding=0 cellspacing=0 align=center>
+			<tr><form>
+				<td valign="top"><font class="paging2">1/1</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					<b><font class="paging">1</font></b>
+					</td></form>
+			</tr>
+		</table>
+</td>
+                  </tr>
+
+              </table>
+		<script type="text/javascript">
+		jQuery(document).ready(function() {
+
+			(function () {
+                $(".various3").modalLink({
+					title:"",
+					width:430,
+					height:400,
+					overlayOpacity: 0.3,
+
+					showTitle: true,
+					 showClose: true,
+					 disableScroll: false
+                   
+                });
+            })();
+
+		});
+		</script>	
+
+				<!--끝-->
+				</div>
+				</td>
+				
+			</tr>
+
+		</table>
+	</td>
+  </tr>
+</table>
+
+
+ <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+  <tr>
+       <td align="center"  style="background-image:url('/images/bg_footer.png');background-repeat: repeat-y;background-position: top center;">
+			<table width="1280" border="0" cellspacing="0" cellpadding="0" >			
+				<tr>						
+					<td  align="left" style="padding:40px 0 40px 0px;font-size:13px;line-height:200%;color:#242424;">
+2026 대국민 경륜·경정 건전화 공모전 / 문의 : 02-2233-4016<br>서울시 영등포구 양평로 21길 26 1203호 ㈜인투인미디어 : 201-86-21825<br>copyright ⓒ 2026 대국민 경륜·경정 건전화 공모전 ALL RIGHTS RESERVED
+
+					</td>
+					<td   valign="top" align="right" style="padding-top:52px;padding-right:0px;" >
+					<a ><img src="/images/footer_logo.png" border="0" >
+
+						
+					</td> 
+				
+				</tr>
+			</table>
+	   </td> 
+  </tr>
+</table>
+<span><a href="#" class="top"><img src="/images/arrow.png" width="45" ></a></span>
+<script type="text/javascript">
+$(document).ready(function() {
+
+    $( window ).scroll( function() {
+      if ( $( this ).scrollTop() > 200 ) {
+        $( '.panel' ).fadeIn();
+		$( '.top' ).fadeIn();
+      } else {
+        $( '.panel' ).fadeOut();
+		$( '.top' ).fadeOut();
+      }
+    } );
+    $( '.top' ).click( function() {
+	   $( 'html, body' ).animate( { scrollTop : 0 }, 400 );
+		 return false;
+    } );
+
+
+});
+</script>
+</body>
+</html>
+
+ 
+
+ 
+ 
+
+
