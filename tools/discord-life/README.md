@@ -7,9 +7,10 @@
 
 ## 매일
 ```bash
-node tools/discord-life/post-hotdeal.mjs            # reports/핫딜_TOP50_<오늘>.md 상위 30개 → 카드 3장
+node tools/discord-life/post-hotdeal.mjs            # 상위 30개: 채널엔 TOP5 요약, 스레드에 분류별 카드 4장
 node tools/discord-life/post-info.mjs --n 5          # info.json 에서 아직 안 올린 것 5개 + 목차 갱신
 node tools/discord-life/post-info.mjs --remind       # 마감 3일 전 항목 한 번 알림
+node tools/discord-life/post-info.mjs --edit         # 이미 올린 카드를 현재 형식으로 다시 그림
 ```
 `--dry-run` 으로 먼저 확인 가능. 텔레그램 b_s 봇 TOP50 전송은 그대로 유지.
 
