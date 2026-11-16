@@ -1,0 +1,864 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+
+
+
+
+
+
+<style>
+div.contest-gubun:first-child{
+	padding: 0px 0px;
+	border-bottom: 0px solid #ddd;
+}
+
+@media screen and (max-width: 767px) {
+	.select-box {
+	min-width: 0px;
+	}
+}
+
+</style>
+
+<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="/static/jslibrary/datetimepicker/jquery.datetimepicker.full.min.js"></script>
+
+<script src="/static/bos/js/post.js"></script>
+<script src="/static/jslibrary/miya_validator.js"></script>
+
+<script>
+
+$('#brthdy').datetimepicker({
+	minDate: new Date(),
+	format: 'YYYY-MM-DD',
+	ignoreReadonly: true
+});
+
+/* $(function() {
+	var applyCd = $('input[name=applyCd]').eq(0).attr('checked', true);
+	var ids = $('input[name=applyCd]').eq(0).attr('id');
+
+	changeFile(ids);
+});
+ */
+
+function fn_modify(){
+	$("#board").attr("action", "/bos/competition/codeManage/forUpdate.do?menuNo=2600005&pageIndex=");
+	$("#board").submit();
+}
+
+function deleteContest(){
+	$("#board").attr("action", "delete.do");
+	$("#board").submit();
+}
+
+function fnInsert(){
+
+	if(checkForm()){
+
+		if (!confirm('등록 하시겠습니까?')) {
+			return;
+		}
+
+		$("#board").attr("action", "insert.do");
+		$("#board").submit();
+	}
+
+
+}
+
+function emailChange(selectElement) {
+	var selectedValue = $(selectElement).val();
+	$("#ntcrEmad2").val(selectedValue);
+}
+
+function checkForm(){
+
+	var form = $("#board")[0];
+	var v = new MiyaValidator(form);
+
+	v.add("registerNm", {
+        required: true
+    });
+
+	var birthyn = 'Y';
+	if(birthyn == 'Y'){
+		v.add("brthdy", {
+			required: true
+	    });
+	}
+
+
+    /* var birthyn = 'Y';
+    if(birthyn == 'Y'){
+    	if($("#birth").val() == ""){
+        	alert('[생년월일 입력] 반드시 입력하셔야 하는 사항입니다.');
+        	$("#birth").focus();
+        	return false;
+        }
+    } */
+
+
+    /*
+    v.add("postNo", {
+        required: true
+    });
+	v.add("adres", {
+		required: true
+	});
+	v.add("adresDetail", {
+		required: true
+	});
+	*/
+
+
+    v.add("ntcrEmad1", {
+        required: true
+    });
+    v.add("ntcrEmad2", {
+        required: true
+    });
+
+    v.add("ntcrTelno1", {
+        required: true
+    });
+
+    v.add("ntcrTelno2", {
+        required: true
+    });
+    v.add("ntcrTelno3", {
+        required: true
+    });
+    v.add("passwd", {
+        required: true
+    });
+
+    v.add("passwd", {
+    	required: true,
+		pattern : "(?=.*[0-9])(?=.*[a-zA-Z])(?=\\S+$)(?=.*[!@#$%^*+=-]).{8,16}$",
+		message : "8~16자 이하 영문 대소문자+숫자+특수문자 조합으로 입력하셔야 합니다."
+	});
+
+    v.add("applycnTyCd", {
+        required: true,
+        message : "[접수유형] 반드시 선택하셔야 하는 항목입니다."
+    });
+    v.add("pssrpSj", {
+        required: true
+    });
+
+
+
+
+
+
+
+	var result = v.validate();
+	if (!result) {
+		alert(v.getErrorMessage());
+		v.getErrorElement().focus();
+		return;
+	}
+
+	var maxTypeValue = 0;
+	var atchFieldCnt = 0;
+	console.log(maxTypeValue);
+	console.log(atchFieldCnt);
+
+	for(var i = 1; i <= maxTypeValue; i++){
+		var fieldName = 'fieldChk' + (i < 10 ? '0' + i : i);
+        var elements = document.getElementsByName(fieldName); //가져옴
+
+        if (elements.length > 0) {
+        	 for (var j = 0; j < elements.length; j++) {
+
+        		 var element = elements[j];
+
+        		 // 필수일때만 작동
+                 if(element.required == true){
+
+                	 var checkName = element.name;
+
+                     console.log(checkName);
+
+                 	 if(!$('input[name="'+checkName+'"]:checked').val()){
+                 		 alert("체크박스 체크 부탁드립니다.");
+                 		 return;
+                 	 }
+                 }
+        	 }
+        }
+	}
+
+
+	for(var i = 1; i <= maxTypeValue; i++){
+		var fieldName = 'fieldRio' + (i < 10 ? '0' + i : i);
+        var elements = document.getElementsByName(fieldName); //가져옴
+
+        if (elements.length > 0) {
+        	 for (var j = 0; j < elements.length; j++) {
+
+        		 var element = elements[j];
+
+        		 // 필수일때만 작동
+                 if(element.required == true){
+
+                	 var radioName = element.name;
+
+                 	if(!$('input[name="'+radioName+'"]:checked').val()){
+                 		alert("라디오 체크 부탁드립니다.");
+                 		return;
+                 	}
+                 }
+        	 }
+        }
+	}
+
+	
+
+    for (var i = 1; i <= maxTypeValue; i++) {
+
+        var fieldName = 'field' + (i < 10 ? '0' + i : i);
+        var elements = document.getElementsByName(fieldName); //가져옴
+
+        if (elements.length > 0) {
+
+            var fieldFilled = false;
+            var chkCnt = 0;
+
+            for (var j = 0; j < elements.length; j++) {
+
+                var element = elements[j];
+
+                console.log(element.type);
+                console.log(element);
+                console.log(element.required);
+
+                // 필수일때만 작동
+                if(element.required == true){
+                	if (element.type === 'radio') {
+
+						/* var radioName = element.name;
+
+                    	if(!$('input[name="'+radioName+'"]:checked').val()){
+                    		alert("라디오 체크 부탁드립니다.");
+                    		return;
+                    	}
+
+                    	console.log("radio : false"); */
+
+                    }else if(element.type === 'text'){
+                    	if (element.value.trim() !== '') {
+                    		fieldFilled = true;
+                    		console.log("text : true");
+                        }else{
+                        	fieldFilled = false;
+                        	console.log("text : false");
+                        	break;
+                        }
+                    }else if(element.type === 'file'){
+                    	fieldFilled = true;
+                    }
+                }else{
+                	fieldFilled = true;
+                }
+            }
+
+            if (!fieldFilled) {
+            	alert('세부항목들을 모두 입력해주세요');
+                return false; // 필드가 비어있다면 false 반환
+            }
+        }
+    }
+
+    return true;
+}
+
+/*
+function changeFile (gubun) {
+
+	 $('#contestFiles').empty();
+
+	var tmpl = $('#' + gubun + 'Hide').html();
+	tmpl = tmpl.replace(/_temp/g, '');
+
+	$('#contestFiles').append(tmpl);
+
+
+	if(gubun != 'documentFiles') {
+		var documentFiles = $('#documentFilesHide').html();
+		documentFiles = documentFiles.replace(/_temp/g, '');
+		$('#contestFiles').append(documentFiles);
+	}
+
+	 $(".board-view-li > *").matchHeight();
+	 $(".board-view-inner > *").matchHeight();
+}
+
+ */
+
+</script>
+<form name="board" id="board" enctype="multipart/form-data" action="" method="post" class="bd_search">
+	<input type="hidden" name="menuNo" value="2600005">
+	<input type="hidden" id="pageIndex" name="pageIndex" value="" />
+	<input type="hidden" name="pageQueryString" value="menuNo=2600005&pageIndex=" />
+	<input type="hidden" name="pssrpDspyCd" value="10018" />
+	<input type="hidden" name="registerId" value="" />
+
+	<!-- } 컨텐츠 본문 -->
+
+	<div class="sub-content">
+		<div class="sub-sec-ct">
+			<div class="sub-sec">
+
+				<!-- 게시판 영역 { -->
+				<div class="board-wr">
+					<!-- 글 작성 시작 { -->
+					<!-- 한 행에 두 항목이 들어갈 경우 두 개의 .board-view-li 각각에 'item02' 클래스 추가 -->
+					<div class="board-write">
+						<div class="board-caption" style="text-align: right;">
+		                    <p><span class="mainColor">*</span> 는 필수 입력 사항입니다.</p>
+		                  </div>
+
+						<ul class="board-view-ul">
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										공모전명
+									</div>
+									<div class="v">
+										2026 힐링충남 관광 정책 아이디어 공모전
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										성명 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="input-wrap">
+											<label for="registerNm" class="sound_only">성명</label>
+											<input id="registerNm" name="registerNm" value="" title="성명" type="text" class="txt-input full" style="max-width: 160px;">
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										생년월일
+										
+											<span class="mainColor">*</span><span class="sound_only">필수</span>
+										
+									</div>
+									<div class="v">
+										<div class="date-input-wr">
+											<div class="date-picker-wr">
+												<label for="brthdy" class="sound_only">생년월일</label>
+												<input id="brthdy" type="date"  name="brthdy" class="txt-input date-input" max="9999-12-31" value="">
+											</div>
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										성별
+									</div>
+									<div class="v">
+										<div class="radio-wrap">
+											
+												<div class="radio-wrap_item">
+													<input type="radio" tabindex="0" id="M" name="sexdstn" value="M">
+													<label for="M">남자</label>
+												</div>
+											
+												<div class="radio-wrap_item">
+													<input type="radio" tabindex="0" id="F" name="sexdstn" value="F">
+													<label for="F">여자</label>
+												</div>
+											
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										주소 <!-- <span class="mainColor">*</span><span class="sound_only">필수</span> -->
+									</div>
+									<div class="v">
+										<div class="input-wrap withbtn">
+											<label for="postNo" class="sound_only">우편번호 입력</label>
+											<input id="postNo" name="postNo" value="" type="text" class="txt-input" readonly>
+											<button type="button" class="btn mainBtn sizeS"  onclick="openPost('postNo','adres','adresDetail');">주소찾기</button>
+										</div>
+										<div class="input-wrap">
+											<label for="adres" class="sound_only">주소 입력</label>
+											<input id="adres" name="adres" value="" type="text" class="txt-input full" readonly>
+										</div>
+										<div class="input-wrap">
+											<label for="adresDetail" class="sound_only">상세주소 입력</label>
+											<input id="adresDetail" name="adresDetail" value="" type="text" class="txt-input full" >
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner" style="">
+									<div class="k">
+										이메일 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="email-wrap">
+											<div class="email-wrap_item">
+												<label for="ntcrEmad1" class="sound_only">이메일주소 아이디 자리</label>
+												<input id="ntcrEmad1" name="ntcrEmad1" value="" type="text" class="txt-input email01">
+											</div>
+											<div class="email-wrap_item">
+												@
+											</div>
+											<div class="email-wrap_item">
+												<label for="ntcrEmad2" class="sound_only">이메일주소 도메인</label>
+												<input id="ntcrEmad2" name="ntcrEmad2" value="" type="text" class="txt-input email02">
+											</div>
+											<div class="email-wrap_item">
+												<label for="emailSelect" class="sound_only">이메일주소 도메인 선택</label>
+												<select name="" id="emailSelect" class="select-box email-sel" onchange="emailChange(this)">
+													<option value="">직접 입력</option>
+													
+														<option value="korea.kr" >korea.kr</option>
+													
+														<option value="naver.com" >naver.com</option>
+													
+														<option value="hanmail.net" >hanmail.net</option>
+													
+														<option value="gmail.com" >gmail.com</option>
+													
+														<option value="yahoo.com" >yahoo.com</option>
+													
+														<option value="nate.com" >nate.com</option>
+													
+														<option value="hotmail.com" >hotmail.com</option>
+													
+														<option value="param.com" >param.com</option>
+													
+														<option value="empas.com" >empas.com</option>
+													
+														<option value="korea.com" >korea.com</option>
+													
+												</select>
+											</div>
+											<input type="hidden" id="userEmad" name="userEmad">
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										휴대전화 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="tel-wrap">
+											<div class="tel-wrap_item">
+												<select id="ntcrTelno1" name="ntcrTelno1" class="select-box email-sel" title="휴대전화 앞 자리">
+													<option value="">선택</option>
+													
+														<option value="010">010</option>
+													
+														<option value="011">011</option>
+													
+														<option value="016">016</option>
+													
+														<option value="017">017</option>
+													
+														<option value="018">018</option>
+													
+														<option value="019">019</option>
+													
+												</select>
+											</div>
+											<div class="tel-wrap_item">
+												<label for="ntcrTelno2" class="sound_only">핸드폰번호 두번째 자리</label>
+												<input id="ntcrTelno2" name="ntcrTelno2" value="" type="text" class="txt-input" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');" maxlength="4">
+											</div>
+											<div class="tel-wrap_item">
+												<label for="ntcrTelno3" class="sound_only">핸드폰번호 세번째 자리</label>
+												<input id="ntcrTelno3" name="ntcrTelno3" value="" type="text" class="txt-input" oninput="this.value=this.value.replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');" maxlength="4">
+											</div>
+
+										</div>
+									</div>
+								</div>
+							</li>
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										비밀번호 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="input-wrap">
+											<label for="passwd" class="sound_only">비밀번호</label>
+											<input id="passwd" name="passwd" value="" title="비밀번호" type="password" class="txt-input" maxlength="16">
+										</div>
+										<div class="add-txt">
+											<p class="txt point">* 8~16자 이하 영문 대소문자+숫자+특수문자 조합으로 입력하셔야 합니다.</p>
+											<!-- <p class="txt point">* 9자이상 16자이하의 영문, 숫자, 특수문자(!@#$%^*+=-)</p> -->
+										</div>
+									</div>
+								</div>
+							</li>
+							
+
+							
+
+
+							<input type="hidden" name="resultListSize" value="">
+
+
+
+
+
+
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										접수유형 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="tel-wrap">
+											<div class="tel-wrap_item">
+												<label for="applycnTyCd" class="sound_only">접수유형</label>
+												<select id="applycnTyCd" name="applycnTyCd" class="select-box email-sel" title="휴대전화 앞 자리" >
+													<option value="">선택</option>
+
+													
+
+													
+
+													
+
+													
+
+													
+
+													
+
+													
+														<option value="E">기타</option>
+													
+
+												</select>
+											</div>
+
+
+										</div>
+									</div>
+								</div>
+							</li>
+
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										작품명 <span class="mainColor">*</span><span class="sound_only">필수</span>
+									</div>
+									<div class="v">
+										<div class="input-wrap">
+											<label for="pssrpSj" class="sound_only">작품명</label>
+											<input id="pssrpSj" name="pssrpSj" value="" title="작품명" type="text" class="txt-input full">
+										</div>
+									</div>
+								</div>
+							</li>
+
+							<li class="board-view-li">
+								<div class="board-view-inner">
+									<div class="k">
+										작품설명
+									</div>
+									<div class="v">
+										<div class="input-wrap">
+											<label for="pssrpCn" class="sound_only">작품설명 작성</label>
+											<textarea name="pssrpCn" id="pssrpCn" cols="30" rows="10" class="txt-input full txt-area"></textarea>
+										</div>
+									</div>
+								</div>
+							</li>
+
+
+							
+								<li class="board-view-li">
+									<div class="board-view-inner">
+										<div class="k">
+											양식다운로드
+										</div>
+										<div class="v">
+											
+											
+												
+													<a href="/contest/cmmn/file/fileDown.do?atchFileId=35e05e1f99e34fdb94415e6efd5b32fd&fileSn=3">공고문, 공모신청서 등 제출서류(수정).hwpx</a><br>
+												
+											
+												
+											
+										</div>
+									</div>
+								</li>
+							
+
+							
+
+
+
+
+						</ul>
+					</div>
+					<!-- } 글 작성 끝 -->
+
+
+
+					<!-- <div class="board-caption" style="text-align: left;color: red;">
+		                    <p><span class="mainColor"></span> "출품하시는 작품파일에는 개인정보를 포함하지 않도록 유의하시기 바랍니다."</p>
+		                  </div> -->
+
+
+
+					<!-- 상세페이지 하단 버튼 시작 {  -->
+					<ul class="board-view-btns cf">
+						<li>
+							<button type="button" onclick="fnInsert();" class="view-list-btn btn mainBtn sizeL">접수</button>
+							<!-- <button type="reset" class="view-list-btn btn subBtn sizeS">재작성</button> -->
+							<a href="/contest/competition/codeManage/list.do?menuNo=2600005&pageIndex=" class="view-list-btn btn subBtn sizeS">취소</a>
+						</li>
+					</ul>
+					<!-- } 상세페이지 하단 버튼 끝  -->
+
+				</div>
+				<!-- } 게시판 영역 -->
+			</div>
+		</div>
+	</div>
+	<!-- } 컨텐츠 본문 -->
+</form>
+
+
+<!-- } 컨텐츠 본문 -->
+            <!-- 정보관리실명제 및 만족도조사 영역 { -->
+            <!-- 정보관리실명제 및 만족도조사 영역 { -->
+  <div class="pg-satisfaction">
+    <!-- 실시간 -->
+				
+				<div class="cf top-inner">
+			            <div class="responsibility">
+			              <ul class="i-col-0">
+			                <li class="i-col-0 dot">
+			                  <i class="symbol"></i>
+			                  <b class="bTxt">담당부서 : </b>
+			                  <span class="sTxt"> 대변인 디지털소통담당관</span>
+			                </li>
+			<li class="i-col-0 tel">
+			                  <i class="symbol"></i>
+			                  <b class="bTxt">문의전화 : </b>
+			                  <a href="tel:041-111-2222" class="sTxt">041-635-4891</a>
+			                </li>
+			              </ul>
+			            </div>
+			            </div>
+			        <div class="mid-inner">
+        <form name="stsfdgForm" id="stsfdgForm" method="post">
+          <input type="hidden" name="csrfToken" value=""/>
+          <input type="hidden" name="menuNo" value="2600005">
+          <fieldset>
+            <legend>만족도조사</legend>
+            <div class="i-col-2 research">
+              <div class="point">
+                <p class="point-txt">이 페이지에서 제공하는 정보에 대하여 만족하십니까?</p>
+                <div class="point-radio">
+                  <ul class="i-col-0">
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r1" name="stsfdgIdex" value="5">
+                        <label for="sr-r1"><span>매우만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r2" name="stsfdgIdex" value="4">
+                        <label for="sr-r2"><span>만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r3" name="stsfdgIdex" value="3">
+                        <label for="sr-r3"><span>보통</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r4" name="stsfdgIdex" value="2">
+                        <label for="sr-r4"><span>불만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r5" name="stsfdgIdex" value="1">
+                        <label for="sr-r5"><span>매우불만족</span></label>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="caution">
+                <p class="caution-txt">게재된 내용 및 운영에 대한 개선사항이 있으시면 정보관리 담당부서로 연락 주시기 바랍니다. 이 페이지에 대한 저작권은 충청남도가
+                  소유하고 있습니다.</p>
+              </div>
+            </div>
+            <div class="i-col-0 survey_txt">
+              <label for="research_descript" class="sound_only">여러분들의 의견을 남겨주세요.</label>
+              <input type="text" name="opinionCn" id="research_descript" value="" title="의견입력">
+              <button type="submit" class="survey_submit">
+                평가하기<img src="/static/contest/img/icon-submit.png" alt="확인">
+              </button>
+            </div>
+            <script>
+	        function writeAuth(check) {
+	        	if (confirm("회원 로그인후 사용 하실수 있습니다. \n로그인창으로 이동하시겠습니까?")) {
+	        		location.href="/cnportal/member/user/forLogin.do?menuNo=5100032";
+	        	}
+	        }
+        
+              $("input[name=stsfdgIdex]").on('click', function () {
+                
+            	writeAuth();
+                return false;
+                
+              });
+              $("#stsfdgForm").on('submit', function () {
+                
+	            writeAuth();
+	        	return false;
+                
+
+                if ($(this).find("input[name=stsfdgIdex]:checked").length == 0) {
+                  $(this).find("input[name=stsfdgIdex]").eq(0).focus();
+                  alert("페이지만족도를 선택해 주세요.");
+                  return false;
+                } else if ($(this).find("input[name=opinionCn]").val() == "") {
+                  $(this).find("input[name=opinionCn]").focus();
+                  alert("한줄 의견을 입력해 주세요.");
+                  return false;
+                } else if ($(this).find("input[name=opinionCn]").val().length > 100) {
+                  alert("최대 100자 까지 입력가능합니다.");
+                  var cn = $(this).find("input[name=opinionCn]").val();
+                  cn = cn.substring(0, 100);
+                  $(this).find("input[name=opinionCn]").val(cn);
+                  return false;
+                }
+
+                var url = "/contest/singl/stsfdg/insert.ujson";
+                var params = $(this).serialize();
+                $.post(url, params, function (data) {
+                  if (data.resultCode == "success") {
+                    alert("페이지만족도 의견이 등록되었습니다.");
+                    $("#stsfdgForm")[0].reset();
+                  } else if (data.resultCode == "duplicate") {
+                    alert("이미 등록하셨습니다.");
+                  } else {
+                    alert("페이지만족도 의견등록 오류입니다.");
+                  }
+                }, "json");
+
+                return false;
+              });
+            </script>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+<!-- 정보관리실명제 및 만족도조사 영역 } --><!-- 정보관리실명제 및 만족도조사 영역 } -->
+          </div>
+          <!-- } 컨텐츠 영역 -->
+        </div>
+      </div>
+    </div>
+    <!-- } 서브 본문 전체 -->
+  </div>
+</div>
+<!-- } Sub Contents -->
+<!-- footer -->
+<!-- Footer { -->
+  <div class="footer">
+    <button type="button" id="btnTop" class="btn-top" title="페이지 상단으로 이동">
+      <img src="/static/contest/img/icon-gnb-up.png" alt="페이지 상단으로 이동">
+      <p>TOP</p>
+    </button>
+    <div class="container">
+      <div class="wrapper">
+        <div class="i-col-2 ft-wr">
+          <div class="ft-left">
+            <div class="ft-logo">
+              <a href="" title="메인으로 이동">
+                <img src="/static/contest/img/footer-logo.png" alt="충청남도 공모전홈페이지">
+              </a>
+            </div>
+            <div class="ft-info">
+              <p>(32255) 충남 홍성군 홍북읍 충남대로 21 / 대표전화 041-120</p>
+              <p>Copyright ⓒ 2024 CHUNGCHEONGNAM-DO. All Rights Reserved.</p>
+            </div>
+          </div>
+          <div class="ft-right">
+            <ul class="i-col-0 ft-rnb">
+              <li><a href="/cnportal/main/contents.do?menuNo=5100046" target="_blank">개인정보처리방침</a></li>
+              <li><a href="/cnportal/main/contents.do?menuNo=5100037" target="_blank">이메일수집거부</a></li>
+            </ul>
+            <!-- 패밀리 사이트 있는 경우 { -->
+            <div class="family-site">
+              <select name="" id="" title="패밀리 사이트 이동" onchange="openLink(this)">
+                <option value="#">패밀리사이트 바로가기</option>
+                <option value="/cnportal/main/main.do">충청남도</option>
+                <option value="/welfare/main/main.do">충남통합복지</option>
+                <option value="http://www.chungnam.go.kr/sosNetMain.do">기업SOS</option>
+                <option value="https://alldam.chungnam.go.kr/index.chungnam?menuCd=DOM_000000202007000000">통계정보관</option>
+                <option value="/naepo/main/main.do">내포신도시</option>
+                <option value="/art/main/main.do">도청문예회관</option>
+              </select>
+            </div>
+
+            <script>
+              function openLink(select) {
+                const url = select.value;
+                if (url !== "#") {
+                  window.open(url, '_blank');
+                }
+              }
+            </script>
+            <!-- } 패밀리 사이트 있는 경우 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- } Footer -->
+
+<!-- AceCounter Log Gathering Script V.8.0.2019080601 -->
+<script>
+	var _AceGID=(function(){var Inf=['gtp9.acecounter.com','8080','AM3A33173330568','AW','0','NaPm,Ncisy','ALL','0']; var _CI=(!_AceGID)?[]:_AceGID.val;var _N=0;var _T=new Image(0,0);if(_CI.join('.').indexOf(Inf[3])<0){ _T.src ="https://"+Inf[0]+'/?cookie'; _CI.push(Inf);  _N=_CI.length; } return {o: _N,val:_CI}; })();
+	var _AceCounter=(function(){var G=_AceGID;var _sc=document.createElement('script');var _sm=document.getElementsByTagName('script')[0];if(G.o!=0){var _A=G.val[G.o-1];var _G=(_A[0]).substr(0,_A[0].indexOf('.'));var _C=(_A[7]!='0')?(_A[2]):_A[3];var _U=(_A[5]).replace(/\,/g,'_');_sc.src='https:'+'//cr.acecounter.com/Web/AceCounter_'+_C+'.js?gc='+_A[2]+'&py='+_A[4]+'&gd='+_G+'&gp='+_A[1]+'&up='+_U+'&rd='+(new Date().getTime());_sm.parentNode.insertBefore(_sc,_sm);return _sc.src;}})();
+</script>
+<!-- AceCounter Log Gathering Script End -->
+<!-- //footer -->
+
+<!-- 로그기록  -->
+<script>
+document.writeln("<span class='sound_only'><img src='/contest/singl/siteConectStats/rcord.do?menuNo=2600005&amp;conectUrlad=/contest/competition/contest/forInsert.do' alt=''></span>");
+</script>
+<!-- 로그기록 END  -->
+
+
+
+</body>
+</html>

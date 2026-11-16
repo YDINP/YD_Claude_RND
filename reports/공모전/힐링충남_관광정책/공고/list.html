@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <!-- sns 공유하기 -->
+  <meta property="og:url" content="http://cnportal.imeum.co.kr" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="충청남도" />
+  <meta property="og:description" content="더 행복한 충남 대한민국의 중심, 충청남도 홈페이지에 오신 것을 환영합니다." />
+  <meta property="og:image" content="http://cnportal.imeum.co.kr/static/cnportal/img/sns-logo.jpg" />
+  <meta property="og:image:type" content="image/jpg">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="충청남도">
+  <meta name="twitter:url" content="http://cnportal.imeum.co.kr">
+  <meta name="twitter:description" content="더 행복한 충남 대한민국의 중심, 충청남도 홈페이지에 오신 것을 환영합니다.">
+<title>작품접수(목록) | 공모전 참가 |  공모전</title>
+
+  <!-- src > css, js 연결 -->
+  <link rel="stylesheet" href="/static/contest/plugin/jqueryui/jquery-ui.min.css">
+  <link rel="stylesheet" href="/static/contest/plugin/swiper/swiper-bundle.min.css">
+  <link rel="stylesheet" href="/static/contest/plugin/niceselect/nice-select.css">
+  <link rel="stylesheet" href="/static/contest/css/fonts.css">
+  <link rel="stylesheet" href="/static/contest/css/common.css">
+  <link rel="stylesheet" href="/static/contest/css/layout.css">
+  <link rel="stylesheet" href="/static/contest/css/normal.css">
+  <link rel="stylesheet" href="/static/contest/css/responsive.css">
+
+  <script src="/static/contest/js/jquery-3.7.0.min.js"></script>
+  <script src="/static/contest/plugin/jqueryui/jquery-ui.min.js"></script>
+  <script src="/static/contest/plugin/feather.min.js" defer></script>
+  <script src="/static/contest/plugin/prefixfree.min.js" defer></script>
+  <script src="/static/contest/plugin/matchheight/jquery.matchHeight.js" defer></script>
+  <script src="/static/contest/plugin/swiper/swiper-bundle.min.js" defer></script>
+  <script src="/static/contest/plugin/niceselect/jquery.nice-select.js"></script>
+  <script src="/static/contest/js/normal.js" defer></script>
+  <script src="/static/jslibrary/miya_validator.js"></script>
+  <script src="/static/commons/commons.js"></script>
+
+</head>
+<body>
+
+<!-- 바로가기 영역 -->
+<p id="skip-nav">
+  <a href="#contents-wrap">본문으로 바로가기</a>
+  <a href="#snb">통합검색 바로가기</a>
+  <a href="#gnb">메인메뉴 바로가기</a>
+</p>
+<!-- // 바로가기 영역 -->
+
+<!-- 헤더 영역 -->
+<!-- Header { -->
+<div class="header">
+  <!-- Header Top { -->
+  <div class="hd-top">
+    <div class="container">
+      <div class="wrapper">
+        <div class="tnb">
+          <ul class="i-col-0 tnb-ul">
+            <li class="nuri">
+              <a href="/main.do" target="_blank" title="충청남도 누리집 새창으로 열림">
+                <img src="/static/contest/img/nuri-logo.png" alt="충청남도">
+              </a>
+            </li>
+            <li><a href="/cnportal/member/user/forLogin.do?menuNo=5100032">로그인</a></li>
+              <li><a href="/cnportal/member/user/joinSelect.do?menuNo=5100033">회원가입</a></li>
+            </ul>
+
+
+          <script>
+
+function siteHeaderSearch(){
+	
+	var searchForm = document.siteSearchHeader;
+	
+	if (isEmptyText(searchForm.query.value)) {
+		alert("검색어를 입력하세요.");
+		searchForm.query.focus();
+		return false;
+	}
+	return true;
+}
+
+//공백 체크
+function isEmptyText(str){
+	if(str == null || str.replace(/ /gi,"") == ""){
+		return true;
+	}
+	return false;
+}
+</script>
+
+
+<div class="srch-barm" id="srch">
+	<!-- <form action="/cnportal/search/cnportalSearch/list.do" method="post"> -->
+	<form id="siteSearchHeader" name="siteSearchHeader" method="post" action="/cnportal/search/cnportalSearch/list.do?pSiteId=cnportal&menuNo=5100165" title="새창열림" onsubmit="return siteHeaderSearch();">
+	    
+	    <input type="hidden" name="cate" id="cate" value="ALL">
+	    <input type="hidden" name="collection" id="collection" value="">
+	    <input type="hidden" name="startCount" id="startCount" value="0">
+	    
+	    <input type="text" name="query" id="query" value="" title="통합 검색" placeholder="">
+	    <button type="submit" title="검색하기" id="search_btn_h">
+	        <img src="/static/cnportal/img/icon-srch-site.png" alt="검색 아이콘">
+	    </button>
+	</form>
+</div>
+
+
+
+
+
+
+
+
+
+</div>
+      </div>
+    </div>
+  </div>
+  <!-- } Header Top -->
+
+  <!-- Header Bottom { -->
+  <div class="hd">
+    <div class="container">
+      <div class="wrapper">
+        <div class="i-col-0 hd-wr">
+          <h1 class="logo">
+            <a href="/contest.do" title="메인으로 이동">
+              <img src="/static/contest/img/logo.png" alt="충청남도">
+            </a>
+          </h1>
+          <div class="gnb" id="gnb">
+            <ul class="i-col-4 gnb-ul">
+              <li>
+                  <a href="/contest/competition/mainScheduleManage/scheduleList.do?menuNo=2600002" >공모전 정보</a>
+                  <ul class="gnb-ul2">
+                    <li>
+	                          <a href="/contest/competition/mainScheduleManage/scheduleList.do?menuNo=2600002" >주요일정</a>
+	                        </li>
+                      	<li>
+	                          <a href="/contest/competition/codeManage/listUser.do?menuNo=2600003" >모집요강</a>
+	                        </li>
+                      	</ul>
+                </li>
+              <li>
+                  <a href="/contest/competition/codeManage/list.do?menuNo=2600005" >공모전 참가</a>
+                  <ul class="gnb-ul2">
+                    <li>
+	                          <a href="/contest/competition/codeManage/list.do?menuNo=2600005" >작품접수</a>
+	                        </li>
+                      	<li>
+	                          <a href="/contest/competition/rcptIdnty/list.do?menuNo=2600006" >접수확인</a>
+	                        </li>
+                      	</ul>
+                </li>
+              <li>
+                  <a href="/contest/bbs/B0000355/list.do?menuNo=2600008" >커뮤니티</a>
+                  <ul class="gnb-ul2">
+                    <li>
+	                          <a href="/contest/bbs/B0000355/list.do?menuNo=2600008" >공지사항</a>
+	                        </li>
+                      	<li>
+	                          <a href="/contest/bbs/B0000356/list.do?menuNo=2600009" >묻고 답하기</a>
+	                        </li>
+                      	<li>
+	                          <a href="/contest/competition/entryManage/list.do?menuNo=2600010" >수상작 전시실</a>
+	                        </li>
+                      	</ul>
+                </li>
+              <li>
+                  <a href="/contest/competition/alarmRequestList/list.do?menuNo=2600012" >공모전 알림신청</a>
+                  <ul class="gnb-ul2">
+                    <li>
+	                          <a href="/contest/competition/alarmRequestList/list.do?menuNo=2600012" >문자 신청</a>
+	                        </li>
+                      	<li>
+	                          <a href="/contest/competition/alarmRequestList/cancelList.do?menuNo=2600013" >문자 신청해제</a>
+	                        </li>
+                      	</ul>
+                </li>
+              </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 모바일 메뉴 및 검색 { -->
+    <div class="mb-wr">
+      <div class="mb-gnb">
+        <button type="button" class="mb-gnb-btn">모바일메뉴 열기</button>
+        <div class="mb-gnb-bg"></div>
+        <div class="mb-gnb-box">
+          <div class="mb-gnb-inner">
+            <div class="mb-gnb-head">
+              <div class="mb-gnb-gray">
+                <a href="http://www.chungnam.go.kr" target="_blank" title="충청남도 누리집 새창으로 열림" class="mb-gnb-logo">
+                  <img src="/static/contest/img/nuri-logo.png" alt="충청남도">
+                </a>
+              </div>
+              <div class="mb-gnb-link">
+                <a href="/cnportal/member/user/forLogin.do?menuNo=5100032" title="로그인 이동" class="login">
+                    <i></i>
+                    <p>로그인</p>
+                  </a>
+                  <a href="/cnportal/member/user/joinSelect.do?menuNo=5100033" title="회원가입 이동" class="join">
+                    <i></i>
+                    <p>회원가입</p>
+                  </a>
+                </div>
+            </div>
+            <div class="mb-gnb-body">
+              <ul class="mb-gnb-ul">
+                <li class="mb-gnb-li">
+                    <a href="javascript:void(0)" class="mb-gnb-menu">공모전 정보</a>
+                      <ul class="mb-gnb-ul2">
+                        <li class="mb-gnb-li2">
+                              <a href="/contest/competition/mainScheduleManage/scheduleList.do?menuNo=2600002" class="mb-gnb-menu2">주요일정</a>
+                                	</li>
+                          <li class="mb-gnb-li2">
+                              <a href="/contest/competition/codeManage/listUser.do?menuNo=2600003" class="mb-gnb-menu2">모집요강</a>
+                                	</li>
+                          </ul>
+                    </li>
+                <li class="mb-gnb-li">
+                    <a href="javascript:void(0)" class="mb-gnb-menu">공모전 참가</a>
+                      <ul class="mb-gnb-ul2">
+                        <li class="mb-gnb-li2">
+                              <a href="/contest/competition/codeManage/list.do?menuNo=2600005" class="mb-gnb-menu2">작품접수</a>
+                                	</li>
+                          <li class="mb-gnb-li2">
+                              <a href="/contest/competition/rcptIdnty/list.do?menuNo=2600006" class="mb-gnb-menu2">접수확인</a>
+                                	</li>
+                          </ul>
+                    </li>
+                <li class="mb-gnb-li">
+                    <a href="javascript:void(0)" class="mb-gnb-menu">커뮤니티</a>
+                      <ul class="mb-gnb-ul2">
+                        <li class="mb-gnb-li2">
+                              <a href="/contest/bbs/B0000355/list.do?menuNo=2600008" class="mb-gnb-menu2">공지사항</a>
+                                	</li>
+                          <li class="mb-gnb-li2">
+                              <a href="/contest/bbs/B0000356/list.do?menuNo=2600009" class="mb-gnb-menu2">묻고 답하기</a>
+                                	</li>
+                          <li class="mb-gnb-li2">
+                              <a href="/contest/competition/entryManage/list.do?menuNo=2600010" class="mb-gnb-menu2">수상작 전시실</a>
+                                	</li>
+                          </ul>
+                    </li>
+                <li class="mb-gnb-li">
+                    <a href="javascript:void(0)" class="mb-gnb-menu">공모전 알림신청</a>
+                      <ul class="mb-gnb-ul2">
+                        <li class="mb-gnb-li2">
+                              <a href="/contest/competition/alarmRequestList/list.do?menuNo=2600012" class="mb-gnb-menu2">문자 신청</a>
+                                	</li>
+                          <li class="mb-gnb-li2">
+                              <a href="/contest/competition/alarmRequestList/cancelList.do?menuNo=2600013" class="mb-gnb-menu2">문자 신청해제</a>
+                                	</li>
+                          </ul>
+                    </li>
+                </ul>
+            </div>
+            <button type="button" class="mb-gnb-close">모바일메뉴 닫기</button>
+          </div>
+        </div>
+      </div>
+      <div class="mb-srch">
+        <button type="button" class="mb-srch-btn" title="모바일검색 열기">검색</button>
+      </div>
+    </div>
+    <!-- } 모바일 메뉴 및 검색 -->
+  </div>
+  <!-- } Header Bottom -->
+</div>
+<!-- } Header -->
+
+
+<!-- // 헤더 영역 -->
+<!-- Sub Contents { -->
+<div id="contents-body" class="sub">
+  <!--
+    * 좌측메뉴 유무에 따른 클래스 부여 필요
+    - sub-wrap_lnb : 사이드 메뉴 있는 레이아웃
+    - sub-wrap_full : 사이드 메뉴 없는 레이아웃
+  -->
+  <div class="sub-wrap sub-wrap_lnb">
+    <!-- 서브 비주얼 { -->
+    <div class="sub-visual sub-visual_1"><!-- 메뉴에 따라 sub-visual_n 클래스 변경 -->
+      <div class="container">
+        <div class="wrapper">
+          <h2 class="sub-visual-title">
+            공모전 참가</h2>
+          <p class="sub-visual-descript">
+            작품접수 관련 페이지입니다.
+          </p>
+        </div>
+      </div>
+    </div>
+    <!-- } 서브 비주얼 -->
+    <!-- 서브 본문 전체 { -->
+    <div class="sub-layout">
+      <div class="container">
+        <div class="cf wrapper">
+          <!-- [사이드 메뉴 있는 레이아웃] 사이드 메뉴 { -->
+          <!-- [사이드 메뉴 있는 레이아웃] 사이드 메뉴 { -->
+<div class="sub-lnb">
+  <div class="sub-lnb-title">
+    <p>공모전 참가</p>
+  </div>
+  <ul class="depth2-list">
+    <li class="depth2-item active">
+		        <a href="/contest/competition/codeManage/list.do?menuNo=2600005" class="depth2-link">작품접수</a>
+		        </li>
+    	<li class="depth2-item ">
+		        <a href="/contest/competition/rcptIdnty/list.do?menuNo=2600006" class="depth2-link">접수확인</a>
+		        </li>
+    	</ul>
+</div>
+<!-- 
+
+                    
+                    <!-- } [사이드 메뉴 있는 레이아웃] 사이드 메뉴 -->
+          <!-- 컨텐츠 영역 { -->
+          <div class="sub-contents">
+            <!-- 컨텐츠 제목 { -->
+            <div class="sub-head">
+              <div class="cf sub-page-info">
+                <ul class="sub-breadcrumb">
+                  <li class="sub-breadcrumb-item">
+                    <a href="/contest/main/main.do" class="menu home">홈</a>
+                  </li>
+                  <li class="sub-breadcrumb-item">
+                      <span class="menu">공모전 참가</span>
+                    </li>
+                  <li class="sub-breadcrumb-item">
+                      <span class="menu">작품접수</span>
+                    </li>
+                  </ul>
+                <ul class="sub-print">
+                  <li>
+                    <button type="button" class="sub-print-button" title="인쇄화면 새창열림">인쇄하기</button>
+                  </li>
+                </ul>
+              </div>
+              <h3 class="sub-title">
+                작품접수</h3>
+            </div>
+            <!-- } 컨텐츠 제목 -->
+            <!-- 컨텐츠 본문 { -->
+            
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+function noticeList() {
+	document.frm.submit();
+}
+//검색
+function fnSearch(pageIndex) {
+	$('#pageIndex').val(pageIndex);
+	$("#frm").attr("action", "list.domenuNo=2600005&pageIndex=1");
+	$('#frm').submit();
+}
+</script>
+<form name="frm" id="frm" action="list.do" method="post">
+	<input type="hidden" name="menuNo" value="2600005" />
+	<input type="hidden" id="pageIndex" name="pageIndex" value="1" />
+
+	<!-- 컨텐츠 본문 { -->
+	<div class="sub-content">
+		<div class="sub-sec-ct">
+			<div class="sub-sec">
+
+				<!-- 게시판 영역 { -->
+				<div class="board-wr">
+					<!-- 게시판 상단 추가 컨텐츠 { -->
+					<div class="board-in-cnt first"></div>
+					<!-- } 게시판 상단 추가 컨텐츠 -->
+					<!-- 게시판 상단 { -->
+					<div class="board-top">
+						<!-- 게시판 검색 { -->
+						<!--
+              li 개수에 따라 스타일 클래스 자동 추가됨
+              .search-box.list-style : 나열 형태(search-li 1개 이하)
+              .search-box.table-style : 테이블 형태(search-li 2개 이상)
+            -->
+						<div class="search-box">
+							<fieldset>
+								<legend>검색영역</legend>
+								<ul class="search-ul match_h">
+									<li class="search-li">
+										<div class="search-tit">
+											<p>검색어</p>
+										</div>
+										<div class="search-cnt">
+											<div class="search-cnt_in">
+												<label for="searchCnd" class="sound_only">검색항목 선택</label>
+												<select name="searchCnd" ame="searchCnd" id="searchCnd" title="검색조건 선택란" class="select-box">
+													<option value="0"  >전체</option>
+													<option value="1"  >공모전</option>
+													
+												</select>
+											</div>
+											<div class="search-cnt_in">
+												<label for="searchWrd" class="sound_only">검색어를 입력하세요</label>
+												<input type="text" name="searchWrd" id="searchWrd" class="txt-input w-px400">
+												<button type="submit" class="btn redBtn sizeS">
+													<img src="/static/contest/img/icon-search_w.png" alt="" class="icon-search">
+													<img src="/static/contest/img/icon-search_r.png" alt="" class="icon-search">
+													검색
+												</button>
+											</div>
+										</div>
+									</li>
+								</ul>
+							</fieldset>
+						</div>
+						<!-- } 게시판 검색 -->
+						<!-- 게시판 정보 { -->
+						<div class="board-info cf">
+							<div class="board-info_left">
+								<div class="board-info-wr">
+									<ul class="board-info-ul">
+										<li>총 <span class="point">2</span>건</li>
+										
+										<li><span class="point">1 / 1</span>Page</li>
+									</ul>
+								</div>
+							</div>
+							<div class="board-info_right">
+								<!-- 게시글 출력 개수 { -->
+								<div class="sort-wr">
+									<div class="board-sort">
+										<label for="pageUnit" class="sound_only">게시물 출력수 선택</label>
+										<select class="sort" name="pageUnit" id="pageUnit" title="출력 게시물 수 설정란">
+											<option value="10"  selected >10개 출력</option>
+											<option value="15" >15개 출력</option>
+											<option value="20" >20개 출력</option>
+											<option value="30" >30개 출력</option>
+										</select>
+										<!-- // 셀렉트박스 옵션 선택 후 바로 링크 이동을 하게 되면 웹접근성에 위배되므로 확인 버튼 추가 -->
+										<button type="submit" title="확인" class="board-list-btn board-sort-btn">확인</button>
+									</div>
+								</div>
+								<!-- } 게시글 출력 개수 -->
+							</div>
+						</div>
+						<!-- } 게시판 정보 -->
+					</div>
+					<!-- } 게시판 상단 -->
+					<!-- 게시판 본문 { -->
+					<div class="board-list txt-type02">
+						<table>
+							<caption>접수구분, 공모전, 공모주제, 관련부서, 모집기간의 내용을 포함한 표입니다.</caption>
+							<colgroup>
+								<col style="width: 8%;">
+								<col style="width: auto;">
+								
+								<col style="width: 25%;">
+								<col style="width: 20%;">
+							</colgroup>
+							<thead>
+							<tr>
+								<th>접수구분</th>
+								<th>공모전</th>
+								<!-- <th>공모주제</th> -->
+								<th>관련부서</th>
+								<th>모집기간</th>
+							</tr>
+							</thead>
+							<tbody>
+							
+								
+								
+								<tr>
+									<td>
+										
+										접수중
+										
+									</td>
+									<td>
+										
+											
+											
+												
+												
+													
+													
+														<a href="/contest/competition/contest/forInsert.do?menuNo=2600005&pssrpDspyCd=10016" class="txt01">2026 충청남도 자치경찰위원회 교통안전 콘텐츠 공모전</a>
+													
+												
+												
+													
+											
+										
+									</td>
+									
+									<td>충청남도 자치경찰위원회</td>
+									<td>
+										2026-11-11 09:00
+										<br/>~
+										2026-12-11 18:00
+									</td>
+								</tr>
+							
+								
+								
+								<tr>
+									<td>
+										
+										접수중
+										
+									</td>
+									<td>
+										
+											
+											
+												
+												
+													
+													
+														<a href="/contest/competition/contest/forInsert.do?menuNo=2600005&pssrpDspyCd=10018" class="txt01">2026 힐링충남 관광 정책 아이디어 공모전</a>
+													
+												
+												
+													
+											
+										
+									</td>
+									
+									<td> 충청남도</td>
+									<td>
+										2026-11-16 09:00
+										<br/>~
+										2026-12-04 18:00
+									</td>
+								</tr>
+							
+							
+							</tbody>
+						</table>
+					</div>
+					<!-- } 게시판 본문 -->
+					<!-- 페이징 { -->
+					
+						<div class='paginationSet'><ul class='pagination pagination-centered'><li class='i first disabled'><span class='s'><span>처음 <span class='t'>목록</span></span></span></li><li class='i prev disabled'><span class='s'><span>이전 <span class='t'>목록</span></span></span></li><li class='active'><span><em title='현재목록'><span>1</span></em></span></li><li class='i next disabled'><span class='s'><span>다음 <span class='t'>목록</span></span></span></li><li class='i end disabled'><span class='s'><span>끝 <span class='t'>목록</span></span></span></li></ul></div>
+					
+					<!-- } 페이징 -->
+				</div>
+				<!-- } 게시판 영역 -->
+			</div>
+		</div>
+	</div>
+	<!-- } 컨텐츠 본문 -->
+</form>
+
+
+
+
+
+
+<!-- } 컨텐츠 본문 -->
+            <!-- 정보관리실명제 및 만족도조사 영역 { -->
+            <!-- 정보관리실명제 및 만족도조사 영역 { -->
+  <div class="pg-satisfaction">
+    <!-- 실시간 -->
+				
+				<div class="cf top-inner">
+			            <div class="responsibility">
+			              <ul class="i-col-0">
+			                <li class="i-col-0 dot">
+			                  <i class="symbol"></i>
+			                  <b class="bTxt">담당부서 : </b>
+			                  <span class="sTxt"> 대변인 디지털소통담당관</span>
+			                </li>
+			<li class="i-col-0 tel">
+			                  <i class="symbol"></i>
+			                  <b class="bTxt">문의전화 : </b>
+			                  <a href="tel:041-111-2222" class="sTxt">041-635-4891</a>
+			                </li>
+			              </ul>
+			            </div>
+			            </div>
+			        <div class="mid-inner">
+        <form name="stsfdgForm" id="stsfdgForm" method="post">
+          <input type="hidden" name="csrfToken" value=""/>
+          <input type="hidden" name="menuNo" value="2600005">
+          <fieldset>
+            <legend>만족도조사</legend>
+            <div class="i-col-2 research">
+              <div class="point">
+                <p class="point-txt">이 페이지에서 제공하는 정보에 대하여 만족하십니까?</p>
+                <div class="point-radio">
+                  <ul class="i-col-0">
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r1" name="stsfdgIdex" value="5">
+                        <label for="sr-r1"><span>매우만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r2" name="stsfdgIdex" value="4">
+                        <label for="sr-r2"><span>만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r3" name="stsfdgIdex" value="3">
+                        <label for="sr-r3"><span>보통</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r4" name="stsfdgIdex" value="2">
+                        <label for="sr-r4"><span>불만족</span></label>
+                      </div>
+                    </li>
+                    <li>
+                      <div class="radio_wrap">
+                        <input type="radio" id="sr-r5" name="stsfdgIdex" value="1">
+                        <label for="sr-r5"><span>매우불만족</span></label>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="caution">
+                <p class="caution-txt">게재된 내용 및 운영에 대한 개선사항이 있으시면 정보관리 담당부서로 연락 주시기 바랍니다. 이 페이지에 대한 저작권은 충청남도가
+                  소유하고 있습니다.</p>
+              </div>
+            </div>
+            <div class="i-col-0 survey_txt">
+              <label for="research_descript" class="sound_only">여러분들의 의견을 남겨주세요.</label>
+              <input type="text" name="opinionCn" id="research_descript" value="" title="의견입력">
+              <button type="submit" class="survey_submit">
+                평가하기<img src="/static/contest/img/icon-submit.png" alt="확인">
+              </button>
+            </div>
+            <script>
+	        function writeAuth(check) {
+	        	if (confirm("회원 로그인후 사용 하실수 있습니다. \n로그인창으로 이동하시겠습니까?")) {
+	        		location.href="/cnportal/member/user/forLogin.do?menuNo=5100032";
+	        	}
+	        }
+        
+              $("input[name=stsfdgIdex]").on('click', function () {
+                
+            	writeAuth();
+                return false;
+                
+              });
+              $("#stsfdgForm").on('submit', function () {
+                
+	            writeAuth();
+	        	return false;
+                
+
+                if ($(this).find("input[name=stsfdgIdex]:checked").length == 0) {
+                  $(this).find("input[name=stsfdgIdex]").eq(0).focus();
+                  alert("페이지만족도를 선택해 주세요.");
+                  return false;
+                } else if ($(this).find("input[name=opinionCn]").val() == "") {
+                  $(this).find("input[name=opinionCn]").focus();
+                  alert("한줄 의견을 입력해 주세요.");
+                  return false;
+                } else if ($(this).find("input[name=opinionCn]").val().length > 100) {
+                  alert("최대 100자 까지 입력가능합니다.");
+                  var cn = $(this).find("input[name=opinionCn]").val();
+                  cn = cn.substring(0, 100);
+                  $(this).find("input[name=opinionCn]").val(cn);
+                  return false;
+                }
+
+                var url = "/contest/singl/stsfdg/insert.ujson";
+                var params = $(this).serialize();
+                $.post(url, params, function (data) {
+                  if (data.resultCode == "success") {
+                    alert("페이지만족도 의견이 등록되었습니다.");
+                    $("#stsfdgForm")[0].reset();
+                  } else if (data.resultCode == "duplicate") {
+                    alert("이미 등록하셨습니다.");
+                  } else {
+                    alert("페이지만족도 의견등록 오류입니다.");
+                  }
+                }, "json");
+
+                return false;
+              });
+            </script>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+<!-- 정보관리실명제 및 만족도조사 영역 } --><!-- 정보관리실명제 및 만족도조사 영역 } -->
+          </div>
+          <!-- } 컨텐츠 영역 -->
+        </div>
+      </div>
+    </div>
+    <!-- } 서브 본문 전체 -->
+  </div>
+</div>
+<!-- } Sub Contents -->
+<!-- footer -->
+<!-- Footer { -->
+  <div class="footer">
+    <button type="button" id="btnTop" class="btn-top" title="페이지 상단으로 이동">
+      <img src="/static/contest/img/icon-gnb-up.png" alt="페이지 상단으로 이동">
+      <p>TOP</p>
+    </button>
+    <div class="container">
+      <div class="wrapper">
+        <div class="i-col-2 ft-wr">
+          <div class="ft-left">
+            <div class="ft-logo">
+              <a href="" title="메인으로 이동">
+                <img src="/static/contest/img/footer-logo.png" alt="충청남도 공모전홈페이지">
+              </a>
+            </div>
+            <div class="ft-info">
+              <p>(32255) 충남 홍성군 홍북읍 충남대로 21 / 대표전화 041-120</p>
+              <p>Copyright ⓒ 2024 CHUNGCHEONGNAM-DO. All Rights Reserved.</p>
+            </div>
+          </div>
+          <div class="ft-right">
+            <ul class="i-col-0 ft-rnb">
+              <li><a href="/cnportal/main/contents.do?menuNo=5100046" target="_blank">개인정보처리방침</a></li>
+              <li><a href="/cnportal/main/contents.do?menuNo=5100037" target="_blank">이메일수집거부</a></li>
+            </ul>
+            <!-- 패밀리 사이트 있는 경우 { -->
+            <div class="family-site">
+              <select name="" id="" title="패밀리 사이트 이동" onchange="openLink(this)">
+                <option value="#">패밀리사이트 바로가기</option>
+                <option value="/cnportal/main/main.do">충청남도</option>
+                <option value="/welfare/main/main.do">충남통합복지</option>
+                <option value="http://www.chungnam.go.kr/sosNetMain.do">기업SOS</option>
+                <option value="https://alldam.chungnam.go.kr/index.chungnam?menuCd=DOM_000000202007000000">통계정보관</option>
+                <option value="/naepo/main/main.do">내포신도시</option>
+                <option value="/art/main/main.do">도청문예회관</option>
+              </select>
+            </div>
+
+            <script>
+              function openLink(select) {
+                const url = select.value;
+                if (url !== "#") {
+                  window.open(url, '_blank');
+                }
+              }
+            </script>
+            <!-- } 패밀리 사이트 있는 경우 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- } Footer -->
+
+<!-- AceCounter Log Gathering Script V.8.0.2019080601 -->
+<script>
+	var _AceGID=(function(){var Inf=['gtp9.acecounter.com','8080','AM3A33173330568','AW','0','NaPm,Ncisy','ALL','0']; var _CI=(!_AceGID)?[]:_AceGID.val;var _N=0;var _T=new Image(0,0);if(_CI.join('.').indexOf(Inf[3])<0){ _T.src ="https://"+Inf[0]+'/?cookie'; _CI.push(Inf);  _N=_CI.length; } return {o: _N,val:_CI}; })();
+	var _AceCounter=(function(){var G=_AceGID;var _sc=document.createElement('script');var _sm=document.getElementsByTagName('script')[0];if(G.o!=0){var _A=G.val[G.o-1];var _G=(_A[0]).substr(0,_A[0].indexOf('.'));var _C=(_A[7]!='0')?(_A[2]):_A[3];var _U=(_A[5]).replace(/\,/g,'_');_sc.src='https:'+'//cr.acecounter.com/Web/AceCounter_'+_C+'.js?gc='+_A[2]+'&py='+_A[4]+'&gd='+_G+'&gp='+_A[1]+'&up='+_U+'&rd='+(new Date().getTime());_sm.parentNode.insertBefore(_sc,_sm);return _sc.src;}})();
+</script>
+<!-- AceCounter Log Gathering Script End -->
+<!-- //footer -->
+
+<!-- 로그기록  -->
+<script>
+document.writeln("<span class='sound_only'><img src='/contest/singl/siteConectStats/rcord.do?menuNo=2600005&amp;conectUrlad=/contest/competition/codeManage/list.do' alt=''></span>");
+</script>
+<!-- 로그기록 END  -->
+
+
+
+</body>
+</html>
