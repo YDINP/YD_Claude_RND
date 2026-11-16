@@ -1,0 +1,10 @@
+Use your image generation tool to create ONE image, using the attached image as the exact character reference. Do not write any files yourself, just generate the image.
+
+Character expression and pose sheet of the SAME mascot as the attached image: a rounded grey-beige river stepping-stone with a wavy sky-blue band around its lower body, a small darker flat pebble on top of its head, dot eyes, pink cheeks, stubby arms with rounded mitten hands (no fingers) and two short stubby legs. IMPORTANT: the body must stay a WIDE, flattened oval exactly like the reference, about 1.3 times wider than tall, never a tall ball or sphere; the blue band stays a thick wavy band across the lower third. Arms attach cleanly to the sides with closed outlines. Keep identical proportions, colors, outline thickness and flat 2D vector style as the reference.
+Landscape 3:2 image, pure white background, four poses evenly spaced in a row, same size, each with a small soft grey ground shadow:
+1. Holding the small pebble from its head up with both hands, offering it forward, proud gentle smile.
+2. Cheering with both arms raised, eyes closed in happy upturned arcs, mouth open in a smile.
+3. Lying down flat on its belly with arms stretched forward, relaxed calm face, like a step stone resting on the ground, the head pebble placed on the ground in front of it.
+4. Shy thank-you bow: body tilted slightly forward, both mitten hands together in front of the band, eyes closed in gentle arcs, small smile.
+Flat colors, one soft shadow tone, no gradients, no glossy highlights, no 3D.
+Absolutely no text, no letters, no numbers, no labels, no logo, no watermark.
