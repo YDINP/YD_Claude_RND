@@ -25,6 +25,7 @@
       <main id="stage"><canvas id="board"></canvas></main>
       <footer id="foot">
         <button id="mute" type="button">소리 켜짐</button>
+        <button id="album-btn" type="button">천 모음</button>
         <button id="restart" type="button">다시 하기</button>
       </footer>
       <div id="overlay" hidden>
@@ -32,10 +33,20 @@
           <div id="seal" class="seal"></div>
           <h2 id="heading"></h2>
           <p id="detail"></p>
+          <div id="stars" class="stars" hidden></div>
+          <p id="album-notice" class="album-notice" hidden></p>
+          <button id="album-view" type="button" class="album-view-btn" hidden>천 모음 보기</button>
           <p id="rules" class="rules"></p>
           <button id="start" type="button" class="primary">시작하기</button>
           <button id="again" type="button" class="primary" hidden>다시 하기</button>
           <button id="next" type="button" class="primary" hidden>다음 판</button>
+        </div>
+      </div>
+      <div id="album-overlay" hidden>
+        <div id="album-card" class="album-card">
+          <h2 class="album-title">천 모음</h2>
+          <div id="album-grid" class="album-grid"></div>
+          <button id="album-close" type="button">닫기</button>
         </div>
       </div>
     </div>

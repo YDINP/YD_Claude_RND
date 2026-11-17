@@ -1,14 +1,15 @@
-import { BRUSH_RUN, COLORS, H, LINE_RUN, W } from './constants'
+import { pickColor, type Weights } from './board'
+import { BRUSH_RUN, COLORS, H, LINE_RUN, N, W } from './constants'
 import { findGroups, type GroupInfo } from './match'
 import type { Rng } from './rng'
 import { stepPoints } from './score'
 import { planStains } from './stain'
 import {
-  BRUSH, EMPTY, KIND_BUCKET, KIND_COL, KIND_ROW, WATER, colorOf, isSpecial, kindOf, makePiece,
+  BRUSH, EMPTY, KIND_BUCKET, KIND_COL, KIND_ROW, NO_COLOR, colorOf, isColored, isSpecial, kindOf, makePiece,
   type Cell, type ClearEvent, type Fire, type FireShape, type TurnEvent,
 } from './types'
 
-export interface State { pieces: Int8Array; floor: Int8Array; base: Int8Array }
+export interface State { pieces: Int8Array; floor: Int8Array; collected: number[] }
 export interface StepInput { chain: number; swapped: Cell[]; fires: Fire[]; fired: Cell[] }
 
 const fire = (at: Cell, color: number, shape: FireShape, brush: boolean, cells: Cell[]): Fire => ({ at, color, cells, shape, brush })
@@ -46,8 +47,14 @@ export function crossFire(at: Cell, color: number): Fire {
   return fire(at, color, 'cross', true, [...set])
 }
 
-export function fireFor(at: Cell, piece: number, inherit: number): Fire {
-  if (piece === BRUSH) return rowFire(at, inherit)
+export function colorFire(at: Cell, color: number, p: ArrayLike<number>): Fire {
+  const cells: Cell[] = [at]
+  for (let i = 0; i < N; i++) if (i !== at && isColored(p[i]!) && colorOf(p[i]!) === color) cells.push(i)
+  return fire(at, color, 'color', true, cells)
+}
+
+export function fireFor(at: Cell, piece: number, inherit: number, p: ArrayLike<number>): Fire {
+  if (piece === BRUSH) return inherit >= 0 ? colorFire(at, inherit, p) : rowFire(at, NO_COLOR)
   const color = colorOf(piece)
   const kind = kindOf(piece)
   if (kind === KIND_ROW) return rowFire(at, color, false)
@@ -58,13 +65,16 @@ export function fireFor(at: Cell, piece: number, inherit: number): Fire {
 export function swapFires(p: ArrayLike<number>, a: Cell, b: Cell): { fires: Fire[]; fired: Cell[] } {
   const pa = p[a]!
   const pb = p[b]!
-  if (pa === BRUSH && pb === BRUSH) return { fires: [crossFire(b, WATER)], fired: [a, b] }
+  if (pa === BRUSH && pb === BRUSH) return { fires: [crossFire(b, NO_COLOR)], fired: [a, b] }
   if (pa !== BRUSH && pb !== BRUSH) return { fires: [], fired: [] }
   const [brushAt, partnerAt, partner] = pa === BRUSH ? [b, a, pb] : [a, b, pa]
-  const fires = [rowFire(brushAt, colorOf(partner))]
+  const after = Array.from(p)
+  after[a] = pb
+  after[b] = pa
+  const fires = [colorFire(brushAt, colorOf(partner), after)]
   const fired = [brushAt]
   if (isSpecial(partner)) {
-    fires.push(fireFor(partnerAt, partner, colorOf(partner)))
+    fires.push(fireFor(partnerAt, partner, colorOf(partner), after))
     fired.push(partnerAt)
   }
   return { fires, fired }
@@ -77,7 +87,7 @@ function collectFires(pieces: Int8Array, infos: GroupInfo[], input: StepInput): 
     const p = pieces[cell]!
     if (!isSpecial(p) || fired.has(cell)) return
     fired.add(cell)
-    queue.push(fireFor(cell, p, inherit))
+    queue.push(fireFor(cell, p, inherit, pieces))
   }
   for (const g of infos) for (const c of g.cells) trigger(c, g.color)
   for (let qi = 0; qi < queue.length; qi++) for (const cell of queue[qi]!.cells) trigger(cell, queue[qi]!.color)
@@ -99,7 +109,7 @@ function specialFor(g: GroupInfo, swapped: Cell[]): { cell: Cell; piece: number 
 }
 
 export function resolveStep(st: State, input: StepInput): ClearEvent | null {
-  const { pieces, floor, base } = st
+  const { pieces, floor } = st
   const infos = findGroups(pieces)
   if (infos.length === 0 && input.fires.length === 0) return null
 
@@ -120,15 +130,22 @@ export function resolveStep(st: State, input: StepInput): ClearEvent | null {
   const cleared = [...clearedSet].sort((x, y) => x - y)
 
   const groups = infos.map(({ color, cells, maxRun, spread }) => ({ color, cells, maxRun, spread }))
-  const stains = planStains(floor, base, groups, fires)
-  const { points, lucky } = stepPoints(stains, cleared, input.chain)
-  for (const s of stains) {
-    floor[s.cell] = s.to
-    base[s.cell] = s.base
+  const stains = planStains(floor, pieces, groups, fires)
+  const collected = new Array<number>(COLORS).fill(0)
+  const popped = new Set<Cell>(fireCells)
+  for (const g of infos) for (const c of g.cells) popped.add(c)
+  let count = 0
+  for (const c of popped) {
+    const p = pieces[c]!
+    if (!isColored(p)) continue
+    collected[colorOf(p)]!++
+    st.collected[colorOf(p)]!++
+    count++
   }
+  for (const s of stains) floor[s.cell] = s.to
   for (const c of cleared) pieces[c] = EMPTY
   for (const c of created) pieces[c.cell] = c.piece
-  return { k: 'clear', chain: input.chain, groups, fires, cleared, stains, created, points, lucky }
+  return { k: 'clear', chain: input.chain, groups, fires, cleared, stains, created, collected, points: stepPoints(count, input.chain) }
 }
 
 export function applyGravity(p: Int8Array): { from: Cell; to: Cell }[] {
@@ -150,13 +167,13 @@ export function applyGravity(p: Int8Array): { from: Cell; to: Cell }[] {
   return moves
 }
 
-export function refill(p: Int8Array, rng: Rng): Extract<TurnEvent, { k: 'refill' }>['spawns'] {
+export function refill(p: Int8Array, rng: Rng, weights: Weights): Extract<TurnEvent, { k: 'refill' }>['spawns'] {
   const spawns: Extract<TurnEvent, { k: 'refill' }>['spawns'] = []
   for (let c = 0; c < W; c++) {
     let k = 0
     while (k < H && p[k * W + c] === EMPTY) k++
     for (let r = 0; r < k; r++) {
-      const piece = rng.int(COLORS)
+      const piece = pickColor(rng, weights)
       p[r * W + c] = piece
       spawns.push({ cell: r * W + c, piece, rowsAbove: k })
     }

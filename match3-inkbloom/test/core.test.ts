@@ -1,219 +1,238 @@
 import { describe, expect, it } from 'vitest'
-import { mix, wash } from '../src/core/color'
-import { Game } from '../src/core/game'
-import { H, MAX_CHAIN, N, W } from '../src/core/constants'
+import { decodeFloor, encodeFloor, mergeEntry, parseAlbum } from '../src/core/album'
+import { blend } from '../src/core/color'
+import { COLORS, N } from '../src/core/constants'
+import { Game, starsFor } from '../src/core/game'
+import { findHint } from '../src/core/hint'
+import { LEVELS, type Level } from '../src/core/levels'
 import { findGroups, hasMatch, hasMove } from '../src/core/match'
 import { reshuffle } from '../src/core/moves'
 import { Rng } from '../src/core/rng'
-import { stepPoints } from '../src/core/score'
-import { paint, planStains } from '../src/core/stain'
 import {
-  BLUE, GREEN, KIND_BUCKET, KIND_COL, KIND_ROW, MUDDY, NO_FLOOR, ORANGE, PURPLE, RED, WATER, YELLOW, makePiece,
-  type TurnEvent,
+  BLUE, BRUSH, EMPTY, GREEN, KIND_BUCKET, KIND_COL, KIND_NORMAL, KIND_ROW, NO_FLOOR, ORANGE, PURPLE, RED, YELLOW,
+  colorOf, isColored, isSpecial, kindOf, makePiece, type TurnEvent,
 } from '../src/core/types'
-import { B, allCells, baseBoard, cell, clears, colCells, makeGame, paintFloor, rowCells } from './helpers'
+import { B, allPairs, baseBoard, cell, clears, colCells, makeGame, mixGame, rowCells } from './helpers'
 
-const empty = (): Int8Array => new Int8Array(N).fill(NO_FLOOR)
 const sorted = (a: number[]): number[] => [...a].sort((x, y) => x - y)
 
-describe('1. 섞기·씻기 표', () => {
-  it('mix 전 경우', () => {
-    for (const c of [RED, YELLOW, BLUE]) {
-      expect(mix(NO_FLOOR, c)).toBe(c)
-      expect(mix(c, c)).toBe(c)
-      for (const f of [ORANGE, GREEN, PURPLE, MUDDY]) expect(mix(f, c)).toBe(MUDDY)
+describe('조각 인코딩', () => {
+  it('색 6가지 × 종류 4가지 왕복', () => {
+    const seen = new Set<number>()
+    for (let c = 0; c < COLORS; c++) {
+      for (const k of [KIND_NORMAL, KIND_ROW, KIND_COL, KIND_BUCKET]) {
+        const p = makePiece(c, k)
+        expect(isColored(p)).toBe(true)
+        expect(colorOf(p)).toBe(c)
+        expect(kindOf(p)).toBe(k)
+        expect(isSpecial(p)).toBe(k !== KIND_NORMAL)
+        seen.add(p)
+      }
     }
-    expect([mix(RED, YELLOW), mix(YELLOW, RED)]).toEqual([ORANGE, ORANGE])
-    expect([mix(YELLOW, BLUE), mix(BLUE, YELLOW)]).toEqual([GREEN, GREEN])
-    expect([mix(RED, BLUE), mix(BLUE, RED)]).toEqual([PURPLE, PURPLE])
+    expect(seen.size).toBe(COLORS * 4)
+    expect(seen.has(BRUSH)).toBe(false)
   })
-  it('wash 전 경우 + base 되돌리기', () => {
-    expect(wash(MUDDY, RED)).toBe(NO_FLOOR)
-    expect(wash(ORANGE, YELLOW)).toBe(YELLOW)
-    expect(wash(GREEN, BLUE)).toBe(BLUE)
-    expect(wash(PURPLE, RED)).toBe(RED)
-    expect(wash(RED, RED)).toBe(NO_FLOOR)
-    expect(wash(NO_FLOOR, NO_FLOOR)).toBe(NO_FLOOR)
-    expect(paint(NO_FLOOR, NO_FLOOR, RED)).toEqual({ to: RED, base: RED })
-    expect(paint(RED, RED, YELLOW)).toEqual({ to: ORANGE, base: RED })
-    expect(paint(ORANGE, RED, WATER)).toEqual({ to: RED, base: RED })
-    expect(paint(RED, RED, WATER)).toEqual({ to: NO_FLOOR, base: NO_FLOOR })
-    expect(paint(MUDDY, BLUE, WATER)).toEqual({ to: NO_FLOOR, base: NO_FLOOR })
+  it('붓과 빈칸은 색 없음', () => {
+    expect(isColored(BRUSH)).toBe(false)
+    expect(isSpecial(BRUSH)).toBe(true)
+    expect(colorOf(BRUSH)).toBe(-1)
+    expect(isColored(EMPTY)).toBe(false)
   })
-})
-
-describe('2. 번짐은 무색 칸에만', () => {
-  it('이미 물든 이웃은 그대로', () => {
-    const floor = empty()
-    const base = empty()
-    floor[cell(2, 4)] = base[cell(2, 4)] = YELLOW
-    const g = { color: RED, cells: [cell(3, 3), cell(3, 4), cell(3, 5), cell(3, 6)], maxRun: 4, spread: 1 as const }
-    const res = planStains(floor, base, [g], [])
-    expect(res.find((s) => s.cell === cell(2, 4))).toBeUndefined()
-    expect(res.find((s) => s.cell === cell(2, 3))).toMatchObject({ to: RED, base: RED, src: 'spread' })
-  })
-  it('판 밖으로 안 나감', () => {
-    const corner = planStains(empty(), empty(), [{ color: 1, cells: [cell(0, W - 1)], maxRun: 5, spread: 2 }], [])
-    expect(sorted(corner.map((s) => s.cell))).toEqual([cell(0, W - 2), cell(0, W - 1), cell(1, W - 2), cell(1, W - 1)])
+  it('원색 섞기 표', () => {
+    expect([blend(RED, YELLOW), blend(YELLOW, RED)]).toEqual([ORANGE, ORANGE])
+    expect([blend(YELLOW, BLUE), blend(BLUE, YELLOW)]).toEqual([GREEN, GREEN])
+    expect([blend(RED, BLUE), blend(BLUE, RED)]).toEqual([PURPLE, PURPLE])
+    expect(blend(RED, RED)).toBe(-1)
+    expect(blend(RED, ORANGE)).toBe(-1)
   })
 })
 
-describe('3. 물 매치', () => {
-  it('씻기만 하고 번짐 없음', () => {
-    const g = makeGame({ '6,0': WATER, '6,1': WATER, '7,2': WATER })
-    paintFloor(g, allCells(), ORANGE, RED)
-    const ev = clears(g.trySwap(cell(6, 2), cell(7, 2)).events)[0]!
-    expect(ev.groups[0]!.color).toBe(WATER)
-    expect(ev.stains.every((s) => s.src === 'clear' && s.to === RED)).toBe(true)
-    expect(ev.stains).toHaveLength(ev.groups[0]!.cells.length)
-  })
-})
-
-describe('4. 붓', () => {
-  it('붓+노랑 on 빨강 줄 -> 주황 줄, 이동 -1', () => {
-    const g = makeGame({ '3,3': B, '3,4': YELLOW })
+describe('섞기', () => {
+  it('다른 원색 둘, 매치 없음 → 도착 칸에 2차색, 1수 소모', () => {
+    const g = mixGame({ '3,3': RED, '3,4': YELLOW })
     const moves = g.movesLeft
-    paintFloor(g, rowCells(3), RED)
     const res = g.trySwap(cell(3, 3), cell(3, 4))
     expect(res.events[0]).toEqual({ k: 'swap', a: cell(3, 3), b: cell(3, 4), valid: true })
-    expect(res.movesLeft).toBe(moves - 1)
-    const row = clears(res.events)[0]!.stains.filter((s) => s.src === 'brush')
-    expect(row).toHaveLength(8)
-    expect(row.every((s) => s.to === ORANGE && s.base === RED)).toBe(true)
+    expect(res.events[1]).toEqual({ k: 'mix', from: cell(3, 3), to: cell(3, 4), piece: ORANGE })
+    expect(g.pieces[cell(3, 4)]).toBe(ORANGE)
+    expect(g.movesLeft).toBe(moves - 1)
+    expect(g.mixes).toBe(1)
+    expect(res.events.some((e) => e.k === 'fall')).toBe(true)
+    expect(res.events.some((e) => e.k === 'refill')).toBe(true)
+    expect(g.pieces.includes(EMPTY)).toBe(false)
   })
-  it('붓+물 -> 줄 씻기', () => {
-    const g = makeGame({ '3,5': B, '3,6': WATER })
-    paintFloor(g, rowCells(3), PURPLE, BLUE)
-    const row = clears(g.trySwap(cell(3, 5), cell(3, 6)).events)[0]!.stains.filter((s) => s.src === 'brush')
-    expect(row).toHaveLength(8)
-    expect(row.every((s) => s.to === BLUE)).toBe(true)
+  it('옮긴 쪽이 기준: 파랑을 빨강 자리로 → 보라가 빨강 자리에', () => {
+    const g = mixGame({ '5,1': BLUE, '5,2': RED })
+    const res = g.trySwap(cell(5, 2), cell(5, 1))
+    expect(res.events[1]).toEqual({ k: 'mix', from: cell(5, 2), to: cell(5, 1), piece: PURPLE })
   })
-  it('붓+붓 -> 십자 씻기', () => {
-    const g = makeGame({ '3,3': B, '3,4': B })
-    paintFloor(g, allCells(), RED)
-    const ev = clears(g.trySwap(cell(3, 3), cell(3, 4)).events)[0]!
-    expect(ev.fires[0]!.shape).toBe('cross')
-    expect(ev.fires[0]!.cells).toHaveLength(W + H - 1)
-    expect(ev.stains.filter((s) => s.src === 'brush').every((s) => s.to === NO_FLOOR && s.base === NO_FLOOR)).toBe(true)
+  it('특수 방울 종류 유지', () => {
+    const a = mixGame({ '3,3': makePiece(RED, KIND_ROW), '3,4': YELLOW })
+    expect(a.trySwap(cell(3, 3), cell(3, 4)).events[1]).toMatchObject({ k: 'mix', piece: makePiece(ORANGE, KIND_ROW) })
+    const b = mixGame({ '3,3': YELLOW, '3,4': makePiece(BLUE, KIND_BUCKET) })
+    expect(b.trySwap(cell(3, 3), cell(3, 4)).events[1]).toMatchObject({ k: 'mix', piece: makePiece(GREEN, KIND_BUCKET) })
   })
-  it('휘말린 붓은 줄 색 상속, 붓마다 1회', () => {
-    const g = makeGame({ '3,3': B, '3,4': B, '6,4': B })
-    const ev = clears(g.trySwap(cell(3, 3), cell(3, 4)).events)[0]!
-    expect(ev.fires).toHaveLength(2)
-    expect(ev.fires.find((f) => f.at === cell(6, 4))).toMatchObject({ color: WATER, shape: 'row' })
-  })
-})
-
-describe('5. 같은 스텝 우선순위', () => {
-  it('터진 칸 > 붓 줄 > 번짐, 긴 maxRun 우선, 결정적', () => {
-    const a = { color: RED, cells: [cell(3, 3), cell(3, 4), cell(3, 5)], maxRun: 3, spread: 1 as const }
-    const b = { color: BLUE, cells: [cell(2, 4), cell(2, 5), cell(2, 6), cell(2, 7)], maxRun: 4, spread: 1 as const }
-    const f = { at: cell(5, 0), color: YELLOW, cells: rowCells(4), shape: 'row' as const, brush: true }
-    const res = planStains(empty(), empty(), [a, b], [f])
-    const at = (c: number) => res.find((s) => s.cell === c)!
-    expect(at(cell(3, 4)).to).toBe(RED)
-    expect(at(cell(2, 4)).to).toBe(BLUE)
-    expect(at(cell(3, 6)).to).toBe(BLUE)
-    expect(at(cell(4, 4))).toMatchObject({ to: YELLOW, src: 'brush' })
-    expect(planStains(empty(), empty(), [a, b], [f])).toEqual(res)
-  })
-  it('같은 시드 같은 결과', () => {
-    const play = (): string => {
-      const g = new Game(42, 3)
-      const out: TurnEvent[] = []
-      for (let i = 0; i < N; i++) for (const d of [1, W]) if (i + d < N) out.push(...g.trySwap(i, i + d).events)
-      return JSON.stringify(out) + JSON.stringify(g.snapshot())
+  it('2차색이 끼거나 같은 색끼리면 무효, 수 그대로', () => {
+    for (const over of [{ '3,4': RED }, { '3,3': RED, '3,4': RED }] as Record<string, number>[]) {
+      const g = mixGame(over)
+      const before = g.snapshot()
+      const res = g.trySwap(cell(3, 3), cell(3, 4))
+      expect(res.events).toEqual([{ k: 'swap', a: cell(3, 3), b: cell(3, 4), valid: false }])
+      expect(g.snapshot()).toEqual(before)
     }
-    expect(play()).toBe(play())
+  })
+  it('맞바꿔 매치가 생기면 섞지 않고 터뜨림', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED })
+    const res = g.trySwap(cell(6, 2), cell(7, 2))
+    expect(res.events.some((e) => e.k === 'mix')).toBe(false)
+    expect(g.mixes).toBe(0)
+    expect(clears(res.events)[0]!.groups[0]!.color).toBe(RED)
+  })
+  it('섞인 방울이 바로 줄을 이루면 터지고 주문에 들어감', () => {
+    const g = mixGame({ '3,3': RED, '3,4': YELLOW, '3,5': ORANGE, '3,6': ORANGE, '3,7': GREEN })
+    const res = g.trySwap(cell(3, 3), cell(3, 4))
+    expect(res.events[1]).toMatchObject({ k: 'mix' })
+    const ev = clears(res.events)[0]!
+    expect(ev.chain).toBe(1)
+    expect(ev.groups[0]!.color).toBe(ORANGE)
+    expect(ev.groups[0]!.cells).toEqual(expect.arrayContaining([cell(3, 4), cell(3, 5), cell(3, 6)]))
+    expect(g.collected[ORANGE]).toBeGreaterThanOrEqual(3)
+  })
+  it('previewMix 는 섞일 때만 결과를 주고 상태 불변', () => {
+    const g = mixGame({ '3,3': RED, '3,4': YELLOW })
+    const before = JSON.stringify(g.snapshot())
+    expect(g.previewMix(cell(3, 3), cell(3, 4))).toBe(ORANGE)
+    expect(g.previewMix(cell(3, 3), cell(2, 3))).toBe(EMPTY)
+    expect(g.previewMix(cell(3, 3), cell(5, 5))).toBe(EMPTY)
+    expect(JSON.stringify(g.snapshot())).toBe(before)
   })
 })
 
-describe('6. 점수와 연쇄 섞임 보너스', () => {
-  const st = (from: number, to: number) => ({ cell: 0, from, to, base: RED, src: 'clear' as const })
-  it('새 2차색 30, 연쇄 2부터 칸당 +20', () => {
-    expect(stepPoints([st(RED, ORANGE)], [0], 1)).toEqual({ points: 30, lucky: 0 })
-    expect(stepPoints([st(RED, ORANGE)], [0], 2)).toEqual({ points: 75, lucky: 1 })
+describe('주문 = 터뜨린 개수', () => {
+  it('일반 매치 3개 → 그 색 +3, 바닥은 그 색', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED, '7,3': BLUE })
+    const res = g.trySwap(cell(6, 2), cell(7, 2))
+    const first = clears(res.events)[0]!
+    expect(first.collected[RED]).toBe(3)
+    for (const c of [cell(7, 0), cell(7, 1), cell(7, 2)]) expect(g.floor[c]).toBe(RED)
   })
-  it('터짐 10 / 같은 색 15 / 탁해짐 0', () => {
-    expect(stepPoints([st(NO_FLOOR, RED)], [0], 1).points).toBe(10)
-    expect(stepPoints([st(RED, RED)], [0], 1).points).toBe(15)
-    expect(stepPoints([st(ORANGE, MUDDY)], [0], 1).points).toBe(0)
+  it('줄 방울이 터뜨린 칸도 색별로 셈', () => {
+    const g = makeGame({ '7,0': makePiece(RED, KIND_COL), '7,1': YELLOW, '6,1': RED })
+    const before = Array.from(g.pieces)
+    const ev = clears(g.trySwap(cell(6, 1), cell(7, 1)).events)[0]!
+    expect(ev.fires[0]).toMatchObject({ at: cell(7, 0), shape: 'col', color: RED })
+    const swapped = [...before]
+    swapped[cell(6, 1)] = before[cell(7, 1)]!
+    swapped[cell(7, 1)] = before[cell(6, 1)]!
+    const popped = new Set([...ev.groups.flatMap((g2) => g2.cells), ...colCells(0)])
+    const expected = new Array<number>(COLORS).fill(0)
+    for (const c of popped) expected[colorOf(swapped[c]!)]!++
+    expect(ev.collected).toEqual(expected)
   })
-})
-
-describe('7. 주문 판정', () => {
-  const redRow = { '6,1': RED }
-  it('end 는 연쇄 뒤 맨 끝 1회', () => {
-    const res = makeGame(redRow).trySwap(cell(6, 2), cell(7, 2))
-    expect(res.events.filter((e) => e.k === 'end')).toHaveLength(1)
-    expect(res.events[res.events.length - 1]!.k).toBe('end')
+  it('붓 + 색 → 그 색 방울 전부 터지고 전부 셈', () => {
+    const g = makeGame({ '3,3': B, '3,4': YELLOW })
+    const yellows = Array.from(g.pieces).filter((p) => isColored(p) && colorOf(p) === YELLOW).length
+    const ev = clears(g.trySwap(cell(3, 3), cell(3, 4)).events)[0]!
+    expect(ev.fires[0]).toMatchObject({ shape: 'color', color: YELLOW, brush: true })
+    expect(ev.collected[YELLOW]).toBe(yellows)
   })
-  it('채우면 win + 남은 이동 보너스', () => {
-    const g = makeGame(redRow, { moves: 3 })
-    paintFloor(g, [...rowCells(0), cell(1, 0)], RED)
+  it('붓끼리 → 십자', () => {
+    const ev = clears(makeGame({ '3,3': B, '3,4': B }).trySwap(cell(3, 3), cell(3, 4)).events)[0]!
+    expect(ev.fires[0]!.shape).toBe('cross')
+    expect(ev.fires[0]!.cells).toHaveLength(15)
+  })
+  it('연쇄까지 합친 값이 game.collected 와 end.progress', () => {
+    const rng = new Rng(5)
+    let chained = 0
+    for (let seed = 0; seed < 30; seed++) {
+      const g = new Game(seed, seed % LEVELS.length)
+      const sum = new Array<number>(COLORS).fill(0)
+      for (let t = 0; t < 40 && g.status === 'playing'; t++) {
+        const [a, b] = allPairs()[rng.int(allPairs().length)]!
+        const res = g.trySwap(a, b)
+        for (const ev of clears(res.events)) {
+          ev.collected.forEach((n, c) => (sum[c]! += n))
+          if (ev.chain > 1) chained++
+        }
+        const end = res.events.find((e) => e.k === 'end')
+        if (end) expect(end.progress).toEqual(g.progress())
+      }
+      expect(g.collected).toEqual(sum)
+    }
+    expect(chained).toBeGreaterThan(0)
+  })
+  it('채우면 win + 남은 이동 보너스, 이후 입력 무시', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED }, { moves: 3 })
+    g.collected[RED] = LEVELS[0]!.order[0]!.need - 3
     const res = g.trySwap(cell(6, 2), cell(7, 2))
     expect(res.events[res.events.length - 1]).toMatchObject({ k: 'end', result: 'win', bonus: 200 })
     expect(g.status).toBe('win')
     expect(g.trySwap(0, 1).events).toEqual([])
   })
-  it('턴 전엔 채워져 있어도 덧칠로 줄면 미달 -> 마지막 이동이면 lose', () => {
-    const g = makeGame({ '6,0': YELLOW, '7,2': YELLOW }, { moves: 1 })
-    paintFloor(g, [cell(6, 0), cell(6, 1), cell(6, 2), ...rowCells(0), cell(1, 0)], RED)
-    expect(g.progress()[0]).toMatchObject({ color: RED, have: 12, need: 12 })
+  it('수가 떨어지면 lose', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED }, { moves: 1 })
     const res = g.trySwap(cell(6, 2), cell(7, 2))
     expect(res.events[res.events.length - 1]).toMatchObject({ k: 'end', result: 'lose' })
-    expect(g.progress()[0]!.have).toBeLessThan(12)
   })
 })
 
-describe('8. previewSwap', () => {
-  it('실제 첫 스텝과 일치, 상태 불변', () => {
-    let checked = 0
-    for (let seed = 0; seed < 20; seed++) {
-      const g = new Game(seed, 5)
-      paintFloor(g, [seed % N, (seed * 7) % N], RED)
-      for (let i = 0; i < N; i++) {
-        for (const d of [1, W]) {
-          if (i + d >= N || (d === 1 && i % W === W - 1)) continue
-          const before = JSON.stringify(g.snapshot()) + g.rng.state
-          const pv = g.previewSwap(i, i + d)
-          expect(JSON.stringify(g.snapshot()) + g.rng.state).toBe(before)
-          const first = clears(g.clone().trySwap(i, i + d).events)[0]
-          expect(pv).toEqual(first ? first.stains : null)
-          if (pv) checked++
-        }
-      }
-    }
-    expect(checked).toBeGreaterThan(20)
+describe('별', () => {
+  const plain: Level = { moves: 20, order: [{ color: RED, need: 10 }], spawn: [1, 1, 1, 0, 0, 0], mixes: 0 }
+  const mixed: Level = { moves: 20, order: [{ color: ORANGE, need: 10 }], spawn: [1, 1, 1, 0, 0, 0], mixes: 4 }
+  it('2차색 주문 없음: 남은 수 기준', () => {
+    expect(starsFor(plain, 4, 0)).toBe(1)
+    expect(starsFor(plain, 5, 0)).toBe(2)
+    expect(starsFor(plain, 7, 0)).toBe(2)
+    expect(starsFor(plain, 8, 0)).toBe(3)
+  })
+  it('2차색 주문: ★2 + 섞기 횟수', () => {
+    expect(starsFor(mixed, 4, 9)).toBe(1)
+    expect(starsFor(mixed, 5, 3)).toBe(2)
+    expect(starsFor(mixed, 5, 4)).toBe(3)
+  })
+  it('이긴 판 stars 가 starsFor 와 같음', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED }, { moves: 18 })
+    g.collected[RED] = 100
+    const res = g.trySwap(cell(6, 2), cell(7, 2))
+    const end = res.events[res.events.length - 1] as Extract<TurnEvent, { k: 'end' }>
+    expect(end.stars).toBe(starsFor(LEVELS[0]!, g.movesLeft, g.mixes))
+    expect(g.stars).toBe(end.stars)
   })
 })
 
-describe('9. 특수 방울 생성', () => {
-  it('가로 4 -> 세로줄 방울(색 유지), 들어온 칸', () => {
+describe('특수 방울 생성', () => {
+  it('가로 4 -> 세로줄 방울, 들어온 칸', () => {
     const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '7,3': RED, '6,2': RED })
     const ev = clears(g.trySwap(cell(6, 2), cell(7, 2)).events)[0]!
     expect(ev.created).toEqual([{ cell: cell(7, 2), piece: makePiece(RED, KIND_COL) }])
   })
   it('세로 4 -> 가로줄 방울', () => {
-    const g = makeGame({ '4,0': YELLOW, '5,0': YELLOW, '6,0': 2, '7,0': YELLOW, '6,1': YELLOW })
+    const g = makeGame({ '4,0': YELLOW, '5,0': YELLOW, '6,0': BLUE, '7,0': YELLOW, '6,1': YELLOW })
     const ev = clears(g.trySwap(cell(6, 0), cell(6, 1)).events)[0]!
     expect(ev.created).toEqual([{ cell: cell(6, 0), piece: makePiece(YELLOW, KIND_ROW) }])
   })
   it('L -> 물감 통', () => {
-    const g = makeGame({ '7,0': RED, '7,1': WATER, '6,1': RED, '5,0': RED, '4,0': YELLOW })
+    const g = makeGame({ '7,0': RED, '7,1': ORANGE, '6,1': RED, '5,0': RED, '4,0': YELLOW })
     const ev = clears(g.trySwap(cell(6, 1), cell(7, 1)).events)[0]!
     expect(ev.groups[0]!.cells).toHaveLength(5)
     expect(ev.created).toEqual([{ cell: cell(7, 1), piece: makePiece(RED, KIND_BUCKET) }])
-  })
-  it('T -> 물감 통', () => {
-    const g = makeGame({ '5,1': RED, '6,1': RED, '7,1': RED, '7,0': YELLOW })
-    const ev = clears(g.trySwap(cell(6, 0), cell(7, 0)).events)[0]!
-    expect(ev.created).toEqual([{ cell: cell(7, 0), piece: makePiece(RED, KIND_BUCKET) }])
   })
   it('직선 5 -> 붓', () => {
     const g = makeGame({ '7,0': RED, '7,1': RED, '7,3': YELLOW, '7,4': RED, '6,3': RED })
     const ev = clears(g.trySwap(cell(6, 3), cell(7, 3)).events)[0]!
     expect(ev.created).toEqual([{ cell: cell(7, 3), piece: B }])
+  })
+  it('2차색도 같은 규칙으로 매치·특수', () => {
+    const g = mixGame({ '6,0': GREEN, '6,1': GREEN, '6,2': PURPLE, '6,3': GREEN, '6,4': PURPLE, '5,2': GREEN })
+    const ev = clears(g.trySwap(cell(5, 2), cell(6, 2)).events)[0]!
+    expect(ev.groups[0]!.color).toBe(GREEN)
+    expect(ev.created).toEqual([{ cell: cell(6, 2), piece: makePiece(GREEN, KIND_COL) }])
+  })
+  it('물감 통: 판 모서리면 4칸', () => {
+    const g = makeGame({ '7,0': makePiece(RED, KIND_BUCKET), '7,1': YELLOW, '6,1': RED })
+    const ev = clears(g.trySwap(cell(6, 1), cell(7, 1)).events)[0]!
+    expect(ev.fires[0]!.shape).toBe('box')
+    expect(sorted(ev.fires[0]!.cells)).toEqual([cell(6, 0), cell(6, 1), cell(7, 0), cell(7, 1)])
   })
   it('특수 방울도 같은 색 매치에 참여', () => {
     const groups = findGroups(baseBoard({ '7,0': makePiece(RED, KIND_ROW), '7,1': RED }))
@@ -222,44 +241,66 @@ describe('9. 특수 방울 생성', () => {
   })
 })
 
-describe('10. 특수 방울 발동', () => {
-  it('세로줄 방울: 세로줄 전체 + 그 색으로 섞기', () => {
-    const g = makeGame({ '7,0': makePiece(RED, KIND_COL), '7,1': YELLOW, '6,1': RED })
-    paintFloor(g, colCells(0), YELLOW)
-    const ev = clears(g.trySwap(cell(6, 1), cell(7, 1)).events)[0]!
-    expect(ev.fires).toHaveLength(1)
-    expect(ev.fires[0]).toMatchObject({ at: cell(7, 0), shape: 'col', color: RED })
-    expect(sorted(ev.fires[0]!.cells)).toEqual(colCells(0))
-    for (const c of colCells(0)) expect(ev.stains.find((s) => s.cell === c)!.to).toBe(ORANGE)
+describe('도움: findHint', () => {
+  it('돌려준 수는 항상 유효', () => {
+    let found = 0
+    for (let seed = 0; seed < 40; seed++) {
+      const g = new Game(seed, seed % LEVELS.length)
+      const h = findHint(g)
+      if (!h) continue
+      found++
+      const first = g.clone().trySwap(h.a, h.b).events[0]
+      expect(first).toMatchObject({ k: 'swap', valid: true })
+    }
+    expect(found).toBe(40)
   })
-  it('물감 통: 3x3, 판 모서리면 4칸', () => {
-    const g = makeGame({ '7,0': makePiece(RED, KIND_BUCKET), '7,1': YELLOW, '6,1': RED })
-    const ev = clears(g.trySwap(cell(6, 1), cell(7, 1)).events)[0]!
-    expect(ev.fires[0]!.shape).toBe('box')
-    expect(sorted(ev.fires[0]!.cells)).toEqual([cell(6, 0), cell(6, 1), cell(7, 0), cell(7, 1)])
+  it('주문에 도움 되는 매치를 섞기보다 먼저', () => {
+    const g = mixGame({ '3,3': RED, '3,4': YELLOW, '6,0': RED, '6,1': RED, '7,2': RED })
+    const h = findHint(g)!
+    expect([h.a, h.b].sort((x, y) => x - y)).toEqual([cell(6, 2), cell(7, 2)])
   })
-  it('물 줄 방울은 씻기', () => {
-    const g = makeGame({ '7,0': makePiece(WATER, KIND_COL), '7,1': WATER, '7,2': YELLOW, '6,2': WATER })
-    paintFloor(g, colCells(0), GREEN, BLUE)
-    const ev = clears(g.trySwap(cell(6, 2), cell(7, 2)).events)[0]!
-    for (const c of colCells(0)) expect(ev.stains.find((s) => s.cell === c)!.to).toBe(BLUE)
+  it('매치가 없으면 필요한 색을 만드는 섞기', () => {
+    const g = mixGame({ '2,2': RED, '2,3': BLUE, '5,5': RED, '5,6': YELLOW }, { level: 2 })
+    const h = findHint(g)!
+    expect([h.a, h.b].sort((x, y) => x - y)).toEqual([cell(5, 5), cell(5, 6)])
   })
-  it('연쇄 휘말림: 특수마다 1회', () => {
-    const g = makeGame({
-      '7,0': makePiece(RED, KIND_BUCKET), '7,1': RED, '7,2': YELLOW, '6,2': RED,
-      '6,1': makePiece(YELLOW, KIND_ROW), '6,5': makePiece(BLUE, KIND_BUCKET),
-    })
-    const ev = clears(g.trySwap(cell(6, 2), cell(7, 2)).events)[0]!
-    expect(ev.fires.map((f) => [f.at, f.shape])).toEqual([[cell(7, 0), 'box'], [cell(6, 1), 'row'], [cell(6, 5), 'box']])
-  })
-  it('붓 + 특수: 붓 줄 뒤 상대 특수도 발동', () => {
-    const g = makeGame({ '3,3': B, '3,4': makePiece(BLUE, KIND_BUCKET) })
-    const ev = clears(g.trySwap(cell(3, 3), cell(3, 4)).events)[0]!
-    expect(ev.fires.map((f) => [f.at, f.shape, f.color])).toEqual([[cell(3, 4), 'row', BLUE], [cell(3, 3), 'box', BLUE]])
+  it('끝난 판은 null', () => {
+    const g = new Game(1)
+    g.status = 'win'
+    expect(findHint(g)).toBeNull()
   })
 })
 
-describe('11. 기존 규칙', () => {
+describe('천 모음', () => {
+  it('바닥 왕복, 범위 밖 글자는 빈 바닥', () => {
+    const floor = new Int8Array(N).fill(NO_FLOOR)
+    floor[0] = RED
+    floor[1] = ORANGE
+    floor[N - 1] = PURPLE
+    const s = encodeFloor(floor)
+    expect(s).toHaveLength(N)
+    expect(Array.from(decodeFloor(s))).toEqual(Array.from(floor))
+    expect(decodeFloor('zz')[0]).toBe(NO_FLOOR)
+    expect(decodeFloor('')[5]).toBe(NO_FLOOR)
+  })
+  it('mergeEntry: 별 우선, 같은 별이면 점수 우선', () => {
+    const a = { stars: 2, score: 1000, floor: '', at: 0 }
+    const b = { stars: 1, score: 9999, floor: '', at: 1 }
+    const c = { stars: 2, score: 1500, floor: '', at: 2 }
+    expect(mergeEntry(a, b)).toBe(a)
+    expect(mergeEntry(a, c)).toBe(c)
+    expect(mergeEntry(undefined, b)).toBe(b)
+  })
+  it('깨진 JSON·배열·잘못된 항목은 버림', () => {
+    expect(parseAlbum('{not json')).toEqual({})
+    expect(parseAlbum('[1,2]')).toEqual({})
+    expect(parseAlbum(null)).toEqual({})
+    const ok = { stars: 3, score: 10, floor: 'b', at: 1 }
+    expect(parseAlbum(JSON.stringify({ 0: ok, 1: { stars: 'x' }, 2: null }))).toEqual({ 0: ok })
+  })
+})
+
+describe('판·섞기 규칙 유지', () => {
   it('무효 스왑: 이동 그대로, 판 불변', () => {
     const g = makeGame()
     const before = g.snapshot()
@@ -267,37 +308,41 @@ describe('11. 기존 규칙', () => {
     expect(res.events).toEqual([{ k: 'swap', a: cell(2, 2), b: cell(2, 3), valid: false }])
     expect(g.snapshot()).toEqual(before)
   })
-  it('섞기: 수 없는 판 -> 수 있고 매치 없음, 붓 있으면 안 섞음', () => {
-    const p = baseBoard()
+  it('둘 수 없는 판은 다시 놓기: 매치 없음 + 둘 수 있음, 붓 있으면 안 함', () => {
+    const p = mixGame().pieces
     expect(hasMove(p)).toBe(false)
-    expect(reshuffle(p, new Rng(3))).not.toBeNull()
+    expect(reshuffle(p, new Rng(3), [1, 1, 1, 1, 1, 1])).not.toBeNull()
     expect(hasMove(p)).toBe(true)
     expect(hasMatch(p)).toBe(false)
-    const q = baseBoard({ '2,2': B })
-    const copy = Int8Array.from(q)
-    expect(reshuffle(q, new Rng(3))).toBeNull()
-    expect(q).toEqual(copy)
+    const q = mixGame({ '2,2': B }).pieces
+    expect(reshuffle(q, new Rng(3), [1, 1, 1, 1, 1, 1])).toBeNull()
   })
-  it('1000턴 무작위: chain < 50, 빈칸 없음, 바닥·base 일관', () => {
-    const rng = new Rng(99)
-    let g = new Game(7)
-    let valid = 0
-    for (let t = 0; t < 1000; t++) {
-      if (g.status !== 'playing') g = new Game(t, t % 10)
-      const a = rng.int(N)
-      const b = rng.int(2) === 0 ? a + 1 : a + W
-      const res = g.trySwap(a, b)
-      if (res.events[0]?.k === 'swap' && res.events[0].valid) valid++
-      for (const ev of clears(res.events)) expect(ev.chain).toBeLessThan(MAX_CHAIN)
-      expect(g.pieces.includes(-1)).toBe(false)
-      for (let i = 0; i < N; i++) {
-        const f = g.floor[i]!
-        const b0 = g.base[i]!
-        expect(f >= NO_FLOOR && f <= MUDDY).toBe(true)
-        expect(f === NO_FLOOR).toBe(b0 === NO_FLOOR)
-        if (f >= RED && f <= BLUE) expect(b0).toBe(f)
-      }
+  it('시작 판: 매치 없음 + 매치 수 있음, 판별 생성 비율 반영', () => {
+    const count = new Array<number>(COLORS).fill(0)
+    for (let seed = 0; seed < 50; seed++) {
+      const g = new Game(seed, 2)
+      expect(hasMatch(g.pieces)).toBe(false)
+      expect(hasMove(g.pieces, false)).toBe(true)
+      for (const p of g.pieces) count[colorOf(p)]!++
     }
-    expect(valid).toBeGreaterThan(50)
+    const prim = count[RED]! + count[YELLOW]! + count[BLUE]!
+    const sec = count[ORANGE]! + count[GREEN]! + count[PURPLE]!
+    expect(prim).toBeGreaterThan(sec * 5)
+  })
+  it('같은 시드 같은 결과', () => {
+    const play = (): string => {
+      const g = new Game(42, 3)
+      const out: TurnEvent[] = []
+      for (const [a, b] of allPairs()) out.push(...g.trySwap(a, b).events)
+      return JSON.stringify(out) + JSON.stringify(g.snapshot())
+    }
+    expect(play()).toBe(play())
+  })
+  it('바닥은 덮어쓰기: 터진 자리는 그 방울 색', () => {
+    const g = makeGame({ '7,0': RED, '7,1': RED, '7,2': YELLOW, '6,2': RED })
+    for (const c of rowCells(7)) g.floor[c] = BLUE
+    g.trySwap(cell(6, 2), cell(7, 2))
+    expect(g.floor[cell(7, 0)]).toBe(RED)
+    expect(g.floor[cell(7, 5)]).toBe(BLUE)
   })
 })

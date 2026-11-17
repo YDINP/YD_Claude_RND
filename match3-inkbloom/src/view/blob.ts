@@ -1,13 +1,14 @@
+import { partsOf } from '../core/color'
 import { Rng } from '../core/rng'
-import { BRUSH, KIND_BUCKET, KIND_COL, KIND_ROW, WATER, colorOf, kindOf } from '../core/types'
+import { BRUSH, KIND_BUCKET, KIND_COL, KIND_ROW, colorOf, kindOf } from '../core/types'
 import { blotPath, shapePath } from './paper'
 
-export const PIECE_PALETTE = ['#c8432b', '#e2b13c', '#2f5d8a', '#8cc3dc'] as const
-export const FLOOR_PALETTE = ['#c8432b', '#e2b13c', '#2f5d8a', '#e07a2e', '#5a8f4a', '#7a4f8f', '#7a6a55'] as const
-export const FX_PALETTE = [...FLOOR_PALETTE, PIECE_PALETTE[WATER]] as const
-export const FX_WATER = FLOOR_PALETTE.length
-export const STAIN_ALPHA = [0.85, 0.8, 0.85, 0.85, 0.85, 0.85, 0.72] as const
-export const fxColor = (piece: number): number => (piece === BRUSH ? 6 : colorOf(piece) === WATER ? FX_WATER : colorOf(piece))
+export const PIECE_PALETTE = ['#c8432b', '#e2b13c', '#2f5d8a', '#e07a2e', '#5a8f4a', '#7a4f8f'] as const
+export const FLOOR_PALETTE = PIECE_PALETTE
+export const FX_PALETTE = [...PIECE_PALETTE, '#2a2623'] as const
+export const FX_INK = PIECE_PALETTE.length
+export const STAIN_ALPHA = [0.85, 0.8, 0.85, 0.85, 0.85, 0.85] as const
+export const fxColor = (piece: number): number => (piece === BRUSH ? FX_INK : colorOf(piece))
 
 const POINTS = 24
 const INK_SOFT = 'rgba(42,38,35,0.55)'
@@ -46,9 +47,8 @@ function makeHalo(color: number, size: number, r: number, dpr: number): HTMLCanv
   const ctx = cv.getContext('2d')!
   ctx.scale(dpr, dpr)
   ctx.translate(size / 2, size / 2 + r * 0.06)
-  const a = color === WATER ? 0.22 : 0.17
   blotPath(ctx, new Rng(color * 7 + 1), r * 1.17, 28, 0.04)
-  ctx.fillStyle = tone(PIECE_PALETTE[color]!, 0, a)
+  ctx.fillStyle = tone(PIECE_PALETTE[color]!, 0, 0.17)
   ctx.fill()
   return cv
 }
@@ -59,15 +59,22 @@ function makeOverlay(color: number, size: number, r: number, dpr: number): HTMLC
   const ctx = cv.getContext('2d')!
   ctx.scale(dpr, dpr)
   ctx.translate(size / 2, size / 2)
-  const s = r * 0.4
-  ctx.beginPath()
-  shapePath(ctx, color, s)
-  ctx.fillStyle = color === WATER ? 'rgba(255,255,255,0.75)' : tone(PIECE_PALETTE[color]!, 0.58, 0.9)
-  ctx.fill()
-  if (color === WATER) {
-    ctx.strokeStyle = tone(PIECE_PALETTE[WATER], -0.45, 0.6)
-    ctx.lineWidth = Math.max(0.8, r * 0.06)
-    ctx.stroke()
+  ctx.fillStyle = tone(PIECE_PALETTE[color]!, 0.58, 0.9)
+  const parts = partsOf(color)
+  if (parts) {
+    const s = r * 0.27
+    for (const [k, part] of [[-1, parts[0]], [1, parts[1]]] as const) {
+      ctx.save()
+      ctx.translate(k * s * 0.95, 0)
+      ctx.beginPath()
+      shapePath(ctx, part, s)
+      ctx.fill()
+      ctx.restore()
+    }
+  } else {
+    ctx.beginPath()
+    shapePath(ctx, color, r * 0.4)
+    ctx.fill()
   }
   ctx.save()
   ctx.translate(-r * 0.36, -r * 0.42)
@@ -126,13 +133,12 @@ export class BlobSprites {
     const r = this.r
     this.halos = PIECE_PALETTE.map((_, i) => makeHalo(i, this.size, r, dpr))
     this.overlays = PIECE_PALETTE.map((_, i) => makeOverlay(i, this.size, r, dpr))
-    this.bodies = PIECE_PALETTE.map((hex, i) => {
+    this.bodies = PIECE_PALETTE.map((hex) => {
       const g = ctx.createRadialGradient(-r * 0.28, -r * 0.32, 0, 0, 0, r * 1.06)
-      const water = i === WATER
-      g.addColorStop(0, tone(hex, water ? 0.75 : 0.2, water ? 0.55 : 0.9))
-      g.addColorStop(0.55, tone(hex, water ? 0.25 : 0, water ? 0.6 : 0.92))
-      g.addColorStop(0.86, tone(hex, -0.18, water ? 0.75 : 0.96))
-      g.addColorStop(1, tone(hex, -0.34, water ? 0.85 : 0.98))
+      g.addColorStop(0, tone(hex, 0.2, 0.9))
+      g.addColorStop(0.55, tone(hex, 0, 0.92))
+      g.addColorStop(0.86, tone(hex, -0.18, 0.96))
+      g.addColorStop(1, tone(hex, -0.34, 0.98))
       return g
     })
     this.rims = PIECE_PALETTE.map((hex) => tone(hex, -0.45, 0.55))

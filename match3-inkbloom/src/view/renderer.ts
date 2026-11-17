@@ -1,7 +1,6 @@
 import { N, W } from '../core/constants'
 import { Rng } from '../core/rng'
-import { BLUE, MUDDY, NO_FLOOR, RED, YELLOW } from '../core/types'
-import { isSecondary } from '../core/color'
+import { isSecondary, partsOf } from '../core/color'
 import { BlobSprites, FLOOR_PALETTE, FX_PALETTE, STAIN_ALPHA, tone, wobblePath } from './blob'
 import type { Director } from './director'
 import type { Layout } from './layout'
@@ -9,9 +8,11 @@ import { makePaperTile, makeStainStamps, shapePath, STAMP_VARIANTS, tornEdge, tr
 import { ease } from './tween'
 
 const INK = '#2a2623'
-const PAPER_HI = '#faf4e4'
 const TEXT_STEPS = 6
-const MIX_PARTS: Record<number, [number, number]> = { 3: [RED, YELLOW], 4: [YELLOW, BLUE], 5: [RED, BLUE] }
+const HINT_AMP = 0.06
+const HINT_SPEED = 14
+const PREVIEW_SCALE = 0.42
+const PREVIEW_ALPHA = 0.62
 
 function drawMark(ctx: CanvasRenderingContext2D, x: number, y: number, cell: number, color: number): void {
   const s = cell * 0.075
@@ -20,8 +21,9 @@ function drawMark(ctx: CanvasRenderingContext2D, x: number, y: number, cell: num
   ctx.lineWidth = Math.max(0.8, cell * 0.018)
   ctx.strokeStyle = tone(FLOOR_PALETTE[color]!, -0.5, 0.55)
   ctx.fillStyle = ctx.strokeStyle
-  if (isSecondary(color)) {
-    const [a, b] = MIX_PARTS[color]!
+  const parts = partsOf(color)
+  if (parts) {
+    const [a, b] = parts
     ctx.beginPath()
     ctx.translate(-s * 0.45, 0)
     shapePath(ctx, a, s)
@@ -30,12 +32,6 @@ function drawMark(ctx: CanvasRenderingContext2D, x: number, y: number, cell: num
     ctx.translate(s * 0.9, s * 0.2)
     shapePath(ctx, b, s)
     ctx.stroke()
-  } else if (color === MUDDY) {
-    for (const [dx, dy, r] of [[-0.6, -0.3, 0.32], [0.5, -0.5, 0.24], [0.1, 0.55, 0.36], [0.9, 0.4, 0.2]] as const) {
-      ctx.beginPath()
-      ctx.arc(dx * s, dy * s, r * s, 0, Math.PI * 2)
-      ctx.fill()
-    }
   }
   ctx.restore()
 }
@@ -141,7 +137,7 @@ export class Renderer {
     }
     for (let i = 0; i < N; i++) {
       const c = dir.viewFloor[i]!
-      if (c >= 3 && !dir.hidden[i]) drawMark(ctx, m + ((i % W) + 0.5) * l.cell, m + (Math.floor(i / W) + 0.5) * l.cell, l.cell, c)
+      if (isSecondary(c) && !dir.hidden[i]) drawMark(ctx, m + ((i % W) + 0.5) * l.cell, m + (Math.floor(i / W) + 0.5) * l.cell, l.cell, c)
     }
     this.floorVer = dir.floorVersion
   }
@@ -183,9 +179,11 @@ export class Renderer {
 
     this.drawStreaks(ctx, dir, l)
 
-    for (const s of dir.sprites) {
+    for (let i = 0; i < N; i++) {
+      const s = dir.sprites[i]
       if (!s || s.scale <= 0) continue
-      const px = l.ox + (s.x + 0.5) * l.cell
+      const wob = dir.hint.includes(i) && !dir.reduced ? Math.sin(t * HINT_SPEED) * HINT_AMP * l.cell : 0
+      const px = l.ox + (s.x + 0.5) * l.cell + wob
       const py = l.oy + (s.y + 0.5) * l.cell + blobs.r * s.scale * (1 - 1 / s.sq)
       const sel = dir.sprites[dir.selected] === s
       const pulse = sel ? 1.1 + Math.sin(t * 8) * 0.035 : 1
@@ -197,7 +195,7 @@ export class Renderer {
         ctx.stroke()
       }
     }
-    this.drawPreview(ctx, dir, l, t)
+    this.drawPreview(ctx, dir, l, tt)
     ctx.restore()
 
     dir.particles.draw(ctx, l.ox, l.oy, l.cell, FX_PALETTE)
@@ -217,6 +215,10 @@ export class Renderer {
       ctx.strokeStyle = FX_PALETTE[s.color]!
       ctx.lineWidth = l.cell * (0.7 - p * 0.45)
       ctx.beginPath()
+      if (s.shape === 'color') {
+        ctx.lineWidth = l.cell * (0.3 - p * 0.22)
+        ctx.arc(x, y, reach * 0.75, 0, Math.PI * 2)
+      }
       if (s.shape === 'box') {
         const half = l.cell * (0.5 + ease.outQuart(p) * 1)
         ctx.lineWidth = l.cell * (0.4 - p * 0.3)
@@ -251,23 +253,13 @@ export class Renderer {
   }
 
   private drawPreview(ctx: CanvasRenderingContext2D, dir: Director, l: Layout, t: number): void {
-    if (dir.preview.length === 0) return
-    const r = l.cell * 0.11
-    ctx.globalAlpha = 0.82 + 0.18 * Math.sin(t * 5)
-    ctx.lineWidth = Math.max(1, l.cell * 0.025)
+    const blobs = this.blobs
+    if (dir.preview.length === 0 || !blobs) return
     for (const pv of dir.preview) {
-      const x = l.ox + ((pv.cell % W) + 0.82) * l.cell
-      const y = l.oy + (Math.floor(pv.cell / W) + 0.82) * l.cell
-      ctx.beginPath()
-      ctx.arc(x, y, r, 0, Math.PI * 2)
-      ctx.fillStyle = pv.to === NO_FLOOR ? PAPER_HI : FLOOR_PALETTE[pv.to]!
-      ctx.fill()
-      ctx.strokeStyle = INK
-      if (pv.to === NO_FLOOR) ctx.setLineDash([r * 0.5, r * 0.35])
-      ctx.stroke()
-      ctx.setLineDash([])
+      const x = l.ox + ((pv.cell % W) + 0.5) * l.cell
+      const y = l.oy + (Math.floor(pv.cell / W) + 0.18) * l.cell
+      blobs.draw(ctx, pv.piece, x, y, PREVIEW_SCALE, pv.cell, t, 1, PREVIEW_ALPHA)
     }
-    ctx.globalAlpha = 1
   }
 
   private drawTexts(ctx: CanvasRenderingContext2D, dir: Director, l: Layout): void {

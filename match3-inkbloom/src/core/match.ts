@@ -1,4 +1,5 @@
-import { BRUSH, colorOf, isColored, type Cell, type MatchGroup } from './types'
+import { blend } from './color'
+import { BRUSH, EMPTY, KIND_NORMAL, colorOf, isColored, kindOf, makePiece, type Cell, type MatchGroup } from './types'
 import { H, MIN_MATCH, N, W } from './constants'
 
 export interface Run { cells: Cell[]; horiz: boolean; color: number }
@@ -74,20 +75,36 @@ export function findGroups(p: ArrayLike<number>): GroupInfo[] {
 
 export const hasMatch = (p: ArrayLike<number>): boolean => findRuns(p).length > 0
 
-export function hasMove(p: Int8Array): boolean {
-  if (p.includes(BRUSH)) return true
-  const tryPair = (a: Cell, b: Cell): boolean => {
-    const t = p[a]!
-    p[a] = p[b]!
-    p[b] = t
-    const ok = hasMatch(p)
-    p[b] = p[a]!
-    p[a] = t
-    return ok
-  }
+export function mixPiece(p: ArrayLike<number>, a: Cell, b: Cell): number {
+  const pa = p[a]!
+  const pb = p[b]!
+  if (!isColored(pa) || !isColored(pb)) return EMPTY
+  const color = blend(colorOf(pa), colorOf(pb))
+  if (color < 0) return EMPTY
+  return makePiece(color, kindOf(pa) !== KIND_NORMAL ? kindOf(pa) : kindOf(pb))
+}
+
+export function matchesAfterSwap(p: Int8Array, a: Cell, b: Cell): boolean {
+  if (p[a] === BRUSH || p[b] === BRUSH) return true
+  const t = p[a]!
+  p[a] = p[b]!
+  p[b] = t
+  const ok = hasMatch(p)
+  p[b] = p[a]!
+  p[a] = t
+  return ok
+}
+
+export function eachPair(fn: (a: Cell, b: Cell) => boolean | void): void {
   for (let i = 0; i < N; i++) {
-    if (i % W < W - 1 && tryPair(i, i + 1)) return true
-    if (i < N - W && tryPair(i, i + W)) return true
+    if (i % W < W - 1 && fn(i, i + 1)) return
+    if (i < N - W && fn(i, i + W)) return
   }
-  return false
+}
+
+export function hasMove(p: Int8Array, withMix = true): boolean {
+  if (p.includes(BRUSH)) return true
+  let found = false
+  eachPair((a, b) => (found = matchesAfterSwap(p, a, b) || (withMix && mixPiece(p, a, b) !== EMPTY)))
+  return found
 }

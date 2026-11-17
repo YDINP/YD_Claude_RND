@@ -1,10 +1,9 @@
-import { isSecondary } from '../core/color'
-import { N, POINT_LUCKY, W } from '../core/constants'
+import { N, W } from '../core/constants'
 import { orderProgress, type Game } from '../core/game'
 import { Rng } from '../core/rng'
-import { MUDDY, NO_FLOOR, WATER, type Cell, type ClearEvent, type Fire, type FireShape, type OrderProgress, type TurnEvent, type TurnResult } from '../core/types'
-import { FLOOR_NAMES } from '../ui/names'
-import { FX_PALETTE, FX_WATER, fxColor } from './blob'
+import { NO_FLOOR, colorOf, type Cell, type ClearEvent, type Fire, type FireShape, type OrderProgress, type TurnEvent, type TurnResult } from '../core/types'
+import { COLOR_NAMES } from '../ui/names'
+import { FX_INK, FX_PALETTE, fxColor } from './blob'
 import { Particles } from './particles'
 import { ease, Tweens } from './tween'
 
@@ -29,7 +28,7 @@ export class Sprite {
 
 export interface Bleed { active: boolean; started: boolean; cell: Cell; from: number; to: number; ring: boolean; delay: number; t: number; dur: number }
 export interface Streak { active: boolean; at: Cell; color: number; shape: FireShape; delay: number; t: number; dur: number }
-export interface PreviewMark { cell: Cell; to: number }
+export interface PreviewMark { cell: Cell; piece: number }
 export interface FloatText { active: boolean; x: number; y: number; text: string; t: number; dur: number; big: boolean; step: number }
 
 const BLEED_MS = 560
@@ -41,7 +40,8 @@ const POP_MS = 210
 const SWAP_MS = 150
 const LAND_MS = 240
 const SHAKE_DECAY_MS = 70
-const MIX_TEXT_LAG_MS = 260
+const MIX_PULL_MS = 170
+const MIX_GROW_MS = 170
 const MIX_SFX_STEP = 4
 const hitStop = (chain: number, brush: boolean): number => Math.min(150, 55 + 22 * (chain - 1) + (brush ? 30 : 0))
 const fallMs = (rows: number): number => 90 + 85 * Math.sqrt(rows)
@@ -61,6 +61,8 @@ export class Director {
   floorVersion = 0
   selected = -1
   shake = 0
+  hint: Cell[] = []
+
   readonly reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
   private tweens = new Tweens()
   private free: Sprite[] = []
@@ -71,6 +73,7 @@ export class Director {
   private phaseDur = 0
   private movesShown = 0
   private scoreShown = 0
+  private collectedShown: number[] = []
 
   constructor(private game: Game, private hooks: Hooks) {
     this.reset()
@@ -84,7 +87,9 @@ export class Director {
     this.viewFloor.set(this.game.floor)
     this.hidden.fill(0)
     this.preview = []
+    this.hint = []
     this.floorVersion++
+    this.collectedShown = [...this.game.collected]
     this.movesShown = this.game.movesLeft
     this.scoreShown = this.game.score
     this.state = this.game.status === 'playing' ? 'idle' : this.game.status
@@ -107,6 +112,7 @@ export class Director {
   play(res: TurnResult): void {
     if (res.events.length === 0 || this.state !== 'idle') return
     this.events = res.events
+    this.hint = []
     this.idx = -1
     this.state = 'playing'
     this.next()
@@ -124,7 +130,7 @@ export class Director {
   }
 
   private viewProgress(): OrderProgress[] {
-    return orderProgress(this.viewFloor, this.game.order)
+    return orderProgress(this.collectedShown, this.game.order)
   }
 
   private spawn(piece: number, cell: Cell, y = cy(cell)): Sprite {
@@ -185,6 +191,7 @@ export class Director {
     }
     switch (ev.k) {
       case 'swap': return this.onSwap(ev.a, ev.b, ev.valid)
+      case 'mix': return this.onMix(ev.from, ev.to, ev.piece)
       case 'clear': return this.onClear(ev)
       case 'fall': return this.onFall(ev.moves)
       case 'refill': return this.onRefill(ev.spawns)
@@ -199,6 +206,10 @@ export class Director {
     if (!sa || !sb) return
     this.selected = -1
     this.preview = []
+    if (valid && this.events[this.idx + 1]?.k === 'mix') {
+      this.hooks.moves(--this.movesShown)
+      return
+    }
     if (valid) {
       this.sprites[a] = sb
       this.sprites[b] = sa
@@ -229,6 +240,29 @@ export class Director {
     this.phaseDur = 290
   }
 
+  private onMix(from: Cell, to: Cell, piece: number): void {
+    const sa = this.sprites[from]
+    const sb = this.sprites[to]
+    if (!sa || !sb) return
+    this.sprites[from] = null
+    const pull = this.reduced ? 80 : MIX_PULL_MS
+    const grow = this.reduced ? 80 : MIX_GROW_MS
+    this.move(sa, cx(to), cy(to), pull, 0, ease.inQuad)
+    this.tweens.add(pull, 0, ease.inQuad, (p) => {
+      sa.scale = 1 - 0.6 * p
+      sa.alpha = 1 - p
+      if (!this.reduced) sb.scale = 1 - 0.25 * p
+    }, () => {
+      this.free.push(sa)
+      sb.piece = piece
+      if (!this.reduced) this.particles.burst(cx(to) + 0.5, cy(to) + 0.5, colorOf(piece), 6, 1.8, () => this.rng.next())
+      this.pushText(cx(to) + 0.5, cy(to) - 0.2, `섞였어요 · ${COLOR_NAMES[colorOf(piece)]}`, true, 1)
+      this.hooks.sfx('pop', MIX_SFX_STEP)
+    })
+    this.tweens.add(grow, pull, ease.outBack, (p) => (sb.scale = this.reduced ? 1 : 0.75 + 0.25 * p))
+    this.phaseDur = pull + grow
+  }
+
   private fireDelays(fires: Fire[], stop: number): Map<Cell, number> {
     const delay = new Map<Cell, number>()
     for (const f of fires) {
@@ -245,7 +279,7 @@ export class Director {
   private addStreak(f: Fire, delay: number): void {
     const st = this.streaks.find((s) => !s.active) ?? { active: false, at: 0, color: 0, shape: 'row' as FireShape, delay: 0, t: 0, dur: 0 }
     if (!this.streaks.includes(st)) this.streaks.push(st)
-    Object.assign(st, { active: true, at: f.at, color: f.color === WATER ? FX_WATER : f.color, shape: f.shape, delay, t: 0, dur: STREAK_MS })
+    Object.assign(st, { active: true, at: f.at, color: f.color < 0 ? FX_INK : f.color, shape: f.shape, delay, t: 0, dur: STREAK_MS })
   }
 
   private onClear(ev: ClearEvent): void {
@@ -278,50 +312,21 @@ export class Director {
       end = Math.max(end, stop + 460)
     }
     let bleedEnd = 0
-    const mixed: Cell[] = []
-    const muddy: Cell[] = []
     for (const st of ev.stains) {
       if (st.from === st.to && st.to === NO_FLOOR) continue
       const delay = (delays.get(st.cell) ?? stop) + (st.src === 'spread' ? SPREAD_LAG_MS : 30)
-      const changed = st.from !== NO_FLOOR && st.from !== st.to
-      this.addBleed(st.cell, st.from, st.to, changed, delay)
+      this.addBleed(st.cell, st.from, st.to, st.from !== NO_FLOOR && st.from !== st.to, delay)
       bleedEnd = Math.max(bleedEnd, delay + BLEED_MS)
-      if (isSecondary(st.to) && changed) mixed.push(st.cell)
-      if (st.to === MUDDY && st.from !== MUDDY) muddy.push(st.cell)
     }
     this.hooks.score((this.scoreShown += ev.points))
     this.tweens.add(1, stop, ease.linear, () => {}, () => {
       this.kick(Math.min(0.14, 0.03 + 0.025 * (ev.chain - 1) + (brush ? 0.05 : 0)))
       this.floatText(ev)
       this.hooks.sfx(brush ? 'brush' : 'pop', ev.chain)
+      ev.collected.forEach((n, c) => (this.collectedShown[c] = (this.collectedShown[c] ?? 0) + n))
+      this.hooks.order(this.viewProgress())
     })
-    if (mixed.length > 0 || muddy.length > 0) {
-      const targets = new Map(ev.stains.map((st) => [st.cell, st.to]))
-      this.tweens.add(1, stop + MIX_TEXT_LAG_MS, ease.linear, () => {}, () => this.mixFx(ev, mixed, muddy, targets))
-    }
     this.phaseDur = Math.max(300, end + 50, bleedEnd * 0.55)
-  }
-
-  private mixFx(ev: ClearEvent, mixed: Cell[], muddy: Cell[], targets: Map<Cell, number>): void {
-    const cells = mixed.length > 0 ? mixed : muddy
-    let sx = 0
-    let sy = 0
-    for (const c of cells) {
-      sx += cx(c) + 0.5
-      sy += cy(c) + 0.5
-    }
-    const x = sx / cells.length
-    const y = sy / cells.length - 0.9
-    if (mixed.length === 0) {
-      this.pushText(x, y, '탁해졌어요', false, 0)
-      return
-    }
-    const kinds = new Set(mixed.map((c) => targets.get(c)!))
-    if (!this.reduced) for (const c of mixed) this.particles.burst(cx(c) + 0.5, cy(c) + 0.5, targets.get(c)!, 4, 1.6, () => this.rng.next())
-    const name = kinds.size === 1 ? FLOOR_NAMES[[...kinds][0]!] : ''
-    if (ev.lucky > 0) this.pushText(x, y, `우연히 섞였다! +${Math.floor((ev.lucky * POINT_LUCKY * (ev.chain + 1)) / 2)}`, true, 3)
-    else this.pushText(x, y, name ? `섞였다! ${name}` : '섞였다!', true, 1)
-    this.hooks.sfx('pop', ev.chain + MIX_SFX_STEP)
   }
 
   private addBleed(cell: Cell, from: number, to: number, ring: boolean, delay: number): void {
@@ -371,7 +376,7 @@ export class Director {
 
   private onShuffle(ev: Extract<TurnEvent, { k: 'shuffle' }>): void {
     this.hooks.sfx('shuffle')
-    this.pushText(W / 2, W / 2, '섞었어요', true)
+    this.pushText(W / 2, W / 2, '방울을 다시 놓았어요', true)
     if (ev.recolor || ev.moves.length === 0) {
       this.rebuildSprites(true)
       this.phaseDur = 500
@@ -402,6 +407,8 @@ export class Director {
       this.hooks.score((this.scoreShown += ev.bonus))
       this.pushText(W / 2, W / 2, `남은 이동 보너스 +${ev.bonus}`, true)
     }
+    this.collectedShown = [...this.game.collected]
+    this.hooks.order(this.viewProgress())
     this.verify()
     this.phaseDur = ev.result === 'continue' ? 0 : 200
   }
@@ -453,10 +460,7 @@ export class Director {
         changed = true
       }
     }
-    if (changed) {
-      this.floorVersion++
-      this.hooks.order(this.viewProgress())
-    }
+    if (changed) this.floorVersion++
     for (const s of this.streaks) {
       if (!s.active) continue
       if (s.delay > 0) s.delay -= dt

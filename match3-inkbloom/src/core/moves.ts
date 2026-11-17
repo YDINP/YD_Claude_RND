@@ -1,11 +1,11 @@
-import { fillColors } from './board'
+import { fillColors, type Weights } from './board'
 import { INIT_RETRIES, N, SHUFFLE_RETRIES } from './constants'
 import { hasMatch, hasMove } from './match'
 import type { Rng } from './rng'
 
 export interface ShuffleResult { moves: { from: number; to: number }[]; recolor: boolean }
 
-export function reshuffle(p: Int8Array, rng: Rng): ShuffleResult | null {
+export function reshuffle(p: Int8Array, rng: Rng, weights: Weights): ShuffleResult | null {
   if (hasMove(p)) return null
   const orig = Int8Array.from(p)
   for (let t = 0; t < SHUFFLE_RETRIES; t++) {
@@ -24,8 +24,8 @@ export function reshuffle(p: Int8Array, rng: Rng): ShuffleResult | null {
     }
   }
   for (let t = 0; t < INIT_RETRIES; t++) {
-    fillColors(p, rng)
-    if (hasMove(p)) break
+    fillColors(p, rng, weights)
+    if (hasMove(p, false)) break
   }
   return { moves: [], recolor: true }
 }

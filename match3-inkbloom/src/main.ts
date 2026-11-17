@@ -1,9 +1,12 @@
 import './styles.css'
+import { encodeFloor, loadAlbum, mergeEntry, saveAlbum } from './core/album'
 import { Sfx } from './audio/sfx'
 import { areAdjacent } from './core/board'
-import { W } from './core/constants'
+import { STAR2_RATIO, STAR3_RATIO, W } from './core/constants'
 import { Game } from './core/game'
-import { levelAt, LEVELS } from './core/levels'
+import { findHint } from './core/hint'
+import { firstMixLevel, LEVELS, needsMix } from './core/levels'
+import { EMPTY } from './core/types'
 import { bindPointer } from './input/pointer'
 import { Hud } from './ui/hud'
 import { Director, type PreviewMark } from './view/director'
@@ -12,7 +15,9 @@ import { Renderer } from './view/renderer'
 
 const RESULT_DELAY_MS = 900
 const MAX_DT_MS = 50
+const HINT_IDLE_MS = 5000
 const LEVEL_KEY = 'inkbloom.level'
+const MIX_GUIDE_KEY = 'inkbloom.mixGuide'
 
 function loadLevel(): number {
   try {
@@ -32,23 +37,47 @@ function saveLevel(n: number): void {
 }
 
 function previewMarks(game: Game, from: number, to: number): PreviewMark[] {
-  const stains = game.previewSwap(from, to) ?? []
-  return stains.filter((s) => s.from !== s.to).map((s) => ({ cell: s.cell, to: s.to }))
+  const piece = game.previewMix(from, to)
+  return piece === EMPTY ? [] : [{ cell: to, piece }]
 }
 
 function unionMarks(game: Game, from: number): PreviewMark[] {
-  const seen = new Map<number, number>()
+  const marks: PreviewMark[] = []
   for (const d of [-W, -1, 1, W]) {
     const to = from + d
-    if (!areAdjacent(from, to)) continue
-    for (const m of previewMarks(game, from, to)) if (!seen.has(m.cell)) seen.set(m.cell, m.to)
+    if (areAdjacent(from, to)) marks.push(...previewMarks(game, from, to))
   }
-  return [...seen].map(([cell, to]) => ({ cell, to }))
+  return marks
+}
+
+function starTexts(game: Game): { star2: string; star3: string } {
+  const lv = game.lv
+  const star2 = `남은 이동 ${Math.ceil(lv.moves * STAR2_RATIO)}번 이상`
+  const star3 = needsMix(lv)
+    ? `${star2} + 섞기 ${lv.mixes}번 이상 (이번 판 ${game.mixes}번)`
+    : `남은 이동 ${Math.ceil(lv.moves * STAR3_RATIO)}번 이상`
+  return { star2, star3 }
+}
+
+function mixGuideSeen(): boolean {
+  try {
+    return localStorage.getItem(MIX_GUIDE_KEY) === '1'
+  } catch {
+    return true
+  }
+}
+
+function markMixGuide(): void {
+  try {
+    localStorage.setItem(MIX_GUIDE_KEY, '1')
+  } catch {
+    return
+  }
 }
 
 interface RoundEnv { canvas: HTMLCanvasElement; stage: HTMLElement; hud: Hud; sfx: Sfx }
 
-function createRound(env: RoundEnv, seed: number, level: number, onResult: (win: boolean) => void): () => void {
+function createRound(env: RoundEnv, seed: number, level: number, onResult: (win: boolean, game: Game) => void): () => void {
   const { canvas, stage, hud, sfx } = env
   const ac = new AbortController()
   const { signal } = ac
@@ -74,11 +103,23 @@ function createRound(env: RoundEnv, seed: number, level: number, onResult: (win:
   })
   ro.observe(stage)
 
+  let idle = 0
+  let hintChecked = false
+  const wake = (): void => {
+    idle = 0
+    hintChecked = false
+    director.hint = []
+  }
+
   bindPointer(canvas, {
     layout: () => layout,
-    gesture: () => sfx.unlock(),
+    gesture: () => {
+      sfx.unlock()
+      wake()
+    },
     select: (c) => {
       if (director.state !== 'idle') return false
+      wake()
       director.selected = c
       director.preview = c >= 0 ? unionMarks(game, c) : []
       return true
@@ -89,6 +130,7 @@ function createRound(env: RoundEnv, seed: number, level: number, onResult: (win:
     },
     swap: (a, b) => {
       if (director.state !== 'idle') return
+      wake()
       director.preview = []
       director.play(game.trySwap(a, b))
     },
@@ -102,14 +144,21 @@ function createRound(env: RoundEnv, seed: number, level: number, onResult: (win:
     const dt = Math.max(0, Math.min(MAX_DT_MS, now - last))
     last = now
     director.update(dt, now / 1000)
+    if (director.state === 'idle' && director.selected < 0 && !hintChecked && (idle += dt) >= HINT_IDLE_MS) {
+      hintChecked = true
+      const h = findHint(game)
+      director.hint = h ? [h.a, h.b] : []
+    }
     renderer.draw(director, now / 1000)
     if (!resultShown && (director.state === 'win' || director.state === 'lose')) {
       endTimer += dt
       if (endTimer >= RESULT_DELAY_MS) {
         resultShown = true
         const win = director.state === 'win'
-        onResult(win)
-        hud.showResult(win, game.score, game.progress(), game.level, game.level === LEVELS.length - 1)
+        onResult(win, game)
+        hud.showResult(win, game.score, game.progress(), game.level, game.level === LEVELS.length - 1,
+          win ? { stars: game.stars, ...starTexts(game), onStar: (i) => sfx.play('pop', i * 2 + 1) } : undefined,
+        )
       }
     }
     raf = requestAnimationFrame(frame)
@@ -144,23 +193,35 @@ function main(): void {
   const fixed = params.get('seed')
   const newSeed = (): number => (fixed ? Number(fixed) : (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0)
   let level = params.has('level') ? Math.max(0, Math.min(LEVELS.length - 1, Number(params.get('level')) - 1 || 0)) : loadLevel()
-  const onResult = (win: boolean): void => {
-    if (win) saveLevel((level + 1) % LEVELS.length)
+  let album = loadAlbum()
+  const onResult = (win: boolean, game: Game): void => {
+    if (!win) return
+    saveLevel((level + 1) % LEVELS.length)
+    const entry = { stars: game.stars, score: game.score, floor: encodeFloor(game.floor), at: Date.now() }
+    album[String(game.level)] = mergeEntry(album[String(game.level)], entry)
+    saveAlbum(album)
   }
   let dispose = createRound(env, newSeed(), level, onResult)
-  const restart = (): void => {
+  const startLevel = (lv: number): void => {
+    level = lv
     dispose()
     env.hud.hideOverlay()
     dispose = createRound(env, newSeed(), level, onResult)
+    if (lv === firstMixLevel() && !mixGuideSeen()) {
+      markMixGuide()
+      env.hud.showMixGuide(LEVELS[lv]!, () => env.sfx.unlock(), app.signal)
+    }
   }
+  const restart = (): void => startLevel(level)
   const app = new AbortController()
-  env.hud.showIntro(level, levelAt(level), () => env.sfx.unlock(), app.signal)
+  env.hud.showIntro(level, LEVELS[level]!, () => env.sfx.unlock(), app.signal)
   env.hud.onRestart(restart, app.signal)
-  env.hud.onNext(() => {
-    level = (level + 1) % LEVELS.length
-    restart()
-  }, app.signal)
+  env.hud.onNext(() => startLevel((level + 1) % LEVELS.length), app.signal)
   env.hud.onMute(() => env.sfx.toggleMute(), app.signal)
+  env.hud.onAlbumBtn(() => {
+    album = loadAlbum()
+    env.hud.showAlbum(album, level, (lv) => startLevel(lv), app.signal)
+  }, app.signal)
   window.addEventListener('pagehide', (e) => {
     if (e.persisted) return
     dispose()
