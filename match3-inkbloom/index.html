@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#efe6d2" />
+    <title>염색 공방</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%273%27 y=%273%27 width=%2726%27 height=%2726%27 rx=%275%27 fill=%27%23d9482b%27/%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%277%27 fill=%27%23efe6d2%27/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud">
+        <div class="top">
+          <h1 class="title"><span class="mark">염</span>염색 공방</h1>
+          <div class="stats">
+            <div class="stat"><span class="lbl">판</span><b id="level">1</b></div>
+            <div class="stat"><span class="lbl">남은 이동</span><b id="moves">0</b></div>
+            <div class="stat"><span class="lbl">점수</span><b id="score">0</b></div>
+          </div>
+        </div>
+        <div class="order"><span class="order-lbl">주문</span><div id="order" class="chips"></div></div>
+        <div id="legend" class="legend"></div>
+        <div id="specials" class="specials"></div>
+      </header>
+      <main id="stage"><canvas id="board"></canvas></main>
+      <footer id="foot">
+        <button id="mute" type="button">소리 켜짐</button>
+        <button id="album-btn" type="button">천 모음</button>
+        <button id="restart" type="button">다시 하기</button>
+      </footer>
+      <div id="overlay" hidden>
+        <div id="card" class="card">
+          <div id="seal" class="seal"></div>
+          <h2 id="heading"></h2>
+          <p id="detail"></p>
+          <div id="stars" class="stars" hidden></div>
+          <p id="album-notice" class="album-notice" hidden></p>
+          <button id="album-view" type="button" class="album-view-btn" hidden>천 모음 보기</button>
+          <p id="rules" class="rules"></p>
+          <button id="start" type="button" class="primary">시작하기</button>
+          <button id="again" type="button" class="primary" hidden>다시 하기</button>
+          <button id="next" type="button" class="primary" hidden>다음 판</button>
+        </div>
+      </div>
+      <div id="album-overlay" hidden>
+        <div id="album-card" class="album-card">
+          <h2 class="album-title">천 모음</h2>
+          <div id="album-grid" class="album-grid"></div>
+          <button id="album-close" type="button">닫기</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

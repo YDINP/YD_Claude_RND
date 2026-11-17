@@ -1,0 +1,15 @@
+export const W = 8
+export const H = 8
+export const N = W * H
+export const COLORS = 6
+export const PRIMARIES = 3
+export const MIN_MATCH = 3
+export const LINE_RUN = 4
+export const BRUSH_RUN = 5
+export const MAX_CHAIN = 50
+export const POINT_CLEAR = 10
+export const BONUS_PER_MOVE = 100
+export const STAR2_RATIO = 0.25
+export const STAR3_RATIO = 0.4
+export const INIT_RETRIES = 100
+export const SHUFFLE_RETRIES = 50
