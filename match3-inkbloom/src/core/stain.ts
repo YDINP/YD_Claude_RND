@@ -1,10 +1,19 @@
+import { mix, wash } from './color'
 import { H, N, W } from './constants'
-import type { BrushFire, MatchGroup, StainChange } from './types'
+import { NO_FLOOR, WATER, type Fire, type MatchGroup, type StainChange } from './types'
 
 const ORTHO: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1]]
 const ALL8: [number, number][] = [...ORTHO, [-1, -1], [-1, 1], [1, -1], [1, 1]]
 
-export function planStains(floor: ArrayLike<number>, groups: MatchGroup[], fires: BrushFire[]): StainChange[] {
+export function paint(from: number, base: number, color: number): { to: number; base: number } {
+  if (color === WATER) {
+    const to = wash(from, base)
+    return { to, base: to === NO_FLOOR ? NO_FLOOR : base }
+  }
+  return { to: mix(from, color), base: from === NO_FLOOR ? color : base }
+}
+
+export function planStains(floor: ArrayLike<number>, base: ArrayLike<number>, groups: MatchGroup[], fires: Fire[]): StainChange[] {
   const rank = new Float64Array(N).fill(Infinity)
   const color = new Int8Array(N)
   const src: StainChange['src'][] = new Array(N)
@@ -18,7 +27,12 @@ export function planStains(floor: ArrayLike<number>, groups: MatchGroup[], fires
   const key = (kind: number, maxRun: number, idx: number): number => kind * 1e6 + (100 - maxRun) * 1e3 + idx
   groups.forEach((g, gi) => {
     for (const cell of g.cells) offer(cell, g.color, key(0, g.maxRun, gi), 'clear')
-    if (g.spread === 0) return
+  })
+  fires.forEach((f, fi) => {
+    for (const cell of f.cells) offer(cell, f.color, key(1, 0, fi), 'brush')
+  })
+  groups.forEach((g, gi) => {
+    if (g.spread === 0 || g.color === WATER) return
     const dirs = g.spread === 2 ? ALL8 : ORTHO
     for (const cell of g.cells) {
       const r = Math.floor(cell / W)
@@ -27,17 +41,17 @@ export function planStains(floor: ArrayLike<number>, groups: MatchGroup[], fires
         const nr = r + dr
         const nc = c + dc
         if (nr < 0 || nr >= H || nc < 0 || nc >= W) continue
-        offer(nr * W + nc, g.color, key(1, g.maxRun, gi), 'spread')
+        const n = nr * W + nc
+        if (floor[n] === NO_FLOOR) offer(n, g.color, key(2, g.maxRun, gi), 'spread')
       }
     }
-  })
-  fires.forEach((f, fi) => {
-    for (const cell of f.cells) offer(cell, f.color, key(0, 0, groups.length + fi), 'brush')
   })
   const out: StainChange[] = []
   for (let cell = 0; cell < N; cell++) {
     if (rank[cell] === Infinity) continue
-    out.push({ cell, from: floor[cell]!, to: color[cell]!, src: src[cell]! })
+    const from = floor[cell]!
+    const p = paint(from, base[cell]!, color[cell]!)
+    out.push({ cell, from, to: p.to, base: p.base, src: src[cell]! })
   }
   return out
 }

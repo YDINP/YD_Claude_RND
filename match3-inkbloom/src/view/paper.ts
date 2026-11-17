@@ -80,6 +80,29 @@ export function tracePoly(ctx: CanvasRenderingContext2D, pts: Pt[]): void {
 
 export const STAMP_VARIANTS = 4
 
+export function shapePath(ctx: CanvasRenderingContext2D, shape: number, s: number): void {
+  switch (shape) {
+    case 0:
+      ctx.arc(0, 0, s, 0, Math.PI * 2)
+      break
+    case 1:
+      ctx.moveTo(0, -s * 1.05)
+      ctx.lineTo(s * 1.02, s * 0.75)
+      ctx.lineTo(-s * 1.02, s * 0.75)
+      ctx.closePath()
+      break
+    case 2:
+      ctx.roundRect(-s * 0.85, -s * 0.85, s * 1.7, s * 1.7, s * 0.14)
+      break
+    default:
+      ctx.moveTo(0, -s * 1.15)
+      ctx.bezierCurveTo(s * 0.35, -s * 0.6, s * 0.92, -s * 0.05, s * 0.92, s * 0.32)
+      ctx.arc(0, s * 0.32, s * 0.92, 0, Math.PI)
+      ctx.bezierCurveTo(-s * 0.92, -s * 0.05, -s * 0.35, -s * 0.6, 0, -s * 1.15)
+      ctx.closePath()
+  }
+}
+
 export function blotPath(ctx: CanvasRenderingContext2D, rng: Rng, R: number, n: number, rough: number): void {
   const ph = [rng.next() * 6.28, rng.next() * 6.28, rng.next() * 6.28, rng.next() * 6.28]
   ctx.beginPath()

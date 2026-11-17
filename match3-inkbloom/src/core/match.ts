@@ -1,10 +1,8 @@
-import { BRUSH, type Cell, type MatchGroup } from './types'
+import { BRUSH, colorOf, isColored, type Cell, type MatchGroup } from './types'
 import { H, MIN_MATCH, N, W } from './constants'
 
 export interface Run { cells: Cell[]; horiz: boolean; color: number }
 export interface GroupInfo extends MatchGroup { runs: Run[]; mixed: boolean }
-
-const isColor = (v: number): boolean => v >= 0 && v < BRUSH
 
 export function findRuns(p: ArrayLike<number>): Run[] {
   const runs: Run[] = []
@@ -13,12 +11,13 @@ export function findRuns(p: ArrayLike<number>): Run[] {
       let i = 0
       while (i < inner) {
         const v = p[idx(o, i)]!
+        const ok = isColored(v)
         let j = i + 1
-        if (isColor(v)) while (j < inner && p[idx(o, j)] === v) j++
-        if (isColor(v) && j - i >= MIN_MATCH) {
+        if (ok) while (j < inner && isColored(p[idx(o, j)]!) && colorOf(p[idx(o, j)]!) === colorOf(v)) j++
+        if (ok && j - i >= MIN_MATCH) {
           const cells: Cell[] = []
           for (let k = i; k < j; k++) cells.push(idx(o, k))
-          runs.push({ cells, horiz, color: v })
+          runs.push({ cells, horiz, color: colorOf(v) })
         }
         i = j
       }
@@ -55,7 +54,7 @@ export function findGroups(p: ArrayLike<number>): GroupInfo[] {
     const root = find(c)
     let g = byRoot.get(root)
     if (!g) {
-      g = { color: p[c]!, cells: [], maxRun: 0, spread: 0, runs: [], mixed: false }
+      g = { color: colorOf(p[c]!), cells: [], maxRun: 0, spread: 0, runs: [], mixed: false }
       byRoot.set(root, g)
       groups.push(g)
     }

@@ -1,7 +1,10 @@
-import { MOVES, N, W } from '../core/constants'
-import type { Game } from '../core/game'
+import { isSecondary } from '../core/color'
+import { N, POINT_LUCKY, W } from '../core/constants'
+import { orderProgress, type Game } from '../core/game'
 import { Rng } from '../core/rng'
-import { NO_FLOOR, type BrushFire, type Cell, type ClearEvent, type TurnEvent, type TurnResult } from '../core/types'
+import { MUDDY, NO_FLOOR, WATER, type Cell, type ClearEvent, type Fire, type FireShape, type OrderProgress, type TurnEvent, type TurnResult } from '../core/types'
+import { FLOOR_NAMES } from '../ui/names'
+import { FX_PALETTE, FX_WATER, fxColor } from './blob'
 import { Particles } from './particles'
 import { ease, Tweens } from './tween'
 
@@ -10,7 +13,7 @@ export type SfxName = 'swap' | 'bad' | 'pop' | 'brush' | 'win' | 'lose' | 'shuff
 export interface Hooks {
   moves(n: number): void
   score(n: number): void
-  stained(n: number): void
+  order(p: OrderProgress[]): void
   sfx(name: SfxName, arg?: number): void
 }
 
@@ -24,8 +27,9 @@ export class Sprite {
   alpha = 1
 }
 
-export interface Bleed { active: boolean; cell: Cell; color: number; delay: number; t: number; dur: number; to: number }
-export interface Streak { active: boolean; at: Cell; color: number; cross: boolean; delay: number; t: number; dur: number }
+export interface Bleed { active: boolean; started: boolean; cell: Cell; from: number; to: number; ring: boolean; delay: number; t: number; dur: number }
+export interface Streak { active: boolean; at: Cell; color: number; shape: FireShape; delay: number; t: number; dur: number }
+export interface PreviewMark { cell: Cell; to: number }
 export interface FloatText { active: boolean; x: number; y: number; text: string; t: number; dur: number; big: boolean; step: number }
 
 const BLEED_MS = 560
@@ -37,6 +41,8 @@ const POP_MS = 210
 const SWAP_MS = 150
 const LAND_MS = 240
 const SHAKE_DECAY_MS = 70
+const MIX_TEXT_LAG_MS = 260
+const MIX_SFX_STEP = 4
 const hitStop = (chain: number, brush: boolean): number => Math.min(150, 55 + 22 * (chain - 1) + (brush ? 30 : 0))
 const fallMs = (rows: number): number => 90 + 85 * Math.sqrt(rows)
 const cx = (c: Cell): number => c % W
@@ -46,6 +52,8 @@ export class Director {
   state: DirState = 'idle'
   readonly sprites: (Sprite | null)[] = new Array<Sprite | null>(N).fill(null)
   readonly viewFloor = new Int8Array(N).fill(NO_FLOOR)
+  readonly hidden = new Uint8Array(N)
+  preview: PreviewMark[] = []
   readonly bleeds: Bleed[] = []
   readonly streaks: Streak[] = []
   readonly texts: FloatText[] = []
@@ -61,7 +69,7 @@ export class Director {
   private idx = 0
   private phaseT = 0
   private phaseDur = 0
-  private movesShown = MOVES
+  private movesShown = 0
   private scoreShown = 0
 
   constructor(private game: Game, private hooks: Hooks) {
@@ -74,6 +82,8 @@ export class Director {
     this.bleeds.length = this.streaks.length = this.texts.length = 0
     for (let i = 0; i < N; i++) this.drop(i)
     this.viewFloor.set(this.game.floor)
+    this.hidden.fill(0)
+    this.preview = []
     this.floorVersion++
     this.movesShown = this.game.movesLeft
     this.scoreShown = this.game.score
@@ -91,7 +101,7 @@ export class Director {
     }
     this.hooks.moves(this.movesShown)
     this.hooks.score(this.scoreShown)
-    this.hooks.stained(this.countStained())
+    this.hooks.order(this.viewProgress())
   }
 
   play(res: TurnResult): void {
@@ -113,10 +123,8 @@ export class Director {
     }
   }
 
-  private countStained(): number {
-    let n = 0
-    for (let i = 0; i < N; i++) if (this.viewFloor[i] !== NO_FLOOR) n++
-    return n
+  private viewProgress(): OrderProgress[] {
+    return orderProgress(this.viewFloor, this.game.order)
   }
 
   private spawn(piece: number, cell: Cell, y = cy(cell)): Sprite {
@@ -190,6 +198,7 @@ export class Director {
     const sb = this.sprites[b]
     if (!sa || !sb) return
     this.selected = -1
+    this.preview = []
     if (valid) {
       this.sprites[a] = sb
       this.sprites[b] = sa
@@ -220,7 +229,7 @@ export class Director {
     this.phaseDur = 290
   }
 
-  private fireDelays(fires: BrushFire[], stop: number): Map<Cell, number> {
+  private fireDelays(fires: Fire[], stop: number): Map<Cell, number> {
     const delay = new Map<Cell, number>()
     for (const f of fires) {
       const base = delay.get(f.at) ?? stop
@@ -233,16 +242,16 @@ export class Director {
     return delay
   }
 
-  private addStreak(f: BrushFire, delay: number): void {
-    const st = this.streaks.find((s) => !s.active) ?? { active: false, at: 0, color: 0, cross: false, delay: 0, t: 0, dur: 0 }
+  private addStreak(f: Fire, delay: number): void {
+    const st = this.streaks.find((s) => !s.active) ?? { active: false, at: 0, color: 0, shape: 'row' as FireShape, delay: 0, t: 0, dur: 0 }
     if (!this.streaks.includes(st)) this.streaks.push(st)
-    Object.assign(st, { active: true, at: f.at, color: f.color, cross: f.cross, delay, t: 0, dur: STREAK_MS })
+    Object.assign(st, { active: true, at: f.at, color: f.color === WATER ? FX_WATER : f.color, shape: f.shape, delay, t: 0, dur: STREAK_MS })
   }
 
   private onClear(ev: ClearEvent): void {
-    const brush = ev.brushes.length > 0
+    const brush = ev.fires.length > 0
     const stop = this.reduced ? 0 : hitStop(ev.chain, brush)
-    const delays = this.fireDelays(ev.brushes, stop)
+    const delays = this.fireDelays(ev.fires, stop)
     const splash = Math.min(16, 5 + ev.chain * 2)
     const speed = 2.2 + Math.min(1.6, ev.chain * 0.3)
     let end = stop
@@ -252,7 +261,7 @@ export class Director {
       end = Math.max(end, d + POP_MS)
       if (!s) continue
       this.sprites[cell] = null
-      const color = s.piece < 5 ? s.piece : 4
+      const color = fxColor(s.piece)
       if (stop > 0 && d === stop) this.tweens.add(stop, 0, ease.outCubic, (p) => (s.scale = 1 + 0.2 * p))
       this.tweens.add(POP_MS, d, ease.outCubic, (p) => {
         s.scale = this.reduced ? 1 : 1.2 + 0.35 * p
@@ -269,10 +278,16 @@ export class Director {
       end = Math.max(end, stop + 460)
     }
     let bleedEnd = 0
+    const mixed: Cell[] = []
+    const muddy: Cell[] = []
     for (const st of ev.stains) {
+      if (st.from === st.to && st.to === NO_FLOOR) continue
       const delay = (delays.get(st.cell) ?? stop) + (st.src === 'spread' ? SPREAD_LAG_MS : 30)
-      this.addBleed(st.cell, st.to, delay)
+      const changed = st.from !== NO_FLOOR && st.from !== st.to
+      this.addBleed(st.cell, st.from, st.to, changed, delay)
       bleedEnd = Math.max(bleedEnd, delay + BLEED_MS)
+      if (isSecondary(st.to) && changed) mixed.push(st.cell)
+      if (st.to === MUDDY && st.from !== MUDDY) muddy.push(st.cell)
     }
     this.hooks.score((this.scoreShown += ev.points))
     this.tweens.add(1, stop, ease.linear, () => {}, () => {
@@ -280,13 +295,39 @@ export class Director {
       this.floatText(ev)
       this.hooks.sfx(brush ? 'brush' : 'pop', ev.chain)
     })
+    if (mixed.length > 0 || muddy.length > 0) {
+      const targets = new Map(ev.stains.map((st) => [st.cell, st.to]))
+      this.tweens.add(1, stop + MIX_TEXT_LAG_MS, ease.linear, () => {}, () => this.mixFx(ev, mixed, muddy, targets))
+    }
     this.phaseDur = Math.max(300, end + 50, bleedEnd * 0.55)
   }
 
-  private addBleed(cell: Cell, to: number, delay: number): void {
-    const b = this.bleeds.find((x) => !x.active) ?? { active: false, cell: 0, color: 0, delay: 0, t: 0, dur: 0, to: 0 }
+  private mixFx(ev: ClearEvent, mixed: Cell[], muddy: Cell[], targets: Map<Cell, number>): void {
+    const cells = mixed.length > 0 ? mixed : muddy
+    let sx = 0
+    let sy = 0
+    for (const c of cells) {
+      sx += cx(c) + 0.5
+      sy += cy(c) + 0.5
+    }
+    const x = sx / cells.length
+    const y = sy / cells.length - 0.9
+    if (mixed.length === 0) {
+      this.pushText(x, y, '탁해졌어요', false, 0)
+      return
+    }
+    const kinds = new Set(mixed.map((c) => targets.get(c)!))
+    if (!this.reduced) for (const c of mixed) this.particles.burst(cx(c) + 0.5, cy(c) + 0.5, targets.get(c)!, 4, 1.6, () => this.rng.next())
+    const name = kinds.size === 1 ? FLOOR_NAMES[[...kinds][0]!] : ''
+    if (ev.lucky > 0) this.pushText(x, y, `우연히 섞였다! +${Math.floor((ev.lucky * POINT_LUCKY * (ev.chain + 1)) / 2)}`, true, 3)
+    else this.pushText(x, y, name ? `섞였다! ${name}` : '섞였다!', true, 1)
+    this.hooks.sfx('pop', ev.chain + MIX_SFX_STEP)
+  }
+
+  private addBleed(cell: Cell, from: number, to: number, ring: boolean, delay: number): void {
+    const b = this.bleeds.find((x) => !x.active) ?? { active: false, started: false, cell: 0, from: 0, to: 0, ring: false, delay: 0, t: 0, dur: 0 }
     if (!this.bleeds.includes(b)) this.bleeds.push(b)
-    Object.assign(b, { active: true, cell, color: to, delay, t: 0, dur: BLEED_MS, to })
+    Object.assign(b, { active: true, started: false, cell, from, to, ring, delay, t: 0, dur: BLEED_MS })
   }
 
   private floatText(ev: ClearEvent): void {
@@ -371,19 +412,22 @@ export class Director {
     for (let i = 0; i < N; i++) if (this.sprites[i]?.piece !== this.game.pieces[i]) bad = true
     for (const b of this.bleeds) if (b.active) b.delay = 0, b.t = b.dur
     this.updateEffects(0)
+    this.hidden.fill(0)
     for (let i = 0; i < N; i++) if (this.viewFloor[i] !== this.game.floor[i]) bad = true
     if (!bad) return
     console.warn('[inkbloom] 화면과 core 상태가 어긋나 재동기화합니다', this.game.snapshot())
     this.rebuildSprites(false)
     this.viewFloor.set(this.game.floor)
+    this.hidden.fill(0)
     this.floorVersion++
+    this.hooks.order(this.viewProgress())
   }
 
   private finishFx(result: 'win' | 'lose'): void {
     this.hooks.sfx(result)
     if (result !== 'win') return
     for (let k = 0; k < 40; k++) {
-      this.particles.burst(this.rng.next() * W, this.rng.next() * W, this.rng.int(5), 1, 3.2, () => this.rng.next())
+      this.particles.burst(this.rng.next() * W, this.rng.next() * W, this.rng.int(FX_PALETTE.length), 1, 3.2, () => this.rng.next())
     }
   }
 
@@ -395,16 +439,23 @@ export class Director {
         b.delay -= dt
         continue
       }
+      if (!b.started) {
+        b.started = true
+        this.commitOthers(b)
+        this.hidden[b.cell] = 1
+        changed = true
+      }
       b.t += dt
       if (b.t >= b.dur) {
         b.active = false
         this.viewFloor[b.cell] = b.to
+        this.hidden[b.cell] = 0
         changed = true
       }
     }
     if (changed) {
       this.floorVersion++
-      this.hooks.stained(this.countStained())
+      this.hooks.order(this.viewProgress())
     }
     for (const s of this.streaks) {
       if (!s.active) continue
@@ -412,6 +463,14 @@ export class Director {
       else if ((s.t += dt) >= s.dur) s.active = false
     }
     for (const t of this.texts) if (t.active && (t.t += dt) >= t.dur) t.active = false
+  }
+
+  private commitOthers(b: Bleed): void {
+    for (const o of this.bleeds) {
+      if (o === b || !o.active || !o.started || o.cell !== b.cell) continue
+      o.active = false
+      this.viewFloor[o.cell] = o.to
+    }
   }
 
   dispose(): void {

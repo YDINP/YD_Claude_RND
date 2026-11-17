@@ -1,23 +1,63 @@
 import './styles.css'
 import { Sfx } from './audio/sfx'
+import { areAdjacent } from './core/board'
+import { W } from './core/constants'
 import { Game } from './core/game'
+import { levelAt, LEVELS } from './core/levels'
 import { bindPointer } from './input/pointer'
 import { Hud } from './ui/hud'
-import { Director } from './view/director'
+import { Director, type PreviewMark } from './view/director'
 import { computeLayout, type Layout } from './view/layout'
 import { Renderer } from './view/renderer'
 
 const RESULT_DELAY_MS = 900
 const MAX_DT_MS = 50
+const LEVEL_KEY = 'inkbloom.level'
 
-function createRound(canvas: HTMLCanvasElement, stage: HTMLElement, hud: Hud, sfx: Sfx, seed: number): () => void {
+function loadLevel(): number {
+  try {
+    const n = Number(localStorage.getItem(LEVEL_KEY))
+    return Number.isInteger(n) && n >= 0 && n < LEVELS.length ? n : 0
+  } catch {
+    return 0
+  }
+}
+
+function saveLevel(n: number): void {
+  try {
+    localStorage.setItem(LEVEL_KEY, String(n))
+  } catch {
+    return
+  }
+}
+
+function previewMarks(game: Game, from: number, to: number): PreviewMark[] {
+  const stains = game.previewSwap(from, to) ?? []
+  return stains.filter((s) => s.from !== s.to).map((s) => ({ cell: s.cell, to: s.to }))
+}
+
+function unionMarks(game: Game, from: number): PreviewMark[] {
+  const seen = new Map<number, number>()
+  for (const d of [-W, -1, 1, W]) {
+    const to = from + d
+    if (!areAdjacent(from, to)) continue
+    for (const m of previewMarks(game, from, to)) if (!seen.has(m.cell)) seen.set(m.cell, m.to)
+  }
+  return [...seen].map(([cell, to]) => ({ cell, to }))
+}
+
+interface RoundEnv { canvas: HTMLCanvasElement; stage: HTMLElement; hud: Hud; sfx: Sfx }
+
+function createRound(env: RoundEnv, seed: number, level: number, onResult: (win: boolean) => void): () => void {
+  const { canvas, stage, hud, sfx } = env
   const ac = new AbortController()
   const { signal } = ac
-  const game = new Game(seed)
+  const game = new Game(seed, level)
+  hud.setLevel(game.level)
   const director = new Director(game, {
     moves: (n) => hud.setMoves(n),
     score: (n) => hud.setScore(n),
-    stained: (n) => hud.setStained(n),
+    order: (p) => hud.setOrder(p),
     sfx: (name, arg) => sfx.play(name, arg),
   })
   const renderer = new Renderer(canvas, canvas.getContext('2d')!)
@@ -40,10 +80,16 @@ function createRound(canvas: HTMLCanvasElement, stage: HTMLElement, hud: Hud, sf
     select: (c) => {
       if (director.state !== 'idle') return false
       director.selected = c
+      director.preview = c >= 0 ? unionMarks(game, c) : []
       return true
+    },
+    aim: (from, to) => {
+      if (director.state !== 'idle' || director.selected !== from) return
+      director.preview = to >= 0 ? previewMarks(game, from, to) : unionMarks(game, from)
     },
     swap: (a, b) => {
       if (director.state !== 'idle') return
+      director.preview = []
       director.play(game.trySwap(a, b))
     },
   }, signal)
@@ -61,7 +107,9 @@ function createRound(canvas: HTMLCanvasElement, stage: HTMLElement, hud: Hud, sf
       endTimer += dt
       if (endTimer >= RESULT_DELAY_MS) {
         resultShown = true
-        hud.showResult(director.state === 'win', game.score, game.stainedCount())
+        const win = director.state === 'win'
+        onResult(win)
+        hud.showResult(win, game.score, game.progress(), game.level, game.level === LEVELS.length - 1)
       }
     }
     raf = requestAnimationFrame(frame)
@@ -86,21 +134,33 @@ function createRound(canvas: HTMLCanvasElement, stage: HTMLElement, hud: Hud, sf
 }
 
 function main(): void {
-  const canvas = document.getElementById('board') as HTMLCanvasElement
-  const stage = document.getElementById('stage') as HTMLElement
-  const hud = new Hud()
-  const sfx = new Sfx()
-  const fixed = new URLSearchParams(location.search).get('seed')
+  const env: RoundEnv = {
+    canvas: document.getElementById('board') as HTMLCanvasElement,
+    stage: document.getElementById('stage') as HTMLElement,
+    hud: new Hud(),
+    sfx: new Sfx(),
+  }
+  const params = new URLSearchParams(location.search)
+  const fixed = params.get('seed')
   const newSeed = (): number => (fixed ? Number(fixed) : (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0)
-  let dispose = createRound(canvas, stage, hud, sfx, newSeed())
-  const app = new AbortController()
-  hud.showIntro(() => sfx.unlock(), app.signal)
-  hud.onRestart(() => {
+  let level = params.has('level') ? Math.max(0, Math.min(LEVELS.length - 1, Number(params.get('level')) - 1 || 0)) : loadLevel()
+  const onResult = (win: boolean): void => {
+    if (win) saveLevel((level + 1) % LEVELS.length)
+  }
+  let dispose = createRound(env, newSeed(), level, onResult)
+  const restart = (): void => {
     dispose()
-    hud.hideOverlay()
-    dispose = createRound(canvas, stage, hud, sfx, newSeed())
+    env.hud.hideOverlay()
+    dispose = createRound(env, newSeed(), level, onResult)
+  }
+  const app = new AbortController()
+  env.hud.showIntro(level, levelAt(level), () => env.sfx.unlock(), app.signal)
+  env.hud.onRestart(restart, app.signal)
+  env.hud.onNext(() => {
+    level = (level + 1) % LEVELS.length
+    restart()
   }, app.signal)
-  hud.onMute(() => sfx.toggleMute(), app.signal)
+  env.hud.onMute(() => env.sfx.toggleMute(), app.signal)
   window.addEventListener('pagehide', (e) => {
     if (e.persisted) return
     dispose()

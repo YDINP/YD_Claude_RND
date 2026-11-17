@@ -1,11 +1,16 @@
 import { Rng } from '../core/rng'
-import { BRUSH } from '../core/types'
-import { blotPath } from './paper'
+import { BRUSH, KIND_BUCKET, KIND_COL, KIND_ROW, WATER, colorOf, kindOf } from '../core/types'
+import { blotPath, shapePath } from './paper'
 
-export const PALETTE = ['#d9482b', '#2f5d8a', '#e0a82e', '#3f8f7a', '#2a2623'] as const
-export const STAIN_ALPHA = [0.85, 0.85, 0.85, 0.85, 0.55] as const
+export const PIECE_PALETTE = ['#c8432b', '#e2b13c', '#2f5d8a', '#8cc3dc'] as const
+export const FLOOR_PALETTE = ['#c8432b', '#e2b13c', '#2f5d8a', '#e07a2e', '#5a8f4a', '#7a4f8f', '#7a6a55'] as const
+export const FX_PALETTE = [...FLOOR_PALETTE, PIECE_PALETTE[WATER]] as const
+export const FX_WATER = FLOOR_PALETTE.length
+export const STAIN_ALPHA = [0.85, 0.8, 0.85, 0.85, 0.85, 0.85, 0.72] as const
+export const fxColor = (piece: number): number => (piece === BRUSH ? 6 : colorOf(piece) === WATER ? FX_WATER : colorOf(piece))
 
 const POINTS = 24
+const INK_SOFT = 'rgba(42,38,35,0.55)'
 const AMP = [0.045, 0.03, 0.02] as const
 const OMEGA = [1.3, 1.9, 2.6] as const
 const XS = new Float32Array(POINTS)
@@ -29,32 +34,6 @@ export function wobblePath(ctx: CanvasRenderingContext2D, cx: number, cy: number
   ctx.closePath()
 }
 
-function stampPath(ctx: CanvasRenderingContext2D, color: number, s: number): void {
-  switch (color) {
-    case 0:
-      ctx.arc(0, 0, s, 0, Math.PI * 2)
-      break
-    case 1:
-      ctx.roundRect(-s * 0.85, -s * 0.85, s * 1.7, s * 1.7, s * 0.14)
-      break
-    case 2:
-      ctx.moveTo(0, -s)
-      ctx.lineTo(s * 0.98, s * 0.72)
-      ctx.lineTo(-s * 0.98, s * 0.72)
-      ctx.closePath()
-      break
-    case 3:
-      ctx.moveTo(0, -s * 1.08)
-      ctx.lineTo(s * 0.86, 0)
-      ctx.lineTo(0, s * 1.08)
-      ctx.lineTo(-s * 0.86, 0)
-      ctx.closePath()
-      break
-    default:
-      ctx.arc(0, 0, s * 0.42, 0, Math.PI * 2)
-  }
-}
-
 export function tone(hex: string, k: number, a = 1): string {
   const n = parseInt(hex.slice(1), 16)
   const f = (v: number): number => Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k))
@@ -67,9 +46,9 @@ function makeHalo(color: number, size: number, r: number, dpr: number): HTMLCanv
   const ctx = cv.getContext('2d')!
   ctx.scale(dpr, dpr)
   ctx.translate(size / 2, size / 2 + r * 0.06)
-  const a = color === 4 ? 0.13 : 0.17
+  const a = color === WATER ? 0.22 : 0.17
   blotPath(ctx, new Rng(color * 7 + 1), r * 1.17, 28, 0.04)
-  ctx.fillStyle = tone(PALETTE[color]!, 0, a)
+  ctx.fillStyle = tone(PIECE_PALETTE[color]!, 0, a)
   ctx.fill()
   return cv
 }
@@ -82,9 +61,14 @@ function makeOverlay(color: number, size: number, r: number, dpr: number): HTMLC
   ctx.translate(size / 2, size / 2)
   const s = r * 0.4
   ctx.beginPath()
-  stampPath(ctx, color, s)
-  ctx.fillStyle = tone(PALETTE[color]!, color === 4 ? 0.5 : 0.58, 0.9)
+  shapePath(ctx, color, s)
+  ctx.fillStyle = color === WATER ? 'rgba(255,255,255,0.75)' : tone(PIECE_PALETTE[color]!, 0.58, 0.9)
   ctx.fill()
+  if (color === WATER) {
+    ctx.strokeStyle = tone(PIECE_PALETTE[WATER], -0.45, 0.6)
+    ctx.lineWidth = Math.max(0.8, r * 0.06)
+    ctx.stroke()
+  }
   ctx.save()
   ctx.translate(-r * 0.36, -r * 0.42)
   ctx.rotate(-0.65)
@@ -140,18 +124,18 @@ export class BlobSprites {
     this.r = cell * 0.31
     this.size = Math.ceil(cell * 1.05)
     const r = this.r
-    this.halos = PALETTE.map((_, i) => makeHalo(i, this.size, r, dpr))
-    this.overlays = PALETTE.map((_, i) => makeOverlay(i, this.size, r, dpr))
-    this.bodies = PALETTE.map((hex, i) => {
+    this.halos = PIECE_PALETTE.map((_, i) => makeHalo(i, this.size, r, dpr))
+    this.overlays = PIECE_PALETTE.map((_, i) => makeOverlay(i, this.size, r, dpr))
+    this.bodies = PIECE_PALETTE.map((hex, i) => {
       const g = ctx.createRadialGradient(-r * 0.28, -r * 0.32, 0, 0, 0, r * 1.06)
-      const ink = i === 4
-      g.addColorStop(0, tone(hex, ink ? 0.22 : 0.2, 0.9))
-      g.addColorStop(0.55, tone(hex, 0, 0.92))
-      g.addColorStop(0.86, tone(hex, ink ? -0.2 : -0.18, 0.96))
-      g.addColorStop(1, tone(hex, ink ? -0.35 : -0.34, 0.98))
+      const water = i === WATER
+      g.addColorStop(0, tone(hex, water ? 0.75 : 0.2, water ? 0.55 : 0.9))
+      g.addColorStop(0.55, tone(hex, water ? 0.25 : 0, water ? 0.6 : 0.92))
+      g.addColorStop(0.86, tone(hex, -0.18, water ? 0.75 : 0.96))
+      g.addColorStop(1, tone(hex, -0.34, water ? 0.85 : 0.98))
       return g
     })
-    this.rims = PALETTE.map((hex) => tone(hex, -0.45, 0.55))
+    this.rims = PIECE_PALETTE.map((hex) => tone(hex, -0.45, 0.55))
     this.brush = makeBrush(this.size, r, dpr)
   }
 
@@ -169,18 +153,55 @@ export class BlobSprites {
       ctx.globalAlpha = 1
       return
     }
-    ctx.drawImage(this.halos[piece]!, cx - h / 2, cy - h / 2, h, h)
+    const color = colorOf(piece)
+    const kind = kindOf(piece)
+    ctx.drawImage(this.halos[color]!, cx - h / 2, cy - h / 2, h, h)
     ctx.save()
     ctx.translate(cx, cy)
     ctx.scale(scale, scale)
+    if (kind === KIND_BUCKET) this.bucketRing(ctx, color, phase, t, sq)
     wobblePath(ctx, 0, 0, this.r, phase, t, sq)
-    ctx.fillStyle = this.bodies[piece]!
+    ctx.fillStyle = this.bodies[color]!
     ctx.fill()
-    ctx.strokeStyle = this.rims[piece]!
+    ctx.strokeStyle = this.rims[color]!
     ctx.lineWidth = Math.max(0.8, this.r * 0.05)
     ctx.stroke()
+    if (kind === KIND_ROW || kind === KIND_COL) this.stripes(ctx, kind === KIND_ROW)
     ctx.restore()
-    ctx.drawImage(this.overlays[piece]!, cx - h / 2, cy - h / 2, h, h)
+    ctx.drawImage(this.overlays[color]!, cx - h / 2, cy - h / 2, h, h)
     ctx.globalAlpha = 1
+  }
+
+  private stripes(ctx: CanvasRenderingContext2D, horiz: boolean): void {
+    const r = this.r
+    ctx.save()
+    ctx.clip()
+    ctx.fillStyle = 'rgba(255,251,240,0.62)'
+    for (const k of [-0.62, 0.62]) {
+      if (horiz) ctx.fillRect(-r * 1.2, k * r - r * 0.09, r * 2.4, r * 0.18)
+      else ctx.fillRect(k * r - r * 0.09, -r * 1.2, r * 0.18, r * 2.4)
+    }
+    ctx.restore()
+    ctx.fillStyle = INK_SOFT
+    const a = r * 1.22
+    const w = r * 0.2
+    ctx.beginPath()
+    if (horiz) {
+      ctx.moveTo(-a - w, 0); ctx.lineTo(-a, -w); ctx.lineTo(-a, w)
+      ctx.moveTo(a + w, 0); ctx.lineTo(a, -w); ctx.lineTo(a, w)
+    } else {
+      ctx.moveTo(0, -a - w); ctx.lineTo(-w, -a); ctx.lineTo(w, -a)
+      ctx.moveTo(0, a + w); ctx.lineTo(-w, a); ctx.lineTo(w, a)
+    }
+    ctx.fill()
+  }
+
+  private bucketRing(ctx: CanvasRenderingContext2D, color: number, phase: number, t: number, sq: number): void {
+    wobblePath(ctx, 0, 0, this.r * 1.3, phase + 2, t * 0.7, sq)
+    ctx.strokeStyle = this.rims[color]!
+    ctx.lineWidth = Math.max(1.5, this.r * 0.13)
+    ctx.setLineDash([this.r * 0.32, this.r * 0.18])
+    ctx.stroke()
+    ctx.setLineDash([])
   }
 }
