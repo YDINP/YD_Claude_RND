@@ -6,6 +6,8 @@
 |---|---|---|
 | `daily_log.mjs` | 아침 루틴: 다모앙 오늘 글 링크 + 미션 클릭. 10분 넘게 걸려 백그라운드로 | `cd tools/naver-points && DLOG=dlog_MMDD.txt timeout 1700 node ../agent-browser/cdp-run.mjs 9301 daily_log.mjs > dl_MMDD.out` |
 | `live4.mjs` | 저녁 쇼핑라이브 1원 카드 (방송 뒤, 21시 무렵) | `cd tools/naver-points && timeout 1500 node ../agent-browser/cdp-run.mjs 9301 live4.mjs > live_MMDD.out` |
+| `store_alarm.mjs` | 「포인트 쉽게 받기」 브랜드스토어 알림받기 카드 열기 (`BRAND=`, `GO=1`이면 누름) — **사용자 허가 건만** | 위와 같은 방식 |
+| `brand_alarm.mjs` / `ev_alarm.mjs` | 스토어·행사 페이지의 알림받기 버튼 상태 확인 (`GO=1`이면 누름) | 위와 같은 방식 |
 | `daily.mjs` | daily_log 의 옛판. live4 앞부분(공용 함수)의 원본 | — |
 
 - 출력 파일(`*.out`, `dlog_*.txt`)은 커밋하지 않는다.
