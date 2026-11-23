@@ -45,7 +45,8 @@ function embedOf(it) {
 async function refreshIndex() {
   const done = items.filter((it) => state.posted[`info:${it.id}`]);
   const guild = (await api('GET', `/channels/${ch}`)).guild_id;
-  const link = (it) => `${it.emoji} [${it.title}](https://discord.com/channels/${guild}/${ch}/${state.posted[`info:${it.id}`]})`;
+  const short = (t) => (t.length > 26 ? t.slice(0, 25) + '…' : t);
+  const link = (it) => `${it.emoji} [${short(it.title)}](https://discord.com/channels/${guild}/${ch}/${state.posted[`info:${it.id}`]})`;
   const SECTIONS = [
     ['🚨 마감 임박', (it) => it.tags.includes('마감 임박')],
     ['🙌 누구나', (it) => it.tags.includes('누구나')],
@@ -59,16 +60,31 @@ async function refreshIndex() {
     list.forEach((it) => used.add(it.id));
     if (list.length) blocks.push(`**${label}**\n${list.map(link).join('\n')}`);
   }
-  const embed = {
-    title: '📌 유용정보 목차',
-    description: `-# 지역 상관없이 누구나 챙길 수 있는 것만 올려요. 한 글에 하나씩, 출처 링크 포함.\n\n${blocks.join('\n\n') || '아직 없음'}`,
-    color: 0x3b82f6,
-    footer: { text: `${done.length}개 · 새 글이 올라오면 여기도 갱신됩니다` },
-  };
+  // 디스코드 한도: embed 설명 4096자, 메시지 전체 6000자 → 블록을 여러 embed 로 나눈다
+  const head = '-# 지역 상관없이 누구나 챙길 수 있는 것만 올려요. 한 글에 하나씩, 출처 링크 포함.';
+  const parts = [head];
+  for (const b of (blocks.length ? blocks : ['아직 없음'])) {
+    for (const line of b.split('
+')) {
+      if ((parts[parts.length - 1] + '
+' + line).length > 3900) parts.push(line);
+      else parts[parts.length - 1] += (parts[parts.length - 1] === head ? '
+
+' : '
+') + line;
+    }
+    parts[parts.length - 1] += '
+';
+  }
+  const embeds = parts.map((d, k) => ({ ...(k === 0 ? { title: '📌 유용정보 목차' } : {}), description: d.trim(), color: 0x3b82f6 }));
+  embeds[embeds.length - 1].footer = { text: `${done.length}개 · 새 글이 올라오면 여기도 갱신됩니다` };
+  const total = embeds.reduce((n, e) => n + e.description.length + (e.title || '').length, 0);
+  if (total > 5900) throw new Error(`목차가 ${total}자로 메시지 한도(6000)를 넘음 — 목차를 두 메시지로 나누도록 고쳐야 함`);
+  const embed = embeds;
   if (state.indexMsg) {
-    await api('PATCH', `/channels/${ch}/messages/${state.indexMsg}`, { embeds: [embed] });
+    await api('PATCH', `/channels/${ch}/messages/${state.indexMsg}`, { embeds: embed });
   } else {
-    const m = await api('POST', `/channels/${ch}/messages`, { embeds: [embed] });
+    const m = await api('POST', `/channels/${ch}/messages`, { embeds: embed });
     await api('PUT', `/channels/${ch}/pins/${m.id}`);
     state.indexMsg = m.id;
   }
