@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { pii } from './pii.mjs';
 
-const POS = [/^매우 만족/, /^만족/, /^대체로 만족/, /^매우 그렇다/, /^그렇다/, /^대체로 그렇다/, /^동의/, /^예$|^네$/, /^좋/];
+const POS = [/^만족/, /^대체로 만족/, /^그렇다/, /^대체로 그렇다/, /^있음/, /^편함/, /^쉬움/, /^정확함/, /^동의/, /^예$|^네$/, /^좋/, /^매우 만족/, /^매우 그렇다/];
 const NEG = /불만|않|아니|없음|모름|싫/;
 
 export default async (ctx) => {
@@ -16,7 +16,7 @@ export default async (ctx) => {
   const isPiiQ = t => /성명|이름|성함|휴대|전화|연락처|핸드폰|이메일|e-?mail|메일 주소|주소/i.test(t);
   let lastSig = '', stuck = 0;
   for (let page = 0; page < 30; page++) {
-    const items = p.locator('div[role=listitem]'); const n = await items.count();
+    const items = p.locator('div[role=listitem]:has([role=heading])'); const n = await items.count();
     const sig = (await items.allInnerTexts()).join('|').slice(0, 300);
     if (sig === lastSig) { if (++stuck > 2) { log.push('STUCK ' + sig.slice(0, 120)); break; } } else stuck = 0; lastSig = sig;
     for (let i = 0; i < n; i++) {
@@ -41,7 +41,7 @@ export default async (ctx) => {
         const labs = (await radios.evaluateAll(es => es.map(e => (e.getAttribute('aria-label') || e.getAttribute('data-value') || e.innerText || '').trim())));
         let j;
         if (a !== undefined) j = labs.findIndex(l => l === a) >= 0 ? labs.findIndex(l => l === a) : labs.findIndex(l => l.includes(String(a)));
-        else if (/동의/.test(title)) j = labs.findIndex(l => /동의/.test(l) && !NEG.test(l));
+        else if (/동의/.test(title)) { j = labs.findIndex(l => /동의/.test(l) && !NEG.test(l)); if (j < 0) j = labs.findIndex(l => /^예$|^네$/.test(l)); }
         else { j = -1; for (const r of POS) { j = labs.findIndex(l => r.test(l)); if (j >= 0) break; } if (j < 0) j = labs.length >= 4 ? 1 : 0; }
         if (j < 0) { log.push(`p${page} ${title.slice(0, 80)} => NOOPT ${a} [${labs.join('/')}]`); await p.close(); return log.join('\n'); }
         await radios.nth(j).click(); log.push(`p${page} ${title.slice(0, 70)} => ${labs[j]}   [${labs.join('/').slice(0, 90)}]`); continue;
