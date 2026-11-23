@@ -1,0 +1,15 @@
+[사용 도구] ChatGPT(GPT 이미지)로 생성. 업스케일은 4x-UltraSharp·4x-RealisticRescaler(내 PC에서 실행), 부분 합성은 OpenCV.
+
+[주요 프롬프트 원문]
+한 번의 요청에 공통 스타일과 장면 4개를 함께 넣어 세로 1024x1536 시안 4장을 만들었고, 그중 3번 장면을 골랐다.
+- 공통 스타일: Fine-art medium-format film photograph, Kodak Portra 400 look, natural late-afternoon window light, soft fine film grain, true-to-life muted colors, gentle highlight roll-off, slightly imperfect real-world textures (dust in the air, worn wood, loose threads). No HDR, no glossy CGI look, no oversaturation, no symmetry for its own sake, no text, no letters, no watermark, no logo.
+- 1번 장면(무대 설정): Interior of an ordinary modern Korean apartment living room at about 4 pm in late autumn. A large traditional Korean jogakbo (patchwork wrapping cloth) sewn from translucent ramie (mosi) hangs as a curtain over a tall window. The patches are irregular rectangles of different sizes in faded indigo, persimmon orange, pale jade green, soft pink and undyed beige, and several patches are clearly cut from everyday old clothes: a faded blue gingham shirt, a small baby onesie printed with tiny stars, a worn piece of denim with a seam. The hand-stitched seams (fine double stitching) glow as thin bright lines where the light passes. Sunlight through the cloth projects a soft, slightly blurred colored patchwork of light across a pale oak floor. A small child of about five, seen only from behind with no face visible, sits cross-legged inside the colored light looking up at the cloth. Beside a flat floor cushion sits a low wooden sewing box with a few thread spools and a pincushion. Vertical composition: the cloth fills the upper two thirds, the projected light and child the lower third. Eye-level camera, 50mm lens, deep but natural depth of field.
+- 3번 장면(선택작): Same ramie jogakbo curtain sewn from old family clothes hanging in a tall apartment window at golden hour. An elderly woman with grey hair pinned back and a small child sit side by side on the floor, both seen from behind, their backs and shoulders lit by the colored squares of light. The grandmother's hands are out of frame. Their shadows mix with the colored patches on the oak floor. Outside, through the translucent cloth, the faint silhouette of neighboring apartment towers is barely visible. Vertical composition, 50mm, intimate and calm.
+
+[제작 과정]
+1. 기획: 주제 후보 셋(조각보, 옥상 장독대, 달항아리 야경)을 견줘 보고, 남은 천을 이어 쓰는 조각보와 빛을 걸러 들이는 모시를 오늘의 아파트 거실로 옮기기로 했다. 조각 몇 개는 가족이 입던 옷(체크 셔츠, 배냇저고리, 청바지)으로 정했다.
+2. 생성: 같은 무대로 구도 넷(아이 혼자, 사람 없는 정물, 할머니와 손녀, 맨발 근접)을 만들었다.
+3. 고르기와 검수: 이야기가 가장 잘 보이는 3번을 골랐다. 부분 확대로 머리카락, 바느질 선, 창밖 건물, 바닥 빛을 확인했다. 손과 얼굴은 화면에 넣지 않았다.
+4. 편집: 2:3 원본을 인물이 가운데 오도록 9:16으로 잘랐다.
+5. 후보정: 4배 업스케일을 두 방식으로 해서 비교했다. UltraSharp는 모시 올이 잘 살았지만 할머니 머리카락에 격자 무늬가 생겼고, RealisticRescaler는 머리카락은 깨끗했지만 모시가 금 간 벽처럼 변했다. 그래서 OpenCV로 인물 영역을 따서 인물은 RealisticRescaler, 조각보와 바닥은 UltraSharp 결과를 쓰고 경계는 흐리게 이었다.
+6. 저장: 3456x6144, 300dpi JPG.
