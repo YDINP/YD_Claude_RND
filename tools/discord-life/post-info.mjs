@@ -64,17 +64,11 @@ async function refreshIndex() {
   const head = '-# 지역 상관없이 누구나 챙길 수 있는 것만 올려요. 한 글에 하나씩, 출처 링크 포함.';
   const parts = [head];
   for (const b of (blocks.length ? blocks : ['아직 없음'])) {
-    for (const line of b.split('
-')) {
-      if ((parts[parts.length - 1] + '
-' + line).length > 3900) parts.push(line);
-      else parts[parts.length - 1] += (parts[parts.length - 1] === head ? '
-
-' : '
-') + line;
+    for (const line of b.split('\n')) {
+      if ((parts[parts.length - 1] + '\n' + line).length > 3900) parts.push(line);
+      else parts[parts.length - 1] += (parts[parts.length - 1] === head ? '\n\n' : '\n') + line;
     }
-    parts[parts.length - 1] += '
-';
+    parts[parts.length - 1] += '\n';
   }
   const embeds = parts.map((d, k) => ({ ...(k === 0 ? { title: '📌 유용정보 목차' } : {}), description: d.trim(), color: 0x3b82f6 }));
   embeds[embeds.length - 1].footer = { text: `${done.length}개 · 새 글이 올라오면 여기도 갱신됩니다` };
