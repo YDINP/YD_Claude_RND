@@ -54,6 +54,15 @@ export type { EngineMcMeasurement, SampleOptions, SampleState } from './sampleDi
 export { CascadeAccumulator, buildCascadeReport } from './cascadeStats.js'
 export type { CascadeAccumulatorData } from './cascadeStats.js'
 export {
+  ROULETTE_BUCKETS,
+  ROULETTE_GATES,
+  RouletteAccumulator,
+  buildRouletteReport,
+  rouletteGates,
+  rouletteSections,
+} from './rouletteStats.js'
+export type { RouletteAccumulatorData, RouletteReport, RouletteSegmentRow } from './rouletteStats.js'
+export {
   finishAuditParts,
   mergeConvergence,
   mergeMonteCarlo,

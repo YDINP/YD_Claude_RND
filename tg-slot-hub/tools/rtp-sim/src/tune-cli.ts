@@ -1,6 +1,7 @@
 /**
- * 연쇄 팩 튜닝 CLI. 한 번 돌려 RTP 분해·적중률·최초 클러스터율·평균 연쇄·라운드 진입률·
- * 주문 완료율·σ·n*를 한 화면에 낸다. 밀도표로 스트립을 다시 만들고 배율을 걸어 볼 수 있다.
+ * 연쇄·무대 룰렛 팩 튜닝 CLI. 한 번 돌려 RTP 분해·적중률·σ·n*와 피처 지표를 한 화면에 낸다.
+ * 연쇄 팩은 최초 클러스터율·평균 연쇄·라운드 진입률·주문 완료율, 룰렛 팩은 진입률·룰렛 평균·15× 미만 비율.
+ * 밀도표로 스트립을 다시 만들고 배율을 걸어 볼 수 있다(룰렛 판 값은 `--roulette-scale`).
  *
  * ```
  * pnpm --filter @tgslot/rtp-sim run tune candy-cluster-pop --spins 1000000 --shards 4 \
@@ -11,12 +12,12 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import { parseGameMath } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
-import { buildCascadeReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
-import type { CascadeReport } from './audit/index.js'
+import { buildCascadeReport, buildRouletteReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
+import type { CascadeReport, RouletteReport } from './audit/index.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
-import { MIN_STRIP_LENGTH, generateStrips, scalePaytable, scalePrizes, stripCounts } from './strips.js'
+import { MIN_STRIP_LENGTH, generateStrips, scalePaytable, scalePrizes, scaleRoulette, stripCounts } from './strips.js'
 import type { DensityTable } from './strips.js'
 
 export interface TuneOptions {
@@ -29,6 +30,7 @@ export interface TuneOptions {
   stripSeed: string
   payScale: number
   prizeScale: number
+  rouletteScale: number
   write: boolean
   json: boolean
 }
@@ -44,6 +46,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run tune <게임폴더|m
   --strip-seed <s>   스트립 생성 시드 (기본 1)
   --pay-scale <x>    기본 페이테이블 선형 배율 (0.05 눈금으로 반올림)
   --prize-scale <x>  주문 카드 상품 선형 배율 (0.05 눈금으로 반올림)
+  --roulette-scale <x> 무대 룰렛 판 값 선형 배율 (정수로 반올림)
   --write            바꾼 수학을 math.json에 쓴다
   --json             요약을 JSON으로 낸다
   -h, --help         도움말`
@@ -59,6 +62,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
     stripSeed: '1',
     payScale: 1,
     prizeScale: 1,
+    rouletteScale: 1,
     write: false,
     json: false,
   }
@@ -96,6 +100,9 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
       case '--prize-scale':
         options.prizeScale = Number(takeValue())
         break
+      case '--roulette-scale':
+        options.rouletteScale = Number(takeValue())
+        break
       case '--write':
         options.write = true
         break
@@ -118,7 +125,9 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
   if (!Number.isInteger(options.shards) || options.shards < 1 || options.shards > 8) {
     throw new Error('--shards는 1~8 정수여야 한다')
   }
-  if (!(options.payScale > 0) || !(options.prizeScale > 0)) throw new Error('배율은 양수여야 한다')
+  if (!(options.payScale > 0) || !(options.prizeScale > 0) || !(options.rouletteScale > 0)) {
+    throw new Error('배율은 양수여야 한다')
+  }
   return options
 }
 
@@ -128,7 +137,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
  */
 export function applyTuning(
   raw: Record<string, unknown>,
-  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number },
+  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number; rouletteScale?: number },
 ): { raw: Record<string, unknown>; math: GameMath } {
   const base = parseGameMath(raw)
   const next: Record<string, unknown> = { ...raw }
@@ -136,6 +145,9 @@ export function applyTuning(
   if (knobs.payScale !== undefined && knobs.payScale !== 1) next['paytable'] = scalePaytable(base, knobs.payScale)
   if (knobs.prizeScale !== undefined && knobs.prizeScale !== 1 && base.orderRound !== undefined) {
     next['orderRound'] = { ...(raw['orderRound'] as Record<string, unknown>), pool: scalePrizes(base, knobs.prizeScale) }
+  }
+  if (knobs.rouletteScale !== undefined && knobs.rouletteScale !== 1 && base.stageRoulette !== undefined) {
+    next['stageRoulette'] = scaleRoulette(raw, knobs.rouletteScale)
   }
   return { raw: next, math: parseGameMath(next) }
 }
@@ -175,12 +187,16 @@ export interface TuneSummary {
   hitRate: number
   maxWinMultiplier: number
   stripLengths: number[]
-  cascade: CascadeReport
+  cascade?: CascadeReport
+  roulette?: RouletteReport
 }
 
 export function summarize(math: GameMath, state: SampleState): TuneSummary {
   const cascade = state.cascade
-  if (cascade === null) throw new Error('연쇄 팩이 아니다. tune은 cascade 설정이 있는 팩 전용이다')
+  const roulette = state.roulette ?? null
+  if (cascade === null && roulette === null) {
+    throw new Error('연쇄·무대 룰렛 팩이 아니다. tune은 cascade 또는 stageRoulette 설정이 있는 팩 전용이다')
+  }
   const n = state.spins
   const rtp = state.multiplierSum / n
   const variance = n > 1 ? Math.max(0, (state.multiplierSquareSum - n * rtp * rtp) / (n - 1)) : 0
@@ -195,14 +211,31 @@ export function summarize(math: GameMath, state: SampleState): TuneSummary {
     hitRate: state.hits / n,
     maxWinMultiplier: state.maxWin / state.totalBet,
     stripLengths: math.strips.map((strip) => strip.length),
-    cascade: buildCascadeReport(math, cascade, state.totalBet),
+    ...(cascade === null ? {} : { cascade: buildCascadeReport(math, cascade, state.totalBet) }),
+    ...(roulette === null ? {} : { roulette: buildRouletteReport(math, roulette, state.totalBet, rtp) }),
   }
 }
 
 const p = (value: number, digits = 2): string => `${(value * 100).toFixed(digits)}%`
 
+function formatRouletteSummary(math: GameMath, summary: TuneSummary, r: RouletteReport): string {
+  const odds = r.entryRate > 0 ? Math.round(1 / r.entryRate) : 0
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
+    `RTP ${p(summary.rtp, 3)} (목표 ${p(math.rtpTarget)})  ways ${p(r.waysRtp, 3)} + 룰렛 ${p(r.rouletteRtp, 3)}`,
+    `적중률 ${p(summary.hitRate)}  최대 ${summary.maxWinMultiplier.toFixed(1)}x  winCapped ${r.winCappedSpins}`,
+    `룰렛 진입 1/${odds} (${r.triggers})  가운데 시작 ${p(r.middleStartRate, 1)}  평균 ${r.mean.toFixed(2)}x  σ ${r.sigma.toFixed(1)}x  15x 미만 ${p(r.smallRate, 1)}`,
+    `  고리 도달 ${r.ringReachRate.map((rate) => p(rate, 1)).join(' / ')}  대상 ${p(r.grandTriggerRate, 2)}  평균 회전 ${r.meanSteps.toFixed(2)} (최장 ${r.maxSteps})`,
+    `  응원봉 ${r.cheer.map((row) => `${row.cheer}:${p(row.rate, 0)}/${row.mean.toFixed(0)}x`).join(' ')}`,
+    `  구간 ${r.buckets.map((row) => `${row.range} ${p(row.rate, 1)}`).join('  ')}`,
+    `σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})`,
+  ].join('\n')
+}
+
 export function formatSummary(math: GameMath, summary: TuneSummary): string {
+  if (summary.roulette !== undefined) return formatRouletteSummary(math, summary, summary.roulette)
   const c = summary.cascade
+  if (c === undefined) throw new Error('요약에 피처 지표가 없다')
   const b = c.breakdown
   const lines = [
     `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
@@ -236,6 +269,7 @@ async function main(): Promise<void> {
     ...(densities === undefined ? {} : { densities, stripSeed: options.stripSeed }),
     payScale: options.payScale,
     prizeScale: options.prizeScale,
+    rouletteScale: options.rouletteScale,
   })
   const short = tuned.math.strips.filter((strip) => strip.length < MIN_STRIP_LENGTH).length
   if (short > 0) process.stderr.write(`[tune] 경고: 길이 ${MIN_STRIP_LENGTH} 미만 스트립 ${short}개\n`)

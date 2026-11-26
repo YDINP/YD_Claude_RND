@@ -3,6 +3,7 @@
  * 이 폴더의 모든 모듈은 브라우저에서도 돌아야 하므로 node:* 를 쓰지 않는다.
  */
 import type { GameMath, GridPosition, RtpBreakdown, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { RouletteReport } from './rouletteStats.js'
 
 /** 심볼 또는 그룹 하나가 RTP에 기여하는 몫. */
 export interface ContributionRow {
@@ -175,6 +176,8 @@ export interface DistributionReport {
   precision: RtpPrecision | null
   /** 연쇄 팩의 연쇄·클러스터·주문 카드 통계. 연쇄가 없거나 전수·해석 모드면 없다. */
   cascade?: CascadeReport
+  /** 무대 룰렛 팩의 진입·고리·칸·회전 통계. 룰렛이 없으면 없다. */
+  roulette?: RouletteReport
 }
 
 /** 연쇄 깊이 한 칸. 깊이 = 그 스핀에서 지급된 연쇄 단계 수. */
