@@ -109,6 +109,7 @@ export function validateGamePack(pack: GamePack, source: PackSource, options: Va
   checkIdentity(pack, add, stage)
   checkManifestMathAgreement(pack, add)
   checkCascadeStrips(pack, add)
+  checkRouletteScatterSpacing(pack, add)
 
   // 런타임이 실제로 받아가는 자산. 존재 검사와 추적 검사가 **같은 목록**을 본다.
   const runtime = runtimeAssets(pack, ungenerated)
@@ -219,6 +220,33 @@ function checkCascadeStrips(pack: GamePack, add: Add): void {
         PACK_FILES.math,
         `strips.${reel}`,
         `릴 ${reel} 스트립 길이(${strip.length})가 rows x (maxCascades + 1) = ${needed}보다 짧다. 연쇄 리필이 한 스핀 안에서 반복될 수 있다`
+      )
+    }
+  })
+}
+
+/**
+ * 무대 룰렛 팩은 «한 릴 창에 초대권(스캐터) 최대 1장»을 전제로 진입률을 잰다. 스트립 위 스캐터 간격이
+ * **원형**(끝↔처음 이음매 포함)으로 rows보다 작으면 한 창에 2장이 보여 그 전제가 깨진다. 경고만 한다.
+ */
+function checkRouletteScatterSpacing(pack: GamePack, add: Add): void {
+  const { math } = pack
+  const scatter = math.scatter?.symbol
+  if (math.stageRoulette === undefined || scatter === undefined) return
+  math.strips.forEach((strip, reel) => {
+    const at = strip.flatMap((symbol, index) => (symbol === scatter ? [index] : []))
+    if (at.length < 2) return
+    let gap = strip.length
+    at.forEach((index, k) => {
+      const next = at[(k + 1) % at.length] ?? index
+      gap = Math.min(gap, (next - index + strip.length) % strip.length || strip.length)
+    })
+    if (gap < math.rows) {
+      add(
+        'warn',
+        PACK_FILES.math,
+        `strips.${reel}`,
+        `릴 ${reel}의 ${scatter} 원형 간격 ${gap}이 rows(${math.rows})보다 작다. 한 창에 2장이 보여 룰렛 진입 계산이 어긋난다`
       )
     }
   })

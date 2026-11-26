@@ -65,6 +65,15 @@ export {
 } from './boardSchema.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
+  countCheer,
+  litSegments,
+  maxRouletteSteps,
+  playStageRoulette,
+  resolveRouletteSpin,
+  startRingFor,
+  type RoulettePlay,
+} from './stageRoulette.js'
+export {
   computeAnalyticRtp,
   expectedFreeSpinsPerTrigger,
   expectedLineMultiplier,

@@ -1,0 +1,232 @@
+{
+  "symbols": {
+    "lightstick": "symbols/lightstick.webp",
+    "idol_pink": "symbols/idol_pink.webp",
+    "idol_blue": "symbols/idol_blue.webp",
+    "idol_gold": "symbols/idol_gold.webp",
+    "wild": "symbols/wild.webp",
+    "bonus": "symbols/bonus.webp",
+    "album": "symbols/album.webp",
+    "heart_balloon": "symbols/heart_balloon.webp",
+    "star_badge": "symbols/star_badge.webp",
+    "note": "symbols/note.webp",
+    "ribbon": "symbols/ribbon.webp"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 550
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 16,
+          "durationMs": 850
+        },
+        {
+          "type": "glow",
+          "color": "#ffd166",
+          "durationMs": 850
+        }
+      ]
+    },
+    "bonus": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#ffd166",
+          "durationMs": 800
+        },
+        {
+          "type": "spin",
+          "durationMs": 400,
+          "repeat": 1
+        }
+      ]
+    },
+    "lightstick": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.14,
+          "durationMs": 600
+        },
+        {
+          "type": "glow",
+          "color": "#ff5fa2",
+          "durationMs": 600
+        }
+      ]
+    },
+    "idol_pink": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#ff5fa2",
+          "durationMs": 700
+        }
+      ]
+    },
+    "idol_blue": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#4aa8ff",
+          "durationMs": 700
+        }
+      ]
+    },
+    "idol_gold": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#ffd166",
+          "durationMs": 700
+        }
+      ]
+    },
+    "heart_balloon": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.06,
+          "durationMs": 750
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 750
+        }
+      ]
+    }
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#ffd166",
+    "reelBg": "#14101f",
+    "winLine": [
+      "#ff5fa2",
+      "#4aa8ff",
+      "#ffd166",
+      "#d9dde8",
+      "#ff9ccb"
+    ],
+    "text": "#f7eefc"
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.023125996810207338,
+      "y": 0.10047846889952153,
+      "w": 0.9537480063795853,
+      "h": 0.777511961722488
+    }
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "bonus": {
+      "win": "sheets/bonus-win.json"
+    }
+  },
+  "reelBackdrop": {
+    "color": "#14101f",
+    "alpha": 0.7,
+    "radius": 0.1
+  },
+  "celebration": {
+    "palette": {
+      "core": "#fff4fb",
+      "edge": "#ff5fa2",
+      "glow": "#4aa8ff80"
+    },
+    "particles": {
+      "shapes": [
+        "star",
+        "confetti",
+        "spark",
+        "badge"
+      ],
+      "symbols": [
+        "note",
+        "star_badge"
+      ],
+      "colors": [
+        "#ff5fa2",
+        "#4aa8ff",
+        "#ffd166",
+        "#d9dde8",
+        "#ffffff"
+      ],
+      "motion": "flutter",
+      "size": 1.2
+    },
+    "rays": {
+      "style": "halo"
+    },
+    "waves": {
+      "style": "ring"
+    },
+    "title": {
+      "font": "rounded",
+      "weight": 850,
+      "stroke": 2,
+      "strokeColor": "#3a1550cc",
+      "tracking": 0.02
+    },
+    "tiers": {
+      "surge": {
+        "density": 1.2
+      },
+      "storm": {
+        "glow": "#ff5fa280",
+        "edge": "#ff5fa2"
+      },
+      "cataclysm": {
+        "core": "#ffffff",
+        "edge": "#ffd166",
+        "glow": "#ff5fa28a",
+        "density": 1.4
+      }
+    }
+  },
+  "sound": {
+    "preset": "idol"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2000,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
+  }
+}

@@ -59,6 +59,15 @@ export type { CascadeAccumulatorData } from './cascadeStats.js'
 export { CoinRespinAccumulator, buildCoinRespinReport, coinRespinGates } from './coinRespinStats.js'
 export type { CoinRespinAccumulatorData } from './coinRespinStats.js'
 export {
+  ROULETTE_BUCKETS,
+  ROULETTE_GATES,
+  RouletteAccumulator,
+  buildRouletteReport,
+  rouletteGates,
+  rouletteSections,
+} from './rouletteStats.js'
+export type { RouletteAccumulatorData, RouletteReport, RouletteSegmentRow } from './rouletteStats.js'
+export {
   finishAuditParts,
   mergeConvergence,
   mergeMonteCarlo,

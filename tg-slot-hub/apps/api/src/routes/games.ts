@@ -15,7 +15,7 @@ import {
   toSharedFeatures,
   toSharedWinLine,
 } from '../games/engineSpin.js'
-import { DebugNoMatchError, findDebugSeed } from '../games/debugSpin.js'
+import { DebugNoMatchError, findDebugSeed, isRoulettePreset } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -125,6 +125,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     }
     if (debug?.preset.startsWith('board') && !pack.math.boardBonus) {
       return c.json({ error: 'This game has no board bonus, so no board outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
+    if (debug !== undefined && isRoulettePreset(debug.preset) && !pack.math.stageRoulette) {
+      return c.json({ error: 'This game has no stage roulette, so no roulette outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
 
     // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,

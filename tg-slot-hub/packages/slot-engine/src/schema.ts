@@ -205,6 +205,46 @@ export const OrderRoundConfigSchema = z.object({
 })
 export type OrderRoundConfig = z.infer<typeof OrderRoundConfigSchema>
 
+/** 무대 룰렛 칸 하나. 값은 전부 **총 베팅액 배수**(양의 정수)라 지급 코인이 항상 정수다. */
+export const RouletteSegmentSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('coin'), value: z.number().int().positive() }),
+  z.object({ kind: z.literal('stepUp') }),
+  z.object({ kind: z.literal('encore'), value: z.number().int().positive() }),
+  z.object({ kind: z.literal('grand'), value: z.number().int().positive() }),
+])
+export type RouletteSegment = z.infer<typeof RouletteSegmentSchema>
+
+/** 무대 룰렛 고리 하나. 칸은 모두 같은 크기이고 확률도 칸 수 비율 그대로다. */
+export const RouletteRingSchema = z.object({
+  id: z.string().min(1),
+  segments: z.array(RouletteSegmentSchema).min(6).max(12),
+  /** 응원봉 불이 켜지는 순서 (코인 칸 인덱스). 응원봉 N개면 앞 N칸. */
+  litOrder: z.array(z.number().int().min(0)),
+})
+export type RouletteRing = z.infer<typeof RouletteRingSchema>
+
+/**
+ * 무대 룰렛(여러 겹 보너스 휠). 유료 스핀 화면의 스캐터가 `trigger`장 이상이면 **그 스핀 안에서** 끝까지 정산한다.
+ * 스핀 간 상태가 없다(`nextState`·`carry` 없음). 회전마다 `nextInt(고리 칸 수)` 1회를 쓴다.
+ */
+export const StageRouletteConfigSchema = z.object({
+  trigger: z.number().int().min(1),
+  /** 이 장수 이상이면 두 번째 고리에서 시작한다. 없으면 항상 바깥 고리. */
+  startInnerAt: z.number().int().min(1).optional(),
+  /** 돌리기(곡) 수. 코인·대상·상한 넘은 앙코르가 하나씩 쓴다. */
+  songs: z.number().int().min(1),
+  /** 돌리기를 늘려 주는 앙코르 횟수 상한. */
+  maxEncores: z.number().int().min(0),
+  /** 응원봉 불빛. 트리거 스핀 화면의 `symbol` 칸 수만큼 고리마다 `litOrder` 앞 칸에 불이 켜진다. */
+  cheer: z.object({
+    symbol: z.string().min(1),
+    maxLit: z.number().int().min(0),
+    litMultiplier: z.number().int().min(1).max(3),
+  }),
+  rings: z.array(RouletteRingSchema).min(2).max(3),
+})
+export type StageRouletteConfig = z.infer<typeof StageRouletteConfigSchema>
+
 const BaseGameMathSchema = z.object({
   id: z.string().min(1),
   reels: z.number().int().min(1),
@@ -225,6 +265,7 @@ const BaseGameMathSchema = z.object({
   coinRespin: CoinRespinSchema.optional(),
   /** 말판 보너스. 스캐터로 열리고 트리거 스핀 하나에서 끝까지 정한다. */
   boardBonus: BoardBonusConfigSchema.optional(),
+  stageRoulette: StageRouletteConfigSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -653,6 +694,62 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
 
   checkCoinRespin(math, issue)
   checkBoardConfig(math, issue)
+  const roulette = math.stageRoulette
+  if (roulette !== undefined) {
+    const at = (...path: (string | number)[]): (string | number)[] => ['stageRoulette', ...path]
+    if (math.scatter === undefined) issue('무대 룰렛은 스캐터로 열린다. scatter 설정이 필요하다', at())
+    if (math.scatter?.freeSpins !== undefined) issue('stageRoulette와 scatter.freeSpins는 함께 둘 수 없다', at())
+    if (math.orderRound !== undefined) issue('stageRoulette와 orderRound는 함께 둘 수 없다', at())
+    if (math.cascade !== undefined) issue('stageRoulette와 cascade는 함께 둘 수 없다', at())
+    if (math.round === undefined) issue('무대 룰렛 팩은 round.maxWinCap이 필요하다', ['round'])
+    if (roulette.trigger > math.reels) issue(`트리거 ${roulette.trigger}장이 reels(${math.reels})보다 많다`, at('trigger'))
+    if (roulette.startInnerAt !== undefined && roulette.startInnerAt <= roulette.trigger) {
+      issue(`startInnerAt(${roulette.startInnerAt})은 trigger(${roulette.trigger})보다 커야 한다`, at('startInnerAt'))
+    }
+    // 회전 수 상한 = songs + (고리 수 - 1) + maxEncores. 단조 감소 척도의 시작값이다.
+    const longest = roulette.songs + (roulette.rings.length - 1) + roulette.maxEncores
+    if (longest > 12) issue(`최장 회전 ${longest}번이 상한 12를 넘는다`, at('songs'))
+
+    const cheer = declared.get(roulette.cheer.symbol)
+    if (cheer === undefined) issue(`선언되지 않은 심볼: ${roulette.cheer.symbol}`, at('cheer', 'symbol'))
+    else if (cheer.wild === true || cheer.scatter === true) {
+      issue(`응원봉 심볼은 와일드·스캐터가 아니어야 한다: ${roulette.cheer.symbol}`, at('cheer', 'symbol'))
+    } else if (!onStrip.has(roulette.cheer.symbol)) {
+      issue(`어느 스트립에도 없는 응원봉 심볼: ${roulette.cheer.symbol}`, at('cheer', 'symbol'))
+    }
+
+    const last = roulette.rings.length - 1
+    let maxLitCoin = 0
+    for (const ring of roulette.rings) {
+      for (const segment of ring.segments) {
+        if (segment.kind === 'coin') maxLitCoin = Math.max(maxLitCoin, segment.value * roulette.cheer.litMultiplier)
+      }
+    }
+    roulette.rings.forEach((ring, index) => {
+      const kinds = ring.segments.map((segment) => segment.kind)
+      const count = (kind: string): number => kinds.filter((k) => k === kind).length
+      if (count('coin') < 1) issue(`고리 ${ring.id}에 코인 칸이 없다`, at('rings', index, 'segments'))
+      if (index === last && count('stepUp') > 0) issue('마지막 고리에는 «한 단계 위로» 칸을 둘 수 없다', at('rings', index, 'segments'))
+      if (index < last && count('stepUp') < 1) issue(`고리 ${ring.id}에 «한 단계 위로» 칸이 없다`, at('rings', index, 'segments'))
+      if (index < last && count('grand') > 0) issue('대상 칸은 마지막 고리에만 둔다', at('rings', index, 'segments'))
+      if (index === last) {
+        if (count('grand') !== 1) issue(`마지막 고리의 대상 칸은 정확히 1개여야 한다 (${count('grand')}개)`, at('rings', index, 'segments'))
+        for (const segment of ring.segments) {
+          if (segment.kind === 'grand' && segment.value <= maxLitCoin) {
+            issue(`대상(${segment.value})은 불 켜진 코인 최댓값(${maxLitCoin})보다 커야 한다`, at('rings', index, 'segments'))
+          }
+        }
+      }
+      const seen = new Set<number>()
+      ring.litOrder.forEach((segmentIndex, order) => {
+        if (seen.has(segmentIndex)) issue(`litOrder 중복: ${segmentIndex}`, at('rings', index, 'litOrder', order))
+        seen.add(segmentIndex)
+        if (ring.segments[segmentIndex]?.kind !== 'coin') {
+          issue(`litOrder ${segmentIndex}는 코인 칸이 아니다`, at('rings', index, 'litOrder', order))
+        }
+      })
+    })
+  }
 })
 
 export type GameMath = z.infer<typeof GameMathSchema>

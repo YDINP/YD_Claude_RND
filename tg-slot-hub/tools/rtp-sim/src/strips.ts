@@ -2,7 +2,7 @@
  * 튜닝 도구. 밀도표로 릴 스트립을 만들고, 페이테이블·상품을 선형 배율로 조정한다.
  * 결과는 정해진 시드에서 항상 같다. `tune-cli.ts`가 쓴다.
  */
-import { createSeededRng } from '@tgslot/slot-engine'
+import { createSeededRng, getBetUnit } from '@tgslot/slot-engine'
 import type { GameMath, Rng, SymbolId } from '@tgslot/slot-engine'
 
 /** 스트립 하나의 최소 길이(계획 §3 M1). */
@@ -137,12 +137,22 @@ export function snapToGrid(value: number, grid = PAY_GRID): number {
   return Number((steps * grid).toFixed(10))
 }
 
+/**
+ * 페이테이블 눈금. 가장 작은 배당 단위에서 1코인이 되는 값이다(클러스터 최소 베팅 20 → 0.05, 웨이당 1코인 ways → 1).
+ */
+export function payGridFor(math: GameMath): number {
+  const minUnit = Math.min(...math.betLevels.map((level) => getBetUnit(math, level)))
+  return minUnit > 0 ? Math.min(1, 1 / minUnit) : PAY_GRID
+}
+
 /** 기본 페이테이블에 선형 배율을 곱하고 눈금에 맞춘다. 스캐터 지급표는 건드리지 않는다. */
 export function scalePaytable(math: GameMath, scale: number): GameMath['paytable'] {
   const next: GameMath['paytable'] = {}
+  // 무대 룰렛 팩만 베팅 단위 눈금을 쓴다 — 기존 팩은 예전 0.05 눈금 그대로라 다시 튜닝해도 결과가 같다.
+  const grid = math.stageRoulette !== undefined ? payGridFor(math) : PAY_GRID
   for (const [symbol, rule] of Object.entries(math.paytable)) {
     const scaled: Record<string, number> = {}
-    for (const [count, value] of Object.entries(rule as Record<string, number>)) scaled[count] = snapToGrid(value * scale)
+    for (const [count, value] of Object.entries(rule as Record<string, number>)) scaled[count] = snapToGrid(value * scale, grid)
     next[symbol] = scaled as GameMath['paytable'][string]
   }
   return next
@@ -152,6 +162,24 @@ export function scalePaytable(math: GameMath, scale: number): GameMath['paytable
 export function scalePrizes(math: GameMath, scale: number): NonNullable<GameMath['orderRound']>['pool'] {
   const pool = math.orderRound?.pool ?? []
   return pool.map((entry) => ({ ...entry, prize: snapToGrid(entry.prize * scale) }))
+}
+
+/**
+ * 무대 룰렛 판 값(코인·앙코르·대상)에 선형 배율을 곱하고 양의 정수로 반올림한다.
+ * 기대값은 판 값에 정확히 선형이라 룰렛 몫도 배율만큼 움직인다(반올림 오차는 칸 하나로 맞춘다).
+ */
+export function scaleRoulette(raw: Record<string, unknown>, scale: number): Record<string, unknown> {
+  const roulette = raw['stageRoulette'] as { rings: { segments: { kind: string; value?: number }[] }[] } | undefined
+  if (roulette === undefined) throw new RangeError('stageRoulette 설정이 없다')
+  return {
+    ...roulette,
+    rings: roulette.rings.map((ring) => ({
+      ...ring,
+      segments: ring.segments.map((segment) =>
+        segment.value === undefined ? segment : { ...segment, value: Math.max(1, Math.round(segment.value * scale)) },
+      ),
+    })),
+  }
 }
 
 /** 스트립별 심볼 개수. 리포트·검증용. */

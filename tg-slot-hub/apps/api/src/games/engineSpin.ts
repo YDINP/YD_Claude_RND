@@ -130,6 +130,31 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       hitHardCap: feature.hitHardCap,
     }
   }
+  if (feature.type === 'stageRoulette') {
+    // 무대 룰렛은 트리거 스핀 하나에 전체 결과가 실린다. 키 순서를 고정해 jsonb 왕복 뒤에도 응답 바이트가 같다.
+    const pos = (positions: readonly (readonly [number, number])[]): [number, number][] =>
+      positions.map(([reel, row]) => [reel, row] as [number, number])
+    return {
+      type: 'stageRoulette',
+      bonusCount: feature.bonusCount,
+      positions: pos(feature.positions),
+      cheer: feature.cheer,
+      cheerPositions: pos(feature.cheerPositions),
+      lit: feature.lit.map((ring) => [...ring]),
+      startRing: feature.startRing,
+      steps: feature.steps.map((step) => ({
+        ring: step.ring,
+        segment: step.segment,
+        kind: step.kind,
+        lit: step.lit,
+        win: step.win,
+        encoreCounted: step.encoreCounted,
+        songsLeft: step.songsLeft,
+      })),
+      total: feature.total,
+      endedBy: feature.endedBy,
+    }
+  }
   if (feature.type === 'scatterWin') {
     return {
       type: 'scatterWin',

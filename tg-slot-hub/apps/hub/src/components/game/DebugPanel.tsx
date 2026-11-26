@@ -39,6 +39,11 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   boardTraps: 'boardDebugTraps',
   boardFork: 'boardDebugFork',
   boardBig: 'boardDebugBig',
+  roulette: 'stageRouletteDebugEntry',
+  rouletteInner: 'stageRouletteDebugInner',
+  roulette4: 'stageRouletteDebugStart4',
+  rouletteGrand: 'stageRouletteDebugGrand',
+  rouletteBig: 'stageRouletteDebugBig',
 }
 
 interface DebugPanelProps {

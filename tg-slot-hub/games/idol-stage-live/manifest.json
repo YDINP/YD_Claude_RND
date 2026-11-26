@@ -1,0 +1,34 @@
+{
+  "id": "idol-stage-live",
+  "name": {
+    "en": "Idol Stage Live",
+    "ko": "아이돌 스테이지 라이브"
+  },
+  "version": "0.0.0",
+  "thumbnail": "/games/idol-stage-live/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 4,
+  "lines": 1024,
+  "payModel": "ways",
+  "betLevels": [
+    50,
+    100,
+    250,
+    500,
+    1000,
+    2500
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "auditSpins": 40000000,
+  "volatility": "high",
+  "features": [
+    "ways",
+    "stageRoulette",
+    "scatter",
+    "wild"
+  ],
+  "sort": 11
+}

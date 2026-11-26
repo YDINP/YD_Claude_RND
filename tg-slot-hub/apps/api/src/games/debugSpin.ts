@@ -20,6 +20,19 @@ const BIG_WIN_MULTIPLIER = 10
 
 /** 말판 지급이 총 베팅의 몇 배부터 `boardBig`으로 치는지. */
 export const BOARD_BIG_PAYOUT = 100
+/** 룰렛 합계가 총 베팅의 몇 배부터 `rouletteBig`으로 치는지. */
+const BIG_ROULETTE_MULTIPLIER = 100
+
+/** 이 프리셋은 무대 룰렛이 있는 팩에서만 만족될 수 있다. */
+export function isRoulettePreset(preset: SpinDebugPreset): boolean {
+  return (
+    preset === 'roulette' ||
+    preset === 'rouletteInner' ||
+    preset === 'roulette4' ||
+    preset === 'rouletteGrand' ||
+    preset === 'rouletteBig'
+  )
+}
 
 /**
  * `maxTries` 안에서 `preset` 조건을 만족하는 시드를 찾지 못했을 때.
@@ -91,6 +104,19 @@ export function matchesDebugPreset(
       return boardOf(result)?.throws.some((row) => math?.boardBonus?.forks[row.at] !== undefined) ?? false
     case 'boardBig':
       return (boardOf(result)?.payout ?? 0) >= BOARD_BIG_PAYOUT
+    case 'roulette':
+    case 'rouletteInner':
+    case 'roulette4':
+    case 'rouletteGrand':
+    case 'rouletteBig': {
+      const roulette = result.features.find((feature) => feature.type === 'stageRoulette')
+      if (isFreeSpin || roulette?.type !== 'stageRoulette') return false
+      if (preset === 'rouletteInner') return roulette.steps.some((step) => step.ring >= 2)
+      if (preset === 'roulette4') return roulette.startRing === 1
+      if (preset === 'rouletteGrand') return roulette.steps.some((step) => step.kind === 'grand')
+      if (preset === 'rouletteBig') return roulette.total >= BIG_ROULETTE_MULTIPLIER * totalBet
+      return true
+    }
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)

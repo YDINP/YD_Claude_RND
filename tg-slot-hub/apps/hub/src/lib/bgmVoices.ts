@@ -379,7 +379,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok'>, Kit> = {
+const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -936,7 +936,164 @@ const HANBOK_KIT: Kit = {
   },
 }
 
-const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT }
+/** 슈퍼소 스탭: 톱니 셋(−14·0·+14센트)이 한꺼번에 울리고 필터가 빠르게 닫힌다. 오프비트 코드 찌르기용. */
+function superStab(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.5
+  lp.frequency.setValueAtTime(Math.min(7000, f * 8), t)
+  lp.frequency.setTargetAtTime(f * 1.8, t + 0.004, 0.07)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.004)
+  g.gain.setTargetAtTime(0, t + 0.004, 0.09)
+  const end = t + 0.55
+  lp.connect(g).connect(out)
+  for (const detune of [-14, 0, 14]) {
+    const o = k.c.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = f
+    o.detune.value = detune
+    o.connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 펄스 아르페지오: 사각파 둘이 살짝 어긋나고 필터가 닫히는 짧은 음. */
+function pulseArp(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 2
+  lp.frequency.setValueAtTime(Math.min(6500, f * 7), t)
+  lp.frequency.setTargetAtTime(f * 1.6, t + 0.003, 0.045)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.003)
+  g.gain.setTargetAtTime(0, t + 0.003, 0.06)
+  const end = t + 0.4
+  lp.connect(g).connect(out)
+  for (const detune of [-10, 10]) {
+    const o = k.c.createOscillator()
+    o.type = 'square'
+    o.frequency.value = f
+    o.detune.value = detune
+    o.connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 신스 리드: 톱니 + 사각, 비브라토는 음이 자리 잡은 뒤에 들어온다. 길이는 악보의 음 길이를 따른다. */
+function synthLead(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const hold = t + Math.max(0.12, dur * 0.9)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 0.9
+  lp.frequency.setValueAtTime(f * 5, t)
+  lp.frequency.setTargetAtTime(f * 3, t + 0.02, 0.2)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.01)
+  g.gain.setValueAtTime(vel * 0.8, hold)
+  g.gain.setTargetAtTime(0, hold, 0.07)
+  const end = hold + 0.45
+  lp.connect(g).connect(out)
+  const lfo = k.c.createOscillator()
+  lfo.frequency.value = 5.6
+  const depth = k.c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.linearRampToValueAtTime(0, t + 0.2)
+  depth.gain.linearRampToValueAtTime(f * 0.006, t + 0.45)
+  lfo.connect(depth)
+  lfo.start(t)
+  lfo.stop(end)
+  for (const [type, level] of [['sawtooth', 0.7], ['square', 0.4]] as const) {
+    const o = k.c.createOscillator()
+    o.type = type
+    o.frequency.value = f
+    depth.connect(o.frequency)
+    const og = k.c.createGain()
+    og.gain.value = level
+    o.connect(og).connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 하우스 베이스: 톱니 + 서브 사인, 필터는 닫아 두고 짧게 끊어 킥 사이를 채운다. */
+function houseBass(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.8
+  lp.frequency.setValueAtTime(Math.min(1800, f * 9), t)
+  lp.frequency.setTargetAtTime(f * 2.4, t + 0.004, 0.08)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.005)
+  g.gain.setTargetAtTime(0, t + 0.005, 0.1)
+  const end = t + 0.6
+  lp.connect(g).connect(out)
+  const saw = k.c.createOscillator()
+  saw.type = 'sawtooth'
+  saw.frequency.value = f
+  saw.connect(lp)
+  const sub = k.c.createOscillator()
+  sub.type = 'sine'
+  sub.frequency.value = f
+  const sg = k.c.createGain()
+  sg.gain.value = 0.6
+  sub.connect(sg).connect(g)
+  for (const o of [saw, sub]) {
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 손뼉: 대역 잡음 세 번의 짧은 겹과 꼬리. 핑거 스냅보다 넓고 거칠다. */
+function handClap(k: Tools, t: number, vel: number, out: AudioNode): void {
+  const burst = { type: 'bandpass' as const, q: 1.1, attack: 0.001, tau: 0.012 }
+  hiss(k, t, vel, out, { ...burst, freq: 1700 })
+  hiss(k, t + 0.009, vel * 0.9, out, { ...burst, freq: 2100 })
+  hiss(k, t + 0.018, vel * 0.75, out, { ...burst, freq: 1900 })
+  hiss(k, t + 0.027, vel * 0.5, out, { type: 'bandpass', freq: 1500, q: 0.8, attack: 0.002, tau: 0.05 })
+}
+
+/** 아이돌: 슈퍼소 스탭·펄스 아르페지오·신스 리드·하우스 베이스·4박 킥·손뼉. */
+const IDOL_KIT: Kit = {
+  gain: 0.96,
+  mix: {
+    pad: [0.05, 0.2],
+    keys: [0.16, 0.12],
+    arp: [0.1, 0.2],
+    lead: [0.14, 0.2],
+    bass: [0.3, 0.02],
+    kick: [0.3, 0.02],
+    snare: [0.3, 0.1],
+    hat: [0.05, 0.04],
+  },
+  padCutoff: [1600, 3000],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sawtooth', 'sawtooth'], detune: 12, attack: 0.35, release: 0.6 }),
+    keys: (k, t, m, v, _d, out) => superStab(k, t, m, v, out),
+    arp: (k, t, m, v, _d, out) => pulseArp(k, t, m, v, out),
+    lead: (k, t, m, v, d, out) => synthLead(k, t, m, v, d, out),
+    bass: (k, t, m, v, _d, out) => houseBass(k, t, m, v, out),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 150, 48, v, out, 0.075),
+    snare: (k, t, _m, v, _d, out) => handClap(k, t, v, out),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...RIDE, freq: 8000, tau: 0.018 }),
+  },
+}
+
+const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 

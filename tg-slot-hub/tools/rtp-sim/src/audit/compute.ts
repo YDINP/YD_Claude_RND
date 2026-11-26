@@ -3,6 +3,7 @@ import type { GameMath } from '@tgslot/slot-engine'
 import { analyzeDistribution, buildFeatureReport, canEnumerate, resolveMethod } from './distribution.js'
 import { runMonteCarlo } from './mc.js'
 import { coinRespinGates } from './coinRespinStats.js'
+import { rouletteGates } from './rouletteStats.js'
 import { Z95 } from './stats.js'
 import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
@@ -361,6 +362,7 @@ export function buildGates(input: GateInput): GateRow[] {
   if (distribution.cascade !== undefined) gates.push(...cascadeGates(distribution.cascade))
   if (distribution.coinRespin !== undefined) gates.push(...coinRespinGates(distribution.coinRespin))
   if (distribution.board !== undefined) gates.push(...boardGates(distribution.board))
+  if (distribution.roulette !== undefined) gates.push(...rouletteGates(distribution.roulette))
 
   if (jackpot !== null) {
     gates.push({

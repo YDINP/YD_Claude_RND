@@ -1,0 +1,1112 @@
+/*
+ * 무대 룰렛 오버레이. 허브 DOM이 릴 캔버스 위(.hub-game-screen__stage 안)에 올라간다.
+ * 사용자 취향: 사선 광택 없음(그라디언트는 세로·방사형만) · 선 그리기 없음 · 칸 라벨 최소 13px.
+ *
+ * 단계(data-stage):
+ *   pre        응원봉 칩만 보인다(릴 위 강조가 도는 동안).
+ *   curtain    진입 클립이 덮는 동안 전부 숨는다.
+ *   show-wait  보이기 직전(판은 아직 낮고 투명).
+ *   show       판·정보·버튼이 보인다(data-visible=true).
+ *   exit       닫는 중(퇴장 클립이 덮는다).
+ */
+.hub-roulette {
+  --rl-pink: #ff5fa2;
+  --rl-blue: #4aa8ff;
+  --rl-gold: #ffd166;
+  --rl-night: #14101f;
+  --rl-silver: #d9dde8;
+  --rl-plum: #2b2150;
+  --rl-plum-2: #35285f;
+
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--hub-sans);
+  /* 릴 자리가 비는 룰렛 모드에서는 캔버스 배경이 비친다. 글자가 읽히도록 가장자리만 살짝 눌러 준다. */
+  background: radial-gradient(ellipse at 50% 46%, rgba(20, 16, 31, 0) 38%, rgba(20, 16, 31, 0.5) 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.hub-roulette[data-stage='pre'],
+.hub-roulette[data-stage='curtain'] {
+  pointer-events: none;
+  background: none;
+}
+
+.hub-roulette[data-stage='curtain'] {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.hub-roulette[data-stage='exit'] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+}
+
+/* ---- 정보 줄(고리 이름 · 남은 돌리기 · 응원봉 칩) ---- */
+.hub-roulette__info {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 12px 2px;
+  flex-shrink: 0;
+}
+
+.hub-roulette__title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(20, 16, 31, 0.9);
+  white-space: nowrap;
+}
+
+.hub-roulette__title-ring {
+  color: var(--rl-gold);
+}
+
+.hub-roulette__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 24px;
+  /* 배경 조명이 밝아도 «남은 돌리기»가 읽히게 어두운 받침을 깐다. */
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(20, 16, 31, 0.72);
+}
+
+.hub-roulette__songs {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hub-roulette__song {
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.22);
+  transition: color 220ms ease-out, transform 220ms ease-out;
+}
+
+.hub-roulette__song[data-on='true'] {
+  color: var(--rl-pink);
+  text-shadow: 0 0 8px rgba(255, 95, 162, 0.7);
+}
+
+.hub-roulette__songs-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rl-silver);
+}
+
+.hub-roulette__encores {
+  display: inline-flex;
+  gap: 2px;
+  font-size: 16px;
+  color: var(--rl-gold);
+}
+
+.hub-roulette__encore-tag {
+  margin-right: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--rl-gold);
+}
+
+.hub-roulette__encore[data-on='false'] {
+  opacity: 0.55;
+}
+
+.hub-roulette__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 12px 3px 8px;
+  border-radius: 999px;
+  border: 1.5px solid var(--rl-pink);
+  background: rgba(255, 95, 162, 0.2);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.hub-roulette__chip[data-on='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.hub-roulette__chip[data-on='true'][data-bump='1'] {
+  animation: hub-roulette-chip-bump 240ms ease-out;
+}
+
+.hub-roulette__chip[data-on='true'][data-bump='0'] {
+  animation: hub-roulette-chip-bump-b 240ms ease-out;
+}
+
+@keyframes hub-roulette-chip-bump {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes hub-roulette-chip-bump-b {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hub-roulette__chip-icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.hub-roulette__chip-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff 0, var(--rl-pink) 55%, #b2285f 100%);
+  box-shadow: 0 0 8px rgba(255, 95, 162, 0.8);
+}
+
+/* pre 단계: 칩만 남기고 나머지 정보는 숨긴다. */
+.hub-roulette[data-stage='pre'] .hub-roulette__title,
+.hub-roulette[data-stage='pre'] .hub-roulette__dots,
+.hub-roulette[data-stage='curtain'] .hub-roulette__title,
+.hub-roulette[data-stage='curtain'] .hub-roulette__dots {
+  opacity: 0;
+}
+
+/* ---- 판 영역 ---- */
+.hub-roulette__area {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.hub-roulette__wheel {
+  position: relative;
+  flex-shrink: 0;
+  transform-origin: 50% 50%;
+  transition: transform 700ms cubic-bezier(0.3, 0.1, 0.2, 1);
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
+}
+
+/* 판·정보·버튼이 아래에서 떠오른다(E5). 기본 모드에서는 보이지 않는다. */
+.hub-roulette[data-visible='false'] .hub-roulette__area,
+.hub-roulette[data-visible='false'] .hub-roulette__bar {
+  opacity: 0;
+  transform: translateY(24px) scale(0.88);
+}
+
+.hub-roulette[data-visible='false'] .hub-roulette__title,
+.hub-roulette[data-visible='false'] .hub-roulette__dots {
+  opacity: 0;
+}
+
+.hub-roulette[data-visible='true'] .hub-roulette__area,
+.hub-roulette[data-visible='true'] .hub-roulette__bar,
+.hub-roulette[data-visible='true'] .hub-roulette__title,
+.hub-roulette[data-visible='true'] .hub-roulette__dots {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--rise-ms, 500ms) ease-out, transform var(--rise-ms, 500ms) cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.hub-roulette__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hub-roulette__rim {
+  fill: var(--rl-night);
+  stroke: var(--rl-gold);
+  stroke-width: 1.6;
+}
+
+/* 고리: 지금 고리만 원색, 나머지는 어둡게 눌린다. */
+.hub-roulette__ring {
+  transition: opacity 500ms ease-out, filter 500ms ease-out;
+}
+
+.hub-roulette__ring[data-active='false'] {
+  opacity: 0.5;
+  filter: saturate(0.6) brightness(0.8);
+}
+
+.hub-roulette__seg path {
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 0.6;
+  transition: fill 260ms ease-out;
+}
+
+.hub-roulette__seg--coin path {
+  fill: var(--rl-plum);
+}
+
+.hub-roulette__seg--coin:nth-child(even) path {
+  fill: var(--rl-plum-2);
+}
+
+.hub-roulette__seg--coin.hub-roulette__seg--lit path,
+.hub-roulette__seg--coin.hub-roulette__seg--lit:nth-child(even) path {
+  fill: var(--rl-pink);
+  stroke: #fff;
+  stroke-width: 0.9;
+}
+
+.hub-roulette__seg--stepUp path {
+  fill: #2f7fd6;
+}
+
+.hub-roulette__seg--encore path {
+  fill: #e0a93c;
+}
+
+.hub-roulette__seg--encore.hub-roulette__seg--spent path {
+  fill: #7a6130;
+}
+
+.hub-roulette__seg--grand path {
+  fill: #ffe08a;
+  stroke: #fff;
+  stroke-width: 0.9;
+}
+
+.hub-roulette__label text {
+  font-family: var(--hub-sans);
+  font-weight: 800;
+  fill: #fff;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: rgba(10, 6, 24, 0.55);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+}
+
+.hub-roulette__seg--lit .hub-roulette__label text,
+.hub-roulette__seg--grand .hub-roulette__label text,
+.hub-roulette__seg--encore .hub-roulette__label text {
+  fill: #2a0f24;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.5;
+}
+
+.hub-roulette__seg--lit .hub-roulette__label text {
+  fill: #3a0a24;
+}
+
+.hub-roulette__seg--grand .hub-roulette__label text {
+  fill: #5a1030;
+}
+
+.hub-roulette__label--spent text {
+  opacity: 0.55;
+}
+
+.hub-roulette__label .hub-roulette__encore-word {
+  font-weight: 700;
+}
+
+.hub-roulette__arrow {
+  fill: #fff;
+  stroke: rgba(10, 6, 24, 0.45);
+  stroke-width: 0.6;
+}
+
+.hub-roulette__spark {
+  fill: #fff;
+}
+
+.hub-roulette__bulb {
+  fill: #ffe9a8;
+  opacity: 0.4;
+}
+
+.hub-roulette__ring[data-active='true'] .hub-roulette__bulb {
+  animation: hub-roulette-bulb 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--bulb, 0) * 300ms);
+}
+
+.hub-roulette__ring[data-glow='true'] .hub-roulette__bulb {
+  opacity: 1;
+  animation: none;
+  fill: #fff;
+}
+
+@keyframes hub-roulette-bulb {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hub-roulette__hub {
+  stroke: var(--rl-gold);
+  stroke-width: 1.4;
+}
+
+.hub-roulette__hub-label {
+  font-size: 7.4px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  fill: var(--rl-silver);
+}
+
+.hub-roulette__hub-total {
+  font-weight: 900;
+  fill: var(--rl-gold);
+  font-variant-numeric: tabular-nums;
+  animation: hub-roulette-total 260ms ease-out;
+}
+
+@keyframes hub-roulette-total {
+  0% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 포인터: 12시 고정. 고리를 바꾸면 안쪽 띠 위로 미끄러진다. */
+.hub-roulette__pointer {
+  transition: transform 650ms cubic-bezier(0.3, 0.1, 0.2, 1);
+}
+
+.hub-roulette__pointer-body path {
+  fill: var(--rl-pink);
+  stroke: var(--rl-gold);
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+/* ---- 결과 배지 ---- */
+.hub-roulette__badge {
+  position: absolute;
+  top: 2%;
+  left: 50%;
+  z-index: 4;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 20px;
+  font-weight: 900;
+  white-space: nowrap;
+  color: #2a0f24;
+  background: #fff;
+  border: 2px solid var(--rl-pink);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: hub-roulette-badge var(--badge-ms, 900ms) ease-out both;
+}
+
+.hub-roulette__badge--up {
+  background: #2f7fd6;
+  color: #fff;
+  border-color: #bfe0ff;
+}
+
+.hub-roulette__badge--encore {
+  background: #ffcf5a;
+  border-color: #fff;
+}
+
+.hub-roulette__badge--grand {
+  background: #ffe08a;
+  border-color: #fff;
+  font-size: 24px;
+  color: #5a1030;
+}
+
+@keyframes hub-roulette-badge {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  14% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.1);
+  }
+  24% {
+    transform: translateX(-50%) scale(1);
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.hub-roulette__resume {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rl-silver);
+  background: rgba(20, 16, 31, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+/* ---- 버튼 줄 ---- */
+.hub-roulette__bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 14px 12px;
+  flex-shrink: 0;
+}
+
+.hub-roulette__bar[data-hidden='true'] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.hub-roulette__primary,
+.hub-roulette__skip {
+  position: relative;
+  min-height: var(--hub-touch-min, 48px);
+  border-radius: 14px;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.hub-roulette__primary {
+  flex: 1;
+  border: 2px solid #fff;
+  background: linear-gradient(180deg, #ff86bb 0%, #ff4f98 100%);
+  color: #fff;
+  font-size: 18px;
+  text-shadow: 0 1px 3px rgba(80, 0, 40, 0.55);
+}
+
+.hub-roulette__primary[data-mode='stop'] {
+  background: linear-gradient(180deg, #6bb8ff 0%, #2f7fd6 100%);
+}
+
+.hub-roulette__primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.hub-roulette__primary-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* 탭이 없으면 2초 뒤 저절로 돈다 — 줄어드는 막대로 보여 준다. */
+.hub-roulette__countdown {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  transform-origin: 0 50%;
+  animation: hub-roulette-countdown linear forwards;
+}
+
+@keyframes hub-roulette-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.hub-roulette__skip {
+  flex: 0 0 34%;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  background: rgba(20, 16, 31, 0.7);
+  color: var(--rl-silver);
+  font-size: 15px;
+}
+
+/* ---- 요약 카드 ---- */
+.hub-roulette__summary-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 16, 31, 0.55);
+  cursor: pointer;
+  animation: hub-roulette-fade 200ms ease-out both;
+}
+
+.hub-roulette__summary {
+  width: min(100%, 340px);
+  max-height: 100%;
+  overflow: auto;
+  padding: 16px 16px 12px;
+  border-radius: 18px;
+  border: 2px solid var(--rl-pink);
+  background: rgba(20, 16, 31, 0.96);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.6);
+  text-align: center;
+  animation: hub-roulette-card 260ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+@keyframes hub-roulette-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes hub-roulette-card {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hub-roulette__summary-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--rl-gold);
+}
+
+.hub-roulette__record {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-roulette__record-item {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.hub-roulette__record-item[data-lit='true'] {
+  background: rgba(255, 95, 162, 0.3);
+  border-color: var(--rl-pink);
+}
+
+.hub-roulette__record-item--stepUp {
+  background: rgba(74, 168, 255, 0.28);
+  border-color: var(--rl-blue);
+}
+
+.hub-roulette__record-item--encore {
+  background: rgba(255, 209, 102, 0.22);
+  border-color: var(--rl-gold);
+}
+
+.hub-roulette__record-item--grand {
+  background: rgba(255, 224, 138, 0.3);
+  border-color: #fff;
+}
+
+.hub-roulette__summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 4px 2px;
+  font-size: 14px;
+  color: var(--rl-silver);
+}
+
+.hub-roulette__summary-row strong {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--rl-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-roulette__summary-row--sub strong {
+  font-size: 18px;
+  color: #fff;
+}
+
+.hub-roulette__capped {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rl-pink);
+}
+
+.hub-roulette__summary-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--hub-text-sub, #8792a8);
+}
+
+/* ---- 풀(고정 DOM) ---- */
+.hub-roulette__pool {
+  position: static;
+}
+
+.hub-roulette__token,
+.hub-roulette__pop,
+.hub-roulette__star {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.hub-roulette__token {
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  background-color: transparent;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 0 6px rgba(255, 95, 162, 0.9));
+}
+
+.hub-roulette__token:not([style]) {
+  background: radial-gradient(circle at 50% 40%, #fff 0, var(--rl-pink) 55%, #b2285f 100%);
+}
+
+.hub-roulette__pop {
+  margin: -12px 0 0 -30px;
+  min-width: 60px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--rl-gold);
+  text-shadow: 0 2px 6px rgba(20, 16, 31, 0.95), 0 0 8px rgba(255, 209, 102, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-roulette__star {
+  margin: -10px 0 0 -10px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--rl-gold);
+  text-shadow: 0 0 8px rgba(255, 209, 102, 0.9);
+}
+
+.hub-roulette__live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 모션 축소: 움직임 없이 상태만 바뀐다. */
+.hub-roulette[data-reduced='true'] *,
+.hub-roulette[data-reduced='true'] {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.hub-roulette[data-reduced='true'] .hub-roulette__countdown {
+  animation: none !important;
+  display: none;
+}
+
+/* 좁은 화면(390px 이하)에서 정보 줄을 한 줄로 합친다. */
+@media (max-width: 400px) {
+  .hub-roulette__info {
+    gap: 2px;
+    padding-top: 6px;
+  }
+  .hub-roulette__title {
+    font-size: 15px;
+  }
+  .hub-roulette__songs-text {
+    font-size: 12px;
+  }
+  .hub-roulette__dots {
+    gap: 8px;
+  }
+}
+
+/* ---- 도움말 ---- */
+.hub-roulette-help {
+  --rl-pink: #ff5fa2;
+  --rl-blue: #4aa8ff;
+  --rl-gold: #ffd166;
+  --rl-night: #14101f;
+  --rl-silver: #d9dde8;
+  --rl-plum: #2b2150;
+  --rl-plum-2: #35285f;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-md);
+}
+
+.hub-roulette-help__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+}
+
+.hub-roulette-help__title {
+  margin: 0;
+  font-size: var(--hub-font-body);
+  font-weight: 800;
+  color: var(--hub-gold-light);
+}
+
+.hub-roulette-help__text {
+  margin: 0;
+  font-size: var(--hub-font-sub);
+  line-height: 1.5;
+  color: var(--hub-text);
+}
+
+.hub-roulette-help__text--note {
+  color: var(--hub-text-sub);
+}
+
+.hub-roulette-help__passes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hub-roulette-help__pass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.hub-roulette-help__pass img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.hub-roulette-help__pass-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 209, 102, 0.18);
+  border: 1px solid rgba(255, 209, 102, 0.6);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--hub-gold-light);
+}
+
+.hub-roulette-help__arrow {
+  font-size: 18px;
+  color: var(--hub-text-sub);
+}
+
+.hub-roulette-help__badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: #2a0f24;
+  background: #ffcf5a;
+}
+
+.hub-roulette-help__board {
+  align-self: center;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+}
+
+.hub-roulette-help__board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hub-roulette-help__board .hub-roulette__ring[data-active='false'] {
+  opacity: 1;
+  filter: none;
+}
+
+.hub-roulette-help__board .hub-roulette__bulb {
+  animation: none !important;
+}
+
+.hub-roulette-help__ring-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-roulette-help__ring-name {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--hub-font-small);
+  font-weight: 800;
+  color: var(--hub-text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-roulette-help__cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hub-roulette-help__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-roulette-help__card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-roulette-help__chipcell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+  background: #2b2150;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.hub-roulette-help__chipcell--stepUp {
+  background: #2f7fd6;
+}
+
+.hub-roulette-help__chipcell--encore {
+  background: #e0a93c;
+  color: #2a0f24;
+}
+
+.hub-roulette-help__chipcell--grand {
+  background: #ffe08a;
+  color: #5a1030;
+}
+
+.hub-roulette-help__card-name {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: var(--hub-text);
+}
+
+.hub-roulette-help__card-text {
+  margin: 0;
+  font-size: var(--hub-font-small);
+  line-height: 1.45;
+  color: var(--hub-text-sub);
+}
+
+.hub-roulette-help__cheer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.hub-roulette-help__sticks {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.hub-roulette-help__stick {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.hub-roulette-help__stick-fallback {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff 0, #ff5fa2 55%, #b2285f 100%);
+}
+
+.hub-roulette-help__ring-lit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.hub-roulette-help__ring-lit-name {
+  flex: 0 0 52px;
+  font-size: var(--hub-font-small);
+  font-weight: 800;
+  color: var(--hub-text-sub);
+}
+
+.hub-roulette-help__lit-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.hub-roulette-help__lit-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fff;
+  background: #2b2150;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hub-roulette-help__lit-cell[data-lit='true'] {
+  background: #ff5fa2;
+  color: #3a0a24;
+  border-color: #fff;
+}
+
+.hub-roulette-help__lit-num {
+  display: inline-block;
+  margin-right: 3px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  background: #fff;
+  color: #b2285f;
+}
+
+.hub-roulette-help__dots {
+  display: inline-flex;
+  gap: 3px;
+  font-size: 20px;
+  color: var(--rl-pink, #ff5fa2);
+}
+
+.hub-roulette-help__light-mark {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 4px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #3a0a24;
+  background: #ff9bc7;
+  vertical-align: middle;
+}
+
+/* 도움말 «특별한 심볼» — 와일드·초대권 그림과 설명 한 줄씩. */
+.hub-roulette-help__symbol-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.hub-roulette-help__symbol-img {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+/* 6·9처럼 거꾸로 서면 다른 숫자로 읽히는 값에 밑줄을 그어 방향을 알려 준다. */
+.hub-roulette__value--flip {
+  text-decoration: underline;
+  text-decoration-thickness: 1.2px;
+  text-underline-offset: 1.5px;
+}

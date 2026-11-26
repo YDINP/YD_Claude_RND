@@ -29,6 +29,7 @@ import {
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
+import { debugMaxTries } from '../lib/debugPreset'
 import { completedOrders, type CompletedOrder } from '../game/orders'
 import { boardFeatureOf, saveBoardSnapshot } from '../game/boardPlayback'
 import {
@@ -48,6 +49,14 @@ import {
 // 않는다. 이 모듈은 React/DOM에 기대지 않아 store에서 import해도 안전하다.
 import { celebrationTier } from '../components/game/winTiers'
 import { clearRespinReplay, hasCoinRespin, saveRespinReplay } from '../lib/respinReplay'
+import {
+  findRouletteFeature,
+  rouletteRendererMode,
+  sessionFromResult,
+  type RouletteSession,
+  type RouletteStage,
+} from '../game/rouletteFlow'
+import { clearRouletteCache, readRouletteCache, writeRouletteCache } from '../lib/rouletteResume'
 
 /** SpinResponse.debug의 형태 — 어떤 프리셋이 실제로 적용됐고 몇 번 만에 그 결과를 찾았는지. */
 type SpinDebugResponse = NonNullable<SpinResponse['debug']>
@@ -144,6 +153,44 @@ function withHeldCoins<T extends { coins: number }>(wallet: T, held: number): T 
 }
 
 /**
+ * 무대 룰렛 오버레이가 «요약 카드를 닫았다»고 알릴 때까지 멈춰 서 있는 판을 깨우는 손잡이. 룰렛이 떠 있는 동안만 있다.
+ * 룰렛 한 판의 서술은 spin() 하나에 선형으로 남고(릴 → 강조 → 클립 → 룰렛 → 클립 → 정산), 여기서는 오버레이의 끝 신호를
+ * 그 자리로 되돌려 보내기만 한다(`finishRoulette`). 화면을 나가면(`reset`) 같은 손잡이로 깨워 물러나게 한다.
+ */
+let rouletteGate: (() => void) | null = null
+/** 룰렛 게이트 상한: 기본 + 회전당. 정상 연출(회전당 최대 약 7초 + 자동 대기 2초)보다 넉넉히 크다. */
+const ROULETTE_GATE_BASE_MS = 120_000
+const ROULETTE_GATE_PER_STEP_MS = 30_000
+
+/** 렌더러 커튼(`modeTransition end`)을 기다리는 약속들. `notifyCurtain`이 깨운다. */
+const curtainWaiters = new Set<{ to: 'freeSpins' | 'base'; resolve: () => void }>()
+/** 커튼 이벤트가 끝내 안 와도(렌더러 폴백) 흐름이 멈추지 않게 하는 상한. */
+const CURTAIN_WAIT_LIMIT_MS = 8000
+
+function waitForCurtainEnd(to: 'freeSpins' | 'base'): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const waiter = {
+      to,
+      resolve: () => {
+        clearTimeout(timer)
+        curtainWaiters.delete(waiter)
+        resolve()
+      },
+    }
+    const timer = setTimeout(waiter.resolve, CURTAIN_WAIT_LIMIT_MS)
+    curtainWaiters.add(waiter)
+  })
+}
+
+function resolveCurtainWaiters(to: 'freeSpins' | 'base'): void {
+  for (const waiter of [...curtainWaiters]) if (waiter.to === to) waiter.resolve()
+}
+
+function releaseAllCurtainWaiters(): void {
+  for (const waiter of [...curtainWaiters]) waiter.resolve()
+}
+
+/**
  * 게임 화면이 렌더러(@tgslot/renderer)를 만든 뒤 store에 등록하는 최소 인터페이스.
  * store는 렌더러 패키지를 직접 import하지 않아 테스트에서 가짜 객체로 쉽게 대체할 수 있다.
  */
@@ -210,6 +257,8 @@ export interface SpinRenderer {
     freeSpins?: { left: number; total: number; multiplier: number } | null
     /** true면 커튼·클립 없이 곧장 모드를 맞춘다(서버 상태 복원용). */
     immediate?: boolean
+    /** true면 전환이 덮은 순간 릴을 감춘다(무대 룰렛 — 릴 자리는 허브 오버레이가 쓴다). */
+    hideReels?: boolean
   }): void
   /**
    * 보고 있던 승리 연출 바퀴를 곧장 접는다(showWins의 약속을 그 자리에서 resolve시킨다). 순환
@@ -458,6 +507,13 @@ export interface GameState {
    * 진짜 판이면 spin()이 재생이 끝날 때까지 기다리고, 복원(`resumeBoard`)이면 기다리는 spin()이 없다.
    */
   boardPlay: BoardPlayRequest | null
+  /**
+   * 무대 룰렛 연출 세션. null이면 룰렛이 없다. 값은 전부 서버 응답(`features[].stageRoulette`)에서 온다.
+   *
+   * 룰렛 스핀은 정산이 응답 하나에 끝나 있지만 **보이는 것**(잔액·lastResult·더블업·빅윈)은 룰렛 연출이 끝난 뒤에야
+   * 공개한다(`reveal`을 미룬다). 단계(`stage`)는 `game/rouletteFlow.ts` 참고. 이 값이 있는 동안 입력은 잠긴다.
+   */
+  roulette: RouletteSession | null
 }
 
 /** 말판 재생 요청. */
@@ -506,6 +562,13 @@ export interface GameActions {
   finishBoard: () => void
   /** 새로고침 뒤 복원: 보던 말판을 이어서 재생한다(기다리는 spin()은 없다). 이미 재생 중이면 무시한다. */
   resumeBoard: (request: BoardPlayRequest) => void
+  /** 무대 룰렛 오버레이가 요약 카드를 닫았다고 알린다. 멈춰 서 있던 판이 퇴장 클립 → 정산으로 이어진다. */
+  finishRoulette: () => void
+  /**
+   * 새로고침·재진입 뒤 «무대 룰렛 이어 보기». 세션 캐시(10분 이내, 같은 게임)가 있으면 끝까지 본 회전 다음부터
+   * 연출만 다시 튼다. 정산은 이미 끝났으니 잔액은 서버 값 그대로다. 캐시가 없으면 아무 일도 하지 않는다.
+   */
+  resumeRoulette: () => Promise<void>
   /**
    * 오토스핀을 `count`판만큼 무장하고, 지금 바로 돌 수 있는 상태면(idle, 프리스핀 아님) 첫 판을
    * 곧장 시작한다. 이미 스핀 중이면 예약만 해두고 그 판이 끝나는 대로 이어진다.
@@ -569,6 +632,7 @@ const initialState: GameState = {
   roundFlow: ROUND_FLOW_IDLE,
   winCelebration: null,
   boardPlay: null,
+  roulette: null,
 }
 
 type StoreGet = () => GameStore
@@ -641,6 +705,66 @@ function applyRoundFlow(event: RoundFlowEvent, get: StoreGet, set: StoreSet): vo
         break
     }
   }
+}
+
+/**
+ * 무대 룰렛의 클립·오버레이 구간(진입 클립 → 오버레이 → 퇴장 클립). 릴 위 강조(pre)는 이미 끝난 뒤에 부른다.
+ *
+ * 렌더러의 `setMode`(프리스핀 전환과 같은 커튼·클립 경로)를 재사용한다: 진입은 `freeSpins` 모드(배경 → 룰렛 무대,
+ * 릴 감춤), 퇴장은 모드 해제. 커튼이 걷히는 `modeTransition end`를 기다린 뒤 다음 단계로 간다.
+ * `immediate`는 이어 보기용 — 진입 클립 없이 곧장 룰렛 모드로 맞춘다.
+ */
+async function playRouletteSession(
+  gameId: string,
+  songs: number,
+  options: { immediate: boolean },
+  get: StoreGet,
+  set: StoreSet,
+): Promise<void> {
+  const setStage = (stage: RouletteStage): void => {
+    const current = get().roulette
+    if (current !== null && get().gameId === gameId) set({ roulette: { ...current, stage } })
+  }
+  const renderer = (): SpinRenderer | null => (get().gameId === gameId ? get().renderer : null)
+
+  setStage('curtain')
+  const enter = renderer()
+  if (enter?.setMode) {
+    if (options.immediate) {
+      enter.setMode({ ...rouletteRendererMode(songs), immediate: true })
+    } else {
+      const ended = waitForCurtainEnd('freeSpins')
+      enter.setMode(rouletteRendererMode(songs))
+      await ended
+    }
+  }
+  if (get().gameId !== gameId) return
+
+  setStage('show')
+  // 안전망 — 연출이 끝내 onFinished를 부르지 못해도 결과 길이로 잡은 상한 뒤에는 공개·잠금 해제로 넘어간다.
+  const steps = get().roulette?.feature.steps.length ?? 0
+  const gateLimitMs = ROULETTE_GATE_BASE_MS + steps * ROULETTE_GATE_PER_STEP_MS
+  await new Promise<void>((resolve) => {
+    const release = (): void => {
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(release, gateLimitMs)
+    rouletteGate = release
+  })
+  rouletteGate = null
+  if (get().gameId !== gameId) return
+
+  setStage('exit')
+  const leave = renderer()
+  if (leave?.setMode) {
+    const ended = waitForCurtainEnd('base')
+    leave.setMode({ freeSpins: null })
+    await ended
+  }
+  if (get().gameId !== gameId) return
+  set({ roulette: null })
+  clearRouletteCache()
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -733,6 +857,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     currentSpinHandle = null
     skipRequested = false
 
+    // 새 스핀을 시작하면 지난 룰렛의 «이어 보기» 캐시는 쓸모없다.
+    clearRouletteCache()
+
     // 이전 실패에서 남은 키가 있으면 재사용한다 — 서버가 idempotencyKey로 재전송을 판별한다.
     const idempotencyKey = get().idempotencyKey ?? newIdempotencyKey()
     // 새 스핀을 시작하면 이전 승리 배너부터 지운다 — 다음 결과가 나올 때까지 화면에 남아있으면 안 된다.
@@ -756,7 +883,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const requestBody: SpinRequest = { totalBet, idempotencyKey }
     // preset이 무장돼 있으면 이번 요청에만 실어 보낸다 — maxTries는 서버 기본값을 그대로 쓴다.
-    if (debugPreset) requestBody.debug = { preset: debugPreset, maxTries: 5000 }
+    if (debugPreset) requestBody.debug = { preset: debugPreset, maxTries: debugMaxTries(debugPreset) }
 
     const requestStartedAt = Date.now()
     let result: SpinResponse
@@ -988,6 +1115,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 빅윈 오버레이를 띄울지(아래 try)와 커튼/팝업을 걸지(finally) — 가 **같은 판정**을 봐야
     // 하므로 여기서 한 번만 계산한다. 판단의 재료(스핀 전 freeSpins + 응답)는 이미 다 나왔다.
     const orderLogAfter = nextOrderLog(get().orderCompleted, result, get().math)
+    // 무대 룰렛 진입 스핀이면 보이는 것(잔액·lastResult·더블업·빅윈)을 룰렛이 끝난 뒤에 공개한다.
+    const rouletteFeature = math.stageRoulette === undefined ? null : findRouletteFeature(result.features)
     const baseCeremony = ceremonyFor(freeSpins, result)
     const ceremony = baseCeremony ? withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined) : null
 
@@ -1012,7 +1141,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // 릴이 멈췄다(뮤테이션 리빌까지 끝났다) — 이제서야 결과를 화면에 공개한다. 렌더러가 아예
       // 없으면 기다릴 릴도 없으니 이 자리가 곧 응답 직후다.
-      reveal()
+      // 무대 룰렛 스핀은 룰렛 연출이 끝난 뒤에 공개한다(아래) — 잔액이 먼저 오르면 결과가 새어 나간다.
+      if (rouletteFeature === null) reveal()
+      else {
+        const session = sessionFromResult(gameId, result, rouletteFeature)
+        set({ roulette: session })
+        writeRouletteCache({
+          gameId,
+          roundId: session.roundId,
+          feature: rouletteFeature,
+          baseWin: session.baseWin,
+          totalWin: session.totalWin,
+          totalBet: session.totalBet,
+          shownSteps: 0,
+          savedAt: Date.now(),
+        })
+      }
 
       // ---- 빅윈 오버레이 — 릴(과 뮤테이션)이 멈춘 «직후», 심볼 연출보다 먼저 ----
       //
@@ -1042,7 +1186,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // 기다리는 동안 화면을 벗어났으면(reset) 남은 연출은 이 게임의 것이 아니다 — finally가 정리한다.
         return get().gameId === gameId
       }
-      if (!ceremony && board === undefined && !(await celebrateIfBig())) return
+      // 무대 룰렛 스핀은 룰렛이 끝난 뒤(아래)에 한 번만 띄운다.
+      if (!ceremony && board === undefined && rouletteFeature === null && !(await celebrateIfBig())) return
 
       // 코인 리스핀: 빅윈 연출까지 동굴 배경 위에서 마쳤다. 복귀 전환으로 기본 화면에 돌아온 뒤 라인 당첨을 보여 준다.
       if (renderer?.endRespin !== undefined && hasCoinRespin(result)) {
@@ -1065,9 +1210,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // 전체 표시만 짧게 1회 보여준다 — 순환하는 전체 연출이 프리스핀 사이에 끼면 판
           // 간격이 20초를 넘겨 "진행이 멈춘 것"처럼 보인다(실측). 수동 기본 게임만 full +
           // 순환이다(옵션 자체를 넘기지 않아 기존 호출 형태를 그대로 유지한다).
-          // 말판 판은 «초롱 3개 → 말판»이 주인공이라 라인 연출은 전체 표시 한 번으로 짧게 보여 주고 넘어간다.
+          // 말판 판은 «초롱 3개 → 말판»이 주인공이라(무대 룰렛 진입도 같다) 라인 연출은 전체 표시 한 번으로 짧게 보여 주고 넘어간다.
           const presentation =
-            board !== undefined
+            board !== undefined || rouletteFeature !== null
               ? 'brief'
               : winPresentationMode({
                   autoSpinActive: get().autoSpin !== null,
@@ -1109,6 +1254,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // 합계 축하는 말판 요약이 끝난 뒤 한 번만이다.
         if (!(await celebrateIfBig())) return
       }
+      // ---- 무대 룰렛 ---- 릴 위 강조(위 showWins 첫 바퀴)가 끝났다. 클립 → 오버레이 → 클립 순서로 이어 간다.
+      if (rouletteFeature !== null && get().gameId === gameId) {
+        await playRouletteSession(gameId, math.stageRoulette?.songs ?? 3, { immediate: false }, get, set)
+        if (get().gameId !== gameId) return
+        // 이제서야 잔액·lastResult·더블업을 공개한다(위 reveal을 미뤄 둔 판).
+        reveal()
+        if (!ceremony && celebrationTier(result.totalWin, result.totalBet) !== 'none') {
+          set({
+            phase: 'showingWin',
+            // 요약 카드가 이미 총액을 보여 줬다 — 빅윈은 서둘러(짧은 롤업·짧은 머묾) 한 번 더 축하만 한다.
+            winCelebration: {
+              totalWin: result.totalWin,
+              totalBet: result.totalBet,
+              hurried: true,
+            },
+          })
+          await new Promise<void>((resolve) => {
+            winCelebrationGate = resolve
+          })
+          if (get().gameId !== gameId) return
+        }
+      }
     } catch (err) {
       // 연출 실패는 서버 권위 결과에 영향을 주지 않는다 — 원인만 남기고 아래 finally가 phase를 회복시킨다.
       console.error('[game] renderer playback failed', err)
@@ -1124,7 +1291,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         void renderer?.endRespin?.()
       }
       if (get().gameId === gameId) {
-        set({ phase: 'idle', lastSpinTiming: timing, boardPlay: null })
+        // 말판·룰렛 연출 중 예외로 빠져나왔다면 세션이 남아 roundBusy가 풀리지 않는다 — 여기서 함께 정리한다.
+        set({ phase: 'idle', lastSpinTiming: timing, boardPlay: null, roulette: null })
 
         // 오토스핀 카운터 — 이번 판이 "유료" 판일 때만 하나 깎는다(프리스핀 중에 도는 판은 서버가
         // 공짜로 주는 것이라 오토스핀의 몫에서 빼지 않는다). 0이 되면 스스로 꺼진다.
@@ -1213,6 +1381,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   notifyCurtain(to, phase) {
     applyRoundFlow(phase === 'start' ? { type: 'curtainStarted', to } : { type: 'curtainEnded' }, get, set)
+    // 룰렛 진입·퇴장 클립이 다 걷혔다 — 기다리던 흐름을 깨운다.
+    if (phase === 'end') resolveCurtainWaiters(to)
+  },
+
+  finishRoulette() {
+    const resume = rouletteGate
+    rouletteGate = null
+    resume?.()
+  },
+
+  async resumeRoulette() {
+    const { gameId, math, phase, roulette } = get()
+    if (!gameId || !math?.stageRoulette || roulette !== null || phase !== 'idle') return
+    const cache = readRouletteCache(gameId)
+    if (cache === null) return
+    const session: RouletteSession = {
+      gameId,
+      roundId: cache.roundId,
+      feature: cache.feature,
+      totalBet: cache.totalBet,
+      baseWin: cache.baseWin,
+      totalWin: cache.totalWin,
+      startAt: cache.shownSteps,
+      resumed: true,
+      stage: 'curtain',
+    }
+    // 입력을 잠그고(showingWin) 이어 본다. 정산은 이미 끝났으니 지갑·lastResult는 건드리지 않는다.
+    set({ roulette: session, phase: 'showingWin' })
+    try {
+      await playRouletteSession(gameId, math.stageRoulette.songs, { immediate: true }, get, set)
+    } finally {
+      if (get().gameId === gameId) {
+        set({ roulette: null, phase: 'idle' })
+        scheduleNextRound(get)
+      }
+    }
   },
 
   startAutoSpin(count) {
@@ -1364,6 +1568,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const resumeBoard = boardGate
     boardGate = null
     resumeBoard?.()
+    // 무대 룰렛 앞에 멈춰 서 있던 판과 커튼을 기다리던 약속도 깨워 보낸다(깨어난 쪽은 gameId가 달라진 것을 보고 물러난다).
+    const rouletteResume = rouletteGate
+    rouletteGate = null
+    rouletteResume?.()
+    releaseAllCurtainWaiters()
     currentSpinHandle = null
     skipRequested = false
     // 진행 중이던 승리 연출 순환을 걷어낸다 — 안 그러면 다음에 이 게임에 다시 들어왔을 때(또는

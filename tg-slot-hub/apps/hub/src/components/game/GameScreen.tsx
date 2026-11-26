@@ -93,6 +93,9 @@ import {
 } from '../../lib/respinSfx'
 import { readRespinReplay, respinFeaturesMatch } from '../../lib/respinReplay'
 import { BoardHelp } from './board/BoardHelp'
+import { StageRoulette, type StageRouletteHandle } from './StageRoulette'
+import { RouletteHelp } from './RouletteHelp'
+import { playRouletteCue } from '../../lib/rouletteCues'
 import './GameScreen.css'
 
 /** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
@@ -202,6 +205,8 @@ type LineLabelSource =
   | { kind: 'cycle'; totalWin: number; key: number }
   | { kind: 'chain'; n: number; multiplier: number; stepWin: number; key: number }
   | { kind: 'order'; order: CompletedOrder; key: number }
+  /** 무대 룰렛이 끝난 뒤 «무대 룰렛 +N» 한 줄. */
+  | { kind: 'roulette'; total: number; key: number }
 
 /**
  * 이긴 칸에 **실제로 놓여 있던** 심볼 id들 — 좌표를 이번 판 그리드에 짚어 읽는다.
@@ -280,6 +285,11 @@ function buildOrderIcons(
  * 찾지 못하면(팩마다 와일드 그림이 없을 수 있다) undefined를 돌려준다 — 호출부가 `text`(이름
  * 문구)로 폴백한다. 빈 줄이 뜨거나 깨진 이미지가 보이면 안 된다.
  */
+/** 당첨 줄의 «길 수» 표기. 무대 룰렛 팩은 «8 ways» 대신 쉬운 말(«길 8가지»)을 쓴다. */
+function waysText(math: GameMath, locale: Locale, ways: number): string {
+  return math.stageRoulette !== undefined && locale === 'ko' ? `길 ${ways}가지` : translate(locale, 'waysCount', { n: ways })
+}
+
 function buildWinLineIcons(
   math: GameMath,
   theme: Theme | null,
@@ -315,7 +325,7 @@ function buildWinLineIcons(
         ? symbolLabel(math, source.symbol, locale)
         : groupLabel(math, source.group, locale)
     } ×${source.count}`,
-    suffix: [...(source.ways ? [translate(locale, 'waysCount', { n: source.ways })] : []), source.win.toLocaleString('en-US')].join(' · '),
+    suffix: [...(source.ways ? [waysText(math, locale, source.ways)] : []), source.win.toLocaleString('en-US')].join(' · '),
   }
 }
 
@@ -398,6 +408,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const respinPhase = useCoinRespinStore((s) => s.view.phase)
   const respinActive = useCoinRespinStore((s) => s.view.active)
   const respinBoardTotal = useCoinRespinStore((s) => s.view.coinTotal)
+  // 무대 룰렛 연출 세션(서버 응답에서만 채워진다). 있는 동안 입력이 잠긴다.
+  const roulette = useGameStore((s) => s.roulette)
+  const finishRouletteAction = useGameStore((s) => s.finishRoulette)
+  const resumeRouletteAction = useGameStore((s) => s.resumeRoulette)
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const spinSpeed = useSettingsStore((s) => s.spinSpeed)
   const setSpinSpeedAction = useSettingsStore((s) => s.setSpinSpeed)
@@ -474,6 +488,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const chainRafRef = useRef<number | null>(null)
   const slotRendererRef = useRef<SlotRenderer | null>(null)
   const orderBoardRef = useRef<OrderBoardHandle | null>(null)
+  const rouletteRef = useRef<StageRouletteHandle | null>(null)
+  /** 직전 렌더의 룰렛 세션 — 끝나는 순간(non-null → null) 총 당첨으로 롤업하려고 들고 있는다. */
+  const prevRouletteRef = useRef<typeof roulette>(null)
+  const resumeTriedRef = useRef(false)
   /** 사용자가 STOP으로 압축 재생을 요청했는가. 이 스핀의 토큰을 생략한다. */
   const compressedRef = useRef(false)
   /** 주문 완료 줄이 떠 있는 동안(이 시각까지) 라인·사이클 문구가 덮지 못하게 한다. */
@@ -584,7 +602,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     themeSettled: theme !== null || rendererError,
     onWinStrip: (value, ms) => tickWinTo(value, Math.max(1, ms)),
   })
-  const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null || board.active
+  const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null || board.active || roulette !== null
   const roundPopup = activePopup(roundFlow)
   // 전환 클립이 화면을 덮고 있다. 스핀 도중(코인 리스핀 진입)이면 STOP을 걸어 둘 수 있고, 그 밖에는 스핀 버튼이 기다림으로 보인다.
   const curtainUp = roundFlow.kind === 'curtain'
@@ -828,7 +846,31 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       return
     }
 
+    if (event.type === 'rouletteCheer') {
+      // 응원봉 칸이 빛난다 — 칸마다 불빛 토큰이 프레임 위 칩으로 날아간다(칸 좌표는 렌더러가 안다).
+      const slotRenderer = slotRendererRef.current
+      const origin = containerRef.current?.getBoundingClientRect()
+      const settings = useSettingsStore.getState()
+      rouletteRef.current?.gatherCheer({
+        rects: event.positions.map(([reel, row]) => {
+          try {
+            return slotRenderer?.getCellRect(reel, row) ?? null
+          } catch {
+            return null
+          }
+        }),
+        origin: { x: origin?.left ?? 0, y: origin?.top ?? 0 },
+        ms: settings.reducedMotion ? 0 : settings.spinSpeed === 'turbo' ? 220 : settings.spinSpeed === 'quick' ? 320 : 420,
+      })
+      return
+    }
+
     if (event.type === 'featureTriggered') {
+      // 무대 룰렛 진입: 초대권이 강조되는 순간의 진입음. 룰렛 화면은 store 세션(roulette)이 이어받는다.
+      if (event.feature.type === 'stageRoulette') {
+        playRouletteCue({ kind: 'entry' })
+        return
+      }
       // 재발동만 여기서 다룬다 — 최초 진입은 세리머니 팝업(store.roundFlow)의 몫이다.
       const feature = event.feature
       playFeature()
@@ -932,6 +974,49 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
     winRafRef.current = requestAnimationFrame(step)
   }
+
+  // 무대 룰렛 — WinStrip은 룰렛 동안 «룰렛 합계»만 보여 준다. 클립이 시작되면 기본 지급 롤업을 접고 0에서 다시 쌓는다.
+  const rouletteStage = roulette?.stage ?? null
+  useEffect(() => {
+    if (rouletteStage !== 'curtain') return
+    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    winRafRef.current = null
+    if (chainRafRef.current !== null) cancelAnimationFrame(chainRafRef.current)
+    chainRafRef.current = null
+    setWinRollupValue(0)
+    setLineLabelSource(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 단계가 curtain이 되는 순간만.
+  }, [rouletteStage])
+
+  // 룰렛이 끝나면(non-null → null) WinStrip을 이번 스핀 총 당첨까지 올리고 «무대 룰렛 +N» 줄을 남긴다.
+  useEffect(() => {
+    const previous = prevRouletteRef.current
+    prevRouletteRef.current = roulette
+    if (previous === null || roulette !== null) return
+    lineLabelKeyRef.current += 1
+    setLineLabelSource({ kind: 'roulette', total: previous.feature.total, key: lineLabelKeyRef.current })
+    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    winRafRef.current = null
+    tickWinTo(previous.totalWin, 800)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- roulette가 바뀔 때만.
+  }, [roulette])
+
+  /** 룰렛이 합계를 올릴 때(`rollMs`는 숫자가 오르는 시간). 룰렛 합계는 룰렛 동안 WinStrip 값 자체다. */
+  function handleRouletteProgress(total: number, rollMs: number): void {
+    if (total <= winValueRef.current && total !== 0) {
+      // 롤업은 단조 증가다 — 이어 보기에서 처음 놓는 값만 그대로 둔다.
+      if (winRafRef.current === null && chainRafRef.current === null) setWinRollupValue(total)
+      return
+    }
+    tickWinTo(total, Math.max(1, rollMs))
+  }
+
+  // 새로고침·재진입 — 룰렛을 보던 중이었다면(10분 이내) 끝까지 본 회전 다음부터 이어 본다. 마운트당 한 번만 시도한다.
+  useEffect(() => {
+    if (resumeTriedRef.current || !rendererInstance || !math?.stageRoulette || phase !== 'idle') return
+    resumeTriedRef.current = true
+    void resumeRouletteAction()
+  }, [rendererInstance, math, phase, resumeRouletteAction])
 
   // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
@@ -1294,7 +1379,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         : null
   // 코인 리스핀 정산 중에는 «모은 코인»이다(동굴에서 나오면 평소의 «당첨»으로 돌아간다).
   const respinCollecting = respinPhase === 'collecting' || (respinPhase === 'done' && respinActive)
-  const winStripLabel = showGambleActions
+  // 룰렛이 클립 단계로 들어가면 WinStrip은 «룰렛 합계»가 된다(그 전까지는 기본 지급을 보여 준다).
+  const rouletteStripActive = roulette !== null && roulette.stage !== 'pre'
+  const winStripLabel = rouletteStripActive
+    ? t('stageRouletteTotal')
+    : showGambleActions
     ? t('gamblePendingWinLabel')
     : respinOnBoard
       ? t('coinRespinOnBoardLabel')
@@ -1340,7 +1429,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   //   ways 승리:     "판다 ×5 · 4 ways · 348" (이름, ×맞은개수, · N ways, · 금액)
   // 예전엔 winLineLabel이 스스로 "심볼 × N ways"를 만들고 여기서 다시 ×count를 이어 붙여
   // "판다 × 4 ways ×5"처럼 이중으로 겹쳐 보였다 — 이제 이름/count/ways/금액을 한 곳에서만 합성한다.
-  const lineLabel: WinStripLineLabel | null = lineLabelSource
+  const lineLabel: WinStripLineLabel | null = lineLabelSource && !rouletteStripActive
     ? {
         key: lineLabelSource.key,
         text:
@@ -1352,12 +1441,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   `×${lineLabelSource.multiplier}`,
                   lineLabelSource.stepWin.toLocaleString('en-US'),
                 ].join(' · ')
+              : lineLabelSource.kind === 'roulette'
+                ? t('stageRouletteWinAdd', { amount: lineLabelSource.total.toLocaleString('en-US') })
               : lineLabelSource.kind === 'order'
                 ? `${orderCardText(lineLabelSource.order, math, locale, t, true)} · +${lineLabelSource.order.prize.toLocaleString('en-US')}`
                 : math
                   ? [
                       `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
-                      ...(lineLabelSource.ways ? [t('waysCount', { n: lineLabelSource.ways })] : []),
+                      ...(lineLabelSource.ways ? [waysText(math, locale, lineLabelSource.ways)] : []),
                       ...(lineLabelSource.ladder !== undefined ? [`×${lineLabelSource.ladder}`] : []),
                       lineLabelSource.win.toLocaleString('en-US'),
                     ].join(' · ')
@@ -1761,7 +1852,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             playUiSound('open')
             setHelpSheetOpen(true)
           }}
-          disabled={!math}
+          disabled={!math || roulette !== null}
           aria-label={t('help')}
         >
           ?
@@ -1854,6 +1945,23 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             </div>
           )}
         </div>
+
+        {/* 무대 룰렛 — 릴 캔버스 위 DOM 오버레이(캔버스 리사이즈 0). 결과는 서버 응답(roulette.feature)이 정한다. */}
+        {roulette !== null && math?.stageRoulette !== undefined && (
+          <StageRoulette
+            ref={rouletteRef}
+            key={roulette.roundId}
+            session={roulette}
+            math={math}
+            locale={locale}
+            symbols={theme?.symbols}
+            speed={effectiveSpinSpeed}
+            reducedMotion={reducedMotion}
+            autoSpin={autoSpin !== null}
+            onProgress={handleRouletteProgress}
+            onFinished={finishRouletteAction}
+          />
+        )}
 
         {/* debugEnabled일 때만 마운트되는 진입점 — 절대 기본으로 보이면 안 된다(디버그 패널 참고).
             stage 자체에 onClick(handleStageTap)이 있으므로 버블링을 막아야 스킵/탭-스킵을 대신
@@ -2064,7 +2172,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   : 'hub-game-screen__spin'
             }
             onClick={handleSpinButtonClick}
-            disabled={!math}
+            disabled={!math || (roulette !== null && !autoSpinning)}
             aria-disabled={curtainUp && phase !== 'spinning' && !autoSpinning ? true : undefined}
           >
             {autoSpinning
@@ -2085,7 +2193,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               playUiSound('open')
               setAutoSpinSheetOpen(true)
             }}
-            disabled={!math || autoSpinning || freeSpins !== null}
+            disabled={!math || autoSpinning || freeSpins !== null || roulette !== null}
             aria-label={t('autoSpinTitle')}
           >
             {t('autoSpin')}
@@ -2106,7 +2214,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           <h2 id={AUTO_SPIN_SHEET_TITLE_ID} className="hub-sheet__title">
             {t('autoSpinTitle')}
           </h2>
-          <p className="hub-sheet__message">{t(math?.scatter?.freeSpins || math?.orderRound ? 'autoSpinHint' : 'autoSpinHintNoFreeSpins')}</p>
+          <p className="hub-sheet__message">{t(math?.stageRoulette ? 'stageRouletteAutoSpinHint' : math?.scatter?.freeSpins || math?.orderRound ? 'autoSpinHint' : 'autoSpinHintNoFreeSpins')}</p>
           <div className="hub-autospin__counts">
             {AUTO_SPIN_COUNTS.map((count) => (
               <button
@@ -2237,7 +2345,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {isCluster ? t('tabCluster') : isWays ? t('tabWays') : t('paylinesTitle')}
+                {isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
               </button>
               {hasRespinPage && (
                 <button
@@ -2262,7 +2370,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   }
                   onClick={() => setHelpPage('features')}
                 >
-                  {t('tabFeatures')}
+                  {t(math.stageRoulette ? 'stageRouletteTitle' : 'tabFeatures')}
                 </button>
               )}
               <button
@@ -2338,6 +2446,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                           )}
                           <div className="hub-paytable__row-body">
                             {isGroup && <span className="hub-paytable__row-label">{label}</span>}
+                            {math.stageRoulette?.cheer.symbol === id && (
+                              <span className="hub-roulette-help__light-mark">{t('stageRouletteHelpPaytableLight')}</span>
+                            )}
                             <div className="hub-paytable__chips">
                               {counts.map((count) => (
                                 <span key={count} className="hub-paytable__chip">
@@ -2351,7 +2462,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                     })}
                   </ul>
                   {math.wild && !math.coinRespin && (
-                    <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : wildAllKey)}</p>
+                    <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : math.stageRoulette ? 'stageRouletteWildNote' : wildAllKey)}</p>
                   )}
                   {math.coinRespin && (
                     <>
@@ -2395,7 +2506,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
               {helpPage === 'paylines' && isWays && (
                 <div className="hub-paylines__ways-explainer">
-                  <p className="hub-sheet__message">{t('waysExplainer', { base: math.ways?.base ?? 0 })}</p>
+                  <p className="hub-sheet__message">
+                    {t(math.stageRoulette ? 'stageRouletteWaysExplainer' : 'waysExplainer', { base: math.ways?.base ?? 0 })}
+                  </p>
+                  {math.stageRoulette && <p className="hub-sheet__message">{t('stageRouletteWaysLeftNote')}</p>}
                   {math.ways?.bothWays && <p className="hub-sheet__message">{t('waysBothWaysNote')}</p>}
                 </div>
               )}
@@ -2442,7 +2556,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               {helpPage === 'features' && hasFeaturesPage && (
                 <>
                   <FeatureRules sections={ruleSections.filter((section) => section.title === t('rulesTitle'))} />
-                  {math.wild && (
+                  {math.wild && !math.stageRoulette && (
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresWildTitle')}</h3>
                       <p className="hub-paytable__wild-note">
@@ -2456,7 +2570,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       </p>
                     </div>
                   )}
-                  {math.scatter && (
+                  {math.scatter && !math.stageRoulette && (
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresScatterTitle')}</h3>
                       <div className="hub-paytable__row">
@@ -2508,11 +2622,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   <FeatureRules sections={ruleSections.filter((section) => section.title !== t('rulesTitle'))} />
                   {math.orderRound && <OrderRoundHelp math={math} locale={locale} />}
                   {math.boardBonus && <BoardHelp math={math} symbols={theme?.symbols} />}
+                  {math.stageRoulette && <RouletteHelp math={math} symbols={theme?.symbols} locale={locale} />}
                 </>
               )}
 
               {helpPage === 'fairness' && (
                 <div className="hub-features__section">
+                  {math.stageRoulette && <p className="hub-sheet__message">{t('stageRouletteHelpFairnessNote')}</p>}
                   {lastResult ? (
                     <>
                       <dl className="hub-sheet__fair-list">

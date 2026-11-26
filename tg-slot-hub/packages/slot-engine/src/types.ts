@@ -272,6 +272,47 @@ export interface BoardBonusTrigger {
   win: number
 }
 
+/** 무대 룰렛 칸 종류. `coin` 상 · `stepUp` 한 단계 위로 · `encore` 앙코르(상 + 한 번 더) · `grand` 대상. */
+export type RouletteSegmentKind = 'coin' | 'stepUp' | 'encore' | 'grand'
+
+/** 무대 룰렛 회전 1번의 결과. 서버 RNG가 정한 칸을 그대로 싣는다. */
+export interface RouletteStep {
+  /** 돌린 고리 (0 바깥부터). */
+  ring: number
+  /** 선 칸 인덱스 (포인터 12시 = 0번, 시계 방향). */
+  segment: number
+  kind: RouletteSegmentKind
+  /** 응원봉 불이 켜진 코인 칸이었나. 코인 칸만 true가 될 수 있다. */
+  lit: boolean
+  /** 이 회전 지급 코인 (캡 적용 후). */
+  win: number
+  /** 앙코르가 돌리기를 늘렸나 (`maxEncores` 전이면 true). 앙코르 칸이 아니면 false. */
+  encoreCounted: boolean
+  /** 이 회전 뒤 남은 돌리기(곡) 수. */
+  songsLeft: number
+}
+
+/** 무대 룰렛 진입과 그 전체 결과. 트리거 스핀 응답 하나에서 끝까지 정산한다. */
+export interface StageRouletteTrigger {
+  type: 'stageRoulette'
+  /** 화면의 초대권(스캐터) 수. */
+  bonusCount: number
+  /** 초대권 칸 [reel, row]. */
+  positions: GridPosition[]
+  /** 화면의 응원봉 수 (상한 전 원래 개수). */
+  cheer: number
+  /** 응원봉 칸 [reel, row]. 불빛 토큰 출발점. */
+  cheerPositions: GridPosition[]
+  /** 고리별 불 켜진 칸 인덱스 (`litOrder` 앞에서부터). */
+  lit: number[][]
+  /** 시작 고리. 초대권이 `startInnerAt`장 이상이면 1. */
+  startRing: number
+  steps: RouletteStep[]
+  /** 룰렛 지급 합계 코인 (캡 적용 후). */
+  total: number
+  endedBy: 'songs' | 'capped'
+}
+
 export type FeatureTrigger =
   | FreeSpinsTrigger
   | ScatterWinTrigger
@@ -282,6 +323,7 @@ export type FeatureTrigger =
   | CoinBoardTrigger
   | CoinRespinTrigger
   | BoardBonusTrigger
+  | StageRouletteTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {
@@ -330,6 +372,8 @@ export interface SpinResult {
   respinWin?: number
   /** 말판 보너스 지급 코인 (캡 적용 후). `totalWin`에 이미 들어 있다. 말판 트리거 스핀만. */
   boardWin?: number
+  /** 무대 룰렛 지급 합계 코인 (캡 적용 후). `totalWin`에 이미 들어 있다. 룰렛 트리거 스핀만. */
+  rouletteWin?: number
 }
 
 /**

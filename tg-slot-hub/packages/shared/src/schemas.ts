@@ -119,6 +119,8 @@ export type ApiError = z.infer<typeof ApiErrorSchema>
  * `orderComplete`: 라운드 중 주문 완료 1건 이상. 해당 피처가 없는 게임은 서버가 거부한다.
  * 말판 게임 전용: `boardBonus`: 말판 진입. `boardGoal`: 결승 도착. `boardTraps`: 함정으로 끝남.
  * `boardFork`: 갈림길에 한 번 이상 멈춤. `boardBig`: 말판 지급이 총 베팅의 100배 이상.
+ * 무대 룰렛 게임 전용: `roulette` 룰렛 진입 · `rouletteInner` 안쪽 고리 도달 · `roulette4` 가운데 고리 시작(초대권 4장+) ·
+ * `rouletteGrand` 대상 착지 · `rouletteBig` 룰렛 합계 총 베팅 100배 이상. 드문 셋은 `maxTries` 20000을 권한다.
  */
 export const SpinDebugPresetSchema = z.enum([
   'win',
@@ -139,6 +141,11 @@ export const SpinDebugPresetSchema = z.enum([
   'boardTraps',
   'boardFork',
   'boardBig',
+  'roulette',
+  'rouletteInner',
+  'roulette4',
+  'rouletteGrand',
+  'rouletteBig',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -485,6 +492,35 @@ export const RespinStepSchema = z.object({
   left: z.number().int().min(0),
 })
 export type RespinStep = z.infer<typeof RespinStepSchema>
+/** 무대 룰렛 회전 1번. `win`은 실지급 코인(캡 적용 후), `songsLeft`는 이 회전 뒤 남은 돌리기 */
+export const RouletteStepSchema = z.object({
+  ring: z.number().int().min(0).max(2),
+  segment: z.number().int().min(0).max(11),
+  kind: z.enum(['coin', 'stepUp', 'encore', 'grand']),
+  lit: z.boolean(),
+  win: z.number().int().min(0),
+  encoreCounted: z.boolean(),
+  songsLeft: z.number().int().min(0),
+})
+export type RouletteStep = z.infer<typeof RouletteStepSchema>
+
+/**
+ * 무대 룰렛 진입과 전체 결과. 트리거 스핀 응답 하나에 끝까지 실린다(서버 RNG가 칸을 정했다).
+ * 화면의 «돌리기» 탭은 이 결과를 보여 주는 연출이다. `total`은 `totalWin`에 이미 들어 있다.
+ */
+export const StageRouletteFeatureSchema = z.object({
+  type: z.literal('stageRoulette'),
+  bonusCount: z.number().int().min(1),
+  positions: z.array(z.tuple([z.number().int(), z.number().int()])),
+  cheer: z.number().int().min(0),
+  cheerPositions: z.array(z.tuple([z.number().int(), z.number().int()])),
+  lit: z.array(z.array(z.number().int().min(0).max(11))).max(3),
+  startRing: z.number().int().min(0).max(1),
+  steps: z.array(RouletteStepSchema).min(1).max(12),
+  total: z.number().int().min(0),
+  endedBy: z.enum(['songs', 'capped']),
+})
+export type StageRouletteFeature = z.infer<typeof StageRouletteFeatureSchema>
 
 export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('freeSpins'), spins: z.number().int().min(1), multiplier: z.number().min(1), retrigger: z.boolean() }),
@@ -537,6 +573,7 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   }),
   /** 말판 보너스 전체(던지기 기록·종료 사유·지급). 트리거 스핀에만 실린다 */
   BoardBonusFeatureSchema,
+  StageRouletteFeatureSchema,
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 

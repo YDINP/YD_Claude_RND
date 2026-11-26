@@ -1,0 +1,299 @@
+{
+  "id": "idol-stage-live",
+  "reels": 5,
+  "rows": 4,
+  "payModel": "ways",
+  "ways": {
+    "base": 1024,
+    "bothWays": false,
+    "betDivisor": 50
+  },
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {"en": "Golden Mic", "ko": "황금 마이크"},
+      "wild": true
+    },
+    {
+      "id": "bonus",
+      "name": {"en": "Stage Pass", "ko": "무대 초대권"},
+      "scatter": true
+    },
+    {
+      "id": "idol_pink",
+      "name": {"en": "Pink Center", "ko": "핑크 센터"}
+    },
+    {
+      "id": "idol_blue",
+      "name": {"en": "Blue Vocal", "ko": "블루 보컬"}
+    },
+    {
+      "id": "idol_gold",
+      "name": {"en": "Gold Dancer", "ko": "골드 댄서"}
+    },
+    {
+      "id": "lightstick",
+      "name": {"en": "Lightstick", "ko": "응원봉"}
+    },
+    {
+      "id": "album",
+      "name": {"en": "Album", "ko": "앨범"}
+    },
+    {
+      "id": "heart_balloon",
+      "name": {"en": "Heart Balloon", "ko": "하트 풍선"}
+    },
+    {
+      "id": "star_badge",
+      "name": {"en": "Star Badge", "ko": "별 배지"}
+    },
+    {
+      "id": "note",
+      "name": {"en": "Music Note", "ko": "음표"}
+    },
+    {
+      "id": "ribbon",
+      "name": {"en": "Ribbon", "ko": "리본"}
+    }
+  ],
+  "strips": [
+    ["idol_blue","idol_blue","star_badge","star_badge","star_badge","ribbon","ribbon","ribbon","ribbon","ribbon","ribbon","lightstick","lightstick","ribbon","album","idol_pink","album","ribbon","ribbon","idol_gold","idol_gold","note","note","bonus","lightstick","note","lightstick","ribbon","ribbon","idol_gold","note","star_badge","heart_balloon","note","note","star_badge","heart_balloon","star_badge","ribbon","ribbon","note","note","note","note","lightstick","ribbon","star_badge","ribbon","ribbon","ribbon","star_badge","idol_blue","star_badge","lightstick","lightstick","idol_blue","idol_gold","idol_gold","idol_gold","note","note","note","star_badge","star_badge","album","heart_balloon","heart_balloon","idol_pink","heart_balloon","idol_pink","idol_pink","idol_pink","idol_blue","bonus","note","album","album","note","heart_balloon","star_badge","star_badge","idol_blue","heart_balloon","album","album","album","heart_balloon","heart_balloon","idol_gold","idol_gold","lightstick","idol_pink","idol_blue","star_badge","album","album","lightstick","heart_balloon","heart_balloon","lightstick"],
+    ["ribbon","lightstick","idol_gold","idol_gold","idol_blue","idol_blue","idol_blue","album","idol_gold","idol_gold","ribbon","ribbon","ribbon","star_badge","star_badge","star_badge","idol_pink","idol_pink","album","album","ribbon","ribbon","ribbon","idol_blue","idol_blue","idol_blue","idol_blue","heart_balloon","heart_balloon","album","album","idol_pink","wild","lightstick","heart_balloon","star_badge","album","heart_balloon","lightstick","ribbon","note","star_badge","star_badge","star_badge","heart_balloon","heart_balloon","heart_balloon","note","bonus","star_badge","note","lightstick","ribbon","ribbon","ribbon","note","note","ribbon","ribbon","ribbon","idol_gold","note","note","note","heart_balloon","wild","album","album","star_badge","idol_gold","idol_gold","heart_balloon","heart_balloon","heart_balloon","lightstick","lightstick","star_badge","star_badge","star_badge","star_badge","note","note","note","note","lightstick","lightstick","lightstick","star_badge","note","note","note","idol_gold","album","idol_pink","idol_pink","lightstick","idol_pink","album","bonus","wild"],
+    ["lightstick","star_badge","idol_gold","note","note","note","note","album","note","note","wild","album","idol_blue","idol_blue","idol_pink","idol_pink","idol_blue","album","album","album","album","album","heart_balloon","heart_balloon","heart_balloon","heart_balloon","star_badge","star_badge","heart_balloon","heart_balloon","lightstick","ribbon","note","bonus","idol_gold","idol_gold","idol_gold","idol_gold","idol_gold","idol_gold","idol_gold","note","note","idol_pink","wild","star_badge","star_badge","star_badge","idol_blue","heart_balloon","heart_balloon","heart_balloon","heart_balloon","heart_balloon","lightstick","ribbon","ribbon","ribbon","ribbon","ribbon","idol_pink","idol_pink","note","lightstick","ribbon","note","star_badge","ribbon","ribbon","ribbon","album","idol_pink","note","idol_blue","idol_blue","lightstick","idol_blue","wild","ribbon","ribbon","ribbon","lightstick","star_badge","bonus","star_badge","star_badge","star_badge","lightstick","album","album","lightstick","star_badge","lightstick","note","note","lightstick","star_badge","star_badge","note","ribbon"],
+    ["ribbon","ribbon","ribbon","note","idol_blue","lightstick","lightstick","star_badge","star_badge","ribbon","ribbon","heart_balloon","idol_gold","idol_gold","idol_gold","note","idol_gold","idol_gold","idol_pink","ribbon","note","note","idol_pink","album","wild","album","bonus","lightstick","star_badge","album","album","album","album","album","album","album","album","star_badge","note","note","star_badge","idol_gold","ribbon","ribbon","idol_gold","note","note","note","ribbon","star_badge","star_badge","ribbon","heart_balloon","star_badge","idol_blue","heart_balloon","heart_balloon","ribbon","wild","idol_pink","idol_pink","star_badge","star_badge","star_badge","heart_balloon","heart_balloon","heart_balloon","heart_balloon","heart_balloon","idol_blue","lightstick","note","note","note","star_badge","heart_balloon","bonus","lightstick","star_badge","star_badge","idol_blue","note","note","note","idol_blue","lightstick","ribbon","ribbon","ribbon","lightstick","lightstick","wild","idol_pink","idol_blue","idol_blue","idol_gold","heart_balloon","lightstick","lightstick","idol_pink"],
+    ["album","album","star_badge","star_badge","note","note","note","note","heart_balloon","heart_balloon","star_badge","note","idol_blue","idol_blue","ribbon","ribbon","note","star_badge","star_badge","star_badge","star_badge","star_badge","lightstick","lightstick","lightstick","heart_balloon","wild","note","album","album","idol_gold","idol_gold","idol_gold","idol_gold","idol_gold","star_badge","star_badge","ribbon","bonus","heart_balloon","heart_balloon","heart_balloon","lightstick","heart_balloon","note","star_badge","star_badge","album","ribbon","album","lightstick","idol_pink","idol_pink","idol_pink","heart_balloon","heart_balloon","heart_balloon","lightstick","album","idol_blue","wild","note","idol_blue","idol_blue","note","note","star_badge","idol_gold","note","lightstick","album","idol_pink","ribbon","note","album","album","idol_gold","idol_gold","note","note","lightstick","ribbon","ribbon","ribbon","ribbon","lightstick","star_badge","idol_pink","bonus","ribbon","ribbon","ribbon","ribbon","wild","heart_balloon","ribbon","idol_pink","lightstick","idol_blue","idol_blue"]
+  ],
+  "paytable": {
+    "idol_pink": {
+      "3": 26,
+      "4": 71,
+      "5": 212
+    },
+    "idol_blue": {
+      "3": 21,
+      "4": 53,
+      "5": 159
+    },
+    "idol_gold": {
+      "3": 18,
+      "4": 44,
+      "5": 124
+    },
+    "lightstick": {
+      "3": 14,
+      "4": 32,
+      "5": 88
+    },
+    "album": {
+      "3": 11,
+      "4": 26,
+      "5": 71
+    },
+    "heart_balloon": {
+      "3": 9,
+      "4": 21,
+      "5": 53
+    },
+    "star_badge": {
+      "3": 5,
+      "4": 14,
+      "5": 35
+    },
+    "note": {
+      "3": 5,
+      "4": 11,
+      "5": 26
+    },
+    "ribbon": {
+      "3": 4,
+      "4": 9,
+      "5": 21
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "bonus"
+  },
+  "stageRoulette": {
+    "trigger": 3,
+    "startInnerAt": 4,
+    "songs": 3,
+    "maxEncores": 2,
+    "cheer": {
+      "symbol": "lightstick",
+      "maxLit": 6,
+      "litMultiplier": 2
+    },
+    "rings": [
+      {
+        "id": "outer",
+        "segments": [
+          {
+            "kind": "coin",
+            "value": 4
+          },
+          {
+            "kind": "coin",
+            "value": 5
+          },
+          {
+            "kind": "stepUp"
+          },
+          {
+            "kind": "coin",
+            "value": 4
+          },
+          {
+            "kind": "encore",
+            "value": 3
+          },
+          {
+            "kind": "coin",
+            "value": 6
+          },
+          {
+            "kind": "coin",
+            "value": 4
+          },
+          {
+            "kind": "stepUp"
+          },
+          {
+            "kind": "coin",
+            "value": 8
+          },
+          {
+            "kind": "encore",
+            "value": 3
+          },
+          {
+            "kind": "coin",
+            "value": 5
+          },
+          {
+            "kind": "coin",
+            "value": 9
+          }
+        ],
+        "litOrder": [
+          5,
+          1,
+          10,
+          6,
+          3,
+          8
+        ]
+      },
+      {
+        "id": "middle",
+        "segments": [
+          {
+            "kind": "coin",
+            "value": 5
+          },
+          {
+            "kind": "stepUp"
+          },
+          {
+            "kind": "coin",
+            "value": 8
+          },
+          {
+            "kind": "encore",
+            "value": 5
+          },
+          {
+            "kind": "coin",
+            "value": 10
+          },
+          {
+            "kind": "coin",
+            "value": 6
+          },
+          {
+            "kind": "stepUp"
+          },
+          {
+            "kind": "coin",
+            "value": 12
+          },
+          {
+            "kind": "encore",
+            "value": 5
+          },
+          {
+            "kind": "coin",
+            "value": 18
+          }
+        ],
+        "litOrder": [
+          4,
+          2,
+          9,
+          5,
+          0,
+          7
+        ]
+      },
+      {
+        "id": "inner",
+        "segments": [
+          {
+            "kind": "coin",
+            "value": 12
+          },
+          {
+            "kind": "encore",
+            "value": 12
+          },
+          {
+            "kind": "coin",
+            "value": 20
+          },
+          {
+            "kind": "grand",
+            "value": 120
+          },
+          {
+            "kind": "coin",
+            "value": 16
+          },
+          {
+            "kind": "coin",
+            "value": 24
+          },
+          {
+            "kind": "encore",
+            "value": 12
+          },
+          {
+            "kind": "coin",
+            "value": 40
+          }
+        ],
+        "litOrder": [
+          2,
+          4,
+          0,
+          5,
+          7
+        ]
+      }
+    ]
+  },
+  "round": {
+    "maxWinCap": 2000
+  },
+  "betLevels": [
+    50,
+    100,
+    250,
+    500,
+    1000,
+    2500
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}

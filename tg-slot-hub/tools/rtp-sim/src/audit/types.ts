@@ -3,6 +3,7 @@
  * 이 폴더의 모든 모듈은 브라우저에서도 돌아야 하므로 node:* 를 쓰지 않는다.
  */
 import type { GameMath, GridPosition, RtpBreakdown, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { RouletteReport } from './rouletteStats.js'
 
 /** 심볼 또는 그룹 하나가 RTP에 기여하는 몫. */
 export interface ContributionRow {
@@ -179,6 +180,8 @@ export interface DistributionReport {
   coinRespin?: CoinRespinReport
   /** 말판 팩의 진입·지급·종료 사유·DP 대조. 말판이 없으면 없다. */
   board?: BoardReport
+  /** 무대 룰렛 팩의 진입·고리·칸·회전 통계. 룰렛이 없으면 없다. */
+  roulette?: RouletteReport
 }
 
 /** 코인 리스핀 통계(표본). 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. */

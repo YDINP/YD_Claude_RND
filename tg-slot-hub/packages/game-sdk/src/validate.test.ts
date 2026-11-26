@@ -546,3 +546,41 @@ describe('checkGamePack — 연쇄 스트립 길이', () => {
     expect(find(problems, PACK_FILES.math, 'strips.1')?.level).toBe('warn')
   })
 })
+
+describe('checkGamePack — 무대 룰렛 초대권 간격', () => {
+  const coin = (value: number) => ({ kind: 'coin', value })
+  const rouletteMath = {
+    ...fixtureMath,
+    rows: 2,
+    symbols: [
+      ...fixtureMath.symbols,
+      { id: 'scat', name: { en: 'Pass' }, scatter: true },
+      { id: 'ls', name: { en: 'Lightstick' } },
+    ],
+    strips: [
+      ['scat', 'scat', 'cherry', 'ls', 'wild', 'cherry'],
+      ['scat', 'cherry', 'ls', 'scat', 'wild', 'cherry'],
+    ],
+    scatter: { symbol: 'scat' },
+    round: { maxWinCap: 100 },
+    stageRoulette: {
+      trigger: 2,
+      songs: 3,
+      maxEncores: 0,
+      cheer: { symbol: 'ls', maxLit: 1, litMultiplier: 2 },
+      rings: [
+        { id: 'outer', segments: [coin(1), coin(2), { kind: 'stepUp' }, coin(1), coin(2), coin(3)], litOrder: [0] },
+        { id: 'inner', segments: [coin(2), coin(3), coin(4), { kind: 'grand', value: 20 }, coin(2), coin(3)], litOrder: [0] },
+      ],
+    },
+  }
+  const rouletteManifest = { ...fixtureManifest, rows: 2 }
+
+  it('원형 간격이 rows보다 작은 릴만 경고한다', () => {
+    const problems = check({
+      files: { [PACK_FILES.math]: json(rouletteMath), [PACK_FILES.manifest]: json(rouletteManifest) },
+    })
+    expect(find(problems, PACK_FILES.math, 'strips.0')?.level).toBe('warn')
+    expect(find(problems, PACK_FILES.math, 'strips.1')).toBeUndefined()
+  })
+})
