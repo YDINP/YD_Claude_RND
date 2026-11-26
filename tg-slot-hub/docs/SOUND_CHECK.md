@@ -209,3 +209,142 @@
 - 효과음 스템: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/sfx/candy_<pops|ladder|drop|ordertick|ordercomplete|orderdeal|chain|spin|reelstop|winsmall|winbig|feature|rollup>.wav`
 - BGM·믹스: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/candy_base.wav`, `candy_free.wav`, `candy_mix.wav`, `candy_sfx.wav`(SFX만), `candy_duck.wav`(BGM만, 덕킹 포함)
 - 원자료: `scratchpad/bgm/candy_sfx_check.json`
+
+## kraken-cove 사운드 (`deepsea` 프리셋) — 2026-11-26
+
+`deepsea` 프리셋의 기본 레시피 9종, 코인 리스핀 전용 소리 9종, 전용 BGM(base·free)을 earshot 으로 듣고 잰 기록. 방법은 위와 같다(실제 `audio.ts`를 헤드리스 Chrome OfflineAudioContext + 가상 시계로 렌더, 스템별 `match`·`describe`·`measure`·CLAP 코사인, BGM 40% 기본 음량의 믹스 렌더).
+**수치는 참고값이고 최종 귀 판정은 사용자 몫이다.** 코드는 `apps/hub/src/lib/audioDeepsea.ts`(레시피·리스핀 전용 소리), `bgmDeepsea.ts`(악보), `bgmVoices.ts`의 `DEEPSEA_KIT`(악기), `respinSfx.ts`(이벤트 → 소리 표)다. `audio.ts`는 import 한 줄·`RECIPES.deepsea` 한 줄·위임 export 9개만 더했다.
+
+### 소리 설계 (바닷속 보물 동굴: 물방울·소나·금화·종)
+
+| 이벤트 | 소리 | 다른 프리셋과 다른 점 |
+|---|---|---|
+| 스핀 시작 | 대역 잡음 상승(450→2600 Hz) + 기포 «뽀글» 4개 | 팝·딸깍 대신 물속 질감 |
+| 릴 정지 | 올라가는 기포음(360→700 Hz, 70 ms) + 작은 고음 «똑» | 킥 구조 아님. «bubble pop»으로 읽힘 |
+| 작은 당첨 | 둥근 종(핸드팬결) 3음 + 물방울 3개 + 기포 흩뿌림 | 글로켄·마림바와 다른 정수 배음 계열(기음 + 살짝 어긋난 기음 + 2배음 + 3.02배음) |
+| 큰 당첨 | 파도가 차오름(저역 잡음·사인 상승) → 마루에서 부서짐 → 종 화음 → 금화 쏟아짐 | 등급이 오를수록 화음 3→5음, 금화가 촘촘 |
+| 피처 | 기포 휘익(300→3600 Hz) + 사인 상승 + 종 6음 상행 | |
+| 기대감 | 삼각파 87→290 Hz, 2 Hz 느린 맥동 | 사이렌 아님(최상위 «uplifter sweep») |
+| 코인 착지(진입 판) | 금화 «칭»(2.1 kHz·3.3 kHz 비정수 배음, 80 ms), 알마다 반음씩(7단) | |
+| 빈 칸 회전 | 낮은 소나 «핑» 880 Hz + 메아리 2회 | |
+| 코인 고정 | «철컥»(110→72 Hz 몸통 + 대역 잡음) + «칭». 한 라운드 안에서 고정마다 반음씩 오름(12단 = 정확히 1옥타브) | 진행감 |
+| 횟수 리셋 | 소나 3음 상행(도·미·솔) | |
+| 마지막 한 번 | 60 Hz 심장 박동 2타(+2배음으로 폰 스피커에서도 들림) | 긴장 |
+| 촉수 감기 | 시작: 톱니 80→160 Hz 로우패스 슬라이드 + 거품 폭발 / 끝: «띠링» 2음(C6→G6) 확정음 | 게임의 얼굴 소리 |
+| 보물 작은/중간/큰 | 종 화음 2/3/4음 + 금화 장식 1/2/3개(큰 것은 저역 상승 추가) | |
+| 정산 틱 | 금화 «틱», 높이는 진행률 | 기획은 롤업 틱 재사용이었음 → 아래 «기획 대비» |
+| 최고 보물 | 톱니 3화음 팡파르 4연타 + 심벌 잡음 + 종 | 2.2 s 배경음 덕킹 |
+
+### 기본 레시피 9종 (스템별)
+
+| 이벤트 | 의도 문구 최고 z | 최상위 판독 | LUFS / dBTP | decay ms | 기존 6개 프리셋과 최대 CLAP 코사인 |
+|---|---|---|---|---|---|
+| spin | “a bubbling underwater loop” +2.72 (그럴듯) | a water drop +3.04 | −39.4 / −18.4 | 157 | 0.85 (shrine) |
+| reelstop | “a water droplet plink” +3.35 (강함) | a bubble pop +3.59 | −30.2 / −10.2 | 48 | 0.78 (fruit) |
+| reelstops(5연속) | “a series of water droplet plinks” +2.92 | bubbles underwater +3.74 | −28.8 / −9.5 | 48 | 0.83 (fruit) |
+| winsmall | “a small round bell arpeggio with bubbles” +3.20 (강함) | a magic sparkle chime +3.38 | −22.5 / −10.1 | 462 | 0.86 (bell·shrine) |
+| winbig(3초 롤업) | “a wave crash with gold coins and bells” +1.88 (불일치) | a success chime +2.69, bubbles underwater +2.67 | −24.2 / −5.7 | 463 | 0.90 (western) |
+| feature | “a rising underwater bubble whoosh into a round bell arpeggio” +3.03 (강함) | a success chime +3.82 | −20.4 / −9.1 | 419 | 0.89 (candy) |
+| mutation | “a short magical bubble sparkle” +2.74 | a success chime +3.75 | −24.0 / −12.2 | 460 | 0.84 (clockwork·candy) |
+| riser | “a slow deep pulsing underwater swell” +1.56 (불일치) | an uplifter sweep +3.51 / downlifter +3.44 (사이렌 아님) | −23.3 / −15.4 | 854 | 0.86 (shrine) |
+| rollup | “rapid coin counter ticks ending with a chime” +2.05 (약함) | a kalimba note +3.04 | −23.4 / −10.0 | 400 | 0.90 (candy) |
+
+- **목표 «candy·fruit·기존 프리셋과 같은 이벤트 CLAP 코사인 ≤ 0.90»**: 최대 0.903(큰 당첨·롤업·western/candy). 사실상 충족. 기존 프리셋끼리의 이벤트별 최대는 0.88~0.99라 비교 기준보다 낮다.
+- 클릭·잘린 꼬리: 마지막 10 ms 꼬리 전 스템 −240 dB(무음), 클리핑 0, true peak 전부 −5.7 dBTP 이하(기준 ≤ −1).
+- 큰 당첨은 «파도 + 금화»를 모델이 chime 으로 읽는다(의도 z 1.88). 롤업 틱은 짧은 틱이라 태거가 약한 영역이다(기존 프리셋도 1.7~2.5). **둘 다 귀 판정으로 넘긴다.**
+
+### 코인 리스핀 전용 소리 (이벤트 → 소리는 `respinSfx.ts`)
+
+| 렌더러 이벤트 | 소리 |
+|---|---|
+| `respinPulse`(진입 펄스, 코인마다) | 코인 착지 «칭», 알마다 반음 |
+| `respinStart` | 피처 소리(`playFeature`) |
+| `respinStep` start | 소나 «핑». 마지막 회차면 심장 박동 추가 |
+| `respinStep` land(새 코인 없음) | 물방울 «똑»(릴 정지) |
+| `respinStep` pin | 코인 고정음. 한 번에 두 코인이면 둘째를 90 ms 미룬다(반음 단계가 올라 겹치지 않게) |
+| `respinStep` end | 남은 횟수가 **늘었을 때만** 소나 3음(처음 3회 상태에서 새 코인이 붙은 경우는 조용) |
+| `columnWrap` start / end | 촉수 우웅 / «띠링» 2배 확정음 |
+| `respinCollect` | 보물이면 크기별 종 화음, 숫자 코인이면 정산 금화 틱 |
+| `respinTop` start | 최고 보물 팡파르 |
+
+| 스템 | LUFS | dBTP | earshot 판독 |
+|---|---|---|---|
+| coinlands(8알 상행) | −24.5 | −10.5 | “eight gold coins clinking one after another rising in pitch” z +3.18 (강함) |
+| sonar | −24.8 | −11.0 | “a soft sonar ping” z +2.77 (그럴듯) |
+| pins(고정 13단) | −21.1 | −3.9 | “a metal clack followed by a gold coin ring, rising in pitch” z +1.55 (불일치, 최상위 kalimba note +2.94) |
+| reset | −27.6 | −16.4 | “a three note ascending soft chime” z +3.32 (강함) |
+| last(심장 박동) | −27.1 | −9.7 | “two deep heartbeat thumps” z +2.07, 최상위 **a kick drum +3.69** |
+| wrap(시작+끝) | −23.7 | −9.4 | “a deep rumbling swell with bubbles then two bright rising dings” z +2.16 (약함), 최상위 liquid bloop +3.05 |
+| 보물 작은 / 중간 / 큰 | −22.8 / −21.7 / −19.9 | −9.7 / −9.3 / −8.4 | 작은 +3.09(강함), 큰 +1.81(최상위 success chime +4.26) |
+| settle(8틱) | −25.1 | −10.6 | 조용한 보조음(의도) |
+| top(팡파르) | −23.2 | −6.2 | “a triumphant brass fanfare” z +2.07 (약함), 최상위 success chime +3.99 |
+| respinround(한 라운드 5.85 s) | −23.5 | −5.2 | “a game round of sonar, coin clacks and bells” z +2.12 (약함) |
+
+- **고정음 음높이**: 0 / 6 / 12단의 스펙트럼 피크 1800 / 2546 / 3600 Hz — **12단이 정확히 1옥타브**, 상한(12단)에서 멈춘다. 단위 테스트(`audio.test.ts`·`respinSfx.test.ts`)도 13단 단조 증가·상한 정지를 확인한다. 진입 판 코인 착지도 7단 단조 증가·상한 정지.
+- 기존 대표 소리(candy winsmall·feature, bell winsmall, fruit mutation)와의 최대 코사인 ≤ 0.89.
+- 클리핑 0, 꼬리 −240 dB(`respinround`는 5.85 s 구간 절단이라 −51.8 dB, 게임 소리 문제 아님), true peak 전 스템 −3.9 dBTP 이하.
+- 심장 박동은 의도대로 «킥» 구조(62→42 Hz)라 모델이 kick 으로 읽는다. SOUND_CHECK 의 «킥 구조 금지»는 릴 정지에 대한 교훈이었고 여기서는 **긴장 연출용이라 의도한 구조**다. 귀로 확인할 것.
+
+### 배경음 (96 bpm, D 믹솔리디안, 칼림바 아르페지오 + 둥근 종 선율 + 둥근 사인 베이스, 기본 꺼짐)
+
+| 항목 | deepsea | 비고 |
+|---|---|---|
+| 기본(base) LUFS / dBTP | **−31.8** / −19.1 | 목표 −30~−32 충족 |
+| 라운드 변주(free) LUFS / dBTP | **−31.4** / −19.1 | 클리핑 0 |
+| 밝기 / 중심 주파수 | base 409 / 308 Hz → free 665 / 409 Hz | 기존 BGM(중심 330~657 Hz)보다 어둡다 |
+| “calm underwater ambient music with soft round bells and kalimba” | **+4.24 (base) / +4.49 (free)** | fruit +3.81, candy +2.92 |
+| “happy upbeat cheerful” | +1.69 | 느긋한 곡이라 낮은 게 맞다(fruit +2.85, candy +3.24) |
+| 최상위 판독 | a music box melody +3.53 (base) | |
+| **base ↔ free CLAP 코사인** | **0.967** | **목표 ≤ 0.93 미달.** 기존 프리셋은 bell 0.929 / candy 0.959 / western 0.962 / fruit 0.973 / clockwork 0.981 / shrine 0.983 |
+| 가장 비슷한 기존 BGM | clockwork_base 0.943, fruit_base 0.923, (free: clockwork_free 0.948) | 둘 다 부드러운 말렛·패드 질감 |
+
+- free(라운드) 변주: 두 반음 위, 아르페지오 한 옥타브 위(+12)·템포 1.06배, 박마다 둥근 북(심장 같은 맥), 16분 하이햇, 소나 핑 대선율. 악보는 `bgmDeepsea.ts`.
+- 시도 기록: ① 변주를 크게(아르페지오 +5 → +12, 템포 1.04 → 1.06, 둥근 북, 하이햇 음량↑) 해도 0.972 → 0.967. ② 파도 잡음 타악(snare 자리의 저역 잡음 swell)을 더해 봤으나 0.968, fruit_base 와의 코사인이 0.923 → 0.933 으로 오히려 가까워져 **되돌렸다**. CLAP 이 «말렛 + 패드 계열의 느린 음악»을 한 군으로 묶는 것으로 보인다. **구분은 귀로 확인이 필요하다.**
+- `bpm` 필드는 earshot 이 읽지 못한다. 설계값 96 이다.
+
+### 믹스 (BGM 40% 기본 음량)
+
+30초 장면(스핀 → 기대감 + 큰 당첨 → 피처 + 커튼 → 스핀): 믹스 −26.9 LUFS, true peak −5.8 dBTP, 클리핑 0.
+
+| 구간 | 릴 정지 | 작은 당첨 | 기대감 | 큰 당첨 | 피처 |
+|---|---|---|---|---|---|
+| SFX − BGM (dB) | +3.6 | **+9.2** | +13.7 | +13.7 | +25.8(커튼 덕킹 겹침) |
+| BGM 덕킹(조용한 구간 대비) | | | −4.5 | −4.9 | −13.9 |
+
+코인 리스핀 장면(free BGM 위에 소나 → 고정 2개 + 리셋 → 마지막(심장) → 촉수 감기 → 보물 → 정산 틱 → 팡파르 → 큰 당첨, 20초): 믹스 −24.8 LUFS, true peak −4.8 dBTP, 클리핑 0.
+
+| 구간 | 소나 | 코인 고정 | 마지막(심장) | 촉수 감기 | 보물 | 정산 틱 | 팡파르 | 큰 당첨 |
+|---|---|---|---|---|---|---|---|---|
+| SFX − BGM (dB) | +2.8 | **+5.4** | +7.5 | +6.1 | +6.0 | +4.4 | +14.6 | +13.5 |
+| BGM 덕킹 | | | −2.9 | | | | −7.6 | −8.0 |
+
+- 기획의 믹스 기준(작은 당첨 ≥ +3 dB, 코인 고정 ≥ +5 dB)을 충족한다. 소나(+2.8)는 회차마다 반복되는 배경 맥이라 일부러 낮게 뒀다.
+
+### 기획 대비 바뀐 것
+
+1. **정산 틱**: 기획은 «롤업 틱 레시피 재사용»이었으나 free BGM 위에서 −13.0 dB 로 완전히 묻혔다(틱 음량 0.05). 전용 금화 «틱»(`settleTick`, 음량 0.3)으로 바꿔 +4.4 dB 가 됐다.
+2. **릴 정지**: 기획의 «사인 1200→420 Hz 하강»은 첫 렌더에서 “a digital glitch” +2.78 로 읽혔다. 실제 물방울 소리는 위로 휘므로 «올라가는 기포음 360→700 Hz + 고음 똑»으로 바꿨다 → “a bubble pop” +3.59.
+3. **기대감**: 첫 렌더(사인 98→330 Hz)가 shrine 과 0.92 였다. 삼각파 87→290 Hz·맥동 2 Hz 로 낮춰 최대 0.86.
+4. **큰 당첨**: 첫 렌더(종 아르페지오 중심)가 shrine 과 0.94 였다. 파도 → 마루 화음 → 금화 쏟아짐 구조로 바꿔 최대 0.90.
+5. **베이스 8분 오스티나토**는 악보 구조(변주별 베이스 무늬 없음)상 free 전용으로 넣을 수 없어, free 에 «박마다 둥근 북»을 넣는 것으로 긴장을 대신했다.
+6. **파일 구조**: 효과음은 `createDeepseaAudio(kit)` 팩토리(`audio.ts`의 `tone`·`noise`·`live`·덕킹을 넘겨받음)라 `audio.ts` 와 순환 import 가 없다. 악기는 `BgmVoices`의 `Kit` 타입이 비공개라 `bgmVoices.ts`의 `DEEPSEA_KIT`에 뒀다(`bgmDeepsea.ts`는 악보만).
+7. **코인 착지 «칭»과 정산 틱**처럼 금화 소리를 공유하는 소리는 같은 `coin` 음색에서 나온다(음높이·음량만 다름).
+8. **2차 QA(2026-11-26) 배선 변경**(새 레시피 없음, earshot 재측정 없음): 보물 코인이 **붙는 순간**에도 고정음 140 ms 뒤 그 단계의 종 화음(`tsmall|tmedium|tlarge`, 정산 때와 같은 소리)을 얹는다 — «보물 등장» 박자. 카운터 리셋음은 «남은 횟수가 늘었을 때»가 아니라 «새 코인이 붙을 때마다» 난다(이미 3회여도). 미뤄 둔 소리(둘째 고정음·보물 종)는 새 스핀·게임 이탈 때 취소된다.
+9. **3차 QA(2026-11-26) 배선 변경**(새 레시피 없음, earshot 재측정 없음): 코인 리스핀 정산 뒤 빅윈 오버레이가 **무음**이던 것을 고쳤다. 일반 판의 큰 당첨 소리는 렌더러 `winTotal`에서 나는데, 리스핀은 그 이벤트 없이 오버레이가 먼저 떠서 «큰 당첨 → 롤업 틱 → 마감음»이 한 번도 울리지 않았다(계측: 리스핀 3판 win·rollup 노드 0개). 이제 오버레이의 롤업 박자(`onRollPhase`: 굴리기 시작 → 앉음, 탭 건너뛰기 포함)에 맞춰 `respinSfx.playRespinCelebration`이 같은 레시피(deepsea `winBig` 파도→종 화음→금화, 틱, 마감음)를 낸다. 축하 등급 → 소리 등급은 문턱이 같다(SURGE·BLAST·STORM·CATACLYSM = big·mega·epic·max). 트리거 판의 라인 당첨이 복귀 뒤 `winTotal`로 다시 와도 그 판은 **작은 당첨 소리**만 낸다(큰 당첨 두 번 방지). 브라우저 계측(2026-11-26): 리스핀 6판 모두 오버레이 순간 winBig 노드 212~392개 + 틱 + 마감음 1회, 라인 당첨이 같이 난 판(808 = 780 + 28)은 큰 당첨 1회 + 복귀 뒤 winSmall 10노드.
+
+### 귀로 확인할 것 (earshot 이 못 가르는 것)
+
+- base ↔ free BGM 이 충분히 다르게 들리는지(0.967), 기존 clockwork·fruit BGM 과 구별되는지.
+- 코인 고정음의 «철컥»이 금속 걸쇠로 들리는지(모델 판독은 kalimba note).
+- 심장 박동(마지막 한 번)이 긴장감으로 들리는지, 큰 당첨의 «파도 + 금화», 최고 보물 팡파르가 금관으로 들리는지(모델은 chime 으로 읽음).
+- 한 번에 두 코인이 붙을 때 둘째 고정음 90 ms 지연이 어색하지 않은지.
+- 보물 코인이 붙을 때 고정음 → 140 ms 뒤 종 화음이 «보물이 왔다»로 들리는지, 정산 때 같은 종이 다시 울려 중복으로 느껴지지 않는지.
+- 빠름·터보에서 소나·고정음이 겹쳐 시끄럽지 않은지.
+- 정산이 끝나고 빅윈 오버레이가 뜰 때 큰 당첨 소리가 정산 금화 틱 바로 뒤에 붙어 과하지 않은지, 복귀 뒤 라인 당첨의 작은 소리가 군더더기로 들리지 않는지.
+- 최종 귀 판정은 사용자 몫이다.
+
+### 파일
+
+- 스템·믹스: `D:/park/tgslot-wt/_qa/new-a-sound/wav/deepsea_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup>.wav`, 리스핀 전용 `deepsea_<coinland|coinlands|sonar|pin0|pin6|pin12|pins|reset|last|wrapstart|wrapend|wrap|tsmall|tmedium|tlarge|settle|top|respinround>.wav`
+- BGM: `.../wav/bgm_deepsea_base.wav`, `bgm_deepsea_free.wav`(50초, 측정은 20~50초). 믹스: `mix_deepsea_{mix,sfx,duck}.wav`, 리스핀 장면 `rmix_deepsea_{mix,sfx,duck}.wav`
+- 하네스·분석 스크립트: `.../new-a-sound/{setup.js,run.mjs,analyze.py,intent.py,mixcheck.py,bgmmatch.py}`, 전체 측정 로그 `final_all.txt`
