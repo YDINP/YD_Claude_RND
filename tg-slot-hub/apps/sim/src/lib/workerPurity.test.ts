@@ -14,6 +14,9 @@ const appRoot = resolve(process.cwd())
 const workspaceRoot = resolve(appRoot, '../..')
 const workerEntry = join(appRoot, 'src', 'lib', 'mc.worker.ts')
 
+/** 검수 헬퍼 폴더 안의 Node 전용 CLI 보조 파일(브라우저 번들 밖). */
+const NODE_ONLY_AUDIT_FILES = new Set(['shards.ts', 'shardWorker.ts'])
+
 /** 워크스페이스 패키지 이름 -> 패키지 폴더. */
 function findWorkspacePackages(): Map<string, string> {
   const found = new Map<string, string>()
@@ -137,13 +140,28 @@ describe('몬테카를로 워커의 브라우저 순수성', () => {
 
   it('검수 헬퍼 폴더 전체가 node:를 쓰지 않는다', () => {
     // GUI가 audit/*를 통째로 import하므로 그래프에 안 걸린 파일도 브라우저 안전해야 한다.
+    // 예외: shards.ts·shardWorker.ts는 audit-cli·tune-cli만 쓰는 Node 전용 샤딩(worker_threads)이다.
+    // GUI 진입점(index.ts)이 이 둘을 끌어오지 않는지는 아래 테스트가 따로 지킨다.
     const auditDir = join(workspaceRoot, 'tools', 'rtp-sim', 'src', 'audit')
     const offenders: string[] = []
     for (const name of readdirSync(auditDir)) {
       if (!name.endsWith('.ts') || name.endsWith('.test.ts')) continue
+      if (NODE_ONLY_AUDIT_FILES.has(name)) continue
       const file = join(auditDir, name)
       for (const specifier of extractSpecifiers(readFileSync(file, 'utf8'))) {
         if (specifier.startsWith('node:')) offenders.push(`${name} -> ${specifier}`)
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it('Node 전용 샤딩 파일은 검수 헬퍼 진입점과 브라우저 쪽 모듈이 끌어오지 않는다', () => {
+    const auditDir = join(workspaceRoot, 'tools', 'rtp-sim', 'src', 'audit')
+    const offenders: string[] = []
+    for (const name of readdirSync(auditDir)) {
+      if (!name.endsWith('.ts') || name.endsWith('.test.ts') || NODE_ONLY_AUDIT_FILES.has(name)) continue
+      for (const specifier of extractSpecifiers(readFileSync(join(auditDir, name), 'utf8'))) {
+        if (/\/(shards|shardWorker)(\.js|\.ts)?$/.test(specifier)) offenders.push(`${name} -> ${specifier}`)
       }
     }
     expect(offenders).toEqual([])

@@ -1,8 +1,13 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync as readFileSyncRaw, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const srcDir = resolve(process.cwd(), 'src')
+
+/** 체크아웃 줄끝(CRLF/LF)과 무관하게 검사하도록 LF로 맞춰 읽는다. */
+function readText(path: string, _encoding?: 'utf8'): string {
+  return readFileSyncRaw(path, 'utf8').replace(/\r\n/g, '\n')
+}
 
 /** 줄 주석과 블록 주석 본문을 걷어낸 소스. 규칙을 설명하는 문장이 검사에 걸리지 않게 한다. */
 function stripComments(source: string): string {
@@ -34,7 +39,7 @@ describe('브라우저 전용 코드 격리', () => {
   it('src 루트 모듈은 pixi.js와 gsap을 정적으로 import하지 않는다', () => {
     const offenders: string[] = []
     for (const file of rootFiles) {
-      const source = readFileSync(file, 'utf8')
+      const source = readText(file, 'utf8')
       for (const marker of BROWSER_ONLY) {
         if (source.includes(`from ${marker}`)) offenders.push(`${file} -> ${marker}`)
       }
@@ -46,7 +51,7 @@ describe('브라우저 전용 코드 격리', () => {
     const offenders: string[] = []
     for (const file of rootFiles) {
       if (file.endsWith('.test.ts') || file.endsWith('testSupport.ts')) continue
-      const source = readFileSync(file, 'utf8')
+      const source = readText(file, 'utf8')
       for (const line of source.split('\n')) {
         if (!line.includes("from '@tgslot/slot-engine'")) continue
         if (!line.trimStart().startsWith('import type')) offenders.push(`${file}: ${line.trim()}`)
@@ -56,7 +61,7 @@ describe('브라우저 전용 코드 격리', () => {
   })
 
   it('pixi 진입점은 동적 import로만 연결된다', () => {
-    const facade = readFileSync(join(srcDir, 'createRenderer.ts'), 'utf8')
+    const facade = readText(join(srcDir, 'createRenderer.ts'), 'utf8')
     expect(facade).toContain("await import('./pixi/pixiRenderer.js')")
     expect(facade).not.toContain("from './pixi/")
   })
@@ -67,31 +72,31 @@ describe('브라우저 전용 코드 격리', () => {
     // (설명 주석에는 그 이름이 나오므로 주석을 걷어내고 검사한다.)
     for (const file of listTsFiles(join(srcDir, 'pixi'))) {
       if (file.endsWith('.test.ts')) continue
-      expect(stripComments(readFileSync(file, 'utf8'))).not.toContain('win.symbol')
+      expect(stripComments(readText(file, 'utf8'))).not.toContain('win.symbol')
     }
   })
 
   it('연출은 셀에 그려진 심볼로 찾는다', () => {
-    const entry = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const entry = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(entry).toContain('resolveSymbolFx(this.options.theme.fx, cell.symbol')
   })
 
   it('해제할 때 직접 만든 텍스처를 정리한다', () => {
     // 캔버스로 만든 텍스처는 아무도 소유하지 않아 이 호출이 빠지면 GPU에 그대로 쌓인다.
-    const entry = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const entry = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(entry).toContain('this.ownedTextures.destroyAll()')
   })
 
   it('동적 import가 가리키는 파일이 실제로 있다', () => {
     // jsdom에는 캔버스가 없어 이 모듈을 실행해 볼 수 없다. 경로만이라도 붙잡아 둔다.
     expect(existsSync(join(srcDir, 'pixi', 'pixiRenderer.ts'))).toBe(true)
-    const entry = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const entry = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(entry).toContain('export async function createPixiRendererCore')
   })
 })
 
 describe('리뷰에서 잡힌 회귀 방지', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('showWins가 피처 옵션과 속도를 계획으로 넘긴다', () => {
     expect(renderer()).toContain(
@@ -157,7 +162,7 @@ describe('리뷰에서 잡힌 회귀 방지', () => {
 })
 
 describe('변형(뮤테이션) 배선', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('변형은 착지와 spinEnd 사이에 재생된다', () => {
     // 순서가 뒤집히면 허브가 변형 전 그리드 위에서 승리를 보여준다.
@@ -245,7 +250,7 @@ describe('변형(뮤테이션) 배선', () => {
 
   it('파티클은 풀에서 꺼내 쓴다', () => {
     expect(renderer()).toContain('new MutationSpritePool(this.mutationLayer)')
-    const fx = readFileSync(join(srcDir, 'pixi', 'mutationFx.ts'), 'utf8')
+    const fx = readText(join(srcDir, 'pixi', 'mutationFx.ts'), 'utf8')
     expect(fx).toContain('pool.release(sprite)')
     // 풀이 스프라이트를 파괴하면 다음 차례에 꺼낼 것이 없다.
     expect(stripComments(fx)).not.toContain('sprite.destroy()')
@@ -265,7 +270,7 @@ describe('변형(뮤테이션) 배선', () => {
 })
 
 describe('ways 배선', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('페이라인이 없어도 승리 광채를 그린다', () => {
     // ways 게임의 line은 -1이라 paylines[-1]은 언제나 undefined다.
@@ -275,7 +280,7 @@ describe('ways 배선', () => {
 
   it('ways 승리의 방향은 이벤트에 실려 허브로 간다', () => {
     // 릴 위에는 방향을 말해 줄 빛이 없다. 어느 쪽으로 읽었는지는 허브가 문구로 보여준다.
-    const presentation = readFileSync(join(srcDir, 'presentation.ts'), 'utf8')
+    const presentation = readText(join(srcDir, 'presentation.ts'), 'utf8')
     expect(presentation).toContain('event.direction = win.direction')
   })
 })
@@ -293,7 +298,7 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
     for (const file of rootAndPixi()) {
       // 이 검사 자체가 그 이름을 들고 있다. 테스트 파일은 건너뛴다.
       if (file.endsWith('.test.ts')) continue
-      const source = stripComments(readFileSync(file, 'utf8'))
+      const source = stripComments(readText(file, 'utf8'))
       for (const marker of ['buildPulsePath', 'playWinPulse', 'pulseArrive']) {
         if (source.includes(marker)) offenders.push(`${file} -> ${marker}`)
       }
@@ -302,19 +307,19 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
   })
 
   it('캔버스 크기를 바꾸는 applyLayout은 같은 호출 안에서 다시 그린다(생성자 첫 배치 포함)', () => {
-    const source = stripComments(readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
+    const source = stripComments(readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
     const body = source.slice(source.indexOf('private applyLayout(): void {'), source.indexOf('private drawFrame(): void {'))
     expect(body).toContain('this.app.renderer.resize(')
     expect(body.trimEnd().endsWith('this.app.render()\n  }')).toBe(true)
   })
 
   it('이벤트 유니온에 pulseArrive가 없다', () => {
-    expect(readFileSync(join(srcDir, 'types.ts'), 'utf8')).not.toContain('pulseArrive')
+    expect(readText(join(srcDir, 'types.ts'), 'utf8')).not.toContain('pulseArrive')
   })
 
   it('릴 위에 라인 문구를 찍지 않는다', () => {
     // 문구는 허브가 winLine 이벤트를 받아 릴 밖 스트립에 그린다.
-    const source = stripComments(readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
+    const source = stripComments(readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
     expect(source).not.toContain('winLabel')
     expect(source).not.toContain('formatLineLabel')
   })
@@ -322,7 +327,7 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
   it('릴 위에 프리스핀 남은 횟수/배수 명판을 찍지 않는다', () => {
     // 카운터 텍스트는 허브가 store의 freeSpins 상태로 릴 밖 스트립에 그린다.
     // Text(pixi.js)를 새로 만드는 자리가 남아 있으면 안 된다 — 심볼과 겹쳐 가독성을 해쳤다.
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).not.toContain('new Text(')
     expect(source).not.toContain('modeLabel')
     expect(source).not.toContain('formatFreeSpinsPlaque')
@@ -330,7 +335,7 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
 
   it('다른 프리스핀 연출(배경 전환·테두리)은 그대로 남는다', () => {
     // 텍스트만 없앴을 뿐, 배경 스와이프/전환/테두리 로직은 건드리지 않는다.
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).toContain('this.freeSpinsSprite')
     expect(source).toContain('playModeTransition')
     expect(source).toContain('FREE_SPINS_EDGE_STROKE_PX')
@@ -340,8 +345,17 @@ describe('승리 연출은 움직이는 빛을 쓰지 않는다', () => {
   })
 })
 
+describe('복원(immediate) 모드 맞춤', () => {
+  it('커튼 없이도 프리스핀 배경까지 갈아 끼운다(새로고침 복원 R3·AC-07)', () => {
+    const source = stripComments(readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8'))
+    const body = source.slice(source.indexOf('  setMode(mode: RendererMode): void {'), source.indexOf('  private playModeTransition('))
+    expect(body).toContain('if (mode.immediate === true) {')
+    expect(body).toContain("this.applyModeSwap(isFreeSpinsActive(mode) ? 'freeSpins' : 'base')")
+  })
+})
+
 describe('모드 전환은 화면 전체를 완전히 가리는 커튼이다', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('반투명 와이프/섬광은 남아 있지 않다 — 완전 차폐 커튼으로 대체됐다', () => {
     const source = renderer()
@@ -393,13 +407,13 @@ describe('모드 전환은 화면 전체를 완전히 가리는 커튼이다', (
 
 describe('승리 연출 순환·스킵', () => {
   it('라인 스텝은 그 자리에서 심볼 연출만 터뜨린다', () => {
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).toContain('this.playFxAt(win.positions)')
     expect(source).toContain('this.emit(winLineEvent(win, context))')
   })
 
   it('순환은 clearWins·다음 스핀·모드 전환이 끊는다', () => {
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     // 취소 판정은 winToken 하나로만 한다. clearWins가 그 토큰을 올린다.
     expect(source).toContain('cancelled: () => token !== this.winToken || this.destroyed')
     expect(source).toContain('this.winToken += 1')
@@ -414,7 +428,7 @@ describe('승리 연출 순환·스킵', () => {
 
   it('스킵은 순환을 멈추지 않는다', () => {
     // skipWins는 손잡이만 부른다. winToken을 올리면 순환까지 끊겨 화면이 승리 없이 남는다.
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).toContain('skipWins(): void {')
     expect(source).toContain('this.winSkip?.()')
     // skipWins가 취소 토큰을 건드리면 순환이 통째로 죽는다. 그 자리는 clearWins 하나뿐이다.
@@ -426,14 +440,14 @@ describe('승리 연출 순환·스킵', () => {
 
   it('타이머를 걷어 갈 때 기다리던 쪽을 깨운다', () => {
     // 깨우지 않으면 순환 한 바퀴가 매달린 약속에 붙잡혀 그대로 남는다.
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).toContain('clearTimeout(id)')
     expect(source).toContain('resolve()')
   })
 })
 
 describe('변형 단계는 반드시 닫힌다', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('연출이 없는 단계도 계획이 말한 길이만큼은 머문다', () => {
     // 0ms에 닫으면 buildMutationPlan이 약속한 길이와 화면이 갈린다. 길이의 SSOT은 계획이다.
@@ -461,8 +475,8 @@ describe('변형 단계는 반드시 닫힌다', () => {
 })
 
 describe('전환 클립 배선 — 애니메이션 WebP', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
-  const clip = (): string => readFileSync(join(srcDir, 'pixi', 'transitionClip.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const clip = (): string => readText(join(srcDir, 'pixi', 'transitionClip.ts'), 'utf8')
 
   it('클립은 캔버스가 아니라 DOM 엘리먼트로 올린다', () => {
     // 이 작업 전체의 함정이다. 애니메이션 WebP를 캔버스에 그리면 첫 프레임에서 멈춘다 —
@@ -490,7 +504,7 @@ describe('전환 클립 배선 — 애니메이션 WebP', () => {
     const source = renderer()
     expect(source).toContain('const clip = this.planTransitionClipFor(to)')
     expect(source).toContain('{ clipOpaqueMs: clip.opaqueMs }')
-    expect(readFileSync(join(srcDir, 'transition.ts'), 'utf8')).toContain('options.clipOpaqueMs')
+    expect(readText(join(srcDir, 'transition.ts'), 'utf8')).toContain('options.clipOpaqueMs')
   })
 
   it('클립은 전환이 시작되는 순간부터 돈다', () => {
@@ -501,7 +515,7 @@ describe('전환 클립 배선 — 애니메이션 WebP', () => {
   })
 
   it('두 방향 모두 읽는다', () => {
-    const source = readFileSync(join(srcDir, 'transitionClip.ts'), 'utf8')
+    const source = readText(join(srcDir, 'transitionClip.ts'), 'utf8')
     expect(source).toContain('theme.transitions?.freeSpinsEnter')
     expect(source).toContain('theme.transitions?.freeSpinsExit')
     expect(renderer()).toContain("for (const to of ['freeSpins', 'base'] as const)")
@@ -642,7 +656,7 @@ describe('전환 클립 배선 — 애니메이션 WebP', () => {
 })
 
 describe('풀링 — 순환 연출이 매번 새로 만들지 않는다', () => {
-  const read = (...parts: string[]): string => readFileSync(join(srcDir, ...parts), 'utf8')
+  const read = (...parts: string[]): string => readText(join(srcDir, ...parts), 'utf8')
   const renderer = (): string => read('pixi', 'pixiRenderer.ts')
 
   it('풀과 진단은 순수 모듈이다', () => {
@@ -725,7 +739,7 @@ describe('풀링 — 순환 연출이 매번 새로 만들지 않는다', () => 
 })
 
 describe('심볼 연출 덧그림 풀링', () => {
-  const read = (...parts: string[]): string => readFileSync(join(srcDir, ...parts), 'utf8')
+  const read = (...parts: string[]): string => readText(join(srcDir, ...parts), 'utf8')
   const symbolFx = (): string => stripComments(read('pixi', 'symbolFx.ts'))
 
   it('덧그림은 풀의 create 훅에서만 만들어진다', () => {
@@ -736,6 +750,16 @@ describe('심볼 연출 덧그림 풀링', () => {
     expect(source.match(/new Graphics\(/g) ?? []).toHaveLength(1)
     expect(source).toContain('createMask: () => new Sprite()')
     expect(source).toContain('createMask: () => new Graphics()')
+  })
+
+  it('빛줄기 마스크는 새것이든 재사용이든 심볼의 앵커·변환을 그대로 따른다', () => {
+    // 새 마스크는 앵커 0으로 태어나고 reset 훅은 반납 때만 돈다 — 첫 사용이 반 칸 어긋났었다(FF-17).
+    const source = symbolFx()
+    const shine = source.slice(source.indexOf('function playShine('), source.indexOf('function playBurst('))
+    expect(shine).toContain('mask.anchor.copyFrom(target.sprite.anchor)')
+    expect(shine).toContain('mask.position.copyFrom(target.sprite.position)')
+    expect(shine).toContain('mask.scale.copyFrom(target.sprite.scale)')
+    expect(shine).toContain('onUpdate: syncMask')
   })
 
   it('연출은 덧그림을 직접 파괴하지 않는다', () => {
@@ -779,7 +803,7 @@ describe('심볼 연출 덧그림 풀링', () => {
   })
 
   it('렌더러가 절차적 연출에 풀을 넘기고 해제할 때 비운다', () => {
-    const source = readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+    const source = readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
     expect(source).toContain(
       'playSymbolFxSet(target, plan.procedural, this.fxTextures, this.symbolFxPool)',
     )
@@ -789,7 +813,7 @@ describe('심볼 연출 덧그림 풀링', () => {
 })
 
 describe('릴 뒤 배경 패널 배선', () => {
-  const read = (...parts: string[]): string => readFileSync(join(srcDir, ...parts), 'utf8')
+  const read = (...parts: string[]): string => readText(join(srcDir, ...parts), 'utf8')
   const renderer = (): string => read('pixi', 'pixiRenderer.ts')
 
   it('패널은 콘텐츠 층의 맨 앞에 온다', () => {
@@ -848,7 +872,7 @@ describe('릴 뒤 배경 패널 배선', () => {
 })
 
 describe('시트 스프라이트 상한은 격자에서 나온다', () => {
-  const read = (...parts: string[]): string => readFileSync(join(srcDir, ...parts), 'utf8')
+  const read = (...parts: string[]): string => readText(join(srcDir, ...parts), 'utf8')
 
   it('상한을 상수로 못박지 않는다', () => {
     // 매직넘버 12/20은 특정 격자의 우연한 산물이라 다음 팩에서 또 틀린다.
@@ -870,7 +894,7 @@ describe('시트 스프라이트 상한은 격자에서 나온다', () => {
 })
 
 describe('기대감 배선', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
 
   it('스킵은 기대감 구간을 즉시 닫는다', () => {
     const source = renderer()
@@ -882,14 +906,14 @@ describe('기대감 배선', () => {
   })
 
   it('기대감 대상은 정지 위치로만 정해진다 - 결과 필드를 읽지 않는다', () => {
-    const source = readFileSync(join(srcDir, 'anticipation.ts'), 'utf8')
+    const source = readText(join(srcDir, 'anticipation.ts'), 'utf8')
     expect(source).not.toMatch(/totalWin|Math\.random|wins/)
   })
 })
 
 describe('연쇄 배선', () => {
-  const renderer = (): string => readFileSync(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
-  const fx = (): string => stripComments(readFileSync(join(srcDir, 'pixi', 'cascadeFx.ts'), 'utf8'))
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const fx = (): string => stripComments(readText(join(srcDir, 'pixi', 'cascadeFx.ts'), 'utf8'))
 
   it('순서는 착지 → 변형 → 연쇄 → spinEnd다', () => {
     const source = renderer()
@@ -933,7 +957,7 @@ describe('연쇄 배선', () => {
   })
 
   it('연쇄 판은 slot-engine 값이 아니라 렌더러 사본으로 접는다', () => {
-    const source = readFileSync(join(srcDir, 'cascade.ts'), 'utf8')
+    const source = readText(join(srcDir, 'cascade.ts'), 'utf8')
     expect(source).toContain('export function applyCascadeStepToGrid(')
   })
 })
