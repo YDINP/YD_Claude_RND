@@ -79,11 +79,6 @@
           "type": "pulse",
           "scale": 1.15,
           "durationMs": 700
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": 25
         }
       ]
     },
@@ -116,11 +111,6 @@
           "type": "wobble",
           "degrees": 8,
           "durationMs": 700
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": -20
         }
       ]
     },
@@ -139,11 +129,6 @@
           "type": "pulse",
           "scale": 1.12,
           "durationMs": 600
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": 25
         }
       ]
     },
@@ -204,7 +189,7 @@
       "motion": "tumble",
       "size": 1.6
     },
-    "rays": { "style": "beams" },
+    "rays": { "style": "sunburst" },
     "waves": { "style": "ring" },
     "title": { "font": "rounded", "weight": 900, "stroke": 2, "strokeColor": "#7a1f00b3", "tracking": 0 },
     "tiers": {

@@ -43,11 +43,6 @@
           "type": "pulse",
           "scale": 1.15,
           "durationMs": 700
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": 25
         }
       ]
     },
@@ -80,11 +75,6 @@
           "type": "wobble",
           "degrees": 8,
           "durationMs": 700
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": -20
         }
       ]
     },
@@ -103,11 +93,6 @@
           "type": "pulse",
           "scale": 1.12,
           "durationMs": 600
-        },
-        {
-          "type": "shine",
-          "durationMs": 900,
-          "angle": 25
         }
       ]
     },
