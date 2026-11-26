@@ -34,7 +34,7 @@
 | 3 | `royal-diamond-777` | Royal Diamond 777 / 로열 다이아몬드 777 | 클래식 | 5×3 | 10라인 | 중저 | 미스터리 심볼 일괄 공개 | P1 | 1 |
 | 4 | `sheriff-sixgun` | Sheriff's Six-Gun / 보안관의 6연발 | 스타일라이즈드 3D | 5×3 | 20라인 | 중 | 확장 와일드 + 갬블 | P1 | 1 |
 | 5 | `shiba-shrine` | Shiba Shrine / 시바 신사 | 큐트 애니멀 | 5×3 | 243 ways | 중 | 랜덤 와일드 드롭 | P2·P1 | 1 |
-| 6 | `candy-cluster-pop` | Candy Cluster Pop / 캔디 클러스터 팝 | 캔디 글로스 | 6×5 | 클러스터 5+ | 고 | 클러스터 페이 + 텀블 배수 사다리 | P4·P3 | 2 |
+| 6 | `candy-cluster-pop` | Candy Cluster Pop / 캔디 클러스터 팝 | 캔디 글로스 | 6×5 | 클러스터 5+ | 중 | 클러스터 페이 + 텀블 배수 사다리 | P4·P3 | 2 |
 | 7 | `olympus-nectar` | Olympus Nectar / 올림포스의 신주 | 스타일라이즈드 3D | 6×5 | 8+ 아무 위치 | 최고 | 텀블 + 누적 배수 오브 | P3·P4 | 2 |
 | 8 | `magi-stella` | Magi Stella / 마기 스텔라 | 애니 셀셰이딩 | 5×4 | 1024 ways | 고 | 프리스핀 스티키 와일드 | P2·P1 | 2 |
 | 9 | `kraken-cove` | Kraken Cove / 크라켄 만 | 스타일라이즈드 3D | 5×3 | 20라인 | 고 | 홀드&스핀 코인 + 4단 잭팟 | P5 | 3 |
@@ -54,15 +54,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 그리드 / 페이 | 5×3 / 10 페이라인 · 변동성 중저 · 적중률 목표 32% |
-| RTP 94.5 구성 | 라인 74.0 + 미스터리 12.5 + 스캐터·프리스핀 8.0 |
+| 그리드 / 페이 | 5×3 / 10 페이라인 · 변동성 중저 · 적중률 실측 약 35.0%(5릴 권장 상단) |
+| RTP 94.5 구성 | 라인 76.9 + 스캐터 2.7 + 프리스핀 14.9 (미스터리는 라인 안에서 작동해 따로 떼지 않는다) · 해석 RTP 94.4697% |
 | RTP 산출 | **analytic** — 공개 심볼로 조건부화하면 릴 독립이 복원된다 |
 | 공수 (엔진/렌더/허브/아트) | 6 / 4 / 2 / 10 h |
 
-**컨셉·아트** — 스타일: 클래식 글로시 3D 토이 렌더(`classic-777` 조형 언어 직계). 팔레트: 네이비 `#0b1220`, 브라스 `#d8a94a`/`#f4d98a`, 다이아 시안 `#8fe3f2`, 벨벳 레드 `#8f1f2e`. 프레임: 아르데코 브라스 베젤, 마퀴에 다이아 컷 각인, 사이드 레일에 작은 시안 젬 3개.
+**컨셉·아트** — 스타일: 클래식 글로시 3D 토이 렌더(`classic-777` 조형 언어 직계). 팔레트(구현): 블랙 벨벳 `#0d0c14`, 플래티넘 `#d7dbe0`, 다이아 시안 `#8fe3f2`, 벨벳 레드 `#8f1f2e`. 프레임·배경의 실제 모습은 `games/royal-diamond-777/README.md`가 정본이다(2026-11-26 검수 갱신).
 심볼(10): `wild` `mystery` `scatter` `seven` `diamond` `bar3` `bar2` `bar1` `bell` `cherry`
 
-**메커닉** — 트리거: 릴 스트립 50칸 중 `mystery` 3칸, `P(화면에 1개 이상) ≈ 0.60`. 상태: `STOP → MYSTERY_SCAN → REVEAL(가중 1회 추첨, 화면 전 미스터리 칸을 같은 심볼로) → EVALUATE`, 캐리 상태 없음. 수학: `revealWeights`만이 손잡이다. 고배당 가중을 올리면 분산이 오르고 RTP도 같이 오른다. 엣지: 공개 풀에서 `wild`·`scatter` 제외(공개 후 스캐터 트리거 금지) · 칸마다 따로 뽑지 않고 **스핀당 1회 추첨**(따로 뽑으면 상관이 사라져 해석식이 깨진다) · `revealWeights` 심볼은 전부 페이테이블에 존재. `RoundState`: 추가 없음. 공개 좌표는 `SpinResult.features.mysteryReveal`.
+**메커닉** — 트리거: 릴 스트립 47/46/49/51/54칸에 릴당 `mystery` 2~3칸, `P(화면에 1개 이상) ≈ 0.51`(구현값). 스트립은 첫 화면용으로 원형 회전돼 있다(골든 갱신 기록은 `GOLDEN_BASELINE.md` §3). 상태: `STOP → MYSTERY_SCAN → REVEAL(가중 1회 추첨, 화면 전 미스터리 칸을 같은 심볼로) → EVALUATE`, 캐리 상태 없음. 수학: `revealWeights`만이 손잡이다. 고배당 가중을 올리면 분산이 오르고 RTP도 같이 오른다. 엣지: 공개 풀에서 `wild`·`scatter` 제외(공개 후 스캐터 트리거 금지) · 칸마다 따로 뽑지 않고 **스핀당 1회 추첨**(따로 뽑으면 상관이 사라져 해석식이 깨진다) · `revealWeights` 심볼은 전부 페이테이블에 존재. `RoundState`: 추가 없음. 공개 좌표는 `SpinResult.features.mysteryReveal`.
 
 **UX** — 화면: 물음표 타일 그대로 착지 후 전 타일이 동시에 크로스페이드로 리빌(기존 심볼 슬롯 재사용, 신규 레이어 불필요). 배너: `MYSTERY REVEAL` 소형 팝 + 카드 뒤집기 SFX + medium haptic, 이후 기존 승리 FX로 이어짐. 배경: 전환 없음, 리빌 순간 골드 광선 플래시 300ms만.
 
@@ -72,12 +72,12 @@
     "weights": { "seven": 4, "diamond": 6, "bar3": 8, "bell": 14, "cherry": 26 } }
 ]
 ```
-아트: 심볼 10 + frame + bg + thumb = 13장.
+아트: 심볼 10 + 시트 3 + frame + bg + bg-freespins + thumb = 17장.
 
 ---
 
 ### #4 `sheriff-sixgun` — Sheriff's Six-Gun / 보안관의 6연발
-> 보안관 배지가 릴을 통째로 덮고, 딴 돈은 카드 한 장에 두 배가 되거나 사라진다.
+> 보안관 배지가 릴을 통째로 덮고, 딴 돈은 동전 한 번 던지기에 두 배가 되거나 사라진다.
 
 | 항목 | 값 |
 |---|---|
@@ -89,9 +89,9 @@
 **컨셉·아트** — 스타일: 스타일라이즈드 3D 웨스턴(먼지 낀 무광 금속 + 가죽). 팔레트: 사막 황토 `#c9884a`, 세이지 `#7e9a72`, 선셋 오렌지 `#e2683a`, 밤하늘 `#1b2437`. 프레임: 목재 살룬 간판 + 철제 리벳, 상단 마퀴에 밧줄 레터링, 하단에 편자 몰딩.
 심볼(10): `wild` `scatter` `sheriff` `bandit` `revolver` `dynamite` `horseshoe` `whiskey` `cactus` `boot`
 
-**메커닉** — 트리거: 릴 1·2·3 창에 `wild` 1개 이상이면 그 릴 전체 확장(릴당 `q ≈ 0.12`, 스핀당 확장 `≈ 0.30`). 갬블은 `totalWin > 0`일 때만 제안. 상태: `STOP → EXPAND_SCAN(reel∈{1,2,3}) → EVALUATE → (win>0) GAMBLE_OFFER → GAMBLE_FLIP(×2 | 0) →(≤5회) COLLECT`. 수학: 갬블은 `p=0.5, payout=2×`로 기대값 중립이라 RTP를 바꾸지 않고 분산만 키운다. 엣지: `gambleSteps ≤ 5` **그리고** `win × 2^steps ≤ maxWinCap`, 먼저 걸리는 쪽에서 강제 수령 · 갬블 결과는 서버가 결정하고 라운드 레코드에 기록, 재전송은 멱등키로 방어 · 확장은 스캐터 칸을 덮지 않는다(덮으면 프리스핀 RTP가 흔들린다). `RoundState`: `gamble?: { pendingWin: number; steps: number; maxSteps: number }`.
+**메커닉** — 트리거: 릴 1·2·3(0부터, 화면상 2·3·4번 릴) 창에 `wild` 1개 이상이면 그 릴 전체 확장(릴당 `q ≈ 0.12`, 스핀당 확장 `≈ 0.30`). 갬블은 `totalWin > 0`일 때만 제안. 상태: `STOP → EXPAND_SCAN(reel∈{1,2,3}) → EVALUATE → (win>0) GAMBLE_OFFER → GAMBLE_FLIP(×2 | 0) →(≤5회) COLLECT`. 수학: 갬블은 `p=0.5, payout=2×`로 기대값 중립이라 RTP를 바꾸지 않고 분산만 키운다. 엣지: `gambleSteps ≤ 5` **그리고** `win × 2^steps ≤ maxWinCap`, 먼저 걸리는 쪽에서 강제 수령 · 갬블 결과는 서버가 결정하고 라운드 레코드에 기록, 재전송은 멱등키로 방어 · 확장은 스캐터 칸을 덮지 않는다(덮으면 프리스핀 RTP가 흔들린다). `RoundState`: `gamble?: { pendingWin: number; steps: number; maxSteps: number }`.
 
-**UX** — 화면: 와일드 착지 시 릴 전체 세로 확장 트윈, 당첨 후 카드 뒷면 1장 + 빨강/검정 버튼 시트. 배너: `EXPANDING WILD` + heavy haptic + 금속 슬램음, 갬블 승리 시 배당 재롤업. 배경: 갬블 모달 동안 딤 α0.6, 상시 배경 교체 없음.
+**UX** — 화면(구현): 와일드 착지 시 그 릴이 황금 기둥으로 차오르며 튕긴다(별도 배너 없음). 당첨 후 동전 던지기 시트 — 앞면/뒷면 고르기, 성공 50%·×2·최대 5단, 제안은 다음 스핀이나 만료 때 자동 회수. 프리스핀을 여는 스핀에는 두 배 도전을 열지 않는다(2026-11-26). 갬블 승리 시 배당 재롤업. 배경: 갬블 모달 동안 딤 α0.6, 상시 배경 교체 없음.
 
 ```json
 "mutations": [
@@ -99,17 +99,17 @@
 ],
 "gamble": { "type": "coin-flip", "chance": 0.5, "payout": 2, "maxSteps": 5 }
 ```
-아트: 심볼 10 + frame + bg + bg-freespins + thumb + 갬블 카드 2장 = 16장.
+아트: 심볼 10 + frame + bg + bg-freespins + thumb + 승리 시트 3장(wild·sheriff·scatter). 더블업 동전 그림은 허브가 팩의 wild·scatter 심볼을 그대로 쓴다.
 
 ---
 
 ### #5 `shiba-shrine` — Shiba Shrine / 시바 신사
-> 시바가 경내를 가로지르며 와일드 발자국을 뿌리는, 페이라인 없는 243길 축제.
+> 신사 마당 위로 시바 발자국 도장이 쾅 찍혀 와일드가 되는, 페이라인 없는 243길 축제.
 
 | 항목 | 값 |
 |---|---|
-| 그리드 / 페이 | 5×3 / 243 ways(배수 기준 = **총 베팅액**) · 변동성 중 · 적중률 목표 34% |
-| RTP 94.5 구성 | ways 70.0 + 와일드 드롭 16.0 + 프리스핀 8.5 |
+| 그리드 / 페이 | 5×3 / 243 ways(배수 기준 = **웨이당 베팅액** = 총 베팅액 / 25) · 변동성 중 · 적중률 실측 35.4% |
+| RTP 94.5 구성 | ways 59.8 + 스캐터 5.8 + 프리스핀 29.3 (와일드 드롭은 ways 안에서 작동) · 정식 감사 94.881%(25M) |
 | RTP 산출 | **monte-carlo**, 필요 스핀 수는 팩별 산출(`manifest.auditSpins`, §4 개정 2026-09-03) — 드롭의 배치 배타성이 릴 간 상관을 만든다 |
 | 공수 | 12 / 6 / 2 / 11 h |
 
@@ -118,7 +118,7 @@
 
 **메커닉** — 트리거: 매 스핀 `chance = 0.20`으로 와일드 낙하, 개수 가중 `{1:60, 2:30, 3:10}` → 스핀당 기대 추가 와일드 0.30. 대상은 릴 1~3. 상태: `STOP → DROP_ROLL(p) → DROP_PLACE(후보칸 균등, 기존 wild/scatter 칸 제외) → WAYS_EVAL`. 수학: `chance`와 `countWeights`가 드롭 몫을 거의 선형으로 지배한다. 엣지: 후보칸이 요구 개수보다 적으면 가능한 만큼만(예외 아님) · 드롭은 스캐터를 덮지 않는다 · ways에서 와일드는 릴 카운트에 합산되므로 드롭 1개가 최대 3⁴배 경로를 만든다 → `maxWinCap` 필수. `RoundState`: 추가 없음, 좌표는 `features.wildDrops`.
 
-**UX** — 화면: 정지 후 마스코트가 상단 20% 영역을 가로지르며 무작위 칸에 와일드 스탬프(릴 위/HUD 아래 임시 레이어). 배너: `SHRINE BLESSING` 소형 배너, 낙하마다 방울음 + light haptic 누적, 확정 후 당첨 재계산 및 FX 재생. 배경: 전환 없음, 연출 중 벚꽃·등롱 파티클 1.5초.
+**UX** — 화면(구현): 정지 뒤 발자국 인장이 위에서 떨어져 칸을 와일드로 바꾼다(약 0.5초), 확정 후 당첨 FX. 심볼 이름은 «발자국 와일드»·«신사 방울». 처음 기획한 마스코트 스윕 시트와 `SHRINE BLESSING` 배너는 구현되지 않았다 — 공용 렌더러 부품(마스코트 스윕 레이어)과 팩 아트가 함께 필요해 백로그로 남긴다.
 
 ```json
 "payModel": { "type": "ways", "ways": 243, "adjacentFrom": 0, "bothWays": false },
@@ -127,7 +127,7 @@
     "reels": [1, 2, 3], "coverScatter": false }
 ]
 ```
-아트: 심볼 10 + frame + bg + bg-freespins + thumb + 마스코트 스윕 스프라이트시트(8프레임) = 15장.
+아트: 심볼 10 + frame + bg + bg-freespins + thumb + 승리 시트. (마스코트 스윕 시트는 미발주 — 위 UX 참고.)
 
 ---
 
@@ -136,15 +136,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 그리드 / 페이 | 6×5 / 클러스터 5+ (직교 인접, 배수 기준 = 총 베팅액) · 변동성 고 |
-| RTP 94.5 구성 | 기본 게임(클러스터·텀블 + 스캐터) 86.0 + 주문 카드 라운드 8.5. 최초 클러스터 발생률 32%, 평균 연쇄 1.2(실측, 스트립 리필 구조상 1.6은 적중률 게이트와 충돌) |
+| 그리드 / 페이 | 6×5 / 클러스터 5+ (직교 인접, 배수 기준 = 총 베팅액) · 변동성 중(2026-11-26 검수 수정) |
+| RTP 94.5 구성 | 기본 게임(클러스터·텀블 + 스캐터) 86.0 + 주문 카드 라운드 8.5. 평균 연쇄 1.38(검수 수정 후 실측, 이전 1.19), 라운드 평균 13.2스핀. 1.6은 엔진 리필 규칙 없이는 적중률 게이트(≤60%)와 충돌한다 |
 | RTP 산출 | **monte-carlo**, 필요 스핀 수는 팩별 산출(`manifest.auditSpins`, §4 개정 2026-09-03) — 연쇄가 그리드 전체 상태에 의존해 닫힌 식이 없다 |
 | 공수 | 20 / 14 / 3 / 11 h |
 
 **컨셉·아트** — 스타일: 캔디 글로스(반투명 젤리 + 설탕 결정 표면). 팔레트: 하늘 `#8fd8f2`, 딸기 `#ff7aa8`, 라임 `#a8e05f`, 크림 `#fff1d6`. 프레임: 크림 프로스팅 테두리 + 웨이퍼 기둥, 마퀴에 짜낸 생크림 레터링.
 심볼(10): `wild` `scatter` `heart` `star` `bean` `drop_red` `drop_blue` `drop_green` `drop_purple` `drop_yellow`
 
-**메커닉** — 트리거: 직교 flood-fill 그룹 크기 ≥ 5. 상태: `DROP → FLOOD_FILL(≥5?) → PAY → REMOVE → REFILL(스트립 pull) → LADDER++ → FLOOD_FILL → …(그룹 없음) END`. 수학: 손잡이는 심볼 밀도, `minCluster`, 배수 사다리 `[1,2,3,5,8,12,20]`. 엣지: 한 셀은 정확히 한 그룹에만 속한다(방문 마킹 필수, 중복 지급 금지) · `maxCascades = 12` 하드 캡 · 리필은 릴별 순환 포인터로 스트립 고갈 방지 · 사다리는 유한 배열이고 마지막 값에서 고정, 매 스핀(주문 카드 라운드 포함) 시작 시 리셋. 스핀 간 이월은 주문 카드가 맡는다(`RoundState.carry.orders`).
+**메커닉** — 트리거: 직교 flood-fill 그룹 크기 ≥ 5. 상태: `DROP → FLOOD_FILL(≥5?) → PAY → REMOVE → REFILL(스트립 pull) → LADDER++ → FLOOD_FILL → …(그룹 없음) END`. 수학: 손잡이는 심볼 밀도, `minCluster`, 배수 사다리 `[1,2,3,5,8]`(검수 수정: ×12·×20은 130만 스핀에 1회라 그리지 않는다). 엣지: 한 셀은 정확히 한 그룹에만 속한다(방문 마킹 필수, 중복 지급 금지) · `maxCascades = 12` 하드 캡 · 리필은 릴별 순환 포인터로 스트립 고갈 방지 · 사다리는 유한 배열이고 마지막 값에서 고정, 매 스핀(주문 카드 라운드 포함) 시작 시 리셋. 스핀 간 이월은 주문 카드가 맡는다(`RoundState.carry.orders`).
 
 **UX** — 화면: 클러스터 공통 외곽선 하이라이트, HUD 바로 아래 슬림 배수 미터(높이 8~10%) 상시 노출. 배너: 텀블마다 팝 SFX + 파열 파티클, 배수 상승 시 숫자 펀치 스케일 + light haptic, 3연쇄 이상에서 `CHAIN!` 텍스트 스택. 배경: 전환 없음, 미터는 다음 스핀 시작 시 ×1로 축소 리셋.
 
@@ -339,7 +339,7 @@
 |---|---|
 | 그리드 / 페이 | **4×5** / 625 ways (`betDivisor` **100**) · 변동성 고 · 적중률 실측 29.0% |
 | RTP 94.5 구성 | ways 84.6 + 스캐터 0.6 + 프리스핀 8.9 (확장·승급은 ways 안에 녹아 있다) |
-| RTP 산출 | **monte-carlo** (ways + 뮤테이션 결합) · 실측 sigma 4.46 → `n*` 19.1M |
+| RTP 산출 | **monte-carlo** (ways + 뮤테이션 결합) · 실측 sigma 4.557 → `n*` 약 19.9M · 정식 감사 94.249%(25M, seed 42) |
 | 프레임 캔버스 | **1024×1536 세로** (ART_DIRECTION v5). 허브에서 유일 |
 | 공수 (엔진/렌더/허브/아트/수학) | 0 / 0 / 0 / 15장 / 완료 |
 
@@ -356,9 +356,13 @@
 "mutations": [
   { "type": "expandWild", "symbol": "wild", "reels": [1, 2], "minCount": 1, "coverScatter": false },
   { "type": "upgrade", "from": "gear", "to": "moondial", "minCount": 3, "chance": 0.03 },
-  { "type": "upgrade", "from": "key", "to": "gear", "minCount": 3, "chance": 0.07 }
+  { "type": "upgrade", "from": "key", "to": "gear", "minCount": 3, "chance": 0.07 },
+  { "type": "upgrade", "from": "pendulum", "to": "key", "minCount": 3, "chance": 0.07 },
+  { "type": "upgrade", "from": "starjar", "to": "pendulum", "minCount": 3, "chance": 0.07 },
+  { "type": "upgrade", "from": "quill", "to": "starjar", "minCount": 3, "chance": 0.07 }
 ]
 ```
+승급 사다리 전체: 깃펜 → 별가루 병 → 추 → 열쇠 → 톱니 → 달시계(각 7%·7%·7%·7%·3%).
 아트: 심볼 10 + frame(v5 세로) + bg + bg-freespins + thumb + wild 승리 시트 = 15장.
 
 ---
