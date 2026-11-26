@@ -8,3 +8,5 @@ dist/
 coverage/
 # theme-gen 원본(대용량). webp 산출물만 추적
 games/*/art/raw/
+# theme-gen contact 검수 시트(지금은 art/raw/에 쓴다 — 예전 위치에 남은 파일도 뺀다)
+games/*/art/contact.png
