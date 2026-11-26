@@ -1,0 +1,518 @@
+{
+  "id": "hanbok-night-market",
+  "reels": 5,
+  "rows": 3,
+  "symbols": [
+    {
+      "id": "wild",
+      "name": {"en": "Tiger Mask", "ko": "호랑이 탈"},
+      "wild": true
+    },
+    {
+      "id": "bonus",
+      "name": {"en": "Silk Lantern", "ko": "청사초롱"},
+      "scatter": true
+    },
+    {
+      "id": "lantern_girl",
+      "name": {"en": "Lantern Girl", "ko": "초롱 아가씨"}
+    },
+    {
+      "id": "scholar",
+      "name": {"en": "Young Scholar", "ko": "갓 쓴 도령"}
+    },
+    {
+      "id": "granny",
+      "name": {"en": "Rice-cake Granny", "ko": "떡집 할머니"}
+    },
+    {
+      "id": "norigae",
+      "name": {"en": "Norigae", "ko": "노리개"}
+    },
+    {
+      "id": "flower_shoes",
+      "name": {"en": "Flower Shoes", "ko": "꽃신"}
+    },
+    {
+      "id": "lucky_pouch",
+      "name": {"en": "Lucky Pouch", "ko": "복주머니"}
+    },
+    {
+      "id": "hotteok",
+      "name": {"en": "Hotteok", "ko": "호떡"}
+    },
+    {
+      "id": "tteokbokki",
+      "name": {"en": "Tteokbokki", "ko": "떡볶이"}
+    },
+    {
+      "id": "dalgona",
+      "name": {"en": "Dalgona", "ko": "달고나"}
+    }
+  ],
+  "strips": [
+    ["hotteok","dalgona","granny","lantern_girl","scholar","wild","hotteok","bonus","flower_shoes","tteokbokki","hotteok","norigae","hotteok","lucky_pouch","hotteok","hotteok","hotteok","lucky_pouch","hotteok","granny","lantern_girl","flower_shoes","hotteok","tteokbokki","bonus","tteokbokki","norigae","tteokbokki","hotteok","tteokbokki","hotteok","norigae","tteokbokki","hotteok","norigae","tteokbokki","hotteok","norigae","hotteok","granny","flower_shoes","bonus","scholar","hotteok","tteokbokki","norigae","scholar","wild","tteokbokki","tteokbokki","lucky_pouch","dalgona","granny","tteokbokki","granny","flower_shoes","scholar","lantern_girl","bonus","lucky_pouch","tteokbokki","hotteok","tteokbokki","tteokbokki","lantern_girl","flower_shoes","scholar","dalgona","granny","granny","tteokbokki","tteokbokki","lucky_pouch","tteokbokki","lucky_pouch","bonus","flower_shoes","tteokbokki","lantern_girl","scholar","hotteok","hotteok","tteokbokki","hotteok"],
+    ["tteokbokki","dalgona","lucky_pouch","granny","hotteok","hotteok","hotteok","flower_shoes","tteokbokki","scholar","tteokbokki","hotteok","lucky_pouch","dalgona","tteokbokki","granny","hotteok","tteokbokki","wild","lantern_girl","tteokbokki","tteokbokki","tteokbokki","tteokbokki","lucky_pouch","dalgona","tteokbokki","granny","scholar","scholar","tteokbokki","scholar","lucky_pouch","norigae","lantern_girl","lucky_pouch","hotteok","hotteok","granny","tteokbokki","flower_shoes","tteokbokki","lantern_girl","hotteok","wild","flower_shoes","hotteok","hotteok","tteokbokki","granny","hotteok","tteokbokki","hotteok","tteokbokki","lantern_girl","hotteok","flower_shoes","norigae","flower_shoes","hotteok","norigae","granny","tteokbokki","scholar","hotteok","flower_shoes","lantern_girl","tteokbokki","lucky_pouch","hotteok","dalgona","wild","dalgona","scholar","hotteok","granny","hotteok","norigae","norigae","norigae"],
+    ["norigae","norigae","scholar","dalgona","tteokbokki","lucky_pouch","flower_shoes","norigae","hotteok","flower_shoes","tteokbokki","norigae","wild","hotteok","bonus","tteokbokki","dalgona","scholar","dalgona","flower_shoes","tteokbokki","norigae","hotteok","norigae","lucky_pouch","lucky_pouch","norigae","flower_shoes","flower_shoes","lucky_pouch","lucky_pouch","bonus","lantern_girl","dalgona","granny","norigae","lucky_pouch","lantern_girl","lantern_girl","lucky_pouch","wild","granny","lucky_pouch","flower_shoes","norigae","scholar","dalgona","hotteok","bonus","norigae","flower_shoes","scholar","granny","lucky_pouch","lantern_girl","granny","dalgona","dalgona","lucky_pouch","dalgona","granny","dalgona","flower_shoes","flower_shoes","flower_shoes","bonus","granny","scholar","wild","lucky_pouch","norigae","granny","lantern_girl","tteokbokki","flower_shoes","flower_shoes","dalgona","lucky_pouch","norigae","hotteok","dalgona","dalgona","bonus","scholar"],
+    ["hotteok","norigae","flower_shoes","granny","dalgona","dalgona","tteokbokki","scholar","granny","tteokbokki","tteokbokki","hotteok","wild","norigae","lucky_pouch","scholar","dalgona","dalgona","norigae","scholar","hotteok","granny","lucky_pouch","flower_shoes","scholar","lantern_girl","lantern_girl","lantern_girl","hotteok","tteokbokki","tteokbokki","scholar","wild","lucky_pouch","flower_shoes","norigae","lucky_pouch","hotteok","dalgona","scholar","lantern_girl","hotteok","flower_shoes","norigae","granny","lucky_pouch","granny","granny","granny","flower_shoes","tteokbokki","tteokbokki","wild","granny","lantern_girl","dalgona","tteokbokki","hotteok","flower_shoes","dalgona","hotteok","scholar","lantern_girl","dalgona","flower_shoes","lucky_pouch","hotteok","norigae","dalgona","flower_shoes","lucky_pouch","norigae","wild","hotteok","norigae","tteokbokki","lucky_pouch","tteokbokki","dalgona","dalgona"],
+    ["wild","dalgona","granny","scholar","lucky_pouch","norigae","hotteok","hotteok","flower_shoes","scholar","flower_shoes","flower_shoes","lucky_pouch","lantern_girl","flower_shoes","bonus","lantern_girl","flower_shoes","granny","tteokbokki","lucky_pouch","wild","norigae","lucky_pouch","scholar","lucky_pouch","hotteok","dalgona","dalgona","lantern_girl","flower_shoes","bonus","granny","tteokbokki","dalgona","dalgona","dalgona","dalgona","norigae","flower_shoes","dalgona","lantern_girl","wild","scholar","dalgona","tteokbokki","lantern_girl","hotteok","bonus","granny","norigae","dalgona","norigae","flower_shoes","scholar","norigae","hotteok","granny","granny","hotteok","tteokbokki","hotteok","hotteok","wild","tteokbokki","bonus","tteokbokki","granny","lucky_pouch","lucky_pouch","scholar","norigae","lucky_pouch","tteokbokki","lantern_girl","scholar","flower_shoes","hotteok","tteokbokki","norigae","lucky_pouch","granny","bonus","tteokbokki"]
+  ],
+  "payModel": "lines",
+  "paylines": [
+    [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    [
+      0,
+      1,
+      2,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      0,
+      1,
+      2
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      1,
+      2,
+      2
+    ],
+    [
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      1,
+      0,
+      1,
+      0,
+      1
+    ],
+    [
+      1,
+      2,
+      1,
+      2,
+      1
+    ],
+    [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      1,
+      1,
+      2
+    ],
+    [
+      1,
+      1,
+      0,
+      1,
+      1
+    ],
+    [
+      1,
+      1,
+      2,
+      1,
+      1
+    ],
+    [
+      0,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    [
+      0,
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      2,
+      2,
+      0,
+      2,
+      2
+    ],
+    [
+      0,
+      2,
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      0,
+      1,
+      2,
+      2
+    ],
+    [
+      2,
+      2,
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      1,
+      2,
+      1
+    ],
+    [
+      1,
+      2,
+      1,
+      0,
+      1
+    ],
+    [
+      0,
+      2,
+      2,
+      2,
+      0
+    ]
+  ],
+  "paytable": {
+    "wild": {
+      "3": 100,
+      "4": 400,
+      "5": 1000
+    },
+    "lantern_girl": {
+      "3": 80,
+      "4": 250,
+      "5": 800
+    },
+    "scholar": {
+      "3": 60,
+      "4": 180,
+      "5": 500
+    },
+    "granny": {
+      "3": 50,
+      "4": 150,
+      "5": 400
+    },
+    "norigae": {
+      "3": 30,
+      "4": 80,
+      "5": 250
+    },
+    "flower_shoes": {
+      "3": 25,
+      "4": 60,
+      "5": 200
+    },
+    "lucky_pouch": {
+      "3": 21,
+      "4": 50,
+      "5": 160
+    },
+    "hotteok": {
+      "3": 14,
+      "4": 30,
+      "5": 100
+    },
+    "tteokbokki": {
+      "3": 12,
+      "4": 25,
+      "5": 80
+    },
+    "dalgona": {
+      "2": 1,
+      "3": 9,
+      "4": 20,
+      "5": 60
+    }
+  },
+  "wild": {
+    "substitutesFor": "all"
+  },
+  "scatter": {
+    "symbol": "bonus",
+    "pays": {
+      "3": 2
+    }
+  },
+  "round": {
+    "maxWinCap": 1000
+  },
+  "boardBonus": {
+    "trigger": 3,
+    "throws": 5,
+    "maxThrows": 12,
+    "trapLimit": 3,
+    "maxMultiplier": 4,
+    "minPayout": 5,
+    "maxWin": 200,
+    "throwTable": [
+      {
+        "steps": 1,
+        "weight": 240
+      },
+      {
+        "steps": 2,
+        "weight": 380
+      },
+      {
+        "steps": 3,
+        "weight": 230
+      },
+      {
+        "steps": 4,
+        "weight": 120,
+        "extraThrow": true
+      },
+      {
+        "steps": 5,
+        "weight": 30,
+        "extraThrow": true
+      }
+    ],
+    "layout": "yut29",
+    "nodes": {
+      "start": {
+        "kind": "start"
+      },
+      "goal": {
+        "kind": "goal",
+        "value": 30
+      },
+      "o1": {
+        "kind": "coin",
+        "value": 1
+      },
+      "o2": {
+        "kind": "coin",
+        "value": 2
+      },
+      "o3": {
+        "kind": "trap"
+      },
+      "o4": {
+        "kind": "coin",
+        "value": 2
+      },
+      "o5": {
+        "kind": "coin",
+        "value": 3
+      },
+      "o6": {
+        "kind": "trap"
+      },
+      "o7": {
+        "kind": "again"
+      },
+      "o8": {
+        "kind": "coin",
+        "value": 3
+      },
+      "o9": {
+        "kind": "mult",
+        "value": 1
+      },
+      "o10": {
+        "kind": "coin",
+        "value": 4
+      },
+      "o11": {
+        "kind": "trap"
+      },
+      "o12": {
+        "kind": "coin",
+        "value": 4
+      },
+      "o13": {
+        "kind": "forward",
+        "value": 2
+      },
+      "o14": {
+        "kind": "trap"
+      },
+      "o15": {
+        "kind": "mult",
+        "value": 1
+      },
+      "o16": {
+        "kind": "coin",
+        "value": 5
+      },
+      "o17": {
+        "kind": "trap"
+      },
+      "o18": {
+        "kind": "coin",
+        "value": 6
+      },
+      "o19": {
+        "kind": "coin",
+        "value": 6
+      },
+      "a1": {
+        "kind": "coin",
+        "value": 5
+      },
+      "a2": {
+        "kind": "trap"
+      },
+      "c": {
+        "kind": "mult",
+        "value": 2
+      },
+      "c1": {
+        "kind": "coin",
+        "value": 4
+      },
+      "c2": {
+        "kind": "coin",
+        "value": 4
+      },
+      "b1": {
+        "kind": "trap"
+      },
+      "b2": {
+        "kind": "coin",
+        "value": 6
+      },
+      "f1": {
+        "kind": "coin",
+        "value": 8
+      },
+      "f2": {
+        "kind": "trap"
+      }
+    },
+    "routes": {
+      "outer": [
+        "start",
+        "o1",
+        "o2",
+        "o3",
+        "o4",
+        "o5",
+        "o6",
+        "o7",
+        "o8",
+        "o9",
+        "o10",
+        "o11",
+        "o12",
+        "o13",
+        "o14",
+        "o15",
+        "o16",
+        "o17",
+        "o18",
+        "o19",
+        "goal"
+      ],
+      "a": [
+        "o5",
+        "a1",
+        "a2",
+        "c",
+        "c1",
+        "c2",
+        "o15",
+        "o16",
+        "o17",
+        "o18",
+        "o19",
+        "goal"
+      ],
+      "b": [
+        "o10",
+        "b1",
+        "b2",
+        "c",
+        "f1",
+        "f2",
+        "goal"
+      ],
+      "center": [
+        "c",
+        "f1",
+        "f2",
+        "goal"
+      ]
+    },
+    "forks": {
+      "o5": "a",
+      "o10": "b",
+      "c": "center"
+    }
+  },
+  "betLevels": [
+    25,
+    50,
+    100,
+    250,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}

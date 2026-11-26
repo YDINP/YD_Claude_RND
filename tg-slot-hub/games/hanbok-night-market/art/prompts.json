@@ -1,0 +1,188 @@
+{
+  "game": "hanbok-night-market",
+  "concept": "Hanbok Night Market: a Korean minhwa folk-painting look blended with soft toy-like 3D volume, set in a lantern-lit night market. Obangsaek flat colors (red, blue, yellow, ivory, black) on hanji paper grain with fine ink outlines and a warm lantern glow, clearly different from candy-cluster-pop pastels and shiba-shrine. Low symbols are told apart by silhouette and color: round blue pouch, round amber disc, brown pancake in a cup, diagonal skewer, wide flat shoes, slim hanging ornament. The scatter lantern is the only tall glowing symbol. Free-spin screen is the yut board square: a top-down empty straw mat (all lines are drawn by code).",
+  "stylePrefix": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality —",
+  "negative": "photorealistic photography, glossy plastic, neon cyberpunk, blurry, watermark, signature, text, letters, hangul characters, hanja, random glyphs, busy cluttered background, baked-in drop shadow, diagonal glare streak, cropped edges, multiple duplicate objects, existing anime or drama characters, green colored details",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a carved wooden Korean tiger mask seen straight on, a big round face with two small rounded ears, huge round white eyes with black pupils, a wide grinning mouth with white fangs, red and ivory lacquer face with blue and black tiger stripes on the forehead and cheeks, thin gold trim around the rim, the most ornate and largest symbol, round silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bonus",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a plump glowing Korean silk lantern hanging upright, a short stout chunky cylinder shape whose height is only about 1.6 times its width (not slim, not tall and thin), a small gold hanging ring on top, the top half deep blue (#2f6fb0) and the bottom half red (#d8433c) split by a thin gold band, one white cloud swirl painted on the blue half and one white peony flower painted on the red half, slim gold frame ribbons running down its sides, two SHORT gold tassels under it that take only the bottom 15% of the height, warm lantern light (#ffb765) glowing from inside with a soft halo, the ONLY glowing lantern symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bonus.webp",
+      "outSize": 512
+    },
+    {
+      "id": "lantern_girl",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a waist-up bust portrait of an original cheerful young woman market merchant in a hanbok, a short yellow jeogori jacket with a long red ribbon tie on the chest, black hair in a neat low bun with a small red hair ribbon, a friendly closed-mouth smile with rosy cheeks, one hand raising a small round glowing paper lantern at the lower right, chibi-leaning toy proportions, not any existing character, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/lantern_girl.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scholar",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a bust portrait of an original young scholar boy guest wearing a tall black horsehair gat hat with a flat wide brim and a pale blue (#9fc7e8) dopo robe with a wide white collar, big curious wide-open eyes and a small surprised smile, chibi-leaning toy proportions, not any existing character, the tall black hat is the clear top of the silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scholar.webp",
+      "outSize": 512
+    },
+    {
+      "id": "granny",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a bust portrait of an original kind grandmother rice-cake seller with an ivory headscarf tied under her chin, a navy jeogori with a white apron, warm wrinkled smile, holding a small plate piled with colorful tteok rice cakes in white, pink and yellow, chibi-leaning toy proportions, not any existing character, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/granny.webp",
+      "outSize": 512
+    },
+    {
+      "id": "norigae",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a large ornate Korean norigae ornament hanging upright, as wide as about half of its height: a big gold-yellow triple-loop decorative knot at the top with two short side cords ending in small red beads, a big round turquoise jade piece in the middle, and a wide fluffy fan-shaped red silk tassel below, symmetrical and chunky, filling most of the canvas, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/norigae.webp",
+      "outSize": 512
+    },
+    {
+      "id": "flower_shoes",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a pair of embroidered Korean flower shoes (kkotsin) arranged in a compact cluster, one shoe in front lying flat and the other behind it tilted up on its heel with its sole partly visible, upturned pointed toes, rose-red bodies with blue and yellow flower embroidery and ivory edges, the whole group is fairly compact and about 60 percent as tall as it is wide, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/flower_shoes.webp",
+      "outSize": 512
+    },
+    {
+      "id": "lucky_pouch",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a round silk lucky pouch (bokjumeoni) with a gathered top tied by a red drawstring in a bow with two short red tassels, a plump round blue (#2f6fb0) silk body with a gold cloud-swirl pattern, the only blue round symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/lucky_pouch.webp",
+      "outSize": 512
+    },
+    {
+      "id": "hotteok",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a plump golden-brown hotteok pancake with brown-sugar honey syrup dripping down its sides, held in a small folded white paper cup with a red stripe, the cup is narrower at the bottom and the pancake overflows at the top, warm brown and amber tones, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/hotteok.webp",
+      "outSize": 512
+    },
+    {
+      "id": "tteokbokki",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — tteokbokki rice cakes in glossy red-orange chili sauce threaded on one long thin wooden skewer, four fat plain cream-white cylinders stacked along the skewer, each rice cake smooth and plain with NO patterns or paintings on it, thickly coated in dripping red-orange sauce, the whole skewer tilted about 35 degrees diagonally with the pointed stick tip and the blunt end both visible, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/tteokbokki.webp",
+      "outSize": 512
+    },
+    {
+      "id": "dalgona",
+      "kind": "symbol",
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a perfectly round flat golden-amber dalgona sugar candy disc, honey-brown, slightly bumpy and matte like real pressed caramel, with ONLY a single pressed five-petal plum blossom shape dented into the centre and nothing else on the surface: a plain caramel surface with NO painted decorations, NO printed flowers, NO clouds, NO colored patterns, a plain circular silhouette with no cup and no stick, no star shape, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill and no green details).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/dalgona.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square Korean night-market stall frame in minhwa style with soft toy-like 3D volume, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a curved grey giwa tile roof eave with ivory end caps, and under it a thin dancheong painted trim in red, blue, yellow and ivory, with two small round silk lanterns hanging from the eave near the top-left and top-right corners inside that strip, no signboard, no text. The reel window occupies x 2%-98% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% gold rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim dancheong-painted wooden pillars run the height of the window, each at most 1.5% of the frame width, painted with thin red and blue bands for detail without bulk. The bottom y 83%-100% is a plain wooden stall counter base with an ivory cloth runner and soft ambient shadow, no legend strip, no payline icons, no text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides. The reel window is pure #00FF00 and nothing is drawn inside it."
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a lantern-lit Korean night market alley seen softly out of focus: strings of warm round silk lanterns hung across the top, striped stall awnings and wooden counters on both sides, soft warm bokeh lights, an indigo night sky (#1f2440) at the top blending down into a warm #ffb765 glow, desaturated and low-contrast overall so symbols stand out, a soft radial vignette darkening the corners and edges so foreground content stays legible, calm uncluttered composition with no characters, no readable text, no sharp details competing for attention."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — Straight top-down bird's-eye view, full-bleed portrait background artwork with no isolated chroma background — a festive night market square at night seen from directly above: one very large EMPTY plain rectangular woven straw mat (meongseok) lies in the middle of the picture covering x 6%-94% and y 12%-86%, its straw weave fine, flat, uniform and calm in warm tan and ivory tones, with absolutely NO markings, NO lines, NO dots, NO circles, NO patterns and NO objects on the mat, nothing placed on it at all. Around the mat only the top band (y 0%-12%) and the bottom band (y 86%-100%) show dark indigo (#1f2440) cobblestone ground with round silk lanterns seen from above glowing warm #ffb765 and soft lantern light spilling in from the edges, a gentle vignette darkening the corners. Desaturated and calm so the game board drawn on top stays readable, no characters, no readable text."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine dark ink outlines, flat obangsaek colors (red #d8433c, blue #2f6fb0, yellow #e8c34a, ivory #f2ece0) with gentle volumetric soft top-left lighting and a warm night-market lantern glow (#ffb765), no diagonal glare streaks, bold simple silhouette that reads at 64px, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — an original cheerful young woman merchant in a yellow jeogori and red skirt hopping onto a corner circle of a painted yut board lying on a woven straw mat, four plain wooden yut sticks spinning in the air above her, glowing round silk lanterns strung overhead and a warm blurred lantern-lit night market alley behind, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no clutter, not any existing character."
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a carved wooden Korean tiger mask seen straight on, a big round face with two small rounded ears, huge round white eyes with black pupils, a wide grinning mouth with white fangs, red and ivory lacquer face with blue and black tiger stripes on the forehead and cheeks, thin gold trim around the rim, the most ornate and largest symbol, round silhouette, isolated on a flat solid #00FF00 chroma-key green background with no green details on the object. Win-celebration animation: frames 1-3 the tiger mask blinks its big round eyes shut and open while its whisker dots tremble; frames 4-6 the mask leans slightly forward at peak size with a warm glowing aura around its rim and a few tiny golden sparks; frames 7-9 the mask settles back with a last slow blink, ending close to frame 1 for a seamless loop. All nine frames show the exact same object at the exact same position and size, each cell on the same flat #00FF00 background, only the described pose, glow and sparkle change.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "bonus-win",
+      "kind": "sheet",
+      "symbol": "bonus",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a plump glowing Korean silk lantern hanging upright, a short stout chunky cylinder shape whose height is only about 1.6 times its width (not slim, not tall and thin), a small gold hanging ring on top, the top half deep blue (#2f6fb0) and the bottom half red (#d8433c) split by a thin gold band, one white cloud swirl painted on the blue half and one white peony flower painted on the red half, slim gold frame ribbons running down its sides, two SHORT gold tassels under it that take only the bottom 15% of the height, warm lantern light (#ffb765) glowing from inside with a soft halo, the ONLY glowing lantern symbol, isolated on a flat solid #00FF00 chroma-key green background with no green details on the object. Win-celebration animation: frames 1-3 the lantern sways gently to the left while its paper glows a little brighter from inside; frames 4-6 it swings to the right at peak with its paper glowing brightest and the two short gold tassels flicking; frames 7-9 the sway slows, the glow settles back to rest and the lantern hangs upright again, ending close to frame 1 for a seamless loop. Keep all the light inside the paper surface only: NO outer halo, NO glow aura, NO light rays, NO sparkles and NO stray dots anywhere around the lantern, keep the lantern crisp and clean with no dark smudges. All nine frames show the exact same object at the exact same position and size, each cell on the same flat #00FF00 background, only the described pose, glow and sparkle change.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/bonus-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "lantern_girl-win",
+      "kind": "sheet",
+      "symbol": "lantern_girl",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a waist-up bust portrait of an original cheerful young woman market merchant in a hanbok, a short yellow jeogori jacket with a long red ribbon tie on the chest, black hair in a neat low bun with a small red hair ribbon, a friendly closed-mouth smile with rosy cheeks, one hand raising a small round glowing paper lantern at the lower right, chibi-leaning toy proportions, not any existing character, isolated on a flat solid #00FF00 chroma-key green background with no green details on the object. Win-celebration animation: frames 1-3 she lifts the small lantern slightly and her smile widens; frames 4-6 she sways the lantern a little side to side with her eyes closed in a happy laugh at peak, the lantern glowing brightest; frames 7-9 she lowers the lantern and settles back to her resting smile, ending close to frame 1 for a seamless loop. Keep the framing identical in every cell: a waist-up bust cropped at the waist, the head stays at the same height with only a tiny nod, NO basket, NO bag, NO props behind her, nothing except the girl and her one small lantern. All nine frames show the exact same object at the exact same position and size, each cell on the same flat #00FF00 background, only the described pose, glow and sparkle change.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/lantern_girl-win.webp",
+      "outSize": 768
+    }
+  ]
+}

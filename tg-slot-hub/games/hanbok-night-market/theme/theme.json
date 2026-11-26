@@ -1,0 +1,271 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "bonus": "symbols/bonus.webp",
+    "lantern_girl": "symbols/lantern_girl.webp",
+    "scholar": "symbols/scholar.webp",
+    "granny": "symbols/granny.webp",
+    "norigae": "symbols/norigae.webp",
+    "flower_shoes": "symbols/flower_shoes.webp",
+    "lucky_pouch": "symbols/lucky_pouch.webp",
+    "hotteok": "symbols/hotteok.webp",
+    "tteokbokki": "symbols/tteokbokki.webp",
+    "dalgona": "symbols/dalgona.webp"
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#d8433c",
+    "reelBg": "#1f2440",
+    "winLine": [
+      "#ffb765",
+      "#e8c34a",
+      "#d8433c",
+      "#2f6fb0",
+      "#f2ece0"
+    ],
+    "text": "#f2ece0"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 18,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#ffb765",
+          "durationMs": 900
+        }
+      ]
+    },
+    "bonus": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#ffb765",
+          "durationMs": 800
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 800
+        }
+      ]
+    },
+    "lantern_girl": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 5,
+          "durationMs": 700
+        }
+      ]
+    },
+    "scholar": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.07,
+          "durationMs": 700
+        },
+        {
+          "type": "wobble",
+          "degrees": 6,
+          "durationMs": 700
+        }
+      ]
+    },
+    "granny": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 5,
+          "durationMs": 800
+        },
+        {
+          "type": "pulse",
+          "scale": 1.08,
+          "durationMs": 800
+        }
+      ]
+    },
+    "norigae": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 9,
+          "durationMs": 800
+        },
+        {
+          "type": "glow",
+          "color": "#e8c34a",
+          "durationMs": 800
+        }
+      ]
+    },
+    "flower_shoes": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.09,
+          "durationMs": 650
+        }
+      ]
+    },
+    "lucky_pouch": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.16,
+          "durationMs": 600
+        },
+        {
+          "type": "glow",
+          "color": "#e8c34a",
+          "durationMs": 600
+        }
+      ]
+    },
+    "hotteok": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 650
+        }
+      ]
+    },
+    "tteokbokki": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 8,
+          "durationMs": 700
+        }
+      ]
+    },
+    "dalgona": {
+      "win": [
+        {
+          "type": "spin",
+          "durationMs": 500,
+          "repeat": 1
+        },
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    }
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.0439453125,
+      "y": 0.2314453125,
+      "w": 0.916015625,
+      "h": 0.556640625
+    }
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "bonus": {
+      "win": "sheets/bonus-win.json"
+    },
+    "lantern_girl": {
+      "win": "sheets/lantern_girl-win.json"
+    }
+  },
+  "reelBackdrop": {
+    "color": "#1a1d38",
+    "alpha": 0.74,
+    "radius": 0.08
+  },
+  "celebration": {
+    "palette": {
+      "core": "#f2ece0",
+      "edge": "#d8433c",
+      "glow": "#ffb76580"
+    },
+    "particles": {
+      "shapes": [
+        "petal",
+        "coin",
+        "spark"
+      ],
+      "colors": [
+        "#d8433c",
+        "#2f6fb0",
+        "#e8c34a",
+        "#f2ece0",
+        "#ffb765"
+      ],
+      "motion": "flutter",
+      "size": 1.2
+    },
+    "rays": {
+      "style": "halo"
+    },
+    "waves": {
+      "style": "double"
+    },
+    "title": {
+      "font": "serif",
+      "weight": 800,
+      "stroke": 2,
+      "strokeColor": "#1c1a18cc",
+      "tracking": 0.02
+    },
+    "tiers": {
+      "surge": {
+        "density": 1.2
+      },
+      "storm": {
+        "glow": "#d8433c80",
+        "edge": "#d8433c"
+      },
+      "cataclysm": {
+        "core": "#fff6dc",
+        "edge": "#e8c34a",
+        "glow": "#ffb7658a",
+        "density": 1.4
+      }
+    }
+  },
+  "sound": {
+    "preset": "hanbok"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2200,
+      "durationMs": 3000
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 3000
+    }
+  }
+}
