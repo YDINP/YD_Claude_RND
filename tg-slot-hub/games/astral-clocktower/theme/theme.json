@@ -171,23 +171,90 @@
     }
   },
   "celebration": {
-    "palette": { "core": "#f6e7c1", "edge": "#c9963f", "glow": "#2a5fbf80" },
-    "particles": {
-      "shapes": ["shard", "shard", "star", "gear"],
-      "colors": ["#2a5fbf", "#c8354e", "#f2a03d", "#e8eef7"],
-      "motion": "tumble",
-      "size": 1.5
+    "palette": {
+      "core": "#f6e7c1",
+      "edge": "#c9963f",
+      "glow": "#5a92ffcc"
     },
-    "rays": { "style": "beams" },
-    "waves": { "style": "dashed" },
-    "title": { "font": "serif", "weight": 800, "stroke": 1.5, "strokeColor": "#0a0f24cc", "tracking": 0.02 },
+    "particles": {
+      "shapes": [
+        "shard",
+        "star",
+        "gear",
+        "shard",
+        "star"
+      ],
+      "symbols": [
+        "owl",
+        "astrolabe"
+      ],
+      "colors": [
+        "#4a86f0",
+        "#e0405c",
+        "#f2a03d",
+        "#e8eef7"
+      ],
+      "motion": "tumble",
+      "size": 1.2
+    },
+    "rays": {
+      "style": "beams"
+    },
+    "waves": {
+      "style": "dashed"
+    },
+    "title": {
+      "font": "serif",
+      "weight": 800,
+      "stroke": 2.5,
+      "strokeColor": "#0a0f24e6",
+      "tracking": 0.02
+    },
+    "labels": {
+      "surge": { "ko": "큰 당첨", "en": "SURGE" },
+      "blast": { "ko": "대박 당첨", "en": "BLAST" },
+      "storm": { "ko": "초대박 당첨", "en": "STORM" },
+      "cataclysm": { "ko": "시계탑의 기적", "en": "CATACLYSM" }
+    },
     "tiers": {
-      "surge": { "density": 1.3 },
-      "storm": { "glow": "#c8354e80", "edge": "#c8354e" },
-      "cataclysm": { "core": "#ffffff", "edge": "#f2a03d", "glow": "#e8eef78a", "density": 1.3 }
+      "surge": {
+        "rays": 0.8,
+        "density": 1.6
+      },
+      "blast": {
+        "edge": "#f2a03d",
+        "glow": "#ffb347d9",
+        "rays": 0.8,
+        "density": 1.8
+      },
+      "storm": {
+        "edge": "#c8354e",
+        "glow": "#f0506ed9",
+        "rays": 0.85,
+        "density": 2
+      },
+      "cataclysm": {
+        "core": "#ffffff",
+        "edge": "#f2a03d",
+        "glow": "#ffd45af0",
+        "rays": 0.9,
+        "density": 1.9
+      }
     }
   },
   "sound": {
     "preset": "clockwork"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2400,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
   }
 }
