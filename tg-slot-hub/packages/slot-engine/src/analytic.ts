@@ -387,6 +387,8 @@ export function mysteryRevealCases(math: GameMath): RevealCase[] {
 export function isAnalytic(math: GameMath): boolean {
   // 연쇄·클러스터·주문 라운드는 닫힌 식이 없다. 몬테카를로로만 잰다.
   if (math.payModel === 'cluster' || math.cascade !== undefined || math.orderRound !== undefined) return false
+  // 말판은 상태가 있는 체인이라 라인 해석식 밖이다. 말판 몫은 boardExpectation(DP)으로 따로 잰다.
+  if (math.boardBonus !== undefined) return false
   const mutations = math.mutations ?? []
   if (mutations.length === 0) return true
   // 미스터리만 있으면 공개 조건부화로 닫힌 식이 된다. ways와 섞이면 창 분포까지 바뀌어 어렵다.

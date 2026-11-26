@@ -151,6 +151,53 @@ export interface WinCappedTrigger {
   cap: number
 }
 
+/** 말판 칸 종류. */
+export type BoardTileKind = 'start' | 'coin' | 'mult' | 'forward' | 'again' | 'trap' | 'goal'
+
+/**
+ * 말판이 끝난 이유. 결승 도착 / 함정 `trapLimit`번 / 기회 소진.
+ * 던지기 하드캡(`maxThrows`)은 불변식 `던진 수 + 기회 <= maxThrows`로 보장되므로 따로 사유가 아니다.
+ */
+export type BoardEnd = 'goal' | 'traps' | 'throws'
+
+/** 말판 던지기 1회. 값은 전부 이 던지기를 처리한 **뒤**의 상태다. */
+export interface BoardThrow {
+  /** 1~5 = 도·개·걸·윷·모. */
+  steps: number
+  /** 윷·모의 «한 번 더»가 실제로 인정됐는지 (상한에 걸리면 false). */
+  extraThrow: boolean
+  /** 지나간 노드 id. 출발 칸 제외, 도착 칸 포함. */
+  path: string[]
+  /** 앞으로 칸이 더 옮긴 노드 id. 앞으로 칸에 멈췄을 때만. */
+  forward?: string[]
+  /** 최종으로 멈춘 칸. */
+  at: string
+  /** 다음 던지기에서 탈 길 id. 갈림길에 멈췄으면 바뀐 값이다. */
+  route: string
+  tile: BoardTileKind
+  /** 칸의 값(코인·배수·앞으로·결승). 값이 없는 칸은 키가 없다. */
+  value?: number
+  /** 바구니 (총 베팅액 배수). */
+  pot: number
+  multiplier: number
+  /** 꺼진 등불 수. */
+  traps: number
+  throwsLeft: number
+}
+
+/** 말판 보너스 전체. 트리거 스핀 하나에서 서버가 끝까지 정한다. */
+export interface BoardBonusTrigger {
+  type: 'boardBonus'
+  throws: BoardThrow[]
+  end: BoardEnd
+  pot: number
+  multiplier: number
+  /** `max(minPayout, pot x multiplier)`. **총 베팅액 배수**다. */
+  payout: number
+  /** 실제 지급 코인 (캡 적용 후). `SpinResult.totalWin`에 이미 들어 있다. */
+  win: number
+}
+
 export type FeatureTrigger =
   | FreeSpinsTrigger
   | ScatterWinTrigger
@@ -158,6 +205,7 @@ export type FeatureTrigger =
   | OrderRoundTrigger
   | OrderCompleteTrigger
   | WinCappedTrigger
+  | BoardBonusTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {
@@ -202,6 +250,8 @@ export interface SpinResult {
   finalGrid?: SymbolId[][]
   /** 주문 카드 상품 합계 코인. `totalWin`에 이미 들어 있다. 주문 라운드 스핀만. */
   orderWin?: number
+  /** 말판 보너스 지급 코인 (캡 적용 후). `totalWin`에 이미 들어 있다. 말판 트리거 스핀만. */
+  boardWin?: number
 }
 
 /**

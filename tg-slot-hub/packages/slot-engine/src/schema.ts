@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
+import { BoardBonusConfigSchema, checkBoardConfig } from './boardSchema.js'
 
 export { VolatilitySchema }
 export type { Volatility } from '@tgslot/shared'
@@ -219,6 +220,8 @@ const BaseGameMathSchema = z.object({
   cascade: CascadeConfigSchema.optional(),
   round: RoundConfigSchema.optional(),
   orderRound: OrderRoundConfigSchema.optional(),
+  /** 말판 보너스. 스캐터로 열리고 트리거 스핀 하나에서 끝까지 정한다. */
+  boardBonus: BoardBonusConfigSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -644,6 +647,8 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     // 추첨은 활성 카드 id를 빼고 뽑으므로, 칸을 다 채우려면 서로 다른 id가 slots개 이상 있어야 한다.
     if (ids.size < orders.slots) issue(`서로 다른 주문 id(${ids.size})가 slots(${orders.slots})보다 적다`, at('pool'))
   }
+
+  checkBoardConfig(math, issue)
 })
 
 export type GameMath = z.infer<typeof GameMathSchema>

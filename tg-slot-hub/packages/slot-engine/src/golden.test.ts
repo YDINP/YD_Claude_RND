@@ -14,6 +14,8 @@ const LIVE_PACKS = [
   'astral-clocktower',
   'classic-777',
   'fruit-fiesta',
+  // 말판 보너스 팩 — 다른 피처가 resolveSpin에 RNG 소비 단계를 끼워 넣으면 말판 결과가 조용히 바뀌는 것을 잡는다.
+  'hanbok-night-market',
   'royal-diamond-777',
   'sheriff-sixgun',
   'shiba-shrine',

@@ -18,6 +18,31 @@ export { pickWeighted } from './random.js'
 export { applyCascadeStep, foldCascades, runCascades } from './cascade.js'
 export { evaluateClusters } from './cluster.js'
 export { drawOrderCards, tallyOrders } from './orders.js'
+export {
+  advanceBoard,
+  applyBoardBonus,
+  boardPayout,
+  boardStartNode,
+  boardStartRoute,
+  initialBoardState,
+  playBoard,
+  previewBoardLanding,
+  replayBoard,
+  stepBoard,
+  type BoardState,
+} from './board.js'
+export { boardExpectation, type BoardExpectation } from './boardExact.js'
+export { computeBoardRtp, type BoardRtpReport } from './boardRtp.js'
+export {
+  BOARD_MAX_THROWS_LIMIT,
+  BoardBonusConfigSchema,
+  BoardNodeSchema,
+  BoardThrowEntrySchema,
+  checkBoardConfig,
+  type BoardBonusConfig,
+  type BoardNode,
+  type BoardThrowEntry,
+} from './boardSchema.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
   computeAnalyticRtp,
