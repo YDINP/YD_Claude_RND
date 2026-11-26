@@ -2,6 +2,7 @@ import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import type {
   AuditResult,
   CascadeReport,
+  CoinRespinReport,
   OrderReport,
   DistributionMethod,
   MutationStatRow,
@@ -197,6 +198,74 @@ function cascadeSections(cascade: CascadeReport): string[] {
   ]
 }
 
+/** 코인 리스핀 절. 진입·리스핀 횟수·촉수 감기·보물·15칸·캡·지급 분해. */
+function coinRespinSections(report: CoinRespinReport): string[] {
+  const b = report.breakdown
+  return [
+    '## 5-3. 코인 리스핀',
+    '',
+    `코인 금액·보물은 **총 베팅액 배수**다. 리스핀은 트리거 스핀 하나에서 다 풀리므로 스핀 = 라운드다. 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. ${ESTIMATED}`,
+    '',
+    table(
+      ['지표', '값'],
+      [
+        ['진입 (유료 스핀)', `1/${triggerOdds(report.entryRate)} (${pct(report.entryRate)}, ${num(report.rounds)}라운드) · 목표 1/${report.targetOdds}`],
+        ['피처 평균 지급', `${fixed(report.meanFeatureMultiplier, 2)}x (σ ${fixed(report.featureSigma, 2)}x, 최대 ${fixed(report.maxFeatureMultiplier, 1)}x)`],
+        ['평균 리스핀 / 최장', `${fixed(report.meanSteps, 2)}회 / ${report.maxSteps}회 (구조상 최대 ${report.structuralMaxSteps}, 위반 ${report.overSteps})`],
+        [`hardCap(${report.hardCap}) 도달`, `${num(report.hardCapRounds)}라운드`],
+        ['q x 빈칸 (정적)', fixed(report.growthBound, 4)],
+        ['종료 코인 평균', fixed(report.meanFinalCoins, 2)],
+        ['15칸 채움', pct(report.fullRate)],
+        ['진입하자마자 촉수 감기', pct(report.entryWrapRate, 2)],
+        ['리스핀 도중 촉수 감기 1회 이상', pct(report.midWrapRate, 2)],
+        ['라운드당 감긴 줄', fixed(report.wrapsPerRound, 3)],
+        ['보물 등장 (작은 / 중간 / 큰)', `${pct(report.tierRates.small, 2)} / ${pct(report.tierRates.medium, 2)} / ${pct(report.tierRates.large, 3)}`],
+        ['winCapped 도달', `${num(report.winCappedRounds)}라운드 · 캡 on/off 차 ${pct(report.capLossRtp)}`],
+        ['코인이 1개 이상 뜬 유료 스핀', pct(report.coinBoardRate, 2)],
+        ['기대감(남은 릴 감속) 발생 (유료 스핀)', pct(report.anticipationRate, 2)],
+      ],
+    ),
+    '',
+    '### 지급 분해',
+    '',
+    table(
+      ['출처', 'RTP 몫'],
+      [
+        ['라인 (트리거 스핀 포함)', pct(b.lines)],
+        ['숫자 코인 (감기 전 금액)', pct(b.respinNumeric)],
+        ['촉수 감기 보너스', pct(b.respinWrapBonus)],
+        ['보물 코인', pct(b.respinTreasure)],
+        ['최고 보물 (15칸)', pct(b.respinTop)],
+        ['캡 손실', `−${pct(b.capLoss)}`],
+        ['코인 리스핀 합', pct(b.respin)],
+        ['합계 (표본)', pct(b.total)],
+      ],
+    ),
+    '',
+    '### 종료 코인 수 분포',
+    '',
+    table(
+      ['코인', '라운드', '확률'],
+      report.finalCoins.map((row) => [String(row.coins), num(row.rounds), pct(row.probability, 3)]),
+    ),
+    '',
+    '### 리스핀 횟수 분포',
+    '',
+    table(
+      ['리스핀', '라운드', '확률'],
+      report.stepCounts.map((row) => [String(row.steps), num(row.rounds), pct(row.probability, 3)]),
+    ),
+    '',
+    '### 라운드당 촉수 감기 수',
+    '',
+    table(
+      ['감긴 줄', '라운드', '확률'],
+      report.wrapCounts.map((row) => [String(row.wraps), num(row.rounds), pct(row.probability, 3)]),
+    ),
+    '',
+  ]
+}
+
 /** 주문 카드 절. 등장률·완료율·라운드 길이·완료 장수. */
 function orderSections(orders: OrderReport, breakdown: CascadeReport['breakdown']): string[] {
   return [
@@ -378,7 +447,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
             ] as [string, string][])),
         ['  ├ 페이라인', pct(dist.breakdown.lines)],
         ['  ├ 스캐터', pct(dist.breakdown.scatter)],
-        ['  └ 프리스핀', pct(dist.breakdown.freeSpins)],
+        // 코인 리스핀 팩은 피처 몫이 프리스핀이 아니라 코인 리스핀이다(같은 칸에 담는다).
+        [dist.coinRespin !== undefined ? '  └ 코인 리스핀' : '  └ 프리스핀', pct(dist.breakdown.freeSpins)],
         ['적중률', `${pct(dist.hitRate)}${estimatedNote}`],
         ['최대 배수', `${dist.maxWinMultiplier.toFixed(2)}x${estimatedNote}`],
         [
@@ -532,6 +602,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
       '',
     )
   }
+
+  if (dist.coinRespin !== undefined) sections.push(...coinRespinSections(dist.coinRespin))
 
   if (dist.cascade !== undefined) {
     sections.push(...cascadeSections(dist.cascade))

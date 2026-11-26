@@ -53,6 +53,8 @@ export {
 export type { EngineMcMeasurement, SampleOptions, SampleState } from './sampleDistribution.js'
 export { CascadeAccumulator, buildCascadeReport } from './cascadeStats.js'
 export type { CascadeAccumulatorData } from './cascadeStats.js'
+export { CoinRespinAccumulator, buildCoinRespinReport, coinRespinGates } from './coinRespinStats.js'
+export type { CoinRespinAccumulatorData } from './coinRespinStats.js'
 export {
   finishAuditParts,
   mergeConvergence,
