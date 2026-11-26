@@ -29,6 +29,10 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   cascade3: 'debugPresetCascade3',
   orderRound: 'debugPresetOrderRound',
   orderComplete: 'debugPresetOrderComplete',
+  coinRespin: 'debugPresetCoinRespin',
+  columnWrap: 'debugPresetColumnWrap',
+  treasure: 'debugPresetTreasure',
+  coinRespinFull: 'debugPresetCoinRespinFull',
 }
 
 interface DebugPanelProps {

@@ -7,6 +7,7 @@
  * 다음 바퀴는 다른 선율이 나온다.
  */
 import type { SoundPreset } from '@tgslot/renderer'
+import { DEEPSEA } from './bgmDeepsea'
 
 export type BgmRole = 'pad' | 'keys' | 'arp' | 'lead' | 'bass' | 'kick' | 'snare' | 'hat' | 'shaker' | 'wood' | 'tick' | 'counter'
 export type BgmVariant = 'base' | 'free'
@@ -786,4 +787,5 @@ export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   shrine: SHRINE,
   clockwork: CLOCKWORK,
   candy: CANDY,
+  deepsea: DEEPSEA,
 }

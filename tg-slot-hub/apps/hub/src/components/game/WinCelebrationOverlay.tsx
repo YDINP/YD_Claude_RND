@@ -23,7 +23,7 @@ import { useDialog } from '../../hooks/useDialog'
 import { useT } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
-import { bigWinTimeline, celebrationTier, type WinTierLabels } from './winTiers'
+import { bigWinTimeline, celebrationTier, type CelebrationTier, type WinTierLabels } from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import './WinCelebration.css'
 
@@ -48,6 +48,11 @@ interface WinCelebrationOverlayProps {
   skin?: ResolvedCelebrationSkin
   /** 붙드는 시간이 지났거나(자동) 사용자가 결과 화면을 탭했을 때. */
   onDismiss: () => void
+  /**
+   * 롤업 박자가 바뀔 때(굴리기 시작 → 앉음). 탭 건너뛰기로 일찍 앉아도 그 순간 불린다.
+   * 이 오버레이는 스스로 소리를 내지 않는다 — 소리가 필요한 화면(코인 리스핀 정산 뒤)만 이걸로 소리를 붙인다.
+   */
+  onRollPhase?: (phase: 'rolling' | 'settled', info: { tier: CelebrationTier; rollupMs: number }) => void
 }
 
 export function WinCelebrationOverlay({
@@ -57,6 +62,7 @@ export function WinCelebrationOverlay({
   labels,
   skin,
   onDismiss,
+  onRollPhase,
 }: WinCelebrationOverlayProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts).
@@ -74,6 +80,13 @@ export function WinCelebrationOverlay({
   // 닫기는 렌더마다 새 함수로 와도 시계를 다시 걸면 안 된다 — 그러면 영영 닫히지 않는다.
   const dismissRef = useRef(onDismiss)
   dismissRef.current = onDismiss
+  const rollPhaseRef = useRef(onRollPhase)
+  rollPhaseRef.current = onRollPhase
+
+  useEffect(() => {
+    if (tier === 'none') return
+    rollPhaseRef.current?.(roll.phase, { tier, rollupMs: timing.rollupMs })
+  }, [roll.phase, tier, timing.rollupMs])
 
   // 강조 비트 — 숫자가 **앉는 순간**부터 잰다. 탭으로 감아 앉혔어도 똑같이 여기서 시작하므로
   // 건너뛴 사용자도 강조를 온전히 본다.

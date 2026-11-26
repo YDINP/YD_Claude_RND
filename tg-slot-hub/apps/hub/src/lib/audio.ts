@@ -9,6 +9,7 @@
 import type { SoundPreset, WinTier } from '@tgslot/renderer'
 import { BGM_STYLES, BgmSequencer, type BgmVariant } from './bgm'
 import { createBgmVoices, type BgmVoices } from './bgmVoices'
+import { createDeepseaAudio, type TreasureSize } from './audioDeepsea'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
 
@@ -143,7 +144,7 @@ function playOverride(key: SfxKey, volume = 1): boolean {
 
 // ── 합성 재료 ─────────────────────────────────────────────
 
-interface ToneOpts {
+export interface ToneOpts {
   freq: number
   at?: number
   dur: number
@@ -206,7 +207,7 @@ function noise(
 
 // ── 목소리(음색) ──────────────────────────────────────────
 
-type Voice = (c: AudioContext, freq: number, at: number, vol: number) => void
+export type Voice = (c: AudioContext, freq: number, at: number, vol: number) => void
 
 /** 종소리: 기음 + 비정수 배음 두 개(금속성). 순수 사인 한 줄보다 덜 기계적이다. */
 function bell(c: AudioContext, freq: number, at: number, vol: number, dur = 0.9): void {
@@ -327,7 +328,7 @@ function chord(c: AudioContext, voice: Voice, freqs: readonly number[], at: numb
 
 // ── 레시피 표 ─────────────────────────────────────────────
 
-interface LoopSpec {
+export interface LoopSpec {
   /** 딸깍 하나의 울림 주파수(Hz). */
   hz: number
   ticks: number
@@ -340,7 +341,7 @@ interface LoopSpec {
   vol: number
 }
 
-interface RiserSpec {
+export interface RiserSpec {
   wave: OscillatorType
   from: number
   to: number
@@ -350,7 +351,7 @@ interface RiserSpec {
   vol: number
 }
 
-interface Recipe {
+export interface Recipe {
   loop: LoopSpec
   riser: RiserSpec
   scale: readonly number[]
@@ -523,6 +524,9 @@ const CANDY_RECIPE: Recipe = {
   },
 }
 
+/** kraken-cove: 물방울·소나·금화·종. 합성 재료만 넘기고 레시피와 리스핀 전용 소리는 `audioDeepsea.ts`에 있다. */
+const deepsea = createDeepseaAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+
 const WESTERN_RECIPE: Recipe = {
   loop: { hz: 950, ticks: 12, tonal: 0.35, alt: 0.2, len: 0.026, vol: 0.2 },
   riser: { wave: 'sawtooth', from: 110, to: 440, pulseHz: 7, lp: 1500, vol: 0.1 },
@@ -661,6 +665,7 @@ const RECIPES: Record<SoundPreset, Recipe> = {
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
   candy: CANDY_RECIPE,
+  deepsea: deepsea.recipe,
 }
 
 let preset: SoundPreset = 'bell'
@@ -839,6 +844,63 @@ export function playOrderDeal(): void {
   if (!c) return
   noise(c, { dur: 0.14, vol: 0.1, filter: 'bandpass', freq: 800, sweepTo: 3200, q: 1.2 })
   marimbaVoice(c, 880, 0.1, 0.16)
+}
+
+// ── 코인 리스핀 (kraken-cove) ──────────────────────────────
+// 음색은 `audioDeepsea.ts`의 deepsea 프리셋이다. 이 소리들은 코인 리스핀 게임에서만 불린다.
+
+/** 진입 판의 코인 한 알이 «칭». `index`가 오를수록 반음씩 높아진다. */
+export function playCoinLand(index: number): void {
+  const c = live()
+  if (c) deepsea.cues.coinLand(c, index)
+}
+
+/** 빈 칸이 돌기 시작한다(소나). */
+export function playRespinSonar(): void {
+  const c = live()
+  if (c) deepsea.cues.respinSonar(c)
+}
+
+/** 새 코인이 고정된다. `step`이 오를수록 반음씩 높아진다(12단 상한). */
+export function playCoinPin(step: number): void {
+  const c = live()
+  if (c) deepsea.cues.coinPin(c, step)
+}
+
+/** 남은 횟수가 다시 찼다. */
+export function playCounterReset(): void {
+  const c = live()
+  if (c) deepsea.cues.counterReset(c)
+}
+
+/** 마지막 한 번 남았다(심장 박동). */
+export function playLastRespin(): void {
+  const c = live()
+  if (c) deepsea.cues.lastRespin(c)
+}
+
+/** 촉수가 줄을 감는다 / 두 배로 확정된다. */
+export function playTentacleWrap(phase: 'start' | 'end'): void {
+  const c = live()
+  if (c) deepsea.cues.tentacleWrap(c, phase)
+}
+
+/** 보물 코인. 크기마다 종 화음이 2/3/4음으로 쌓인다. */
+export function playTreasure(size: TreasureSize): void {
+  const c = live()
+  if (c) deepsea.cues.treasure(c, size)
+}
+
+/** 정산 중 숫자 코인 한 알이 합계로 날아간다. `progress`(0..1)가 오를수록 높아진다. */
+export function playSettleTick(progress: number): void {
+  const c = live()
+  if (c) deepsea.cues.settleTick(c, progress)
+}
+
+/** 최고 보물(15칸 채움) 팡파르. */
+export function playTopTreasure(): void {
+  const c = live()
+  if (c) deepsea.cues.topTreasure(c)
 }
 
 // ── 기대감 ────────────────────────────────────────────────

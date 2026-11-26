@@ -1,0 +1,281 @@
+/* 코인 리스핀 — 보물 띠(높이 고정 40) + 리스핀 HUD(자리를 차지하지 않고 캔버스 위쪽에 떠 있는 알약). */
+.hub-coin-hud {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  padding: var(--hub-space-xs) 0;
+  background: var(--hub-bg);
+}
+
+/* ---- 보물 띠 --------------------------------------------------------- */
+.hub-treasure {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 40px;
+  padding: 0 var(--hub-space-sm);
+  box-sizing: border-box;
+}
+
+.hub-treasure__title {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 2px;
+  color: var(--hub-gold-light);
+  font-size: var(--hub-font-small);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  writing-mode: horizontal-tb;
+}
+
+.hub-treasure__chip {
+  --tier: #ffc83d;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: var(--hub-radius-sm);
+  background: color-mix(in srgb, var(--tier) 10%, var(--hub-card-bg));
+  border: 1px solid color-mix(in srgb, var(--tier) 38%, var(--hub-border));
+  box-sizing: border-box;
+  overflow: hidden;
+  transition:
+    flex-grow 0.28s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.hub-treasure__chip--small {
+  --tier: #2ec4d6;
+}
+
+.hub-treasure__chip--medium {
+  --tier: #ffc83d;
+}
+
+.hub-treasure__chip--large {
+  --tier: #8f78ff;
+}
+
+.hub-treasure__chip--top {
+  --tier: #ff6f91;
+}
+
+.hub-treasure__icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.hub-treasure__dot {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6d6 0%, var(--tier) 55%, color-mix(in srgb, var(--tier) 55%, #000) 100%);
+}
+
+.hub-treasure__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.hub-treasure__name {
+  color: var(--hub-text-sub);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hub-treasure__amount {
+  color: var(--hub-text);
+  font-size: 14px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 판에 나왔다: 은은히 맥동 */
+.hub-treasure__chip[data-state='seen'] {
+  border-color: var(--tier);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier) 55%, transparent);
+  animation: hub-treasure-seen 1.1s ease-in-out infinite;
+}
+
+/* 지급됐다: 밝게 켜진다 */
+.hub-treasure__chip[data-state='paid'] {
+  background: color-mix(in srgb, var(--tier) 34%, var(--hub-card-bg));
+  border-color: var(--tier);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tier) 70%, transparent);
+}
+
+.hub-treasure__chip[data-state='paid'] .hub-treasure__name {
+  color: var(--hub-text);
+}
+
+/* 최고 보물이 지금 지급되는 중: 칸이 띠의 절반 가까이로 넓어지고 «+금액»이 맥동한다(기획 S4 «띠 확대»).
+   좁은 화면에서 옆 칸 금액이 잘리지 않게 그동안은 머리표와 옆 칸의 이름·아이콘을 접고 금액만 남긴다. */
+.hub-treasure[data-top='true'] .hub-treasure__title,
+.hub-treasure[data-top='true'] .hub-treasure__chip:not([data-state='showing']) .hub-treasure__name,
+.hub-treasure[data-top='true'] .hub-treasure__chip:not([data-state='showing']) .hub-treasure__icon,
+.hub-treasure[data-top='true'] .hub-treasure__chip:not([data-state='showing']) .hub-treasure__dot {
+  display: none;
+}
+
+.hub-treasure[data-top='true'] .hub-treasure__chip:not([data-state='showing']) {
+  justify-content: center;
+}
+
+.hub-treasure__chip[data-state='showing'] {
+  flex-grow: 2.4;
+  background: color-mix(in srgb, var(--tier) 48%, var(--hub-card-bg));
+  border-color: var(--tier);
+  animation: hub-treasure-showing 0.52s ease-in-out infinite;
+}
+
+.hub-treasure__chip[data-state='showing'] .hub-treasure__name {
+  color: var(--hub-text);
+}
+
+.hub-treasure__chip[data-state='showing'] .hub-treasure__amount {
+  color: #fff;
+  font-size: 1.12em;
+}
+
+@keyframes hub-treasure-showing {
+  0%,
+  100% {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--tier) 60%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 18px color-mix(in srgb, var(--tier) 95%, transparent);
+  }
+}
+
+@keyframes hub-treasure-seen {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--tier) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--tier) 75%, transparent);
+  }
+}
+
+/* ---- 리스핀 HUD ------------------------------------------------------ */
+.hub-respin-hud {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * var(--hub-space-md));
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hub-bg) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hub-gold-light) 30%, transparent);
+  box-sizing: border-box;
+  pointer-events: none;
+  /* 기본 게임에서는 보이지 않는다(자리도 차지하지 않는다). */
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.hub-respin-hud[data-on='true'] {
+  visibility: visible;
+  opacity: 1;
+}
+
+.hub-respin-hud__dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.hub-respin-hud__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--hub-text-sub) 28%, transparent);
+  border: 2px solid color-mix(in srgb, var(--hub-text-sub) 45%, transparent);
+  box-sizing: border-box;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.2s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.hub-respin-hud__dot[data-on='true'] {
+  background: radial-gradient(circle at 35% 30%, #fff6d6, #ffc83d 60%, #c98f12);
+  border-color: #ffe27a;
+  transform: scale(1.06);
+}
+
+.hub-respin-hud[data-last='true'] .hub-respin-hud__dot[data-on='true'] {
+  animation: hub-respin-heartbeat 0.7s ease-in-out infinite;
+}
+
+.hub-respin-hud__mid:empty {
+  display: none;
+}
+
+.hub-respin-hud__mid {
+  min-width: 0;
+  text-align: center;
+  font-size: var(--hub-font-small);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-respin-hud__last {
+  color: #ff8aa6;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.hub-respin-hud__full {
+  color: #ffe27a;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.hub-respin-hud__fill {
+  color: var(--hub-gold-light);
+  font-weight: 800;
+}
+
+@keyframes hub-respin-heartbeat {
+  0%,
+  100% {
+    transform: scale(1.06);
+  }
+  45% {
+    transform: scale(1.32);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-treasure__chip[data-state='seen'],
+  .hub-treasure__chip[data-state='showing'],
+  .hub-respin-hud[data-last='true'] .hub-respin-hud__dot[data-on='true'] {
+    animation: none;
+  }
+  .hub-respin-hud,
+  .hub-respin-hud__dot,
+  .hub-treasure__chip {
+    transition: none;
+  }
+}

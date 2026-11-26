@@ -60,12 +60,25 @@ import { Modal } from '../Modal'
 import { activePopup, isRoundFlowBusy } from '../../game/roundFlow'
 import { RoundPopupView } from './RoundPopup'
 import { WinCelebrationOverlay } from './WinCelebrationOverlay'
+import type { CelebrationTier } from './winTiers'
 import { WinStrip, type WinStripLineLabel } from './WinStrip'
 import { GambleModal } from './GambleModal'
 import { DebugPanel } from './DebugPanel'
 import { LadderMeter } from './LadderMeter'
 import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
 import { ClusterHelp, OrderRoundHelp } from './ClusterHelp'
+import { CoinRespinLayer } from './CoinRespinLayer'
+import { CoinRespinHelp } from './CoinRespinHelp'
+import { useCoinRespinStore } from '../../store/coinRespin'
+import { formatCoinAmount } from '../../lib/coinFormat'
+import {
+  playRespinCelebration,
+  playRespinEventSound,
+  resetRespinSfx,
+  respinCelebrationSounded,
+  stopRespinCelebration,
+} from '../../lib/respinSfx'
+import { readRespinReplay, respinFeaturesMatch } from '../../lib/respinReplay'
 import './GameScreen.css'
 
 /** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
@@ -133,6 +146,8 @@ interface VerifyResult {
   stopsMatch: boolean
   /** 재생한 총 당첨이 화면에서 본 값과 같은가. 프리스핀 라운드인데 시작 상태를 못 받았으면 null(비교 불가). */
   winMatch: boolean | null
+  /** 코인 리스핀 라운드: 재생한 종료 판·리스핀 수·지급이 화면에서 본 것과 같은가. 리스핀이 없는 판은 null. */
+  respinMatch: boolean | null
 }
 
 function stopsEqual(a: number[], b: number[]): boolean {
@@ -290,14 +305,16 @@ function buildWinLineIcons(
   }
 }
 
-type HelpPage = 'paytable' | 'paylines' | 'features' | 'fairness'
+type HelpPage = 'paytable' | 'paylines' | 'features' | 'respin' | 'fairness'
 
 const HELP_PAGE_KEY_PREFIX = 'tgslot.helpPage.'
 
 function readStoredHelpPage(gameId: string): HelpPage | null {
   try {
     const raw = localStorage.getItem(`${HELP_PAGE_KEY_PREFIX}${gameId}`)
-    return raw === 'paytable' || raw === 'paylines' || raw === 'features' || raw === 'fairness' ? raw : null
+    return raw === 'paytable' || raw === 'paylines' || raw === 'features' || raw === 'respin' || raw === 'fairness'
+      ? raw
+      : null
   } catch {
     return null
   }
@@ -316,6 +333,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const token = useSessionStore((s) => s.token)
   const wallet = useSessionStore((s) => s.wallet)
   const locale = useEffectiveLocale()
+  // 코인 얼굴 글자는 렌더러가 생성 시점에 받은 함수로 찍는다 — 언어가 바뀌어도 최신 값을 읽도록 ref로 건넨다.
+  const localeRef = useRef(locale)
+  localeRef.current = locale
   const gameSummary = useGamesStore((s) => s.games.find((g) => g.id === gameId))
 
   const jackpotPool = useHubStore((s) => s.jackpot?.pool ?? 0)
@@ -360,6 +380,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const setDebugPresetAction = useGameStore((s) => s.setDebugPreset)
   const dismissDebugMessageAction = useGameStore((s) => s.dismissDebugMessage)
   const orderRound = useGameStore((s) => s.orderRound)
+  // 코인 리스핀 표시용 진행(WinStrip 라벨만 읽는다). HUD·보물 띠는 CoinRespinLayer가 따로 구독한다.
+  const respinPhase = useCoinRespinStore((s) => s.view.phase)
+  const respinActive = useCoinRespinStore((s) => s.view.active)
+  const respinBoardTotal = useCoinRespinStore((s) => s.view.coinTotal)
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const spinSpeed = useSettingsStore((s) => s.spinSpeed)
   const setSpinSpeedAction = useSettingsStore((s) => s.setSpinSpeed)
@@ -530,6 +554,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    */
   const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null
   const roundPopup = activePopup(roundFlow)
+  // 전환 클립이 화면을 덮고 있다. 스핀 도중(코인 리스핀 진입)이면 STOP을 걸어 둘 수 있고, 그 밖에는 스핀 버튼이 기다림으로 보인다.
+  const curtainUp = roundFlow.kind === 'curtain'
+  const curtainDuringSpin = curtainUp && phase === 'spinning'
 
   // WinStrip의 프리스핀 카운터가 참조하는 "표시용" freeSpins. store.freeSpins는 스핀 응답이
   // 오는 즉시 바뀌지만(베팅 잠금/FREE SPIN 버튼 표시 등에 필요), 커튼은 그보다 한참 뒤(릴 회전·
@@ -616,14 +643,17 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     writeStoredHelpPage(gameId, helpPage)
   }, [gameId, helpPage])
 
-  const hasFeaturesPage = Boolean(math?.wild || math?.scatter)
+  // 코인 리스핀 팩은 피처 탭을 «코인 리스핀» 탭이 대신한다(와일드 설명은 배당표 쪽에 있다). 탭이 네 개를 넘지 않게 한다.
+  const hasRespinPage = Boolean(math?.coinRespin)
+  const hasFeaturesPage = Boolean((math?.wild || math?.scatter) && !math?.coinRespin)
   // 저장돼 있던 탭이 피처인데 이 게임엔 와일드/스캐터가 없으면 배당표로 되돌린다 — 있지도 않은
   // 탭에 머물러 있을 수 없다. math가 아직 안 왔을 때는 판단을 미룬다(로딩 중 잠깐의 false를
   // "피처 없음"으로 오판해 막 로드된 진짜 값을 보기도 전에 탭을 되돌려버리면 안 된다).
   useEffect(() => {
     if (!math) return
     if (helpPage === 'features' && !hasFeaturesPage) setHelpPage('paytable')
-  }, [math, helpPage, hasFeaturesPage])
+    if (helpPage === 'respin' && !hasRespinPage) setHelpPage('paytable')
+  }, [math, helpPage, hasFeaturesPage, hasRespinPage])
 
   /** 프리스핀 재발동 — 짧은 토스트만 띄운다(같은 모드라 커튼이 없다 — 전체화면 인트로는 최초 진입 때만). */
   function showFreeSpinsRetrigger(spins: number): void {
@@ -660,6 +690,32 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   }
 
   function handleRendererEvent(event: RendererEvent): void {
+    // 코인 리스핀: 표시용 진행(HUD·보물 띠)과 효과음. 전환 이벤트는 아래 공용 처리도 그대로 탄다.
+    useCoinRespinStore.getState().apply(event)
+    playRespinEventSound(event)
+    if (event.type === 'respinCollect') {
+      // 정산: 코인이 하나씩 합계로 날아간다. WinStrip 금액은 줄지 않고 서버가 정한 누적까지만 오른다.
+      setWinRollupValue(Math.max(winValueRef.current, event.running))
+      return
+    }
+    if (event.type === 'respinEnd') {
+      setWinRollupValue(Math.max(winValueRef.current, event.coinWin + event.topWin))
+      return
+    }
+    if (event.type === 'respinTop' && event.phase === 'start') {
+      // 최고 보물: 상자가 뜨는 순간 WinStrip 합계도 그만큼 뛴다(store가 이미 더해 둔 누적).
+      setWinRollupValue(Math.max(winValueRef.current, useCoinRespinStore.getState().view.collected))
+      return
+    }
+    if (
+      event.type === 'respinPulse' ||
+      event.type === 'respinStart' ||
+      event.type === 'respinStep' ||
+      event.type === 'columnWrap' ||
+      event.type === 'respinTop'
+    ) {
+      return
+    }
     if (event.type === 'reelStop') {
       playReelStop(event.reel)
       return
@@ -807,7 +863,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
     winSkipRef.current = false
     setWinRollupValue(rollFrom)
-    playWin(event.tier, duration)
+    // 코인 리스핀 판은 정산 뒤 빅윈 오버레이에서 큰 당첨 소리를 이미 냈다 — 복귀 뒤 라인 당첨 롤업은 작은 당첨 소리만 낸다.
+    const soundTier = respinCelebrationSounded() ? 'none' : event.tier
+    playWin(soundTier, duration)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
     // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
@@ -816,7 +874,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (winSkipRef.current) {
         setWinRollupValue(target)
         winRafRef.current = null
-        playRollupEnd(event.tier)
+        playRollupEnd(soundTier)
         return
       }
       if (startTs === null) startTs = ts
@@ -827,7 +885,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         winRafRef.current = requestAnimationFrame(step)
       } else {
         winRafRef.current = null
-        playRollupEnd(event.tier)
+        playRollupEnd(soundTier)
       }
     }
     winRafRef.current = requestAnimationFrame(step)
@@ -837,6 +895,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   useEffect(() => {
     if (phase !== 'spinning') return
     playSpinStart()
+    useCoinRespinStore.getState().reset()
+    resetRespinSfx()
     setWinRollupValue(0)
     setLineLabelSource(null)
     compressedRef.current = false
@@ -941,6 +1001,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           // 마운트 시점 값만 읽는다(구독 아님) — 설정을 바꿔도 이 화면에 있는 동안은 재생성하지
           // 않고, 게임을 나갔다 다시 들어올 때 반영된다. 설정 시트 안내 문구에도 그렇게 적혀 있다.
           reducedMotion: useSettingsStore.getState().reducedMotion,
+          formatCoin: (amount) => formatCoinAmount(amount, localeRef.current),
           onEvent: handleRendererEvent,
         })
         await renderer.ready
@@ -973,6 +1034,59 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   useEffect(() => {
     if (lastResult && lastResult.wins.length > 0) haptic('success')
   }, [lastResult])
+
+  // 코인 리스핀 이어 보기: 연출 도중 새로고침(또는 앱을 닫았다 다시 열기)했으면 지난 라운드를 표시 전용으로 다시 보여 준다.
+  // 결과·잔액은 서버가 이미 확정했다 — 잔액은 건드리지 않는다. 렌더러 인스턴스마다 한 번만 확인한다.
+  // 렌더러가 준비된 순간 다른 연출이 돌고 있으면(유휴가 아니면) 확인 표시를 하지 않고 유휴가 될 때 다시 본다 —
+  // 먼저 표시해 버리면 store가 재생을 조용히 거절한 기록을 이 렌더러에서는 다시 시도하지 않는다.
+  // 기록 키에 사용자 id가 붙으므로 세션 사용자가 채워진 뒤에 읽는다.
+  const replayCheckedRef = useRef<unknown>(null)
+  const replayNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sessionUserId = useSessionStore((s) => s.user?.id)
+  const [replayNotice, setReplayNotice] = useState(false)
+  useEffect(() => {
+    if (!rendererInstance || !math?.coinRespin || replayCheckedRef.current === rendererInstance) return
+    if (phase !== 'idle' || sessionUserId === undefined) return
+    replayCheckedRef.current = rendererInstance
+    const record = readRespinReplay(gameId)
+    if (record === null) return
+    setReplayNotice(true)
+    if (replayNoticeTimerRef.current !== null) clearTimeout(replayNoticeTimerRef.current)
+    replayNoticeTimerRef.current = setTimeout(() => {
+      replayNoticeTimerRef.current = null
+      setReplayNotice(false)
+    }, 2800)
+    void useGameStore.getState().replayRespin(record.response)
+  }, [rendererInstance, math, gameId, phase, sessionUserId])
+  useEffect(
+    () => () => {
+      if (replayNoticeTimerRef.current !== null) clearTimeout(replayNoticeTimerRef.current)
+    },
+    [],
+  )
+
+  // 게임을 떠나거나 다른 게임으로 바뀌면 코인 리스핀 표시 상태와 미뤄 둔 소리를 비운다 — 다음 게임의
+  // WinStrip이 «판 위 코인 N» 같은 옛 값을 읽지 않게 한다.
+  useEffect(
+    () => () => {
+      useCoinRespinStore.getState().reset()
+      resetRespinSfx()
+    },
+    [gameId],
+  )
+
+  // 코인 리스핀 정산 뒤 빅윈: 오버레이 롤업 박자에 맞춰 큰 당첨 소리·틱·마감음을 낸다(일반 판은 winTotal이 낸다).
+  function handleCelebrationRollPhase(
+    rollPhase: 'rolling' | 'settled',
+    info: { tier: CelebrationTier; rollupMs: number },
+  ): void {
+    if (info.tier === 'none') return
+    if (useCoinRespinStore.getState().view.phase !== 'done') return
+    playRespinCelebration(rollPhase, info.tier, info.rollupMs)
+  }
+  useEffect(() => {
+    if (winCelebration === null) stopRespinCelebration()
+  }, [winCelebration])
 
   // 주문 카드 완료 — 서버가 준 orderComplete 피처마다 WinStrip에 "주문 완료" 줄을 잠깐씩 차례로 띄운다.
   useEffect(() => {
@@ -1097,9 +1211,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // math.gamble이 없는데(설정이 아예 없는 게임) gambleSession이 있는 건 있을 수 없는 상태지만,
   // 방어적으로 한 번 더 걸어 둔다 — 서버/엔진 쪽 계약이 어긋나도 UI가 조용히 숨는 쪽이 안전하다.
   const showGambleActions = gambleSession !== null && math?.gamble !== undefined
+  // 코인 리스핀 도중(정산 전)에는 판 위 코인 합계가 리스핀마다 오른다. 정산이 시작되면 «모은 코인»을 0부터 센다.
+  const respinOnBoard =
+    respinActive && (respinPhase === 'cave' || respinPhase === 'spinning' || respinPhase === 'wrapping')
   const winStripAmount = showGambleActions
     ? gambleSession.pendingWin
-    : freeSpins && winRollupValue === 0
+    : respinOnBoard
+      ? respinBoardTotal
+      : freeSpins && winRollupValue === 0
       ? freeSpins.accumulatedWin
       : winRollupValue
   // 연쇄 2단계부터는 라벨이 "연쇄 n"이고, 주문 완료 때는 "주문 완료"다. 둘 다 금액이 있을 때만이다.
@@ -1109,9 +1228,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       : lineLabelSource?.kind === 'line' && lineLabelSource.cascade !== undefined && lineLabelSource.cascade >= 1
         ? lineLabelSource.cascade + 1
         : null
+  // 코인 리스핀 정산 중에는 «모은 코인»이다(동굴에서 나오면 평소의 «당첨»으로 돌아간다).
+  const respinCollecting = respinPhase === 'collecting' || (respinPhase === 'done' && respinActive)
   const winStripLabel = showGambleActions
     ? t('gamblePendingWinLabel')
-    : lineLabelSource?.kind === 'order'
+    : respinOnBoard
+      ? t('coinRespinOnBoardLabel')
+      : respinCollecting
+      ? t('coinRespinCollected')
+      : lineLabelSource?.kind === 'order'
       ? t('orderDoneLabel')
       : chainStep !== null && winRollupValue > 0
         ? t('chainLabel', { n: chainStep })
@@ -1227,7 +1352,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
     // 세리머니(팝업 → 커튼)가 도는 동안은 스핀/스킵 모두 무시한다 — phase가 이미 idle로
     // 돌아와 있어도 커튼이 다 걷히기 전까진 막는다(릴은 그때까지 완전히 멈춰 있어야 한다).
-    if (roundBusy) return
+    // 예외: 코인 리스핀의 진입 클립은 스핀 도중에 화면을 덮는다. 그때 누른 STOP은 버리지 않고 걸어 둔다 — 클립이 걷힌 뒤 압축 재생된다.
+    if (roundBusy) {
+      if (curtainDuringSpin) {
+        skipSpin()
+        haptic('light')
+      }
+      return
+    }
     if (phase === 'spinning') {
       skipSpin()
       haptic('light')
@@ -1269,8 +1401,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         return
       }
 
-      // 세리머니가 도는 동안은 스페이스도 무시한다(스핀 버튼과 동일 규칙).
-      if (roundBusy) return
+      // 세리머니가 도는 동안은 스페이스도 무시한다(스핀 버튼과 동일 규칙 — 스핀 도중의 클립에서는 STOP을 걸어 둔다).
+      if (roundBusy) {
+        if (curtainDuringSpin) {
+          spaceHeldRef.current = true
+          event.preventDefault()
+          skipSpin()
+        }
+        return
+      }
 
       if (phase === 'spinning') {
         spaceHeldRef.current = true
@@ -1318,6 +1457,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     freeSpins,
     gambleModalOpen,
     roundBusy,
+    curtainDuringSpin,
     autoSpinning,
     handleSpin,
     handleSkipWinsAndAdvance,
@@ -1484,8 +1624,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 주지 않는 라운드는 비교하지 않는다.
       const winMatch =
         lastResult.isFreeSpin && seedInfo.stateBefore === undefined ? null : replay.totalWin === lastResult.totalWin
+      // 코인 리스핀 라운드: 합계가 같아도 도중 경로가 다를 수 있다 — 종료 판·리스핀 수·지급까지 비교한다.
+      const respinMatch = lastResult.features.some((feature) => feature.type === 'coinRespin')
+        ? respinFeaturesMatch(replay.features, lastResult.features)
+        : null
 
-      setVerifyResult({ hashMatch, stopsMatch, winMatch })
+      setVerifyResult({ hashMatch, stopsMatch, winMatch, respinMatch })
       setVerifyState('done')
     } catch (err) {
       console.error('[game] provably fair verification failed', err)
@@ -1550,6 +1694,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         </span>
       </div>
 
+      {math?.coinRespin && (
+        <CoinRespinLayer math={math} bet={currentBet} props={theme?.props} locale={locale} />
+      )}
+
       {isCascade && math?.cascade && (
         <div className="hub-game-screen__cascade-hud">
           <LadderMeter ladder={math.cascade.multiplierLadder} activeIndex={ladderIndex} />
@@ -1581,6 +1729,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         {rendererError && (
           <div className="hub-game-screen__renderer-note" role="status">
             {t('graphicsUnavailable')}
+          </div>
+        )}
+        {replayNotice && (
+          <div className="hub-game-screen__renderer-note" role="status">
+            {t('coinRespinReplayNotice')}
           </div>
         )}
         <div className="hub-game-screen__banners">
@@ -1695,6 +1848,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           hurried={winCelebration.hurried}
           onDismiss={dismissWinCelebrationAction}
           skin={celebrationSkin}
+          onRollPhase={handleCelebrationRollPhase}
         />
       )}
 
@@ -1809,10 +1963,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             className={
               phase === 'spinning' || autoSpinning
                 ? 'hub-game-screen__spin hub-game-screen__spin--stop'
-                : 'hub-game-screen__spin'
+                : curtainUp
+                  ? 'hub-game-screen__spin hub-game-screen__spin--waiting'
+                  : 'hub-game-screen__spin'
             }
             onClick={handleSpinButtonClick}
             disabled={!math}
+            aria-disabled={curtainUp && phase !== 'spinning' && !autoSpinning ? true : undefined}
           >
             {autoSpinning
               ? t('autoSpinStop', { n: autoSpin.remaining })
@@ -1984,6 +2141,19 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               >
                 {isCluster ? t('tabCluster') : isWays ? t('tabWays') : t('paylinesTitle')}
               </button>
+              {hasRespinPage && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={helpPage === 'respin'}
+                  className={
+                    helpPage === 'respin' ? 'hub-help-tabs__btn hub-help-tabs__btn--active' : 'hub-help-tabs__btn'
+                  }
+                  onClick={() => setHelpPage('respin')}
+                >
+                  {t('coinRespinTab')}
+                </button>
+              )}
               {hasFeaturesPage && (
                 <button
                   type="button"
@@ -2080,7 +2250,38 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       )
                     })}
                   </ul>
-                  {math.wild && <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : 'wildSubstitutesAll')}</p>}
+                  {math.wild && !math.coinRespin && (
+                    <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : 'wildSubstitutesAll')}</p>
+                  )}
+                  {math.coinRespin && (
+                    <>
+                      {math.wild && (
+                        <p className="hub-paytable__wild-note hub-coin-note">
+                          {theme?.symbols[math.symbols.find((s) => s.wild)?.id ?? ''] && (
+                            <img
+                              className="hub-coin-note__icon"
+                              src={theme.symbols[math.symbols.find((s) => s.wild)?.id ?? '']}
+                              alt=""
+                              width={36}
+                              height={36}
+                            />
+                          )}
+                          {t('coinRespinWildNote', {
+                            reels: math.strips
+                              .map((strip, index) => (strip.includes(math.symbols.find((s) => s.wild)?.id ?? '') ? index + 1 : null))
+                              .filter((n): n is number => n !== null)
+                              .join(', '),
+                          })}
+                        </p>
+                      )}
+                      <p className="hub-paytable__wild-note hub-coin-note">
+                        {theme?.symbols[math.coinRespin.symbol] && (
+                          <img className="hub-coin-note__icon" src={theme.symbols[math.coinRespin.symbol]} alt="" width={36} height={36} />
+                        )}
+                        {t('coinRespinPaytableNote', { trigger: math.coinRespin.trigger })}
+                      </p>
+                    </>
+                  )}
                   {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
                 </>
               )}
@@ -2125,6 +2326,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {helpPage === 'respin' && hasRespinPage && (
+                <CoinRespinHelp math={math} symbols={theme?.symbols} props={theme?.props} bet={currentBet} locale={locale} />
               )}
 
               {helpPage === 'features' && hasFeaturesPage && (
@@ -2231,6 +2436,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                             {verifyResult.stopsMatch ? '✓' : '✗'} {t('fairVerifyStops')}:{' '}
                             {verifyResult.stopsMatch ? t('fairVerifyOk') : t('fairVerifyFail')}
                           </p>
+                          {verifyResult.respinMatch !== null && (
+                            <p
+                              className={
+                                verifyResult.respinMatch
+                                  ? 'hub-sheet__verify-status hub-sheet__verify-status--ok'
+                                  : 'hub-sheet__verify-status hub-sheet__verify-status--fail'
+                              }
+                            >
+                              {verifyResult.respinMatch ? '✓' : '✗'} {t('coinRespinFairVerify')}:{' '}
+                              {verifyResult.respinMatch ? t('fairVerifyOk') : t('fairVerifyFail')}
+                            </p>
+                          )}
                           {verifyResult.winMatch !== null && (
                             <p
                               className={

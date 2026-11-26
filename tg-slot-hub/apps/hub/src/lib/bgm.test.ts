@@ -142,6 +142,36 @@ describe('candy score', () => {
   })
 })
 
+describe('deepsea score', () => {
+  const style = BGM_STYLES.deepsea
+  const roles = (bar: number, variant: 'base' | 'free', role: string): BgmNote[] =>
+    barEvents(style, bar, variant).filter((n) => n.role === role)
+
+  it('is its own song: D mixolydian at 96 bpm, not the lounge or the tropical one', () => {
+    expect(style).not.toBe(BGM_STYLES.bell)
+    expect(style).not.toBe(BGM_STYLES.fruit)
+    expect(style.bpm).toBe(96)
+    expect(style.scale).toEqual([0, 2, 4, 5, 7, 9, 10])
+    expect(style.key % 12).toBe(2)
+  })
+
+  it('has no counter melody or heartbeat drum in the base, and adds both in the round variation', () => {
+    const bar = 10
+    expect(roles(bar, 'base', 'counter')).toHaveLength(0)
+    expect(roles(bar, 'free', 'counter').length).toBeGreaterThan(0)
+    expect(roles(bar, 'free', 'kick').map((n) => Math.round(n.beat))).toEqual([0, 1, 2, 3])
+    expect(roles(bar, 'base', 'hat')).toHaveLength(0)
+    expect(roles(bar, 'free', 'hat').length).toBeGreaterThanOrEqual(12)
+  })
+
+  it('round variation goes up a whole tone', () => {
+    const bar = 10
+    const baseBass = roles(bar, 'base', 'bass').map((n) => n.midi)
+    const freeBass = roles(bar, 'free', 'bass').map((n) => n.midi)
+    expect(freeBass).toEqual(baseBass.map((m) => m + 2))
+  })
+})
+
 describe('BgmSequencer', () => {
   const style = BGM_STYLES.bell
   const spb = secondsPerBeat(style, 'base')

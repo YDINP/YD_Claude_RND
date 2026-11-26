@@ -6,6 +6,15 @@ import type { SpinDebugPreset } from '@tgslot/shared'
 /** 요청에 `maxTries`가 없을 때 쓰는 기본값. `SpinDebugRequestSchema`의 기본값과 같다. */
 export const DEFAULT_DEBUG_MAX_TRIES = 5000
 
+/**
+ * `coinRespinFull`(15칸 채움, 약 1/26,000 스핀)만 쓰는 내부 탐색 상한. 공용 `maxTries` 상한(20,000)으로는
+ * 찾을 확률이 54% 남짓이라 이 프리셋만 서버 안에서 올린다. 요청의 `maxTries`가 더 크면 그것을 쓴다.
+ *
+ * 운영 주의: 요청 하나가 서버 CPU를 수 초 붙든다(동기 루프). `API_ALLOW_DEBUG_SPIN`은 로컬 개발 전용이고 스테이징·운영에서
+ * 켜 두지 않는다. 켜야 한다면 앞단에서 요청 빈도를 제한할 것.
+ */
+export const COIN_RESPIN_FULL_MAX_TRIES = 200_000
+
 /** 총 베팅의 몇 배부터 `bigWin`으로 치는지. */
 const BIG_WIN_MULTIPLIER = 10
 
@@ -53,6 +62,19 @@ export function matchesDebugPreset(
       return !isFreeSpin && result.features.some((feature) => feature.type === 'orderRound')
     case 'orderComplete':
       return result.features.some((feature) => feature.type === 'orderComplete')
+    case 'coinRespin':
+      return result.features.some((feature) => feature.type === 'coinRespin')
+    case 'columnWrap':
+      // 진입 감기만으로는 리스핀 중 촉수 연출 순서를 볼 수 없다. **도중** 감기가 있어야 한다.
+      return result.features.some(
+        (feature) => feature.type === 'coinRespin' && feature.steps.some((step) => step.wraps.length > 0),
+      )
+    case 'treasure':
+      return result.features.some(
+        (feature) => feature.type === 'coinRespin' && feature.final.some((cell) => cell.kind === 'treasure'),
+      )
+    case 'coinRespinFull':
+      return result.features.some((feature) => feature.type === 'coinRespin' && feature.full)
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)
@@ -99,8 +121,9 @@ export interface DebugSeedSearchResult {
  * 내므로, 매칭을 찾은 뒤 스핀을 다시 돌릴 필요가 없다.
  */
 export function findDebugSeed(params: DebugSeedSearchParams): DebugSeedSearchResult | null {
-  const { math, totalBet, state, nonce, preset, maxTries, createRng } = params
+  const { math, totalBet, state, nonce, preset, createRng } = params
   const isFreeSpin = state !== undefined
+  const maxTries = preset === 'coinRespinFull' ? Math.max(params.maxTries, COIN_RESPIN_FULL_MAX_TRIES) : params.maxTries
 
   for (let tries = 1; tries <= maxTries; tries += 1) {
     const seed = createRoundSeed()

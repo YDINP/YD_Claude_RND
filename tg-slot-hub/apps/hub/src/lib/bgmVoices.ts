@@ -331,7 +331,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
+const BASE_KITS: Record<Exclude<SoundPreset, 'candy' | 'deepsea'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -564,7 +564,58 @@ const CANDY_KIT: Kit = {
   },
 }
 
-const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT }
+const KALIMBA: readonly Partial3[] = [[1, 1, 0.34], [6, 0.13, 0.05], [12.4, 0.04, 0.02]]
+const WATER_BELL: readonly Partial3[] = [[1, 1, 0.9], [1.004, 0.5, 0.7], [2, 0.34, 0.5], [3.02, 0.12, 0.2]]
+const ROUND_BASS: readonly Partial3[] = [[1, 1, 0.5], [2, 0.18, 0.14]]
+
+/** 칼림바: 기음이 짧게 울고 고역 배음이 톡 튄다. 엄지가 튕기는 소리를 아주 작은 대역 잡음으로 더한다. */
+function kalimba(k: Tools, t: number, m: number, v: number, out: AudioNode): void {
+  partials(k, t, mtof(m), v, out, KALIMBA, 0.002)
+  hiss(k, t, v * 0.12, out, { type: 'bandpass', freq: 1800, q: 1.5, attack: 0.0008, tau: 0.005 })
+}
+
+/** 소나 핑: 사인이 부드럽게 열리고 0.22초 뒤 작은 메아리가 한 번 온다. */
+function sonarPing(k: Tools, t: number, m: number, v: number, out: AudioNode): void {
+  partials(k, t, mtof(m), v, out, [[1, 1, 0.28]], 0.01)
+  partials(k, t + 0.22, mtof(m), v * 0.4, out, [[1, 1, 0.2]], 0.01)
+}
+
+/** 물방울 «똑»: 위에서 아래로 떨어지는 짧은 사인. 타악 자리(wood)에 쓴다. */
+function dropTap(k: Tools, t: number, vel: number, out: AudioNode): void {
+  drum(k, t, 1500, 560, vel, out, 0.02)
+}
+
+/** 바닷속 동굴: 패드가 어둡게 깔리고 칼림바 아르페지오와 둥근 종 선율이 떠다닌다. 라운드의 대선율은 소나 핑. */
+const DEEPSEA_KIT: Kit = {
+  gain: 0.9,
+  mix: {
+    pad: [0.06, 0.35],
+    keys: [0.14, 0.3],
+    arp: [0.26, 0.3],
+    lead: [0.26, 0.35],
+    counter: [0.24, 0.3],
+    bass: [0.22, 0.03],
+    kick: [0.2, 0.02],
+    wood: [0.18, 0.2],
+    hat: [0.09, 0.1],
+    shaker: [0.08, 0.15],
+  },
+  padCutoff: [700, 2400],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sine', 'triangle'], detune: 6, attack: 1.2, release: 1.8 }),
+    keys: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, WATER_BELL, 0.006),
+    arp: (k, t, m, v, _d, out) => kalimba(k, t, m, v, out),
+    lead: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, WATER_BELL, 0.004),
+    counter: (k, t, m, v, _d, out) => sonarPing(k, t, m, v, out),
+    bass: bassPartials(ROUND_BASS),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 70, 48, v, out, 0.12),
+    wood: (k, t, _m, v, _d, out) => dropTap(k, t, v, out),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'bandpass', freq: 7000, q: 0.9, attack: 0.001, tau: 0.02 }),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...SHAKER, freq: 4800, attack: 0.02, tau: 0.03 }),
+  },
+}
+
+const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, deepsea: DEEPSEA_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 
