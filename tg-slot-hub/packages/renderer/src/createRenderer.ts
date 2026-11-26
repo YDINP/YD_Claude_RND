@@ -116,6 +116,10 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       pendingMode = mode
       core?.setMode(mode)
     },
+    setPaused: (paused: boolean) => {
+      // 초기화 전이면 돌고 있는 루프도 없다. 기억할 이유도 없다(허브는 준비된 뒤에만 부른다).
+      core?.setPaused(paused)
+    },
     resize: () => {
       core?.resize()
     },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anticipatedReels, scatterCountsByReel, type AnticipationMath } from './anticipation.js'
+import { anticipatedReels, featureTriggerCount, scatterCountsByReel, type AnticipationMath } from './anticipation.js'
 import { ANTICIPATION_EXTRA_MS, SPIN_SPEED_PROFILES } from './constants.js'
 import { buildSpinPlan } from './timing.js'
 
@@ -49,6 +49,33 @@ describe('anticipatedReels', () => {
 
   it('릴 뒤쪽에서 트리거에 닿으면 마지막 릴까지 이어진다', () => {
     expect(anticipatedReels(math, [MISS, MISS, HIT, HIT, MISS])).toEqual([4])
+  })
+})
+
+describe('anticipatedReels - 말판 팩(스캐터가 릴 1·3·5에만 있다)', () => {
+  const plain = ['a', 'b', 'c', 'd', 'e', 'f']
+  const board: AnticipationMath = {
+    reels: 5,
+    rows: 3,
+    strips: [strip, plain, strip, plain, strip],
+    scatter: { symbol: 'S', pays: { 3: 2 } },
+    boardBonus: { trigger: 3 } as AnticipationMath['boardBonus'],
+  }
+
+  it('트리거 개수는 말판 보너스에서 읽는다', () => {
+    expect(featureTriggerCount(board)).toBe(3)
+  })
+
+  it('초롱이 릴 1·3에 떨어지면 초롱이 없는 릴 4는 건너뛰고 릴 5만 감속한다', () => {
+    expect(anticipatedReels(board, [HIT, 0, HIT, 0, MISS])).toEqual([4])
+  })
+
+  it('릴 1에만 떨어졌으면 릴 2(초롱 없음)는 건너뛰고 릴 3·5는 아직 두 개가 안 모여 대상이 아니다', () => {
+    expect(anticipatedReels(board, [HIT, 0, MISS, 0, MISS])).toEqual([])
+  })
+
+  it('릴 1이 비면 초롱이 두 개뿐이라 감속이 없다', () => {
+    expect(anticipatedReels(board, [MISS, 0, HIT, 0, HIT])).toEqual([])
   })
 })
 

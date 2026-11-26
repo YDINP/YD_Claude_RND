@@ -330,6 +330,8 @@ describe('클러스터 게임 배선', () => {
     const plain = candy.strips[0]?.find((s) => s !== scatter) as SymbolId
     const strips = candy.strips.map((_, reel) => {
       const strip: SymbolId[] = new Array<SymbolId>(10).fill(plain)
+      // 화면 창(0..rows-1) 밖에도 스캐터를 하나 둬서 «스캐터가 나올 수 있는 릴»로 만든다.
+      strip[9] = scatter
       if (reel < trigger - 1) strip[0] = scatter
       return strip
     })
