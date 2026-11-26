@@ -18,7 +18,7 @@
     "heart": {
       "win": [
         { "type": "pulse", "scale": 1.16, "durationMs": 600 },
-        { "type": "glow", "color": "#ff7aa8", "durationMs": 600 }
+        { "type": "glow", "color": "#e03a9b", "durationMs": 600 }
       ]
     }
   }

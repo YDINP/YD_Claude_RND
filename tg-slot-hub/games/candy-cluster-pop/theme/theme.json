@@ -71,7 +71,7 @@
         },
         {
           "type": "glow",
-          "color": "#ff7aa8",
+          "color": "#e03a9b",
           "durationMs": 600
         }
       ]
@@ -81,11 +81,11 @@
   "frameLayout": {
     "window": {
       "x": 0.04066985645933014,
-      "y": 0.11722488038277512,
-      "w": 0.919457735247209,
-      "h": 0.7456140350877193
+      "y": 0.11961722488038277,
+      "w": 0.9186602870813397,
+      "h": 0.7623604465709729
     },
-    "gapRatio": 0.04
+    "gapRatio": 0
   },
   "reelBackdrop": {
     "color": "#3b2a55",
@@ -150,7 +150,7 @@
   "transitions": {
     "freeSpinsEnter": {
       "src": "transitions/fs-enter.webp",
-      "opaqueMs": 2300,
+      "opaqueMs": 1900,
       "durationMs": 2999
     },
     "freeSpinsExit": {

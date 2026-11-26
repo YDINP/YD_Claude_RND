@@ -23,7 +23,7 @@
   "rtpTotalTarget": 0.96,
   "jackpotContribution": 0.015,
   "auditSpins": 10000000,
-  "volatility": "high",
+  "volatility": "medium",
   "features": [
     "cluster",
     "cascade",
