@@ -33,7 +33,7 @@ export const SfxSchema = z.object({
 })
 
 /** 효과음 합성 프리셋. 허브 `audio.ts`의 레시피 표 키와 같아야 한다. */
-export const SOUND_PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const
+export const SOUND_PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'deepsea'] as const
 export type SoundPreset = (typeof SOUND_PRESETS)[number]
 
 /** 게임별 소리 세트. 없으면 허브 기본(`bell`). `sfx` URL이 있으면 그 키만 파일이 대신한다. */
@@ -378,6 +378,11 @@ export const ThemeFileSchema = z.object({
   reelBackdrop: ReelBackdropSchema.optional(),
   /** 빅윈 축하 스킨. 없으면 허브 기본 연출이다. */
   celebration: CelebrationSkinSchema.optional(),
+  /**
+   * 심볼이 아닌 그림(보물 코인·촉수 등). 키는 게임 팩이 정하고 경로는 theme.json 기준 상대 경로다.
+   * 코인 리스핀 팩은 `coin-small`·`coin-medium`·`coin-large`·`treasure-top`·`tentacle`을 읽는다. 없는 키는 렌더러가 코드로 대신 그린다.
+   */
+  props: z.record(z.string().min(1), z.string().min(1)).optional(),
   palette: ThemePaletteSchema,
   sfx: SfxSchema.optional(),
   sound: SoundSchema.optional(),
@@ -438,6 +443,7 @@ export function themeAssetRefs(theme: ThemeFile): ThemeAssetRef[] {
     push(`sheets.${symbol}.win`, sheet.win, 'sheet')
   }
   // 클립은 애니메이션 WebP다 — 검사기에게는 다른 이미지와 같은 종류다.
+  for (const [id, path] of Object.entries(theme.props ?? {})) push(`props.${id}`, path)
   push('transitions.freeSpinsEnter', theme.transitions?.freeSpinsEnter?.src)
   push('transitions.freeSpinsExit', theme.transitions?.freeSpinsExit?.src)
   for (const key of SFX_KEYS) push(`sfx.${key}`, theme.sfx?.[key], 'audio')

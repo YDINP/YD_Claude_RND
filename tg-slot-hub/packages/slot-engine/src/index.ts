@@ -19,6 +19,25 @@ export { pickWeighted } from './random.js'
 export { applyCascadeStep, foldCascades, runCascades } from './cascade.js'
 export { evaluateClusters } from './cluster.js'
 export { drawOrderCards, tallyOrders } from './orders.js'
+export {
+  applyColumnWraps,
+  assignCoinValues,
+  boardCells,
+  drawCoin,
+  foldRespin,
+  resolveCoinRespinSpin,
+  runCoinRespin,
+  toCoinBoard,
+  type CoinBoard,
+} from './coinRespin.js'
+export {
+  CoinRespinSchema,
+  CoinValueEntrySchema,
+  checkCoinRespin,
+  coinRespinGrowthBound,
+  type CoinRespinConfig,
+  type CoinValueEntry,
+} from './coinRespinSchema.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
   computeAnalyticRtp,

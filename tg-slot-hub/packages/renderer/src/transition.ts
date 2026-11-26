@@ -77,6 +77,11 @@ export interface TransitionOptions {
    * 허브가 그 위에 얹는 구간이라 둘 다 손대면 안 된다. 클립이 짧으면 아무것도 늘리지 않는다.
    */
   clipDurationMs?: number
+  /**
+   * 완전히 덮인 채 머무는 구간(ms)을 직접 정한다. 허브가 그 위에 배너를 얹지 않는 전환(코인 리스핀)이 쓴다.
+   * 모션 축소에서는 무시한다(고정된 짧은 길이가 우선이다).
+   */
+  bannerMs?: number
 }
 
 /**
@@ -109,7 +114,7 @@ export function buildModeTransition(to: ModeTarget, options: TransitionOptions):
     options.clipOpaqueMs !== undefined && Number.isFinite(options.clipOpaqueMs) && options.clipOpaqueMs >= 0
       ? options.clipOpaqueMs
       : MODE_COVER_IN_MS * scale
-  const bannerMs = MODE_BANNER_MS * scale
+  const bannerMs = options.bannerMs !== undefined && options.bannerMs >= 0 ? options.bannerMs : MODE_BANNER_MS * scale
   const coverOutMs = clipCoverOutMs(MODE_COVER_OUT_MS * scale, coverInMs, bannerMs, options.clipDurationMs)
   return buildPlan(to, coverInMs, bannerMs, coverOutMs, useTint)
 }

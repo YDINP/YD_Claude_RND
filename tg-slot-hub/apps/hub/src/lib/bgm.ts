@@ -7,6 +7,7 @@
  * 다음 바퀴는 다른 선율이 나온다.
  */
 import type { SoundPreset } from '@tgslot/renderer'
+import { DEEPSEA } from './bgmDeepsea'
 
 /**
  * 허브 오디오가 아는 소리 세트. 공용 `SoundPreset`에 `royal`이 들어오면 이 유니언은 그대로 `SoundPreset`과 같아진다.
@@ -854,4 +855,5 @@ export const BGM_STYLES: Record<AudioPreset, BgmStyle> = {
   clockwork: CLOCKWORK,
   candy: CANDY,
   royal: ROYAL,
+  deepsea: DEEPSEA,
 }

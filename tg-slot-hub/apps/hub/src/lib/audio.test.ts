@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSfxVolume, getSoundPreset, isAudioMuted, setAudioMuted, setSfxVolume, setSoundPreset } from './audio'
 
-const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal'] as const
+const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea'] as const
 
 describe('audio mute flag', () => {
   it('defaults to unmuted and reflects setAudioMuted()', () => {
@@ -324,6 +324,83 @@ describe('recipe table', () => {
       ;(audio[cue] as (n?: number) => void)(2)
       expect(lastContext!.oscillators, cue).toBeGreaterThan(before)
     }
+    vi.unstubAllGlobals()
+  })
+
+  it('deepsea respin cues make sound, and the coin pin pitch climbs a semitone per step up to one octave', async () => {
+    const firstFreqs: number[] = []
+    class RecordingContext extends FakeAudioContext {
+      createOscillator = () => {
+        this.oscillators += 1
+        const node = fakeNode()
+        const freq = node.frequency as { setValueAtTime: (v: number) => void }
+        freq.setValueAtTime = vi.fn((v: number) => firstFreqs.push(v))
+        return node
+      }
+    }
+    vi.stubGlobal('AudioContext', RecordingContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('deepsea')
+
+    // 핀 하나는 몸통(110Hz 오실레이터)이 먼저, 금화 «칭»의 기음이 그다음에 기록된다 — 높이가 변하는 건 둘째다.
+    const ringFreq = (step: number): number => {
+      firstFreqs.length = 0
+      audio.playCoinPin(step)
+      return firstFreqs[1]!
+    }
+    const rings = Array.from({ length: 13 }, (_, step) => ringFreq(step))
+    for (let i = 1; i < rings.length; i++) expect(rings[i]!, `step ${i}`).toBeGreaterThan(rings[i - 1]!)
+    expect(rings[12]! / rings[0]!).toBeCloseTo(2, 5)
+    expect(ringFreq(40)).toBe(rings[12])
+
+    const landFreq = (index: number): number => {
+      firstFreqs.length = 0
+      audio.playCoinLand(index)
+      return firstFreqs[0]!
+    }
+    const lands = Array.from({ length: 8 }, (_, index) => landFreq(index))
+    for (let i = 1; i < lands.length; i++) expect(lands[i]!, `land ${i}`).toBeGreaterThan(lands[i - 1]!)
+    expect(landFreq(30)).toBe(lands[7])
+
+    const cues: [string, () => void][] = [
+      ['sonar', () => audio.playRespinSonar()],
+      ['reset', () => audio.playCounterReset()],
+      ['last', () => audio.playLastRespin()],
+      ['wrapStart', () => audio.playTentacleWrap('start')],
+      ['wrapEnd', () => audio.playTentacleWrap('end')],
+      ['small', () => audio.playTreasure('small')],
+      ['medium', () => audio.playTreasure('medium')],
+      ['large', () => audio.playTreasure('large')],
+      ['settle', () => audio.playSettleTick(0.5)],
+      ['top', () => audio.playTopTreasure()],
+    ]
+    for (const [name, play] of cues) {
+      const before = lastContext!.oscillators
+      expect(play, name).not.toThrow()
+      expect(lastContext!.oscillators, name).toBeGreaterThan(before)
+    }
+    vi.unstubAllGlobals()
+  })
+
+  it('deepsea treasure chords stack two, three and four bell notes', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    const count = (size: 'small' | 'medium' | 'large'): number => {
+      const before = lastContext!.oscillators
+      audio.playTreasure(size)
+      return lastContext!.oscillators - before
+    }
+    const small = count('small')
+    const medium = count('medium')
+    const large = count('large')
+    expect(medium).toBeGreaterThan(small)
+    expect(large).toBeGreaterThan(medium)
     vi.unstubAllGlobals()
   })
 

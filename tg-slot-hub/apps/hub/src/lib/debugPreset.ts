@@ -17,11 +17,13 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = ['win', 'bigWin', 'freeSpin
  * - 라운드(프리스핀·주문 카드 라운드)가 이미 도는 중이면 진입 프리셋(`freeSpins`·`orderRound`)은 맞출 수 없다.
  */
 export function presetsFor(
-  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble'> | null,
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin'> | null,
   options: { inRound?: boolean } = {},
 ): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
   const hasOrders = math.orderRound !== undefined
+  // 코인 리스핀 팩은 프리스핀이 없다. 대신 리스핀 프리셋 4종(진입·도중 감기·보물·15칸)을 보여 준다.
+  const hasCoins = math.coinRespin !== undefined
   const inRound = options.inRound === true
   const base = DEBUG_PRESETS.filter((preset) => {
     if (preset === 'freeSpins') return math.scatter?.freeSpins !== undefined && !inRound
@@ -32,5 +34,6 @@ export function presetsFor(
     ...base,
     ...(math.cascade !== undefined ? (['cascade3'] as const) : []),
     ...(hasOrders ? (inRound ? (['orderComplete'] as const) : (['orderRound', 'orderComplete'] as const)) : []),
+    ...(hasCoins ? (['coinRespin', 'columnWrap', 'treasure', 'coinRespinFull'] as const) : []),
   ]
 }

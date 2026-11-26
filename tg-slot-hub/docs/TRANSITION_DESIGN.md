@@ -788,6 +788,54 @@ Vertical full-screen game transition effect, soft toy-like 3D render, soft matte
 > ```
 >
 > **눈 확인.** 개발 스택(API 8837 / 허브 5237)에서 주문 라운드 진입·종료를 390×844·430×932 두 폭으로 돌려 0.1~0.2초 간격으로 찍었다. 진입: 가게 → 전표 소용돌이 → 가득 덮임 → 420ms 페이드로 라운드 화면. 복귀: 도장 → 전표 소용돌이 → 캔디 랜드 → 기본 화면(배경 언덕과 같은 톤으로 이어져 컷이 튀지 않음). 두 폭 모두 콘솔 에러 0(favicon 404 제외).
+### 2-8. kraken-cove — 크라켄 보물 동굴 (프리스핀 = 코인 리스핀 라운드)
+
+팩 컨셉: 햇살이 드는 라군 동굴의 말랑한 비닐 장난감(젖은 광택은 재질에만, **화면을 가로지르는 광택 줄은 금지**), 라군 청록(`#2ec4d6`)·
+금(`#ffc83d`)·산호 분홍(`#ff6f91`)·크라켄 보라(`#7b5cff`). 보너스는 일반 프리스핀이 아니라 **빈 칸만 돌려 금화를 모으는 코인 리스핀 라운드**이고,
+촉수가 세로줄 하나를 감아 숫자를 두 배로 만든다. 프리스핀 배경(`bg-freespins.webp`)은 같은 라군 동굴이라 전환 클립이 닿는 곳과 톤이 이어진다.
+
+> 이 팩의 R13은 «동물 금지»를 **뺀다.** 겪지 않은 실패이고, 복귀 클립의 주어가 촉수(머리·눈 없이 한 가닥)다.
+> 대신 «금화는 completely plain with no markings»를 두 클립 모두에 못박았다(R4 — 숫자는 코드가 그린다).
+
+#### 진입 — 금화가 파도처럼 쏟아진다
+
+> 동굴 위쪽에서 금화가 거품 파도처럼 쏟아져 내려 **쌓이는 그 동작으로** 화면 전체를 덮는다. 덮인 뒤에도 금화가 구르고 반짝이며 거품이 오른다.
+
+**왜 이 팩인가.** 라운드의 정체가 «코인을 모으는 것»이라 전환이 곧 규칙 예고가 된다. 금화 더미는 구조적으로 불투명하고(R1),
+계속 구르니 단색 정지로 굳지 않는다(R11).
+
+**규칙 적용.** R1·R2·R3(`camera_fixed` 없이 본문 고정 문구)·R4(손·사람·글자 금지)·R5·R7·R8(쏟아짐 = 덮임 한 동작)·R9(주어 «gold coins»를 첫 문장에)·R11·
+R12(`stylePrefix`의 어휘와 hex, `negative`의 photorealistic).
+
+```
+Vertical full-screen game transition effect, bright stylized 3D render, chunky soft vinyl-toy look with a subtle wet sheen, not photorealistic, premium casual mobile game art. A torrent of shiny plain gold coins pours down from the top of a sunlit lagoon-teal underwater cave in a bubbly wave. One continuous motion repeats: the coins cascade down and pile up thicker and thicker, tumbling over each other in that same pour until the whole frame is completely opaque edge to edge, corner to corner, a seamless heap of gold coins, holding fully covered for a beat while the coins keep tumbling, glinting and bubbles keep rising so the covered frame is never a flat still color, then the heap slides away downward and the teal cave shows through before the next pour. ...
+```
+
+#### 복귀 — 촉수가 금화 더미를 쓸어 걷는다
+
+> 화면을 가득 채운 금화 더미를 보라 촉수 한 가닥이 **휘감아 쓸어 올리는 그 동작으로** 걷어 내며 밝은 라군 동굴이 드러난다.
+
+**왜 이 팩인가.** 재미 장치가 «촉수가 감는다»다. 진입이 «쏟아져 쌓임»이니 복귀는 «감아 걷음»으로 방향이 다르다(R6, 역재생 아님).
+복귀는 덮인 채 시작하므로 `opaqueMs: 0`이다.
+
+```
+Vertical full-screen game transition effect, (같은 stylePrefix). Extreme close-up: a single thick glossy kraken-violet tentacle with soft pale pink suckers sweeps through a dense heap of shiny plain gold coins that completely fills the frame, edge to edge, corner to corner, the camera so close that only coins and the tentacle are visible and no background shows at all. One continuous motion repeats: the tentacle curls in from the bottom edge, wraps around the heap and swirls it up and away off the top of the frame in a bubbly spiral, and that same sweep reveals a calm sunlit lagoon-teal underwater cave with coral and rippling caustic light, fully clear, then a fresh wave of coins pours back in ... .
+```
+
+> **채택 결과 (kraken-cove).** 발주 3편, **$2.79**(승인 범위의 상한). 진입 1편(`fs-enter`)과 복귀 2편 중 뒤의 것(`fs-exit`).
+> 1차 복귀본은 금화 더미가 프레임 위쪽을 비워 둬 R1 위반이라 폐기하고, 위 문장처럼 «Extreme close-up … no background shows at all»을 넣어
+> **한 번 재발주**했다(candy 2-7과 같은 처방). 출고본은 16fps/q60 애니메이션 WebP, 360x640, 48프레임, 3.00초, 최대 프레임 63ms,
+> 정지 프레임 0.0%, `check:clips` 통과. `theme.json`에는 진입 `opaqueMs: 2500` / `durationMs: 2999`, 복귀 `opaqueMs: 0` / `durationMs: 2999`로 적었다.
+>
+> **브라우저 확인 (2026-11-26, 430x932·390x844, 개발 스택).** 코인 리스핀 프리셋으로 스핀하면 진입 클립이 재생되고(금화 기둥 → 더미가 차오름),
+> 그 뒤 프리스핀 동굴(핀 링 친 코인 5개)로 넘어가는 것을 확인했다. 큰 당첨 오버레이를 닫은 뒤 복귀 클립이 금화로 가득 찬 채 시작해
+> 촉수가 쓸어 올리며 라군이 드러나는 것도 확인했다. 콘솔 오류는 «Failed to load resource 404» 한 줄뿐인데 페이지가 받은 응답 중 400 이상은 없어 브라우저가 직접 요청한 favicon으로 보이고, 클립 로그는 정상(`opaqueMs: 2500`·`0`, `decoded: true`)이다.
+>
+> **한계 (눈으로 본 것).**
+> - 진입 클립 끝 프레임에서 금화 더미는 화면 아래 약 70%까지만 차고 위쪽에 동굴 벽과 금화 기둥이 남는다. 클립 상한 3편을 모두 써서 그대로 채택했다.
+>   오버레이가 풀리는 순간 같은 라군 동굴 배경(`bg-freespins`)으로 이어지므로 튀는 정도는 작았지만, R1을 엄밀히 만족하지는 않는다.
+>   더 다듬으려면 진입을 «초근접, 더미가 프레임을 가득 채움» 문장으로 1편 더 발주해야 한다(+$0.93, 승인 필요).
+> - 두 클립 모두 금화에 «$» 비슷한 작은 양각이 보인다(프롬프트의 plain에도 불구하고). 복귀에서 드러나는 동굴은 장난감 톤보다 사진에 가깝다.
 
 ---
 

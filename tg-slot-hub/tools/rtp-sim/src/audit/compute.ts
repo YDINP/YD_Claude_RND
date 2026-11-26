@@ -2,6 +2,7 @@ import { MAX_ENUMERATION_COMBOS, computeExactRtp, getBetUnit } from '@tgslot/slo
 import type { GameMath } from '@tgslot/slot-engine'
 import { analyzeDistribution, buildFeatureReport, canEnumerate, resolveMethod } from './distribution.js'
 import { runMonteCarlo } from './mc.js'
+import { coinRespinGates } from './coinRespinStats.js'
 import { Z95 } from './stats.js'
 import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
@@ -357,6 +358,7 @@ export function buildGates(input: GateInput): GateRow[] {
   }
 
   if (distribution.cascade !== undefined) gates.push(...cascadeGates(distribution.cascade))
+  if (distribution.coinRespin !== undefined) gates.push(...coinRespinGates(distribution.coinRespin))
 
   if (jackpot !== null) {
     gates.push({

@@ -1,6 +1,6 @@
-import { Application, Container, Graphics, Sprite, type Texture } from 'pixi.js'
+import { Application, Color, Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
-import type { GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { CoinCell, GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
 import {
   ACCEL_DISTANCE_RATIO,
   ACCEL_TIME_RATIO,
@@ -64,6 +64,21 @@ import {
   type SpinSpeed,
 } from '../timing.js'
 import { anticipatedReels } from '../anticipation.js'
+import { coinAnticipatedReels } from '../coinAnticipation.js'
+import {
+  buildRespinPlan,
+  compressRespin,
+  compressRespinStep,
+  respinCollectDurations,
+  respinPulseGapMs,
+  respinSkipStepMs,
+  respinSkipWrapMs,
+  respinWrapDurations,
+  type RespinPlan,
+  type RespinPlanStep,
+  type RespinWrapPlan,
+} from '../respin.js'
+import { RESPIN_COVERED_HOLD_MS, RESPIN_FULL_HOLD_MS, RESPIN_SHAKE_AMPLITUDE, RESPIN_SHAKE_MS } from '../respinConstants.js'
 import type { RendererMode } from '../features.js'
 import {
   buildModeTransition,
@@ -174,11 +189,20 @@ import {
   type MutationCellTarget,
   type MutationFxHandle,
 } from './mutationFx.js'
+import { CoinFaceCache, createBadgeTexture } from './coinFace.js'
+import { RespinScene, type RespinHandle } from './respinFx.js'
+
+/** 코인 리스핀 팩이 읽는 `theme.props` 키. 없는 키는 코드로 그린 대체 그림으로 동작한다. */
+const PROP_KEYS = ['coin-small', 'coin-medium', 'coin-large', 'treasure-top', 'tentacle'] as const
+type PropKey = (typeof PROP_KEYS)[number]
+type PropTextures = Partial<Record<PropKey, Texture>>
 
 interface Cell {
   view: Container
   sprite: Sprite
   symbol: SymbolId | null
+  /** 이 칸이 지금 입고 있는 코인 얼굴. 없으면 심볼 그림 그대로다. */
+  face: Texture | null
 }
 
 /** 회전 중인 릴 하나. 스킵할 때 필요한 것만 담는다. */
@@ -200,6 +224,11 @@ interface ReelView {
   position: number
   /** 유휴 모션이 더하는 미세 오프셋. `position`을 더럽히지 않는다. */
   idleOffset: number
+  /**
+   * 코인 금액 얼굴을 다는 중인가. 릴이 멈추러 들어가는 순간부터 켠다 — 착지 프레임에서 «제자리 교체»가 보이지 않게
+   * 서는 자리의 코인은 감속하며 들어올 때부터 이미 금액을 달고 있다.
+   */
+  faceOn: boolean
 }
 
 /**
@@ -388,6 +417,30 @@ class PixiRenderer implements RendererCore {
   private readonly timers = new Map<ReturnType<typeof setTimeout>, () => void>()
   private destroyed = false
 
+  // ---- 코인 리스핀 (math.coinRespin 팩만 쓴다)
+  /** 코인 금액 얼굴 캐시. 리스핀이 없는 팩에서도 만들어 두되 한 장도 그리지 않는다. */
+  private readonly coinFaces: CoinFaceCache
+  /** 동굴 무대. 코인 리스핀이 없는 팩은 null이다. */
+  private readonly respinScene: RespinScene | null
+  private readonly formatCoin: (amount: number) => string
+  /** 릴별로 «스트립 위치 → 코인 얼굴». 이번 스핀의 서버 `coinBoard`에서 만든다. */
+  private reelFaces: Map<number, Texture>[] = []
+  /** 재생 중인 리스핀 토막(리스핀 1회·촉수 1줄·정산). `compress`는 STOP, `finish`는 끼어들기다. */
+  private activeRespin: { finish: () => void; compress: () => void } | null = null
+  /** 동굴이 열려 있는가. `spinTo`가 끝나도 `endRespin()`이 나올 때까지 true다. */
+  private caveActive = false
+  /** 동굴에서 나온 뒤에도 마지막 판(코인 리스핀 종료 판)을 다음 스핀까지 세워 두는 중인가. */
+  private boardHeld = false
+  private endRespinPromise: Promise<void> | null = null
+  /** 진입 펄스·마퀴 흔들림처럼 한 번 쓰고 버리는 짧은 트윈. 끊을 때 한꺼번에 걷는다. */
+  private readonly respinTweens = new Set<gsap.core.Animation>()
+  /** 전환에서 완전히 덮인 채 머무는 시간을 덮어쓴다(허브 배너가 없는 전환). null이면 기본값. */
+  private transitionBannerMs: number | null = null
+  /** 화면이 갈리는 순간(`applyModeSwap`) 한 번 불리는 콜백. */
+  private pendingSwapHook: (() => void) | null = null
+  /** 전환이 끝나면(`finishModeTransition`) 부르는 대기자. */
+  private transitionDone: (() => void) | null = null
+
   constructor(
     options: ResolvedRendererOptions,
     app: Application,
@@ -397,8 +450,10 @@ class PixiRenderer implements RendererCore {
     frameTexture: Texture | null,
     freeSpinsTexture: Texture | null,
     ownedTextures: TextureRegistry,
+    props: PropTextures = {},
   ) {
     this.options = options
+    this.formatCoin = options.formatCoin ?? ((amount: number): string => amount.toLocaleString('en-US'))
     // 시트 스프라이트 상한은 격자에서 유도한다. 한 심볼이 동시에 점등될 수 있는 최대가
     // 곧 격자 칸 수다 — 4x5 팩 실측 최대 20이 정확히 이 값이었다(2백만 스핀).
     this.sheetSprites = new SheetSpritePool(options.math.reels * options.math.rows)
@@ -466,6 +521,18 @@ class PixiRenderer implements RendererCore {
     this.buildReels()
     // 릴 위, 같은 마스크 안. 창 위에서 떨어지는 리필이 창 밖에서는 보이지 않는다.
     this.reelsLayer.addChild(this.cascadeLayer)
+    this.coinFaces = new CoinFaceCache(
+      {
+        coin: textures.get(options.math.coinRespin?.symbol ?? '') ?? coinTexture,
+        treasure: {
+          ...(props['coin-small'] === undefined ? {} : { small: props['coin-small'] }),
+          ...(props['coin-medium'] === undefined ? {} : { medium: props['coin-medium'] }),
+          ...(props['coin-large'] === undefined ? {} : { large: props['coin-large'] }),
+        },
+      },
+      ownedTextures,
+    )
+    this.respinScene = this.buildRespinScene(props)
     this.applyLayout()
     this.observeResize()
     this.warmTransitionClips()
@@ -600,6 +667,7 @@ class PixiRenderer implements RendererCore {
     this.drawBackdrop()
     this.drawMask()
     this.drawMode()
+    this.respinScene?.layout()
 
     for (let reel = 0; reel < this.reels.length; reel += 1) {
       const view = this.reels[reel]
@@ -670,7 +738,7 @@ class PixiRenderer implements RendererCore {
         sprite.anchor.set(0.5)
         view.addChild(sprite)
         root.addChild(view)
-        cells.push({ view, sprite, symbol: null })
+        cells.push({ view, sprite, symbol: null, face: null })
       }
       this.reelsLayer.addChild(root)
       const stop = this.options.initialStops[reel] ?? 0
@@ -680,16 +748,18 @@ class PixiRenderer implements RendererCore {
         cells,
         position: normalizePosition(stop, strip === undefined ? 1 : strip.length),
         idleOffset: 0,
+        faceOn: false,
       })
     }
   }
 
-  private setCellSymbol(cell: Cell, symbol: SymbolId): void {
-    if (cell.symbol === symbol) return
-    const texture = this.textures.get(symbol)
+  private setCellSymbol(cell: Cell, symbol: SymbolId, face: Texture | null = null): void {
+    if (cell.symbol === symbol && cell.face === face) return
+    const texture = face ?? this.textures.get(symbol)
     if (texture !== undefined) cell.sprite.texture = texture
     cell.sprite.setSize(this.layout.symbolSize * SYMBOL_FILL_RATIO)
     cell.symbol = symbol
+    cell.face = face
   }
 
   /** 릴 1개를 현재 위치로 다시 그린다. 위치의 소수부가 스크롤 오프셋이 된다. */
@@ -713,7 +783,9 @@ class PixiRenderer implements RendererCore {
       // 변형이 앉힌 심볼이 스트립보다 우선한다. 자리는 화면 행이 아니라 스트립 인덱스로 찾는다.
       const overridden = mutationOverlaySymbolAt(this.overlay, reel, stripIndex)
       const symbol = overridden ?? strip[stripIndex]
-      if (symbol !== undefined) this.setCellSymbol(cell, symbol)
+      // 코인 금액 얼굴: 서는 자리의 코인만, 릴이 멈추러 들어온 뒤부터 단다.
+      const face = view.faceOn && overridden === undefined ? (this.reelFaces[reel]?.get(stripIndex) ?? null) : null
+      if (symbol !== undefined) this.setCellSymbol(cell, symbol, face)
       cell.view.y = rowTop(this.layout, row) + this.layout.symbolSize / 2 - fraction * pitch
     }
   }
@@ -757,6 +829,8 @@ class PixiRenderer implements RendererCore {
     this.activeMutation?.finish()
     // 연쇄는 끝내지 않고 압축한다. 남은 단계도 같은 길이로 재생된다.
     this.activeCascade?.compress()
+    // 코인 리스핀도 건너뛰지 않고 압축한다. 금액·순서는 그대로다.
+    this.activeRespin?.compress()
     if (this.activeReels.size === 0) return
     const plan = buildSkipPlan(this.options.math.reels)
 
@@ -772,6 +846,8 @@ class PixiRenderer implements RendererCore {
       this.overlay = releaseMutationOverlayReel(this.overlay, reel)
       active.view.position = state.p
       active.view.idleOffset = 0
+      // 스냅 착지도 금액을 단 채로 선다. 접는 순간에 얼굴이 바뀌어 보이지 않게 지금 켠다.
+      active.view.faceOn = true
       this.renderReel(reel)
 
       const timeline = gsap.timeline({ onComplete: active.land })
@@ -796,9 +872,13 @@ class PixiRenderer implements RendererCore {
     if (stops.length !== this.options.math.reels) {
       throw new RangeError(`stops 개수(${stops.length})가 reels(${this.options.math.reels})와 다르다`)
     }
+    // 동굴이 열려 있으면(지난 리스핀 라운드) 전환 없이 곧장 기본 화면으로 돌아온다.
+    this.abortRespin()
+    if (this.boardHeld) this.releaseHeldBoard()
     this.clearWins()
     this.setSpinningIdle(false)
     this.killSpinTimelines()
+    this.prepareReelFaces(stops, opts?.coins)
     // 지난 스핀의 변형은 여기서 걷지 않는다. 릴이 돌기 시작하면 그 심볼도 함께 흘러 나가고,
     // 화면 밖으로 빠져나간 뒤에 릴 단위로 놓인다(`expireMutationOverlay`).
     this.fadeGridOverride()
@@ -811,7 +891,9 @@ class PixiRenderer implements RendererCore {
       ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
       speed: opts?.speed ?? this.spinSpeed,
       reducedMotion: this.options.reducedMotion,
-      anticipation: anticipatedReels(this.options.math, stops),
+      anticipation: this.options.math.coinRespin
+        ? coinAnticipatedReels(this.options.math, stops)
+        : anticipatedReels(this.options.math, stops),
     })
     this.anticipatedPlan = new Set(plan.reels.filter((r) => r.anticipationMs > 0).map((r) => r.reel))
 
@@ -844,6 +926,13 @@ class PixiRenderer implements RendererCore {
     } else if (opts?.finalGrid !== undefined && (opts.cascades?.length ?? 0) > 0) {
       // 단계가 판과 어긋나 계획을 못 세웠다. 연출은 버려도 화면은 서버 판과 같아야 한다.
       this.applyGridOverride(opts.finalGrid)
+    }
+
+    // 코인 리스핀은 연쇄·변형과 같은 자리 — spinEnd 앞이다. 끝나도 화면은 동굴에 머문다(`endRespin()`).
+    const respinPlan = this.planRespin(opts)
+    if (respinPlan !== null) {
+      await this.runRespinPhase(respinPlan, token, stops)
+      if (this.destroyed || token !== this.spinToken) return
     }
 
     this.emit({ type: 'spinEnd' })
@@ -889,6 +978,7 @@ class PixiRenderer implements RendererCore {
         this.overlay = releaseMutationOverlayReel(this.overlay, plan.reel)
         view.position = normalizePosition(stop, length)
         view.idleOffset = 0
+        view.faceOn = true
         this.renderReel(plan.reel)
         if (token === this.spinToken && !this.destroyed) {
           this.endAnticipation()
@@ -928,6 +1018,8 @@ class PixiRenderer implements RendererCore {
           ease: 'power2.in',
           onUpdate,
         })
+        // 감속 구간에 들어서면 서는 자리의 코인이 금액을 달고 들어온다(착지 프레임에서 바뀌어 보이지 않게).
+        .call(() => this.enableReelFaces(plan.reel))
         .to(state, {
           p: landing,
           duration: (plan.spinMs * (1 - ACCEL_TIME_RATIO)) / 1000,
@@ -967,6 +1059,7 @@ class PixiRenderer implements RendererCore {
     // 재생 중이던 변형도 함께 끊는다. 끊긴 단계는 자기 그리드를 확정하고 물러난다.
     this.activeMutation?.finish()
     this.activeCascade?.finish()
+    this.activeRespin?.finish()
     const resolvers = this.spinResolvers
     this.spinResolvers = []
     for (const resolve of resolvers) resolve()
@@ -1300,6 +1393,8 @@ class PixiRenderer implements RendererCore {
       presentationOptionsFor(opts, this.options.reducedMotion, this.spinSpeed),
     )
     if (steps.length === 0) return
+    // 코인 리스핀 종료 판을 세워 둔 채 라인 당첨이 왔다(트리거 판의 당첨이다): 릴을 되살려 그 판 위에 보여 준다.
+    if (this.boardHeld && wins.length > 0) this.releaseHeldBoard()
 
     const delayMs = winStartDelayMs(this.spinSpeed, this.options.reducedMotion)
     if (delayMs > 0) {
@@ -1397,6 +1492,8 @@ class PixiRenderer implements RendererCore {
         totalWin: step.totalWin,
         tier: step.tier,
         durationMs: step.rollupMs,
+        // 코인 리스핀 스핀: 롤업이 0이 아니라 이미 센 리스핀 합계에서 이어진다.
+        ...(step.fromAmount === undefined ? {} : { fromAmount: step.fromAmount }),
       })
       return
     }
@@ -1719,6 +1816,426 @@ class PixiRenderer implements RendererCore {
     }
   }
 
+
+  // ------------------------------------------------------------------ 코인 리스핀
+
+  /** 서버가 정한 라운드를 재생 계획으로 푼다. 어긋나면 null — 연출은 버리고 결과(합계)만 남는다. */
+  private planRespin(opts?: SpinToOptions): RespinPlan | null {
+    const input = opts?.respin
+    const config = this.options.math.coinRespin
+    if (input === undefined || config === undefined || this.respinScene === null) return null
+    try {
+      const plan = buildRespinPlan(this.options.math.reels, this.options.math.rows, input, {
+        speed: opts?.speed ?? this.spinSpeed,
+        reducedMotion: this.options.reducedMotion,
+        respins: config.respins,
+      })
+      return plan.mismatch ? null : plan
+    } catch {
+      return null
+    }
+  }
+
+  /** 이번 스핀의 코인 얼굴을 릴별 «스트립 위치 → 텍스처»로 정해 둔다. 얼굴은 릴이 멈추러 들어갈 때 켠다. */
+  private prepareReelFaces(stops: readonly number[], coins: readonly CoinCell[] | undefined): void {
+    this.reelFaces = this.reels.map(() => new Map<number, Texture>())
+    for (const view of this.reels) view.faceOn = false
+    if (coins === undefined || this.options.math.coinRespin === undefined) return
+    for (const coin of coins) {
+      const [reel, row] = coin.pos
+      const strip = this.options.math.strips[reel]
+      if (strip === undefined || strip.length === 0) continue
+      const index = wrapIndex((stops[reel] ?? 0) + row, strip.length)
+      this.reelFaces[reel]?.set(
+        index,
+        this.coinFaces.get({ kind: coin.kind, tier: coin.tier, label: this.formatCoin(coin.amount) }),
+      )
+    }
+  }
+
+  private enableReelFaces(reel: number): void {
+    const view = this.reels[reel]
+    if (view === undefined || view.faceOn) return
+    view.faceOn = true
+    this.renderReel(reel)
+  }
+
+  private buildRespinScene(props: PropTextures): RespinScene | null {
+    const config = this.options.math.coinRespin
+    if (config === undefined) return null
+    const wild = this.options.math.symbols.find((symbol) => symbol.wild === true)?.id
+    // 도는 칸에 지나가는 심볼: 리스핀 칸 스트립에서 코인·와일드를 뺀다(코인은 결과 칸에만 선다).
+    const fillers = config.respinStrips.map((strip) => strip.filter((id) => id !== config.symbol && id !== wild))
+    let badge: Texture | null = null
+    const multiplier = config.columnBonus.multiplier
+    return new RespinScene({
+      layer: this.reelsLayer,
+      overlay: this.fxLayer,
+      symbols: this.textures,
+      fillers,
+      coinSymbol: config.symbol,
+      faces: this.coinFaces,
+      fx: this.fxTextures,
+      solid: this.confettiTexture,
+      tentacleTexture: props.tentacle ?? null,
+      topTexture: props['treasure-top'] ?? null,
+      badge: () => {
+        badge ??= createBadgeTexture(`×${multiplier}`, this.ownedTextures)
+        return badge
+      },
+      formatCoin: this.formatCoin,
+      getLayout: () => this.layout,
+      reels: this.options.math.reels,
+      rows: this.options.math.rows,
+      ringColor: new Color(this.options.theme.palette.frame).toNumber(),
+      reducedMotion: this.options.reducedMotion,
+    })
+  }
+
+  /**
+   * 코인 리스핀 라운드 재생. 진입 펄스 → 동굴(전환 클립) → 진입 감기 → 리스핀 → 정산.
+   * 결과는 이미 서버가 정했다 — 여기서는 계획을 그대로 재생만 한다. STOP은 남은 것을 건너뛰지 않고 압축해 재생한다.
+   * 끝나도 화면은 동굴에 머문다(`endRespin()`이 기본 화면으로 돌려보낸다) — 빅윈 연출이 동굴 배경 위에서 먼저 나간다.
+   */
+  private async runRespinPhase(plan: RespinPlan, token: number, stops: number[]): Promise<void> {
+    const scene = this.respinScene
+    if (scene === null) return
+    const alive = (): boolean => !this.destroyed && token === this.spinToken
+    const skipped = (): boolean => this.skipRequestedToken === token
+
+    await this.respinIntro(plan, token)
+    if (!alive()) return
+
+    let grid: readonly (readonly SymbolId[])[]
+    try {
+      grid = stopsToGrid(this.options.math, stops)
+    } catch {
+      return
+    }
+    await this.enterCave(plan, grid)
+    if (!alive()) return
+
+    // STOP 뒤 촉수 점멸은 남은 줄 전부가 한 예산을 나눠 쓴다(줄마다 따로 붙으면 감기 많은 판이 몇 초씩 끈다).
+    const totalWraps = plan.entryWraps.length + plan.steps.reduce((n, step) => n + step.wraps.length, 0)
+    let wrapsDone = 0
+    let skipWrapMs: number | null = null
+    const wrapMsAt = (): number | null => {
+      if (!skipped()) return null
+      if (skipWrapMs === null) skipWrapMs = respinSkipWrapMs(totalWraps - wrapsDone)
+      return skipWrapMs
+    }
+
+    // 진입 판에서 이미 다 찬 줄: 클립이 걷힌 직후 곧장 촉수가 감는다.
+    for (const wrap of plan.entryWraps) {
+      await this.playRespinWrap(wrap, plan, true, wrapMsAt)
+      wrapsDone += 1
+      if (!alive()) return
+    }
+
+    const total = plan.steps.length
+    let stepMs: number | null = null
+    const stepMsAt = (index: number): number | null => {
+      if (!skipped()) return null
+      if (stepMs === null) stepMs = respinSkipStepMs(total - index)
+      return stepMs
+    }
+    for (const step of plan.steps) {
+      if (!alive()) return
+      const ms = stepMsAt(step.index)
+      const durations =
+        ms === null
+          ? step.durations
+          : compressRespinStep(ms, { newCoins: step.newCoins.length > 0, spinningCells: step.spinning.length })
+      this.emitRespinStep(step, total, 'start')
+      await this.playRespinStep(step, total, durations, () => stepMsAt(step.index))
+      // start를 냈으면 end도 반드시 낸다. 끼어들어도 화면은 이미 이 리스핀의 끝 모습으로 확정됐다.
+      this.emitRespinStep(step, total, 'end')
+      if (!alive()) return
+      for (const wrap of step.wraps) {
+        await this.playRespinWrap(wrap, plan, false, wrapMsAt)
+        wrapsDone += 1
+        if (!alive()) return
+      }
+    }
+
+    // 15칸을 다 채웠다: 마지막 촉수가 물러나고 «판 가득!»을 읽을 쉼을 둔 뒤 정산한다(STOP·모션 축소에서는 생략).
+    if (plan.full && !skipped() && !this.options.reducedMotion) {
+      await this.wait(RESPIN_FULL_HOLD_MS)
+      if (!alive()) return
+    }
+
+    await this.playRespinCollect(plan, token)
+    if (!alive()) return
+    this.emit({ type: 'respinEnd', coinWin: plan.coinWin, topWin: plan.topWin, full: plan.full })
+  }
+
+  /** 진입 펄스: 판 위 코인이 릴 → 행 순서로 «칭». 이어서 마퀴가 한 번 흔들린다. */
+  private async respinIntro(plan: RespinPlan, token: number): Promise<void> {
+    const scene = this.respinScene
+    if (scene === null) return
+    const alive = (): boolean => !this.destroyed && token === this.spinToken
+    const quick = this.skipRequestedToken === token || this.options.reducedMotion
+    const gap = quick ? 0 : respinPulseGapMs(plan.entry.length)
+    for (let i = 0; i < plan.entry.length; i += 1) {
+      if (!alive()) return
+      const coin = plan.entry[i]
+      if (coin === undefined) continue
+      // 압축·모션 축소에서는 코인마다 소리를 내지 않는다. 한 번이면 «시작했다»는 알림으로 충분하다.
+      if (gap > 0 || i === 0) this.emit({ type: 'respinPulse', index: i, total: plan.entry.length })
+      if (gap > 0) {
+        scene.pulseAt(coin.pos[0], coin.pos[1])
+        this.bounceCell(coin.pos[0], coin.pos[1])
+        await this.wait(gap)
+      }
+    }
+    if (!alive() || quick) return
+    this.shakeFrame()
+    await this.wait(RESPIN_SHAKE_MS)
+  }
+
+  private bounceCell(reel: number, row: number): void {
+    const cell = this.reels[reel]?.cells[row + 1]
+    if (cell === undefined) return
+    const tween = gsap.fromTo(
+      cell.view.scale,
+      { x: 1.16, y: 1.16 },
+      {
+        x: 1,
+        y: 1,
+        duration: 0.24,
+        ease: 'back.out(2.4)',
+        onComplete: () => this.respinTweens.delete(tween),
+      },
+    )
+    this.respinTweens.add(tween)
+  }
+
+  /** 마퀴(프레임)만 잠깐 떤다. 릴은 가만히 있다. */
+  private shakeFrame(): void {
+    const target = this.frameSprite ?? this.frameGraphics
+    const baseX = this.frameSprite !== null ? (this.geometry.frameRect?.x ?? 0) : 0
+    const amplitude = this.geometry.canvasWidth * RESPIN_SHAKE_AMPLITUDE
+    const state = { t: 0 }
+    const tween = gsap.to(state, {
+      t: 1,
+      duration: RESPIN_SHAKE_MS / 1000,
+      ease: 'none',
+      onUpdate: () => {
+        target.x = baseX + Math.sin(state.t * Math.PI * 8) * amplitude * (1 - state.t)
+      },
+      onComplete: () => {
+        target.x = baseX
+        this.respinTweens.delete(tween)
+      },
+    })
+    this.respinTweens.add(tween)
+  }
+
+  private killRespinTweens(): void {
+    for (const animation of [...this.respinTweens]) animation.kill()
+    this.respinTweens.clear()
+    const baseX = this.frameSprite !== null ? (this.geometry.frameRect?.x ?? 0) : 0
+    const target = this.frameSprite ?? this.frameGraphics
+    target.x = baseX
+    for (const view of this.reels) {
+      for (const cell of view.cells) cell.view.scale.set(1)
+    }
+  }
+
+  /** 동굴로 들어간다: 전환 클립이 덮은 순간 무대를 세우고, 클립이 걷히면 resolve한다. */
+  private enterCave(plan: RespinPlan, grid: readonly (readonly SymbolId[])[]): Promise<void> {
+    return this.runCaveTransition('freeSpins', () => {
+      const scene = this.respinScene
+      if (scene === null) return
+      this.setReelsVisible(false)
+      scene.show(grid, plan.entry)
+      this.caveActive = true
+      this.emit({
+        type: 'respinStart',
+        respins: plan.respins,
+        coinTotal: plan.entryTotalBefore,
+        empty: plan.entryEmpty,
+        treasures: plan.entryTreasures,
+      })
+    })
+  }
+
+  /**
+   * 허브 배너 없이 도는 모드 전환. 화면이 갈리는 순간 `onSwap`이 한 번 불리고, 전환이 다 끝나면 resolve한다.
+   * 기존 전환(커튼·클립·`modeTransition` 이벤트)을 그대로 쓴다 — 허브 BGM 전환과 입력 잠금이 같은 길로 따라온다.
+   */
+  private runCaveTransition(to: ModeTarget, onSwap: () => void): Promise<void> {
+    // 끝나지 않은 전환이 있으면 먼저 닫는다. 그 전환의 대기자가 우리 대기자로 오인되지 않게 한다.
+    this.finishModeTransition()
+    return new Promise<void>((resolve) => {
+      this.transitionBannerMs = this.options.reducedMotion ? null : RESPIN_COVERED_HOLD_MS
+      this.pendingSwapHook = onSwap
+      this.transitionDone = resolve
+      this.playModeTransition(to)
+    })
+  }
+
+  private emitRespinStep(step: RespinPlanStep, total: number, phase: 'start' | 'land' | 'pin' | 'end'): void {
+    this.emit({
+      type: 'respinStep',
+      index: step.index,
+      total,
+      phase,
+      last: step.last,
+      left: step.left,
+      empty: step.empty,
+      newCoins: step.newCoins,
+      // 감기 반영 전 값이다. 감기는 `columnWrap`이 따로 더한다.
+      coinTotal: step.coinTotalLanded,
+      treasures: step.treasures,
+    })
+  }
+
+  /**
+   * 재생 토막 하나를 약속으로 만든다. 끝나는 길은 정상 종료와 끼어들기 둘뿐이고, 둘 다 같은 문(`finish`)을 지나
+   * 화면을 그 토막의 끝 모습으로 확정한다. STOP이 이미 눌려 있으면 시작부터 압축한다.
+   */
+  private runRespinHandle(make: (done: () => void) => RespinHandle, compressMs: () => number | null): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let handle: RespinHandle | null = null
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        this.activeRespin = null
+        handle?.settle()
+        handle?.release()
+        resolve()
+      }
+      this.activeRespin = {
+        finish,
+        compress: () => {
+          const ms = compressMs()
+          if (ms !== null) handle?.compress(ms)
+        },
+      }
+      handle = make(finish)
+      if (settled) {
+        handle.settle()
+        handle.release()
+        return
+      }
+      const ms = compressMs()
+      if (ms !== null) handle.compress(ms)
+    })
+  }
+
+  private playRespinStep(
+    step: RespinPlanStep,
+    total: number,
+    durations: RespinPlanStep['durations'],
+    compressMs: () => number | null,
+  ): Promise<void> {
+    const scene = this.respinScene
+    if (scene === null) return Promise.resolve()
+    return this.runRespinHandle(
+      (done) =>
+        scene.playStep(step, durations, {
+          onLand: () => this.emitRespinStep(step, total, 'land'),
+          onPin: () => this.emitRespinStep(step, total, 'pin'),
+          onComplete: done,
+        }),
+      compressMs,
+    )
+  }
+
+  private async playRespinWrap(
+    wrap: RespinWrapPlan,
+    plan: RespinPlan,
+    entry: boolean,
+    skipWrapMs: () => number | null,
+  ): Promise<void> {
+    const scene = this.respinScene
+    if (scene === null) return
+    const before = wrap.cells.map((cell) => cell.before)
+    const after = wrap.cells.map((cell) => cell.after)
+    const skipMs = skipWrapMs()
+    // 압축·모션 축소에서는 촉수 그림 없이 줄이 한 번 점멸한다(rise 0이 점멸 모드의 표식이다).
+    const flash = skipMs !== null || this.options.reducedMotion
+    const base = respinWrapDurations(plan.speedRow)
+    const countMs = skipMs ?? base.countMs
+    const durations = flash ? { riseMs: 0, coilMs: 0, countMs, totalMs: countMs } : base
+    this.emit({ type: 'columnWrap', reel: wrap.reel, phase: 'start', entry, before, after })
+    await this.runRespinHandle(
+      (done) => scene.playWrap(wrap, durations, { onRise: () => undefined, onComplete: done }),
+      skipWrapMs,
+    )
+    this.emit({ type: 'columnWrap', reel: wrap.reel, phase: 'end', entry, before, after })
+  }
+
+  private async playRespinCollect(plan: RespinPlan, token: number): Promise<void> {
+    const scene = this.respinScene
+    if (scene === null) return
+    const total = plan.collect.length
+    const skipped = (): boolean => this.skipRequestedToken === token
+    const durations = respinCollectDurations(plan.speedRow)
+    await this.runRespinHandle(
+      (done) =>
+        scene.playCollect(plan.collect, plan.full, durations, {
+          onCoin: (index, item) => this.emit({ type: 'respinCollect', index, total, cell: item.cell, running: item.running }),
+          onTopStart: () => this.emit({ type: 'respinTop', amount: plan.topWin, phase: 'start' }),
+          onTopEnd: () => this.emit({ type: 'respinTop', amount: plan.topWin, phase: 'end' }),
+          onComplete: done,
+        }),
+      () => (skipped() ? compressRespin(1).collectMs : null),
+    )
+  }
+
+  /**
+   * 동굴에서 기본 화면으로 돌아온다(복귀 전환 클립). 빅윈 연출이 끝난 뒤 허브가 부른다.
+   * 동굴에 있지 않으면 곧장 resolve한다. 두 번 불러도 같은 약속을 돌려준다.
+   */
+  endRespin(): Promise<void> {
+    if (!this.caveActive || this.destroyed) return Promise.resolve()
+    if (this.endRespinPromise !== null) return this.endRespinPromise
+    const done = this.runCaveTransition('base', () => this.leaveCave(true)).finally(() => {
+      this.endRespinPromise = null
+    })
+    this.endRespinPromise = done
+    return done
+  }
+
+  /**
+   * 무대를 걷고 릴을 되살린다. 화면이 갈리는 순간(전환이 덮은 사이)이나 끼어들기에서 부른다.
+   * `hold`면 방금 본 종료 판을 다음 스핀까지 그대로 세워 둔다 — 트리거 판으로 되돌아가면 13칸이 사라지고
+   * 감긴 숫자도 반으로 보여 헷갈린다. 촉수 끝·트윈만 거두고, 다음 `spinTo`가 `releaseHeldBoard`로 릴을 되살린다.
+   */
+  private leaveCave(hold = false): void {
+    this.caveActive = false
+    if (hold && this.respinScene !== null) {
+      this.respinScene.freeze()
+      this.boardHeld = true
+      return
+    }
+    this.releaseHeldBoard()
+  }
+
+  /** 세워 둔 종료 판을 걷고 릴을 되살린다. 세워 둔 것이 없으면 릴만 보이게 한다. */
+  private releaseHeldBoard(): void {
+    this.boardHeld = false
+    this.respinScene?.hide()
+    this.setReelsVisible(true)
+  }
+
+  /** 전환 없이 곧장 기본 화면으로 돌아온다. 새 스핀이나 destroy가 동굴 위로 끼어들 때 쓴다. */
+  private abortRespin(): void {
+    this.activeRespin?.finish()
+    this.killRespinTweens()
+    if (!this.caveActive) return
+    this.finishModeTransition()
+    this.leaveCave()
+    // 동굴 배경(프리스핀 배경 자리)을 내린다. 기본 모드로 되돌리는 것이라 전환 이벤트는 내지 않는다.
+    this.freeSpinsVisible = false
+    this.freeSpinsSprite.visible = false
+    this.drawMode()
+    this.endRespinPromise = null
+  }
+
   // ------------------------------------------------------------- 진행 상태
 
   setMode(mode: RendererMode): void {
@@ -1767,6 +2284,7 @@ class PixiRenderer implements RendererCore {
       hasFreeSpinsBackground: this.options.theme.backgroundFreeSpins !== undefined,
       reducedMotion: this.options.reducedMotion,
       speed: this.spinSpeed,
+      ...(this.transitionBannerMs === null ? {} : { bannerMs: this.transitionBannerMs }),
       ...(clip === null ? {} : { clipOpaqueMs: clip.opaqueMs }),
       ...(clip?.durationMs === undefined ? {} : { clipDurationMs: clip.durationMs }),
     })
@@ -1822,7 +2340,7 @@ class PixiRenderer implements RendererCore {
       reducedMotion: this.options.reducedMotion,
       speed: this.spinSpeed,
       defaultOpaqueMs: MODE_COVER_IN_MS,
-      bannerMs: MODE_BANNER_MS * (MODE_TRANSITION_SPEED_SCALE[this.spinSpeed] ?? 1),
+      bannerMs: this.transitionBannerMs ?? MODE_BANNER_MS * (MODE_TRANSITION_SPEED_SCALE[this.spinSpeed] ?? 1),
     }
     const plan = planTransitionClip(inputs)
     if (plan !== null) return plan
@@ -1919,6 +2437,10 @@ class PixiRenderer implements RendererCore {
     this.freeSpinsSprite.visible = this.freeSpinsVisible
     this.modeGraphics.alpha = 1
     this.drawMode()
+    // 화면이 갈리는 순간에 한 번만 불리는 콜백(코인 리스핀의 동굴 입장·퇴장). 멱등 호출에서 두 번 돌지 않는다.
+    const hook = this.pendingSwapHook
+    this.pendingSwapHook = null
+    hook?.()
   }
 
   /**
@@ -1945,6 +2467,10 @@ class PixiRenderer implements RendererCore {
     this.curtain.visible = false
     this.curtain.alpha = 0
     this.emit({ type: 'modeTransition', to, phase: 'end' })
+    this.transitionBannerMs = null
+    const done = this.transitionDone
+    this.transitionDone = null
+    done?.()
   }
 
   /**
@@ -2078,6 +2604,10 @@ class PixiRenderer implements RendererCore {
     this.disposeTransitionClips()
     this.clearWins()
     this.killSpinTimelines()
+    this.killRespinTweens()
+    // 동굴 무대는 앱(스테이지)이 내려가기 전에 정리한다. 앱이 먼저 지우면 풀이 이미 파괴된 스프라이트를 만진다.
+    this.respinScene?.destroy()
+    this.coinFaces.clear()
     this.stopAmbient()
     for (const tween of this.idleTweens) tween.kill()
     this.idleTweens = []
@@ -2129,6 +2659,7 @@ class PixiRenderer implements RendererCore {
         owned: this.ownedTextures.snapshot,
         sheets: sheetTextureSnapshot(),
       },
+      ...(this.respinScene === null ? {} : { respin: this.respinScene.stats }),
     }
   }
 }
@@ -2161,6 +2692,14 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
     loadImageTexture(options.theme.backgroundFreeSpins),
   ])
   const coinTexture = createCoinTexture(options.theme, ownedTextures)
+  // 보물 코인·촉수 그림. 코인 리스핀 팩만 받는다. 없거나 실패하면 코드로 그린 대체 그림으로 동작한다.
+  const props: PropTextures = {}
+  if (options.math.coinRespin !== undefined) {
+    const loaded = await Promise.all(
+      PROP_KEYS.map(async (id) => [id, await loadImageTexture(options.theme.props?.[id])] as const),
+    )
+    for (const [id, texture] of loaded) if (texture !== null) props[id] = texture
+  }
 
   return new PixiRenderer(
     options,
@@ -2171,5 +2710,6 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
     frameTexture,
     freeSpinsTexture,
     ownedTextures,
+    props,
   )
 }

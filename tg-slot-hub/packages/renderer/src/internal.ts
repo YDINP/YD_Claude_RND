@@ -27,6 +27,7 @@ export interface RendererCore {
   showWins(wins: WinLine[], opts?: ShowWinsOptions): Promise<void>
   skipWins(): void
   clearWins(): void
+  endRespin(): Promise<void>
   setSpinSpeed(speed: SpinSpeed): void
   setSpinningIdle(on: boolean): void
   setMode(mode: RendererMode): void

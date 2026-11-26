@@ -45,6 +45,7 @@ import {
 // 빅윈 오버레이와 프리스핀 종료 팝업이 같은 배수에 같은 등급을 매겨야 하므로 여기서 새로 정하지
 // 않는다. 이 모듈은 React/DOM에 기대지 않아 store에서 import해도 안전하다.
 import { celebrationTier } from '../components/game/winTiers'
+import { clearRespinReplay, hasCoinRespin, saveRespinReplay } from '../lib/respinReplay'
 
 /** SpinResponse.debug의 형태 — 어떤 프리셋이 실제로 적용됐고 몇 번 만에 그 결과를 찾았는지. */
 type SpinDebugResponse = NonNullable<SpinResponse['debug']>
@@ -144,6 +145,10 @@ export interface SpinToOptionsLike {
   mutations?: MutationEvent[]
   cascades?: CascadeStep[]
   finalGrid?: string[][]
+  /** 기본 판 코인(`coinBoard` 피처). 릴이 서는 순간 금액 얼굴을 단다. */
+  coins?: Extract<FeatureTrigger, { type: 'coinBoard' }>['cells']
+  /** 코인 리스핀 라운드(`coinRespin` 피처). 착지 뒤 재생한다. 결과는 이미 서버가 정했다. */
+  respin?: Extract<FeatureTrigger, { type: 'coinRespin' }>
 }
 
 export interface SpinRenderer {
@@ -194,6 +199,11 @@ export interface SpinRenderer {
   skipWins?(): void
   /** 승리 라인 순환 연출을 완전히 멈추고 화면에서 걷어낸다. store가 reset()/게임 이탈 시 부른다. */
   clearWins?(): void
+  /**
+   * 코인 리스핀이 끝난 동굴에서 기본 화면으로 돌아온다(복귀 전환). 동굴에 있지 않으면 곧장 resolve한다.
+   * 빅윈 연출은 동굴 배경 위에서 먼저 끝나야 해서 `spinTo`가 resolve해도 자동으로 나가지 않는다.
+   */
+  endRespin?(): Promise<void>
   /** 이후 스핀의 릴 속도 프로파일을 바꾼다. 돌고 있는 스핀은 건드리지 않는다. */
   setSpinSpeed?(speed: 'normal' | 'quick' | 'turbo'): void
 }
@@ -237,7 +247,11 @@ export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | un
   const hasGridBefore = result.gridBefore !== undefined
   const hasMutations = result.mutations.length > 0
   const hasCascades = hasCascadeSteps(result)
-  if (!result.isFreeSpin && !hasGridBefore && !hasMutations && !hasCascades) return undefined
+  const coinBoard = result.features.find((feature) => feature.type === 'coinBoard')
+  const coinRespin = result.features.find((feature) => feature.type === 'coinRespin')
+  if (!result.isFreeSpin && !hasGridBefore && !hasMutations && !hasCascades && coinBoard === undefined && coinRespin === undefined) {
+    return undefined
+  }
 
   const options: SpinToOptionsLike = {}
   if (result.isFreeSpin) options.fast = true
@@ -247,6 +261,9 @@ export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | un
     options.cascades = result.cascades
     if (result.finalGrid !== undefined) options.finalGrid = result.finalGrid
   }
+  // 코인 리스핀 팩: 서버가 정한 코인 금액과 리스핀 라운드를 그대로 넘긴다(화면은 재생만 한다).
+  if (coinBoard?.type === 'coinBoard') options.coins = coinBoard.cells
+  if (coinRespin?.type === 'coinRespin') options.respin = coinRespin
   return options
 }
 
@@ -466,6 +483,12 @@ export interface GameActions {
    * 상태 응답엔 지갑이 없으므로 세션이 사라졌을 때만 /me를 따로 물어 잔액을 갱신한다.
    */
   syncGambleExpiry: () => Promise<void>
+  /**
+   * 코인 리스핀 «이어 보기» — 연출 도중 새로고침한 라운드를 저장된 서버 응답으로 **표시 전용** 재생한다.
+   * 잔액·마지막 결과는 건드리지 않는다(이미 서버가 확정했고 `/me`가 정답이다). 재생 중에는 스핀 버튼이 STOP이 되고
+   * STOP 한 번이면 압축 재생으로 끝난다. idle이 아니거나 렌더러가 없으면 아무 일도 하지 않는다.
+   */
+  replayRespin: (response: SpinResponse) => Promise<void>
   /** INSUFFICIENT_FUNDS 시트 등 에러 표시를 닫고 idle로 되돌린다 */
   dismissError: () => void
   /** 디버그 패널의 프리셋 버튼이 부른다. null을 주면 무장 해제(예: 취소 버튼). */
@@ -800,6 +823,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 실패했던 스핀의 idempotencyKey는 이제 쓸모가 없으니 지운다.
     set({ idempotencyKey: null })
 
+    // 코인 리스핀: 결과·잔액은 이 응답으로 이미 확정이다. 연출 도중 새로고침해도 이어 볼 수 있게 응답을 저장해 둔다
+    // (연출이 끝나면 아래 finally가 지운다). 저장소를 못 쓰는 환경에서는 조용히 건너뛴다.
+    saveRespinReplay(gameId, result)
+
     // 더블업 세션 — gambleOffer가 있으면 이번 스핀 당첨을 걸 수 있는 새 세션이다. 값은 지금
     // 만들어 두되 **공개는 릴이 멈춘 뒤**다(아래 reveal).
     const gambleSession: GambleSession | null = result.gambleOffer
@@ -932,6 +959,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (get().gameId !== gameId) return
       }
 
+      // 코인 리스핀: 빅윈 연출까지 동굴 배경 위에서 마쳤다. 복귀 전환으로 기본 화면에 돌아온 뒤 라인 당첨을 보여 준다.
+      if (renderer?.endRespin !== undefined && hasCoinRespin(result)) {
+        set({ phase: 'showingWin' })
+        await renderer.endRespin()
+        if (get().gameId !== gameId) return
+      }
+
       // wins가 없어도 features(예: 스캐터 3개로 프리스핀 진입, 배당은 0)만 있을 수 있으므로
       // 어느 한쪽이라도 있으면 연출을 돌려 featureTriggered 이벤트가 나갈 기회를 준다.
       if (result.wins.length > 0 || result.features.length > 0) {
@@ -972,6 +1006,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 안 된다. 정상 경로에서는 이미 공개됐으므로 여기서는 아무 일도 일어나지 않는다.
       reveal()
       currentSpinHandle = null
+      if (hasCoinRespin(result)) {
+        // 연출이 끝났다(또는 도중에 터졌다). 이어 볼 기록을 지우고, 동굴에 남아 있으면 안전망으로 돌려보낸다.
+        clearRespinReplay(gameId)
+        void renderer?.endRespin?.()
+      }
       if (get().gameId === gameId) {
         set({ phase: 'idle', lastSpinTiming: timing })
 
@@ -1004,6 +1043,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
           scheduleNextRound(get)
         }
       }
+    }
+  },
+
+  async replayRespin(response) {
+    const { gameId, math, renderer, phase } = get()
+    if (!gameId || !math || !renderer || phase !== 'idle') return
+    // 스핀 버튼이 STOP이 되고 입력이 잠긴다. 지난 판의 건너뛰기 요청은 비운다.
+    currentSpinHandle = null
+    skipRequested = false
+    set({ phase: 'spinning' })
+    try {
+      const handle = renderer.spinTo(response.stops, buildSpinToOptions(response))
+      currentSpinHandle = handle
+      await handle
+      currentSpinHandle = null
+      if (get().gameId !== gameId) return
+      if (renderer.endRespin !== undefined) {
+        set({ phase: 'showingWin' })
+        await renderer.endRespin()
+      }
+    } catch (err) {
+      // 연출 실패는 서버 결과와 무관하다(표시 전용 재생이다). 원인만 남기고 평소 화면으로 돌아간다.
+      console.error('[game] respin replay failed', err)
+    } finally {
+      currentSpinHandle = null
+      clearRespinReplay(gameId)
+      if (get().gameId === gameId) set({ phase: 'idle' })
     }
   },
 

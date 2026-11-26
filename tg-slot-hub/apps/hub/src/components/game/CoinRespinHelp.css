@@ -1,0 +1,323 @@
+/* 코인 리스핀 도움말 — 6단계 그림 + 문구. 390px에서 잘림 없이 한 열로 쌓인다. */
+.hub-respin-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-md);
+  margin-top: var(--hub-space-sm);
+}
+
+.hub-respin-help__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-xs);
+  padding: var(--hub-space-sm);
+  border-radius: var(--hub-radius-md);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-respin-help__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--hub-font-body);
+  font-weight: 800;
+}
+
+.hub-respin-help__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--hub-gold-light);
+  color: #1a1206;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.hub-respin-help__picture {
+  display: flex;
+  justify-content: center;
+  padding: var(--hub-space-xs) 0;
+}
+
+.hub-respin-help__text {
+  margin: 0;
+  color: var(--hub-text);
+  font-size: var(--hub-font-small);
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+/* ---- 작은 판 ---- */
+.hub-respin-help__flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hub-respin-help__board {
+  display: grid;
+  gap: 3px;
+  width: 140px;
+  padding: 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #10285a 55%, var(--hub-secondary-bg));
+  border: 1px solid color-mix(in srgb, #2ec4d6 35%, var(--hub-border));
+  box-sizing: border-box;
+}
+
+.hub-respin-help__flow .hub-respin-help__board {
+  width: 124px;
+}
+
+.hub-respin-help__cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, #fff 6%, transparent);
+}
+
+.hub-respin-help__cell--coin,
+.hub-respin-help__cell--treasure,
+.hub-respin-help__cell--new {
+  background: color-mix(in srgb, #ffc83d 14%, transparent);
+  outline: 1.5px solid #ffd75a;
+  outline-offset: -1.5px;
+}
+
+.hub-respin-help__cell--treasure {
+  outline-color: #2ec4d6;
+  background: color-mix(in srgb, #2ec4d6 18%, transparent);
+}
+
+.hub-respin-help__cell--new {
+  outline-color: #ffffff;
+  background: color-mix(in srgb, #fff 24%, transparent);
+}
+
+.hub-respin-help__cell[data-wrapped='true'] {
+  box-shadow: inset 0 0 0 2px #8f78ff;
+}
+
+/* ---- 코인 ---- */
+.hub-respin-help__coin {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff3c4 0%, #ffc83d 55%, #8a6316 100%);
+}
+
+.hub-respin-help__coin--treasure {
+  background: radial-gradient(circle at 35% 30%, #d8f8ff 0%, #2ec4d6 55%, #0f5c68 100%);
+}
+
+.hub-respin-help__coin-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hub-respin-help__coin-label {
+  position: relative;
+  color: #fff6d6;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  -webkit-text-stroke: 2.5px #10285a;
+  paint-order: stroke fill;
+  letter-spacing: -0.04em;
+}
+
+.hub-respin-help__stack {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.hub-respin-help__stack .hub-respin-help__coin {
+  width: 38px;
+  height: 38px;
+}
+
+.hub-respin-help__stack .hub-respin-help__coin-label {
+  font-size: 12px;
+}
+
+/* ---- 점·화살표·합계 ---- */
+.hub-respin-help__dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.hub-respin-help__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid color-mix(in srgb, var(--hub-text-sub) 45%, transparent);
+  background: color-mix(in srgb, var(--hub-text-sub) 28%, transparent);
+}
+
+.hub-respin-help__dot[data-on='true'] {
+  background: radial-gradient(circle at 35% 30%, #fff6d6, #ffc83d 60%, #c98f12);
+  border-color: #ffe27a;
+}
+
+.hub-respin-help__arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--hub-gold-light);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.hub-respin-help__arrow--wrap {
+  flex-direction: column;
+  gap: 0;
+  font-size: 15px;
+}
+
+.hub-respin-help__kraken {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hub-respin-help__kraken-img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.hub-respin-help__total {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ffc83d 24%, var(--hub-secondary-bg));
+  border: 1.5px solid #ffd75a;
+  color: var(--hub-text);
+  font-size: 16px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 보물 표 ---- */
+.hub-respin-help__tiers {
+  width: 100%;
+}
+
+.hub-respin-help__note {
+  margin: 0 0 6px;
+  color: var(--hub-text-sub);
+  font-size: 12px;
+  text-align: center;
+}
+
+.hub-respin-help__tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-respin-help__tier {
+  --tier: #ffc83d;
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tier) 12%, var(--hub-secondary-bg));
+  border: 1px solid color-mix(in srgb, var(--tier) 45%, var(--hub-border));
+}
+
+.hub-respin-help__tier--small {
+  --tier: #2ec4d6;
+}
+
+.hub-respin-help__tier--large {
+  --tier: #8f78ff;
+}
+
+.hub-respin-help__tier--top {
+  --tier: #ff6f91;
+}
+
+.hub-respin-help__tier-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.hub-respin-help__tier-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6d6 0%, var(--tier) 55%, color-mix(in srgb, var(--tier) 55%, #000) 100%);
+}
+
+.hub-respin-help__tier-name {
+  font-size: var(--hub-font-small);
+  font-weight: 800;
+}
+
+.hub-respin-help__tier-mult {
+  color: var(--hub-text-sub);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hub-respin-help__tier-amount {
+  min-width: 52px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 알림 ---- */
+.hub-respin-help__notes {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--hub-text);
+  font-size: var(--hub-font-small);
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.hub-respin-help__notes li + li {
+  margin-top: 4px;
+}
+
+/* 배당표 탭: 크라켄(와일드)·금화 설명 줄 앞에 그림을 둔다. */
+.hub-coin-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hub-coin-note__icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}

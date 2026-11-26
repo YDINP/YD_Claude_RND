@@ -32,6 +32,21 @@ export interface RendererDiagnostics {
     /** 여러 렌더러가 나눠 쓰는 시트 아틀라스. 참조가 끊긴 것부터 밀려난다. */
     sheets: TextureRegistrySnapshot
   }
+  /**
+   * 코인 리스핀 무대의 지금 상태. 코인 리스핀이 없는 팩에는 없다.
+   * 라운드를 여러 번 돌려도 `coinFaces`는 상한(64) 아래에, `tentaclesCreated`는 5 이하에 머물고 `liveTweens`는 0으로 돌아와야 한다.
+   */
+  respin?: {
+    /** 지금 캐시에 든 코인 얼굴 장수. */
+    coinFaces: number
+    /** 촉수 풀이 지금까지 만든 수. 최대 동시 사용량 = 상한(5). */
+    tentaclesCreated: number
+    tentaclesLive: number
+    /** 화면에 나가 있는 광채·반짝이·날아가는 코인. */
+    fxLive: number
+    /** 아직 살아 있는 리스핀 타임라인·트윈. 라운드가 끝나면 0이어야 한다. */
+    liveTweens: number
+  }
 }
 
 const EMPTY_POOL: PoolStats = {

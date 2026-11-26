@@ -142,6 +142,11 @@ export function parseTheme(json: unknown, baseUrl: string, options: ParseThemeOp
     theme.sheets = sheets
   }
   if (file.reelBackdrop !== undefined) theme.reelBackdrop = { ...file.reelBackdrop }
+  if (file.props !== undefined) {
+    const props: Record<string, string> = {}
+    for (const [id, path] of Object.entries(file.props)) props[id] = resolveAssetUrl(baseUrl, path)
+    if (Object.keys(props).length > 0) theme.props = props
+  }
   if (file.celebration !== undefined) theme.celebration = file.celebration
   if (file.transitions !== undefined) {
     const transitions: ThemeTransitions = {}

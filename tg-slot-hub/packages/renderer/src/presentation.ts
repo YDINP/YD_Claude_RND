@@ -97,6 +97,16 @@ export function cascadeStepCountOf(wins: readonly WinLine[]): number {
   return seen.size
 }
 
+/**
+ * 코인 리스핀 지급 합계. 리스핀은 동굴에서 정산이 끝난 뒤라 총배당 롤업이 거기서 이어 세야 한다
+ * (`fromAmount`). 코인 리스핀이 없는 게임은 0이라 아무것도 달라지지 않는다.
+ */
+export function respinPayoutOf(features: readonly FeatureTrigger[]): number {
+  let sum = 0
+  for (const feature of features) if (feature.type === 'coinRespin') sum += feature.win
+  return sum
+}
+
 /** 연쇄 모드 총합에 더할 피처 지급: 스캐터 배당과 주문 상품. */
 function featurePayout(features: readonly FeatureTrigger[]): number {
   let sum = 0
@@ -191,17 +201,21 @@ export function buildPresentation(
   // ways 게임에는 라인 인덱스가 없다(-1 고정). 배당 큰 심볼부터 보여준다.
   const ordered = isWaysGame(math) ? sortWaysWins(wins) : [...wins].sort((a, b) => a.line - b.line)
   const dwell = !brief && ordered.length > 1 ? PHASE_ALL_MULTI_DWELL_MS : 0
+  // 코인 리스핀을 한 스핀이면 총합에 리스핀 지급이 얹히고, 롤업은 이미 센 리스핀 합계에서 이어진다.
+  const respinWin = respinPayoutOf(features)
+  const lineWin = totalWinOf(ordered)
 
   const steps: PresentationStep[] = [
     {
       phase: 'all',
       wins: ordered,
-      // 스캐터 배당도 이 스핀의 당첨이다 — 빼면 지갑엔 들어갔는데 카운터는 0으로 남는다.
-      totalWin: totalWinOf(ordered) + featurePayout(features),
-      tier,
+      // 스캐터 배당·코인 리스핀 지급도 이 스핀의 당첨이다 — 빼면 지갑엔 들어갔는데 카운터는 0으로 남는다.
+      totalWin: lineWin + featurePayout(features) + respinWin,
+      tier: respinWin > 0 ? tierOfTotal(lineWin + featurePayout(features) + respinWin, wins, math, options.totalBet) : tier,
       scatters,
       durationMs: cap(dwell > 0 ? hold + dwell : hold),
       rollupMs: cap(hold),
+      ...(respinWin > 0 ? { fromAmount: respinWin } : {}),
     },
   ]
   if (freeSpins !== null) {

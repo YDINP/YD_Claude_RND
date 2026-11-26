@@ -20,6 +20,7 @@ import {
   phaseAllDurationMs,
   presentationCycleMs,
   presentationOptionsFor,
+  respinPayoutOf,
   runPresentation,
   shouldLoopPresentation,
   winLineEvent,
@@ -797,5 +798,56 @@ describe('showWins 옵션 전달', () => {
       presentationOptionsFor({ features: [scatterWin] }, false),
     )
     expect(steps.length).toBeGreaterThan(0)
+  })
+})
+
+describe('코인 리스핀 지급과 총합 롤업', () => {
+  const coinRespin = (win: number): FeatureTrigger => ({
+    type: 'coinRespin',
+    entry: [],
+    entryWraps: [],
+    steps: [],
+    final: [],
+    full: false,
+    coinWin: win,
+    topWin: 0,
+    win,
+    capped: false,
+    hitHardCap: false,
+  })
+
+  it('리스핀 지급은 피처 목록에서 합쳐 읽는다', () => {
+    expect(respinPayoutOf([])).toBe(0)
+    expect(respinPayoutOf([coinRespin(300)])).toBe(300)
+    expect(respinPayoutOf([coinRespin(300), coinRespin(20)])).toBe(320)
+  })
+
+  it('라인 승리와 함께면 A단계 총합에 리스핀 지급이 얹히고 롤업은 그 합계에서 이어진다', () => {
+    const [all] = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10, features: [coinRespin(300)] })
+    expect(all).toMatchObject({ phase: 'all', totalWin: 320, fromAmount: 300 })
+  })
+
+  it('리스핀이 없으면 fromAmount도 없다 — 기존 연출은 그대로다', () => {
+    const [all] = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10 })
+    expect(all?.phase).toBe('all')
+    if (all?.phase === 'all') {
+      expect(all.totalWin).toBe(20)
+      expect('fromAmount' in all).toBe(false)
+    }
+  })
+
+  it('A단계 등급은 리스핀을 합친 총합 기준이다', () => {
+    // 라인만이면 20배(MEGA 미만)지만 리스핀 지급 1000이 얹히면 총 배당 비율이 훨씬 커진다.
+    const [lineOnly] = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10 })
+    const [withRespin] = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10, features: [coinRespin(1000)] })
+    expect(withRespin?.phase === 'all' && lineOnly?.phase === 'all').toBe(true)
+    if (withRespin?.phase === 'all' && lineOnly?.phase === 'all') {
+      expect(withRespin.tier).not.toBe(lineOnly.tier)
+      expect(withRespin.durationMs).toBeGreaterThanOrEqual(lineOnly.durationMs)
+    }
+  })
+
+  it('라인 승리 없이 리스핀만이면 A단계를 만들지 않는다 — 합계는 동굴에서 이미 셌다', () => {
+    expect(buildPresentation([], math, { totalBet: 10, features: [coinRespin(300)] })).toEqual([])
   })
 })

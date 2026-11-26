@@ -7,8 +7,13 @@ import type {
   SpinResult,
 } from '@tgslot/slot-engine'
 import { foldCascades } from '@tgslot/slot-engine'
-import type { CascadeStep as EngineCascadeStep, WinLine as EngineWinLine } from '@tgslot/slot-engine'
-import type { CascadeStep, FeatureTrigger, MutationEvent, WinLine } from '@tgslot/shared'
+import type {
+  CascadeStep as EngineCascadeStep,
+  CoinCell as EngineCoinCell,
+  ColumnWrap as EngineColumnWrap,
+  WinLine as EngineWinLine,
+} from '@tgslot/slot-engine'
+import type { CascadeStep, CoinCell, ColumnWrap, FeatureTrigger, MutationEvent, WinLine } from '@tgslot/shared'
 
 export { toRoundState } from '../economy/freeSpins.js'
 
@@ -100,6 +105,31 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
   if (feature.type === 'winCapped') {
     return { type: 'winCapped', requested: feature.requested, granted: feature.granted, cap: feature.cap }
   }
+  if (feature.type === 'coinBoard') {
+    return { type: 'coinBoard', cells: feature.cells.map(toSharedCoinCell) }
+  }
+  if (feature.type === 'coinRespin') {
+    // 리스핀 라운드 전체. 엔진이 정한 결과를 그대로 싣고, 허브는 재생만 한다(서버 권위).
+    return {
+      type: 'coinRespin',
+      entry: feature.entry.map(toSharedCoinCell),
+      entryWraps: feature.entryWraps.map(toSharedColumnWrap),
+      steps: feature.steps.map((step) => ({
+        index: step.index,
+        grid: step.grid.map((row) => [...row]),
+        newCoins: step.newCoins.map(toSharedCoinCell),
+        wraps: step.wraps.map(toSharedColumnWrap),
+        left: step.left,
+      })),
+      final: feature.final.map(toSharedCoinCell),
+      full: feature.full,
+      coinWin: feature.coinWin,
+      topWin: feature.topWin,
+      win: feature.win,
+      capped: feature.capped,
+      hitHardCap: feature.hitHardCap,
+    }
+  }
   if (feature.type === 'scatterWin') {
     return {
       type: 'scatterWin',
@@ -111,6 +141,21 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
   }
   const exhaustive: never = feature
   throw new Error(`[engineSpin] unknown feature: ${JSON.stringify(exhaustive)}`)
+}
+
+/** 코인 1개 → shared. 키 순서를 고정해 응답 바이트가 늘 같게 한다. */
+export function toSharedCoinCell(cell: EngineCoinCell): CoinCell {
+  return {
+    pos: [cell.pos[0], cell.pos[1]],
+    kind: cell.kind,
+    value: cell.value,
+    ...(cell.tier === undefined ? {} : { tier: cell.tier }),
+    amount: cell.amount,
+  }
+}
+
+function toSharedColumnWrap(wrap: EngineColumnWrap): ColumnWrap {
+  return { reel: wrap.reel, before: [...wrap.before], after: [...wrap.after] }
 }
 
 export function toSharedFeatures(features: readonly EngineFeatureTrigger[]): FeatureTrigger[] {

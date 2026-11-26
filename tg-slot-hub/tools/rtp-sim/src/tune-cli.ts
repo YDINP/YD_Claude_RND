@@ -11,8 +11,8 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import { parseGameMath } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
-import { buildCascadeReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
-import type { CascadeReport } from './audit/index.js'
+import { buildCascadeReport, buildCoinRespinReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
+import type { CascadeReport, CoinRespinReport } from './audit/index.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
@@ -175,12 +175,18 @@ export interface TuneSummary {
   hitRate: number
   maxWinMultiplier: number
   stripLengths: number[]
-  cascade: CascadeReport
+  /** 연쇄 팩만. */
+  cascade: CascadeReport | null
+  /** 코인 리스핀 팩만. */
+  coinRespin: CoinRespinReport | null
 }
 
 export function summarize(math: GameMath, state: SampleState): TuneSummary {
   const cascade = state.cascade
-  if (cascade === null) throw new Error('연쇄 팩이 아니다. tune은 cascade 설정이 있는 팩 전용이다')
+  const coinRespin = state.coinRespin ?? null
+  if (cascade === null && coinRespin === null) {
+    throw new Error('연쇄·코인 리스핀 팩이 아니다. tune은 cascade 또는 coinRespin 설정이 있는 팩 전용이다')
+  }
   const n = state.spins
   const rtp = state.multiplierSum / n
   const variance = n > 1 ? Math.max(0, (state.multiplierSquareSum - n * rtp * rtp) / (n - 1)) : 0
@@ -195,14 +201,30 @@ export function summarize(math: GameMath, state: SampleState): TuneSummary {
     hitRate: state.hits / n,
     maxWinMultiplier: state.maxWin / state.totalBet,
     stripLengths: math.strips.map((strip) => strip.length),
-    cascade: buildCascadeReport(math, cascade, state.totalBet),
+    cascade: cascade === null ? null : buildCascadeReport(math, cascade, state.totalBet),
+    coinRespin: coinRespin === null ? null : buildCoinRespinReport(math, coinRespin, state.totalBet),
   }
 }
 
 const p = (value: number, digits = 2): string => `${(value * 100).toFixed(digits)}%`
 
+function formatCoinRespin(math: GameMath, summary: TuneSummary, r: CoinRespinReport): string {
+  const b = r.breakdown
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
+    `RTP ${p(summary.rtp, 3)} (목표 ${p(math.rtpTarget)}) = 라인 ${p(b.lines, 3)} + 코인 리스핀 ${p(b.respin, 3)}`,
+    `  리스핀 = 숫자 ${p(b.respinNumeric, 3)} + 감기 ${p(b.respinWrapBonus, 3)} + 보물 ${p(b.respinTreasure, 3)} + 최고 ${p(b.respinTop, 3)} - 캡 ${p(b.capLoss, 3)}`,
+    `적중률 ${p(summary.hitRate)}  진입 1/${r.entryRate > 0 ? (1 / r.entryRate).toFixed(1) : '-'} (${r.rounds})  피처 평균 ${r.meanFeatureMultiplier.toFixed(2)}x σ ${r.featureSigma.toFixed(1)}  최대 ${summary.maxWinMultiplier.toFixed(1)}x`,
+    `평균 리스핀 ${r.meanSteps.toFixed(2)} 최장 ${r.maxSteps}/${r.structuralMaxSteps}  종료 코인 ${r.meanFinalCoins.toFixed(2)}  15칸 ${p(r.fullRate, 3)}  진입 감기 ${p(r.entryWrapRate, 1)}  도중 감기 ${p(r.midWrapRate, 1)}`,
+    `보물 ${p(r.tierRates.small, 1)} / ${p(r.tierRates.medium, 1)} / ${p(r.tierRates.large, 2)}  hardCap ${r.hardCapRounds}  winCapped ${r.winCappedRounds}  기대감 ${p(r.anticipationRate)}  q×빈칸 ${r.growthBound.toFixed(3)}`,
+    `σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})`,
+  ].join('\n')
+}
+
 export function formatSummary(math: GameMath, summary: TuneSummary): string {
+  if (summary.coinRespin !== null) return formatCoinRespin(math, summary, summary.coinRespin)
   const c = summary.cascade
+  if (c === null) throw new Error('요약할 연쇄 통계가 없다')
   const b = c.breakdown
   const lines = [
     `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,

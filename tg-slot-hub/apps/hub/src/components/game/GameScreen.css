@@ -516,6 +516,12 @@
   border: 1px solid var(--hub-border);
 }
 
+/* 전환 클립이 화면을 덮는 동안 — 눌러도 아무 일이 없으니 기다림으로 보인다(금색을 빼고 흐리게). */
+.hub-game-screen__spin--waiting {
+  opacity: 0.55;
+  filter: saturate(0.35);
+}
+
 /* 스핀 속도 [보통|빠름|터보] — 베팅/스핀 줄 위 자체 줄을 통째로 쓴다. 예전 ⚡ 순환 버튼
    자리(44px)에 세 칸을 욱여넣으면 390px에서 스핀 버튼이 눌리기 힘들 만큼 좁아진다.
    모양은 설정 모달의 세그먼트(.hub-settings__segmented)와 같은 규칙을 따른다. */

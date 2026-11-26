@@ -247,7 +247,18 @@ function checkRequiredThemeKeys(pack: GamePack, add: Add): void {
   if (hasBonusRound && pack.theme.backgroundFreeSpins === undefined) {
     add('warn', file, 'backgroundFreeSpins', '보너스 라운드가 있는 팩인데 보너스 배경이 없다. 기본 배경에 금빛 틴트가 덧씌워진다')
   }
+  // 코인 리스핀 팩: 보물 띠·최고 보물·촉수 그림. 렌더러가 코드 그림으로 대신하므로 경고다(그림이 빠진 채 출시되지 않게 알린다).
+  if (pack.math.coinRespin !== undefined) {
+    for (const key of COIN_RESPIN_PROPS) {
+      if (pack.theme.props?.[key] === undefined) {
+        add('warn', file, `props.${key}`, `코인 리스핀 팩은 props.${key} 그림이 있어야 한다. 없으면 코드로 그린 대체 그림이 나온다`)
+      }
+    }
+  }
 }
+
+/** 코인 리스핀 팩이 갖춰야 할 소품 그림(기획 kraken-cove §6-4). */
+const COIN_RESPIN_PROPS = ['coin-small', 'coin-medium', 'coin-large', 'treasure-top', 'tentacle'] as const
 
 /** 런타임이 실제로 받아가는 자산 1개. 존재 검사와 추적 검사가 이 목록을 공유한다. */
 interface RuntimeAsset {

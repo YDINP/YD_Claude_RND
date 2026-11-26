@@ -216,3 +216,67 @@ describe('연쇄·주문 카드 스키마', () => {
     }
   })
 })
+
+describe('코인 리스핀 스키마', () => {
+  const symbols = ['crab', 'jellyfish', 'starfish', 'shell']
+  const cell = (reel: number, row: number, value = 10, amount = 10000) => ({ pos: [reel, row], kind: 'bet', value, amount })
+
+  /** 구조상 최악: 진입 6칸 → 리스핀 30회(3회마다 1칸) → 15칸, 다섯 줄 감기, 최대 베팅 1000에 큰 금액. */
+  function worstFeature(): Record<string, unknown> {
+    const order: [number, number][] = []
+    for (let reel = 0; reel < 5; reel += 1) for (let row = 0; row < 3; row += 1) order.push([reel, row])
+    const entry = order.slice(0, 6).map(([reel, row]) => cell(reel, row))
+    const steps = []
+    let filled = 6
+    for (let index = 0; index < 30; index += 1) {
+      const grid = [0, 1, 2].map((row) =>
+        [0, 1, 2, 3, 4].map((reel) => (reel * 3 + row < filled ? 'coin' : (symbols[(reel + row + index) % 4] ?? 'crab'))),
+      )
+      const lands = index % 3 === 2 && filled < 15
+      const at = order[filled]
+      const newCoins = lands && at ? [{ ...cell(at[0], at[1]), kind: 'treasure', tier: 'large', value: 200, amount: 200000 }] : []
+      if (lands) filled += 1
+      const wraps =
+        lands && filled % 3 === 0 ? [{ reel: filled / 3 - 1, before: [10000, 10000, 10000], after: [20000, 20000, 20000] }] : []
+      steps.push({ index, grid, newCoins, wraps, left: lands ? 3 : 2 - (index % 3) })
+    }
+    return {
+      type: 'coinRespin',
+      entry,
+      entryWraps: [{ reel: 0, before: [10000, 10000, 10000], after: [20000, 20000, 20000] }],
+      steps,
+      final: order.map(([reel, row]) => cell(reel, row, 20, 20000)),
+      full: true,
+      coinWin: 1240000,
+      topWin: 1000000,
+      win: 2000000,
+      capped: true,
+      hitHardCap: false,
+    }
+  }
+
+  it('coinBoard·coinRespin 피처를 파싱한다', () => {
+    expect(FeatureTriggerSchema.safeParse({ type: 'coinBoard', cells: [cell(0, 1, 2, 200)] }).success).toBe(true)
+    const parsed = FeatureTriggerSchema.safeParse(worstFeature())
+    expect(parsed.success).toBe(true)
+  })
+
+  it('보물 단계 오타·음수 금액은 거부한다', () => {
+    expect(FeatureTriggerSchema.safeParse({ type: 'coinBoard', cells: [{ ...cell(0, 0), tier: 'huge' }] }).success).toBe(false)
+    expect(FeatureTriggerSchema.safeParse({ type: 'coinBoard', cells: [{ ...cell(0, 0), amount: -1 }] }).success).toBe(false)
+  })
+
+  it('최악 리스핀 피처(coinBoard + coinRespin)가 12KB 안에 든다', () => {
+    const board = { type: 'coinBoard', cells: (worstFeature()['entry'] as unknown[]) }
+    const bytes = new TextEncoder().encode(JSON.stringify([board, worstFeature()])).length
+    expect(bytes).toBeLessThan(12_000)
+  })
+
+  it('respinWin과 코인 리스핀 디버그 프리셋', () => {
+    for (const preset of ['coinRespin', 'columnWrap', 'treasure', 'coinRespinFull']) {
+      expect(SpinDebugPresetSchema.safeParse(preset).success).toBe(true)
+    }
+    expect(SpinResponseSchema.shape.respinWin.safeParse(6900).success).toBe(true)
+    expect(SpinResponseSchema.shape.respinWin.safeParse(-1).success).toBe(false)
+  })
+})

@@ -126,6 +126,11 @@ export const SpinDebugPresetSchema = z.enum([
   'cascade3',
   'orderRound',
   'orderComplete',
+  // 코인 리스핀 게임 전용(kraken-cove): 진입 / 리스핀 도중 촉수 감기 / 끝난 판에 보물 코인 / 15칸 채움
+  'coinRespin',
+  'columnWrap',
+  'treasure',
+  'coinRespinFull',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -273,6 +278,8 @@ export const SpinResponseSchema = z.object({
   finalGrid: z.array(z.array(z.string())).optional(),
   /** 주문 카드 상품 합계 코인. `totalWin`에 이미 들어 있다 */
   orderWin: z.number().int().min(0).optional(),
+  /** 코인 리스핀 지급 합계 코인. `totalWin`에 이미 들어 있다. 리스핀 진입 스핀만 */
+  respinWin: z.number().int().min(0).optional(),
   wins: z.array(WinLineSchema),
   totalBet: z.number().int(),
   totalWin: z.number().int(),
@@ -440,6 +447,37 @@ export const FreeSpinsStateSchema = z.object({
 })
 export type FreeSpinsState = z.infer<typeof FreeSpinsStateSchema>
 
+// ---- 코인 리스핀 (kraken-cove) ----
+
+/** 판 위 코인 1개. `value`는 총 베팅액 배수, `amount`는 코인. 보물 코인은 `tier`가 있다 */
+export const CoinCellSchema = z.object({
+  /** [reel, row] */
+  pos: GridPositionSchema,
+  kind: z.enum(['bet', 'treasure']),
+  value: z.number().gt(0),
+  tier: z.enum(['small', 'medium', 'large']).optional(),
+  amount: z.number().int().min(0),
+})
+export type CoinCell = z.infer<typeof CoinCellSchema>
+
+/** 촉수 감기 1회. 세로줄 하나의 금액(코인)을 행 0→2 순서로 감기 전·후 */
+export const ColumnWrapSchema = z.object({
+  reel: z.number().int().min(0),
+  before: z.array(z.number().int().min(0)),
+  after: z.array(z.number().int().min(0)),
+})
+export type ColumnWrap = z.infer<typeof ColumnWrapSchema>
+
+/** 리스핀 1회. `grid[row][reel]`(고정 칸은 코인), 새 코인 금액은 이 리스핀의 감기 전 값 */
+export const RespinStepSchema = z.object({
+  index: z.number().int().min(0),
+  grid: z.array(z.array(z.string())),
+  newCoins: z.array(CoinCellSchema),
+  wraps: z.array(ColumnWrapSchema),
+  left: z.number().int().min(0),
+})
+export type RespinStep = z.infer<typeof RespinStepSchema>
+
 export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('freeSpins'), spins: z.number().int().min(1), multiplier: z.number().min(1), retrigger: z.boolean() }),
   z.object({
@@ -469,6 +507,25 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
     requested: z.number().int().min(0),
     granted: z.number().int().min(0),
     cap: z.number().int().min(1),
+  }),
+  /** 기본 판에 뜬 코인(릴 → 행 순서). 금액 얼굴을 그리는 데 쓴다 */
+  z.object({ type: z.literal('coinBoard'), cells: z.array(CoinCellSchema) }),
+  /**
+   * 코인 리스핀 라운드 전체(트리거 스핀 하나에 다 실린다). 서버가 정한 결과를 허브는 재생만 한다.
+   * `entry`는 진입 감기 전, `final`은 감기 반영 후. `win = coinWin + topWin`이 `respinWin`과 같다
+   */
+  z.object({
+    type: z.literal('coinRespin'),
+    entry: z.array(CoinCellSchema),
+    entryWraps: z.array(ColumnWrapSchema),
+    steps: z.array(RespinStepSchema),
+    final: z.array(CoinCellSchema),
+    full: z.boolean(),
+    coinWin: z.number().int().min(0),
+    topWin: z.number().int().min(0),
+    win: z.number().int().min(0),
+    capped: z.boolean(),
+    hitHardCap: z.boolean(),
   }),
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>

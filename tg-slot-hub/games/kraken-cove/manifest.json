@@ -1,0 +1,32 @@
+{
+  "id": "kraken-cove",
+  "name": {
+    "en": "Kraken Treasure Cave",
+    "ko": "크라켄 보물 동굴"
+  },
+  "version": "1.0.0",
+  "thumbnail": "/games/kraken-cove/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 3,
+  "lines": 20,
+  "payModel": "lines",
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "auditSpins": 90000000,
+  "volatility": "high",
+  "features": [
+    "coinRespin",
+    "wild"
+  ],
+  "sort": 9
+}

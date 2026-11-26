@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { PACK_FILES } from './pack.js'
 import type { PackProblem } from './pack.js'
 import { checkGamePack, normalizePackPath, parseGamePack, resolveThemePath, thumbnailPackPath } from './validate.js'
@@ -495,6 +498,29 @@ describe('checkGamePack — 공개 팩의 테마 완결성', () => {
     const problems = checkLive(fullTheme, { files: { [PACK_FILES.math]: json(math) } })
     expect(find(problems, PACK_FILES.theme, 'backgroundFreeSpins')?.level).toBe('warn')
     expect(checkLive(fullTheme).some((problem) => problem.field === 'backgroundFreeSpins')).toBe(false)
+  })
+})
+
+describe('checkGamePack — 코인 리스핀 소품 그림', () => {
+  it('공개 코인 리스핀 팩에 props 그림이 빠지면 키마다 경고, 다 있으면 조용하다', () => {
+    const krakenMath = JSON.parse(
+      readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../../games/kraken-cove/math.json'), 'utf8'),
+    ) as Record<string, unknown>
+    const math = { ...krakenMath, id: FIXTURE_ID }
+    const live = { ...fixtureManifest, status: 'live' }
+    const keys = ['coin-small', 'coin-medium', 'coin-large', 'treasure-top', 'tentacle']
+    const run = (props?: Record<string, string>): PackProblem[] =>
+      check({
+        files: {
+          [PACK_FILES.manifest]: json(live),
+          [PACK_FILES.math]: json(math),
+          [PACK_FILES.theme]: json({ ...fixtureTheme, ...(props === undefined ? {} : { props }) }),
+        },
+      }).filter((problem) => problem.field.startsWith('props.'))
+    const missing = run()
+    for (const key of keys) expect(find(missing, PACK_FILES.theme, `props.${key}`)?.level).toBe('warn')
+    const full = run(Object.fromEntries(keys.map((key) => [key, `props/${key}.webp`])))
+    expect(full.filter((problem) => problem.message.includes('코인 리스핀'))).toEqual([])
   })
 })
 

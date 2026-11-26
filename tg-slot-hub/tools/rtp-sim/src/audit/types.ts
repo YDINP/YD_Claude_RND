@@ -175,6 +175,60 @@ export interface DistributionReport {
   precision: RtpPrecision | null
   /** 연쇄 팩의 연쇄·클러스터·주문 카드 통계. 연쇄가 없거나 전수·해석 모드면 없다. */
   cascade?: CascadeReport
+  /** 코인 리스핀 팩의 진입·리스핀·촉수 감기·보물 통계. 코인 리스핀이 없으면 없다. */
+  coinRespin?: CoinRespinReport
+}
+
+/** 코인 리스핀 통계(표본). 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. */
+export interface CoinRespinReport {
+  paidSpins: number
+  rounds: number
+  /** 유료 스핀당 진입 확률. */
+  entryRate: number
+  /** 게이트가 보는 목표 진입 빈도(N스핀에 1회). */
+  targetOdds: number
+  /** 라운드 평균 지급(총 베팅액 배수, 캡 적용 후). */
+  meanFeatureMultiplier: number
+  featureSigma: number
+  maxFeatureMultiplier: number
+  meanSteps: number
+  maxSteps: number
+  /** `respins x (칸 수 - trigger + 1)`. 종료 척도로 증명한 상한. */
+  structuralMaxSteps: number
+  overSteps: number
+  hardCap: number
+  hardCapRounds: number
+  /** `max q x 빈칸`. 1 미만이어야 한다. */
+  growthBound: number
+  meanFinalCoins: number
+  fullRate: number
+  /** 진입하자마자 감긴 라운드 비율. */
+  entryWrapRate: number
+  /** 리스핀 도중 한 줄 이상 감긴 라운드 비율. */
+  midWrapRate: number
+  wrapsPerRound: number
+  /** 끝난 판에 그 보물 코인이 있었던 라운드 비율. */
+  tierRates: { small: number; medium: number; large: number }
+  winCappedRounds: number
+  capLossRtp: number
+  /** 기본 판에 코인이 1개 이상 뜬 유료 스핀 비율. */
+  coinBoardRate: number
+  /** 기대감(남은 릴 감속)이 걸리는 유료 스핀 비율. 계획 §7-3 목표 ≤ 3%. */
+  anticipationRate: number
+  finalCoins: { coins: number; rounds: number; probability: number }[]
+  stepCounts: { steps: number; rounds: number; probability: number }[]
+  wrapCounts: { wraps: number; rounds: number; probability: number }[]
+  /** RTP 분해. `lines + respin = total`, `respin = 숫자 + 감기 보너스 + 보물 + 최고 - 캡 손실`. */
+  breakdown: {
+    lines: number
+    respinNumeric: number
+    respinWrapBonus: number
+    respinTreasure: number
+    respinTop: number
+    capLoss: number
+    respin: number
+    total: number
+  }
 }
 
 /** 연쇄 깊이 한 칸. 깊이 = 그 스핀에서 지급된 연쇄 단계 수. */
