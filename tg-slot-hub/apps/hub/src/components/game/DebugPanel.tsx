@@ -29,6 +29,11 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   cascade3: 'debugPresetCascade3',
   orderRound: 'debugPresetOrderRound',
   orderComplete: 'debugPresetOrderComplete',
+  roulette: 'stageRouletteDebugEntry',
+  rouletteInner: 'stageRouletteDebugInner',
+  roulette4: 'stageRouletteDebugStart4',
+  rouletteGrand: 'stageRouletteDebugGrand',
+  rouletteBig: 'stageRouletteDebugBig',
 }
 
 interface DebugPanelProps {

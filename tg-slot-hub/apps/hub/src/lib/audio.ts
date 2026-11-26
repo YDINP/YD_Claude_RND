@@ -22,6 +22,7 @@ let noiseBuffer: AudioBuffer | null = null
 let spinLoop: { src: AudioBufferSourceNode; gain: GainNode } | null = null
 let riser: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode; extra: AudioScheduledSourceNode[] } | null = null
 let riserStep = 0
+let riserExtraStop: (() => void) | null = null
 let lastStopAt = 0
 let lastTickAt = 0
 let overrideUrls: Partial<Record<SfxKey, string>> = {}
@@ -290,7 +291,7 @@ interface SparkleOpts {
   vol: number
   lo: number
   hi: number
-  voice: 'coin' | 'bubble' | 'suzu' | 'glass'
+  voice: 'coin' | 'bubble' | 'suzu' | 'glass' | 'spark'
 }
 
 /** 당첨 동안 흩뿌리는 작은 소리들. 프리셋마다 동전/거품/방울/유리다. */
@@ -308,6 +309,8 @@ function sparkle(c: AudioContext, o: SparkleOpts): void {
     } else if (o.voice === 'glass') {
       tone(c, { freq: f, at, dur: 0.14, vol: v * 0.9, type: 'sine', attack: 0.001 })
       tone(c, { freq: f * 3.01, at, dur: 0.05, vol: v * 0.3, type: 'sine', attack: 0.001 })
+    } else if (o.voice === 'spark') {
+      tone(c, { freq: f, at, dur: 0.06, vol: v * 0.7, type: 'square', attack: 0.001, lp: f * 2.2, lpTo: f * 0.8 })
     } else {
       tone(c, { freq: f, at, dur: 0.12, vol: v, type: 'sine' })
       tone(c, { freq: f * 1.5, at: at + 0.01, dur: 0.08, vol: v * 0.4, type: 'sine' })
@@ -363,6 +366,8 @@ interface Recipe {
   /** 롤업 중 틱. `progress`는 0..1. */
   tick(c: AudioContext, progress: number): void
   tickEnd(c: AudioContext, tier: WinTier): void
+  /** 기대감 상승음에 겹치는 소리. 돌려주는 함수가 기대감이 끝날 때 불려 남은 소리를 거둔다. */
+  riserExtra?(c: AudioContext): () => void
 }
 
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98]
@@ -654,6 +659,201 @@ const CLOCK_RECIPE: Recipe = {
   },
 }
 
+// ── idol-stage-live ───────────────────────────────────────
+// 신스팝 콘서트: 손뼉·신스 브라스·4박 킥이 주역이다. 말렛·글로켄·종(다른 프리셋의 주역)은 쓰지 않는다.
+
+/** 아이돌: A 장조 펜타토닉 2옥타브(A4~F#6). 브라스 팡파르가 앉는 밝은 중음역이다. */
+const IDOL_SCALE = [440, 493.88, 554.37, 659.25, 739.99, 880, 987.77, 1108.73, 1318.51, 1479.98]
+/** 코드 스탭: A · F#m · D · E (A 장조 팝 진행). */
+const IDOL_CHORDS: readonly (readonly number[])[] = [
+  [440, 554.37, 659.25],
+  [369.99, 440, 554.37],
+  [293.66, 440, 587.33],
+  [329.63, 493.88, 659.25],
+]
+const IDOL_BEAT = 60 / 128
+/** 오프비트 베이스 음(A · F#m · D · E 뿌리음, 2옥타브 아래). */
+const IDOL_BASS = [110, 92.5, 73.42, 82.41]
+
+/** 신스 브라스: 톱니 두 줄(±9센트)이 필터를 빠르게 열었다 천천히 닫는다. «팡파르» 음색. */
+function synthBrass(c: AudioContext, f: number, at: number, vol: number, dur = 0.34): void {
+  const t = c.currentTime + at
+  const lp = c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.2
+  lp.frequency.setValueAtTime(f * 1.4, t)
+  lp.frequency.linearRampToValueAtTime(Math.min(9000, f * 8), t + 0.07)
+  lp.frequency.setTargetAtTime(f * 2.4, t + 0.07, 0.12)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012)
+  g.gain.setTargetAtTime(0.0001, t + dur * 0.55, dur * 0.22)
+  lp.connect(g).connect(master!)
+  for (const detune of [-9, 9]) {
+    const osc = c.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.value = f
+    osc.detune.value = detune
+    osc.connect(lp)
+    osc.start(t)
+    osc.stop(t + dur * 2.1)
+  }
+}
+
+const idolBrassVoice: Voice = (c, f, at, vol) => synthBrass(c, f, at, vol, 0.3)
+
+/** 코드를 브라스로 한 번에 친다. */
+function brassChord(c: AudioContext, freqs: readonly number[], at: number, vol: number, dur = 0.3): void {
+  for (const f of freqs) synthBrass(c, f, at, vol, dur)
+}
+
+/**
+ * 손뼉: 대역 잡음 세 겹(8·9ms 어긋남)과 짧은 꼬리, 3kHz 핑 하나. 킥으로 읽히지 않게 저역은 일부러 비운다.
+ * `lift`는 릴이 뒤로 갈수록 대역을 조금씩 올리는 비율.
+ */
+function clap(c: AudioContext, at: number, vol: number, lift = 1): void {
+  noise(c, { at, dur: 0.028, vol, filter: 'bandpass', freq: 1700 * lift, q: 1.1 })
+  noise(c, { at: at + 0.008, dur: 0.026, vol: vol * 0.9, filter: 'bandpass', freq: 2100 * lift, q: 1.3 })
+  noise(c, { at: at + 0.017, dur: 0.03, vol: vol * 0.7, filter: 'bandpass', freq: 1900 * lift, q: 1.0 })
+  noise(c, { at: at + 0.026, dur: 0.11, vol: vol * 0.42, filter: 'bandpass', freq: 1500 * lift, q: 0.8 })
+  tone(c, { freq: 3000 * lift, at, dur: 0.02, vol: vol * 0.14, type: 'sine', attack: 0.001 })
+}
+
+/** EDM 킥: 160→46Hz 사인 + 아주 짧은 딱. */
+function idolKick(c: AudioContext, at: number, vol: number): void {
+  tone(c, { freq: 160, slideTo: 46, at, dur: 0.17, vol, type: 'sine', attack: 0.002 })
+  noise(c, { at, dur: 0.012, vol: vol * 0.3, filter: 'lowpass', freq: 3000 })
+}
+
+/** 탐: 위에서 내려앉는 사인 + 가죽 닿는 소리. */
+function tom(c: AudioContext, f: number, at: number, vol: number): void {
+  tone(c, { freq: f * 1.5, slideTo: f, at, dur: 0.22, vol, type: 'sine', attack: 0.002 })
+  noise(c, { at, dur: 0.02, vol: vol * 0.25, filter: 'bandpass', freq: 1500, q: 1 })
+}
+
+/** 심벌 크래시: 고역 잡음이 길게 번진다. */
+function crash(c: AudioContext, at: number, vol: number): void {
+  noise(c, { at, dur: 1.1, vol, filter: 'highpass', freq: 5500, q: 0.6 })
+  noise(c, { at, dur: 0.5, vol: vol * 0.5, filter: 'bandpass', freq: 3200, q: 0.7 })
+}
+
+/** 오르는 소리: 잡음 대역과 톱니가 함께 올라 끝에서 가장 크다(드롭 직전). */
+function riseSweep(c: AudioContext, at: number, dur: number, vol: number): void {
+  if (!noiseBuffer || !master) return
+  const t = c.currentTime + at
+  const src = c.createBufferSource()
+  src.buffer = noiseBuffer
+  src.loop = true
+  const bp = c.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.Q.value = 1.6
+  bp.frequency.setValueAtTime(500, t)
+  bp.frequency.exponentialRampToValueAtTime(6500, t + dur)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.92)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.04)
+  src.connect(bp).connect(g).connect(master)
+  src.start(t, Math.random() * 0.5)
+  src.stop(t + dur + 0.06)
+  tone(c, { freq: 200, slideTo: 1000, at, dur, vol: vol * 0.55, type: 'sawtooth', attack: dur * 0.92, lp: 700, lpTo: 6500 })
+}
+
+/**
+ * 손뼉 롤: 간격이 줄어들며 점점 커진다(`n`번). 합성 함성은 earshot에서 바람·휙 소리나 풍선 소리로 읽혀
+ * (SOUND_CHECK 참고) 함성 자리를 이 손뼉 롤이 맡는다.
+ */
+function clapRoll(c: AudioContext, at: number, n: number, gap0: number, gapMin: number, vol: number): void {
+  let x = 0
+  let gap = gap0
+  for (let i = 0; i < n; i++) {
+    clap(c, at + x, vol * (0.6 + 0.4 * (i / Math.max(1, n - 1))))
+    x += gap
+    gap = Math.max(gapMin, gap * 0.82)
+  }
+}
+
+/** 코인 차임: 짧은 사각파 한 음 뒤에 5도 위의 긴 한 음(레트로 «띠링»). */
+function coinChime(c: AudioContext, at: number, vol: number): void {
+  tone(c, { freq: 1318.51, at, dur: 0.07, vol: vol * 0.55, type: 'square', attack: 0.001, lp: 4000, lpTo: 1800 })
+  tone(c, { freq: 1975.53, at: at + 0.065, dur: 0.42, vol: vol * 0.45, type: 'square', attack: 0.001, lp: 5000, lpTo: 1900 })
+  tone(c, { freq: 1975.53, at: at + 0.065, dur: 0.5, vol: vol * 0.55, type: 'sine', attack: 0.001 })
+  tone(c, { freq: 3951, at: at + 0.065, dur: 0.18, vol: vol * 0.18, type: 'sine', attack: 0.001 })
+}
+
+const IDOL_RECIPE: Recipe = {
+  loop: { hz: 3000, ticks: 14, tonal: 0.55, alt: 0.1, len: 0.014, vol: 0.12 },
+  riser: { wave: 'triangle', from: 262, to: 1046, pulseHz: 6, lp: 4200, vol: 0.08 },
+  scale: IDOL_SCALE,
+  spinStart(c) {
+    tone(c, { freq: 180, slideTo: 760, dur: 0.26, vol: 0.2, type: 'sawtooth', attack: 0.05, lp: 450, lpTo: 6500 })
+    noise(c, { dur: 0.2, vol: 0.12, filter: 'bandpass', freq: 700, sweepTo: 4600, q: 1.3 })
+  },
+  reelStop(c, lift) {
+    clap(c, 0, 1.4, lift)
+  },
+  winSmall(c, rollup) {
+    run(c, idolBrassVoice, IDOL_SCALE, [5, 7, 8], 0.075, 0.13)
+    sparkle(c, { dur: Math.min(rollup, 1.2), density: 11, vol: 0.05, lo: 2800, hi: 5200, voice: 'spark' })
+  },
+  winBig(c, tier, rollup) {
+    const beats = { big: 4, mega: 6, epic: 8, max: 8 }[tier]
+    const drop = 0.52
+    riseSweep(c, 0, drop - 0.02, 0.2)
+    crash(c, drop, 0.2)
+    tone(c, { freq: 62, slideTo: 40, at: drop, dur: 0.9, vol: 0.45, type: 'sine', attack: 0.004 })
+    for (let i = 0; i < beats; i++) {
+      const at = drop + i * IDOL_BEAT
+      idolKick(c, at, 0.7)
+      noise(c, { at: at + IDOL_BEAT / 2, dur: 0.07, vol: 0.12, filter: 'highpass', freq: 7000 })
+      tone(c, { freq: IDOL_BASS[Math.floor(i / 2) % IDOL_BASS.length]!, at: at + IDOL_BEAT / 2, dur: 0.2, vol: 0.22, type: 'sawtooth', attack: 0.005, lp: 700, lpTo: 200 })
+      if (i % 2 === 1) clap(c, at, 0.5)
+      brassChord(c, IDOL_CHORDS[Math.floor(i / 2) % IDOL_CHORDS.length]!, at + IDOL_BEAT / 2, 0.09, 0.22)
+    }
+    const end = drop + beats * IDOL_BEAT
+    brassChord(c, [220, 440, 554.37, 659.25, 880], end, 0.11, 0.9)
+    crash(c, end, 0.18)
+    sparkle(c, { dur: rollup, density: tier === 'big' ? 6 : 10, vol: 0.04, lo: 2800, hi: 5600, voice: 'spark' })
+  },
+  feature(c) {
+    // 박수 롤이 빨라지고 상승 스윕이 차올라 0.9초에 드롭: 킥 + 크래시 + 코드.
+    riseSweep(c, 0, 0.86, 0.11)
+    clapRoll(c, 0, 9, 0.22, 0.05, 0.42)
+    idolKick(c, 0.88, 0.5)
+    crash(c, 0.88, 0.16)
+    brassChord(c, IDOL_CHORDS[0]!, 0.9, 0.12, 0.5)
+    brassChord(c, [880, 1108.73, 1318.51], 1.05, 0.08, 0.4)
+  },
+  mutation(c) {
+    run(c, (cc, f, at, v) => tone(cc, { freq: f, at, dur: 0.07, vol: v, type: 'square', attack: 0.001, lp: f * 2.2, lpTo: f }), IDOL_SCALE, [7, 9], 0.05, 0.16)
+    noise(c, { dur: 0.25, vol: 0.09, filter: 'highpass', freq: 6500 })
+  },
+  tick(c, progress) {
+    noise(c, { dur: 0.02, vol: 0.08, filter: 'highpass', freq: 5000 + progress * 2500 })
+    tone(c, { freq: 1900 + progress * 1200, dur: 0.028, vol: 0.04, type: 'triangle', attack: 0.001 })
+  },
+  tickEnd(c, tier) {
+    run(c, idolBrassVoice, IDOL_SCALE, tier === 'none' ? [3, 5] : [5, 7, 8], 0.07, 0.11)
+  },
+  riserExtra(c) {
+    // 손뼉 롤: 간격이 0.34초에서 0.1초로 줄어들며 점점 커진다.
+    const gaps = [0, 0.34, 0.28, 0.23, 0.19, 0.15, 0.12, 0.1]
+    const timers: ReturnType<typeof setTimeout>[] = []
+    let elapsed = 0
+    gaps.forEach((gap, i) => {
+      elapsed += gap
+      timers.push(
+        setTimeout(() => {
+          if (live()) clap(c, 0, 0.16 + i * 0.03)
+        }, elapsed * 1000),
+      )
+    })
+    return () => {
+      for (const id of timers) clearTimeout(id)
+    }
+  },
+}
+
 const RECIPES: Record<SoundPreset, Recipe> = {
   bell: BELL_RECIPE,
   fruit: FRUIT_RECIPE,
@@ -661,6 +861,7 @@ const RECIPES: Record<SoundPreset, Recipe> = {
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
   candy: CANDY_RECIPE,
+  idol: IDOL_RECIPE,
 }
 
 let preset: SoundPreset = 'bell'
@@ -841,6 +1042,91 @@ export function playOrderDeal(): void {
   marimbaVoice(c, 880, 0.1, 0.16)
 }
 
+// ── 무대 룰렛 (idol-stage-live) ────────────────────────────
+// 음색은 IDOL_RECIPE와 같은 재료(손뼉·브라스·킥·코인 차임)다. 이 소리들은 무대 룰렛에서만 불린다 —
+// 어떤 사건에 어떤 소리를 낼지는 `rouletteSfx.ts`가 정한다.
+
+export type RouletteLandKind = 'coin' | 'stepUp' | 'encore' | 'grand'
+
+/**
+ * 포인터가 칸 경계를 지났다. `speed` 1(빠름)→0(멈추기 직전).
+ * 느려질수록 조금 낮고 커진다 — «걸리나 안 걸리나»가 귀에도 들리게.
+ */
+export function playRouletteTick(speed: number): void {
+  const c = live()
+  if (!c) return
+  const s = Math.min(1, Math.max(0, speed))
+  // 회전 동안 음악을 낮춰 둔다(틱마다 다시 걸지 않고 꺼지기 직전에만 연장).
+  if (c.currentTime >= duckUntil - 0.15) duckBgmFor(0.6)
+  tone(c, { freq: 2800 - (1 - s) * 450, dur: 0.008, vol: 0.17 + (1 - s) * 0.12, type: 'square', attack: 0.001 })
+  noise(c, { dur: 0.008, vol: 0.08, filter: 'highpass', freq: 5000 })
+}
+
+/** 룰렛이 선 칸의 종류별 소리. `lit`은 불 켜진 코인 칸(2배)이다. */
+export function playRouletteLand(kind: RouletteLandKind, lit: boolean): void {
+  const c = live()
+  if (!c) return
+  switch (kind) {
+    case 'coin':
+      coinChime(c, 0, 0.26)
+      if (lit) run(c, (cc, f, at, v) => tone(cc, { freq: f, at, dur: 0.09, vol: v, type: 'square', attack: 0.001, lp: f * 2.4, lpTo: f }), IDOL_SCALE, [7, 9], 0.06, 0.1)
+      break
+    case 'stepUp':
+      // 신스 상승 스윕과 탐 필 네 타(약 0.9초).
+      riseSweep(c, 0, 0.8, 0.14)
+      ;[190, 165, 140, 115].forEach((f, i) => tom(c, f, 0.12 + i * 0.14, 0.4))
+      crash(c, 0.72, 0.1)
+      break
+    case 'encore':
+      // «앙코르!» 박수: 다섯 번이 점점 빨라진다.
+      clapRoll(c, 0.02, 5, 0.17, 0.08, 1.2)
+      break
+    case 'grand':
+      duckBgmDeepFor(2.2)
+      crash(c, 0, 0.22)
+      idolKick(c, 0, 0.55)
+      brassChord(c, [220, 440, 554.37, 659.25, 880], 0.02, 0.12, 1.1)
+      brassChord(c, IDOL_CHORDS[3]!, 0.5, 0.1, 0.9)
+      clapRoll(c, 0.3, 10, 0.2, 0.06, 0.4)
+      sparkle(c, { dur: 1.6, density: 14, vol: 0.05, lo: 2800, hi: 5600, voice: 'spark' })
+      break
+  }
+}
+
+/** 응원봉 불빛 토큰이 칸을 켠다. 점등마다 반음씩 오른다(`index` 0부터). */
+export function playRouletteLight(index: number): void {
+  const c = live()
+  if (!c) return
+  const f = 1500 * 2 ** (Math.min(Math.max(0, Math.floor(index)), 11) / 12)
+  tone(c, { freq: f * 0.85, slideTo: f * 1.25, dur: 0.12, vol: 0.26, type: 'sine', attack: 0.004 })
+  tone(c, { freq: f * 2.01, at: 0.01, dur: 0.07, vol: 0.1, type: 'sine', attack: 0.002 })
+}
+
+/** 한 단계 위로 — 판이 줌인한다. 낮게 «웅» 하고 눌린다. */
+export function playRouletteZoom(): void {
+  const c = live()
+  if (!c) return
+  tone(c, { freq: 130, slideTo: 55, dur: 0.3, vol: 0.3, type: 'sine', attack: 0.004 })
+  noise(c, { dur: 0.3, vol: 0.1, filter: 'lowpass', freq: 1800, sweepTo: 200, q: 0.8 })
+}
+
+/** 요약 카드가 뜬다. 큰 판이면 팡파르, 아니면 손뼉과 코인 차임. */
+export function playRouletteSummary(big: boolean): void {
+  const c = live()
+  if (!c) return
+  if (big) {
+    duckBgmFor(2.2)
+    idolKick(c, 0, 0.5)
+    brassChord(c, IDOL_CHORDS[0]!, 0.02, 0.12, 0.8)
+    brassChord(c, IDOL_CHORDS[3]!, 0.4, 0.1, 0.8)
+    clapRoll(c, 0.1, 6, 0.14, 0.06, 0.4)
+    crash(c, 0.02, 0.16)
+  } else {
+    ;[0, 0.16].forEach((at) => clap(c, at, 0.4))
+    coinChime(c, 0.3, 0.22)
+  }
+}
+
 // ── 기대감 ────────────────────────────────────────────────
 
 /**
@@ -900,11 +1186,16 @@ export function startAnticipation(): void {
   fifth.start(t)
   lfo.start(t)
   riser = { osc, gain, lfo, extra }
+  riserExtraStop = recipe.riserExtra?.(c) ?? null
   anticipating = true
   refreshDuck()
 }
 
 export function stopAnticipation(): void {
+  if (riserExtraStop) {
+    riserExtraStop()
+    riserExtraStop = null
+  }
   if (anticipating) {
     anticipating = false
     refreshDuck()
@@ -994,6 +1285,7 @@ let bgm: { preset: SoundPreset; voices: BgmVoices; seq: BgmSequencer; timer: Ret
 let anticipating = false
 let curtain = false
 let duckUntil = 0
+let deepDuckUntil = 0
 let duckTimer: ReturnType<typeof setTimeout> | null = null
 
 function bgmLevel(): number {
@@ -1103,13 +1395,21 @@ function duckBgmFor(seconds: number): void {
   refreshDuck()
 }
 
+/** 가장 큰 순간(룰렛 대상 등)에만 음악을 깊게(커튼 수준) 낮춘다. */
+function duckBgmDeepFor(seconds: number): void {
+  if (!ctx) return
+  deepDuckUntil = Math.max(deepDuckUntil, ctx.currentTime + seconds)
+  refreshDuck()
+}
+
 function refreshDuck(): void {
   if (!ctx || !bgmDuck) return
   const now = ctx.currentTime
-  const target = curtain ? BGM_DIP : anticipating || now < duckUntil ? BGM_DUCK : 1
+  const target = curtain || now < deepDuckUntil ? BGM_DIP : anticipating || now < duckUntil ? BGM_DUCK : 1
   const g = bgmDuck.gain
   g.cancelScheduledValues(now)
   g.setTargetAtTime(target, now, target < g.value ? 0.06 : 0.5)
   if (duckTimer !== null) clearTimeout(duckTimer)
-  duckTimer = now < duckUntil ? setTimeout(refreshDuck, (duckUntil - now) * 1000 + 20) : null
+  const until = Math.max(duckUntil, deepDuckUntil)
+  duckTimer = now < until ? setTimeout(refreshDuck, (until - now) * 1000 + 20) : null
 }

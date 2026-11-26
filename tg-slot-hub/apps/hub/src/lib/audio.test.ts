@@ -116,7 +116,7 @@ describe('recipe table', () => {
     window.dispatchEvent(new Event('pointerdown'))
     expect(lastContext).not.toBeNull()
 
-    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const) {
+    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'idol'] as const) {
       audio.setSoundPreset(preset)
       const before = lastContext!.oscillators
       expect(() => {
@@ -173,6 +173,74 @@ describe('recipe table', () => {
       ;(audio[cue] as (n?: number) => void)(2)
       expect(lastContext!.oscillators, cue).toBeGreaterThan(before)
     }
+    vi.unstubAllGlobals()
+  })
+
+  it('idol roulette cues make sound for every landing, tick and light, and the light pitch rises', async () => {
+    const firstFreqs: number[] = []
+    class RecordingContext extends FakeAudioContext {
+      createOscillator = () => {
+        this.oscillators += 1
+        const node = fakeNode()
+        const freq = node.frequency as { setValueAtTime: (v: number) => void }
+        freq.setValueAtTime = vi.fn((v: number) => firstFreqs.push(v))
+        return node
+      }
+    }
+    vi.stubGlobal('AudioContext', RecordingContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('idol')
+
+    const lights = Array.from({ length: 6 }, (_, index) => {
+      firstFreqs.length = 0
+      audio.playRouletteLight(index)
+      return firstFreqs[0]!
+    })
+    for (let i = 1; i < lights.length; i++) expect(lights[i]!, `light ${i}`).toBeGreaterThan(lights[i - 1]!)
+
+    const made = (fn: () => void): number => {
+      const before = lastContext!.oscillators + lastContext!.sources
+      fn()
+      return lastContext!.oscillators + lastContext!.sources - before
+    }
+    for (const kind of ['coin', 'stepUp', 'encore', 'grand'] as const) {
+      expect(made(() => audio.playRouletteLand(kind, false)), kind).toBeGreaterThan(0)
+      expect(made(() => audio.playRouletteLand(kind, true)), `${kind} lit`).toBeGreaterThan(0)
+    }
+    expect(made(() => audio.playRouletteTick(1))).toBeGreaterThan(0)
+    expect(made(() => audio.playRouletteTick(0))).toBeGreaterThan(0)
+    expect(made(() => audio.playRouletteZoom())).toBeGreaterThan(0)
+    expect(made(() => audio.playRouletteSummary(true))).toBeGreaterThan(0)
+    expect(made(() => audio.playRouletteSummary(false))).toBeGreaterThan(0)
+
+    audio.setAudioMuted(true)
+    expect(made(() => audio.playRouletteLand('grand', true))).toBe(0)
+    expect(made(() => audio.playRouletteTick(0.5))).toBe(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('idol riser adds a clap roll that stops with the anticipation', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('idol')
+
+    const sourcesNow = (): number => lastContext!.sources
+    audio.startAnticipation()
+    const start = sourcesNow()
+    vi.advanceTimersByTime(700)
+    expect(sourcesNow()).toBeGreaterThan(start)
+    audio.stopAnticipation()
+    const stopped = sourcesNow()
+    vi.advanceTimersByTime(2000)
+    expect(sourcesNow()).toBe(stopped)
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 

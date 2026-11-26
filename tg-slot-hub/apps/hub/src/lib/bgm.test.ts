@@ -50,8 +50,8 @@ describe.each(PRESETS)('score: %s', (preset) => {
     expect(style.progression).toHaveLength(BGM_CYCLE_BARS)
     for (const sym of style.progression) expect(() => parseChord(sym)).not.toThrow()
     expect(style.bpm).toBeGreaterThanOrEqual(70)
-    // candy(116)가 가장 빠르다. 라운지 범위는 70..120이다.
-    expect(style.bpm).toBeLessThanOrEqual(120)
+    // idol(128, 4박 킥 신스팝)이 가장 빠르다. 라운지 범위는 70..130이다.
+    expect(style.bpm).toBeLessThanOrEqual(130)
   })
 
   it('produces sorted, in-bar, in-range notes for two whole cycles', () => {
@@ -139,6 +139,43 @@ describe('candy score', () => {
     const snaps = roles(9, 'base', 'snare').map((n) => Math.round(n.beat))
     expect(snaps).toContain(1)
     expect(snaps).toContain(3)
+  })
+})
+
+describe('idol score', () => {
+  const style = BGM_STYLES.idol
+  const roles = (bar: number, variant: 'base' | 'free', role: string): BgmNote[] =>
+    barEvents(style, bar, variant).filter((n) => n.role === role)
+
+  it('is its own song: 128 bpm major synth-pop, faster than every other preset', () => {
+    expect(style.bpm).toBe(128)
+    expect(style.scale).toEqual([0, 2, 4, 5, 7, 9, 11])
+    for (const other of PRESETS.filter((p) => p !== 'idol')) expect(BGM_STYLES[other].bpm, other).toBeLessThan(style.bpm)
+    expect(style).not.toBe(BGM_STYLES.candy)
+  })
+
+  it('kicks on every beat and claps on the 2nd and 4th beat in the full groove', () => {
+    const kicks = roles(9, 'base', 'kick').map((n) => Math.round(n.beat))
+    expect(kicks).toEqual([0, 1, 2, 3])
+    const claps = roles(9, 'base', 'snare').map((n) => Math.round(n.beat))
+    expect(claps).toEqual([1, 3])
+  })
+
+  it('plays 16th-note arpeggios and off-beat chord stabs', () => {
+    expect(roles(9, 'base', 'arp').length).toBeGreaterThanOrEqual(16)
+    const keys = roles(9, 'base', 'keys')
+    expect(keys.length).toBeGreaterThan(0)
+    for (const n of keys) expect(n.beat % 1).toBeGreaterThan(0.2)
+  })
+
+  it('roulette variation goes up one key, adds 16th hats and a clap-roll fill every 8th bar', () => {
+    const bar = 10
+    expect(roles(bar, 'base', 'hat').every((n) => Math.abs((n.beat % 1) - 0.5) < 0.02)).toBe(true)
+    expect(roles(bar, 'free', 'hat').length).toBeGreaterThanOrEqual(8)
+    const baseBass = roles(bar, 'base', 'bass').map((n) => n.midi)
+    const freeBass = roles(bar, 'free', 'bass').map((n) => n.midi)
+    expect(freeBass).toEqual(baseBass.map((m) => m + 1))
+    expect(roles(7, 'free', 'snare').length).toBeGreaterThanOrEqual(6)
   })
 })
 

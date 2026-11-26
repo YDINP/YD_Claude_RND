@@ -14,13 +14,30 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = ['win', 'bigWin', 'freeSpin
  * 이 게임에서 보여 줄 프리셋. `cascade3`는 연쇄 팩, `orderRound`·`orderComplete`는 주문 카드 라운드 팩에만
  * 나온다(서버도 해당 피처가 없는 게임에는 409). 스캐터 프리스핀이 없는 주문 카드 팩은 `freeSpins`를 뺀다.
  */
-export function presetsFor(math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter'> | null): readonly DebugPreset[] {
+export function presetsFor(
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter'> & Partial<Pick<GameMath, 'stageRoulette'>> | null,
+): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
   const hasOrders = math.orderRound !== undefined
-  const base = hasOrders && math.scatter?.freeSpins === undefined ? DEBUG_PRESETS.filter((p) => p !== 'freeSpins') : DEBUG_PRESETS
+  const hasRoulette = math.stageRoulette !== undefined
+  const base =
+    (hasOrders || hasRoulette) && math.scatter?.freeSpins === undefined
+      ? DEBUG_PRESETS.filter((p) => p !== 'freeSpins')
+      : DEBUG_PRESETS
   return [
     ...base,
     ...(math.cascade !== undefined ? (['cascade3'] as const) : []),
     ...(hasOrders ? (['orderRound', 'orderComplete'] as const) : []),
+    ...(hasRoulette ? STAGE_ROULETTE_PRESETS : []),
   ]
+}
+
+/** 무대 룰렛 팩 전용 프리셋. 서버도 룰렛이 없는 게임에는 409. */
+export const STAGE_ROULETTE_PRESETS = ['roulette', 'rouletteInner', 'roulette4', 'rouletteGrand', 'rouletteBig'] as const
+
+/** 서버 시드 탐색 횟수. 드문 룰렛 프리셋(1/1,000~1/5,500)은 스키마 상한 20000을 쓴다. */
+export function debugMaxTries(preset: DebugPreset): number {
+  return preset === 'rouletteInner' || preset === 'roulette4' || preset === 'rouletteGrand' || preset === 'rouletteBig'
+    ? 20000
+    : 5000
 }

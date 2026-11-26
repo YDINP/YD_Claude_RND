@@ -2721,6 +2721,48 @@ describe('GameScreen', () => {
       expect(await screen.findByText(/Reel stops: Does not match/)).toBeInTheDocument()
     })
 
+    it('fairness replay treats the null stateBefore of a base round as no state, so base-spin features replay to the same total win', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      // 서버는 상태를 안 쓰는 라운드에 `stateBefore: null`을 준다. 엔진은 null을 «프리스핀 중 상태가 있음»으로 읽으므로
+      // (프리스핀 팩에서는 예외, 무대 룰렛 팩에서는 룰렛이 안 열려 총 당첨이 어긋난다) 그대로 넘기면 안 된다.
+      const math = parseGameMath(rawMath)
+      const seedInput = 'null-state-seed'
+      const truth = engineSpin(math, { totalBet: 10 }, createSeededRng(seedInput))
+
+      await act(async () => {
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({ roundId: 'fair-null', stops: truth.stops, totalWin: truth.totalWin, nonce: 2 }),
+        )
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+
+      mockedGetRoundSeed.mockResolvedValueOnce({
+        roundId: 'fair-null',
+        gameId: 'classic-777',
+        seed: 'the-real-seed',
+        seedHash: 'irrelevant-for-this-test',
+        nonce: 2,
+        stops: truth.stops,
+        seedInput,
+        stateBefore: null as never,
+      })
+
+      act(() => {
+        screen.getByRole('button', { name: 'Help' }).click()
+      })
+      act(() => {
+        screen.getByRole('tab', { name: 'Fairness' }).click()
+      })
+      await act(async () => {
+        screen.getByRole('button', { name: 'Reveal seed' }).click()
+      })
+
+      expect(await screen.findByText(/Total win: Matches/)).toBeInTheDocument()
+    })
+
     it('resets the fairness verification result when a new round starts (roundId changes)', async () => {
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')

@@ -779,6 +779,74 @@ const CANDY: BgmStyle = {
   },
 }
 
+/** 16분 아르페지오 한 마디: 화음 구성음 인덱스 16개를 16분 간격으로 늘어놓는다. */
+const arp16 = (idxs: readonly number[], vel = 0.5): ArpStep[] => idxs.map((idx, i) => a(i * 0.25, idx, 0.2, i % 4 === 0 ? vel : vel * 0.7))
+
+/**
+ * 아이돌 콘서트: 128bpm 4박 킥, 오프비트 신스 스탭, 16분 펄스 아르페지오, 손뼉 백비트, 사각·톱니 리드. E장조.
+ * 룰렛(free)은 반음 위 + 16분 하이햇 + 마디 끝 손뼉 롤(하프타임 빌드업)이다.
+ */
+const IDOL: BgmStyle = {
+  seed: 59,
+  bpm: 128,
+  swing: 0,
+  humanize: 0.004,
+  strum: 0,
+  key: 64,
+  scale: [0, 2, 4, 5, 7, 9, 11],
+  progression: [
+    'A:maj7', 'B', 'G#:m7', 'C#:m7', 'A:maj7', 'B', 'E', 'B:sus',
+    'A:maj7', 'B', 'G#:m7', 'C#:m7', 'F#:m7', 'B', 'E', 'E',
+    'C#:m7', 'B', 'A:maj7', 'B', 'C#:m7', 'B', 'A:maj7', 'B:sus',
+    'A:maj7', 'B', 'G#:m7', 'C#:m7', 'A:maj7', 'B', 'E', 'B:7',
+  ],
+  padLo: 57,
+  keysLo: 64,
+  arpLo: 69,
+  bassLo: 37,
+  freeArpShift: 7,
+  freeTempo: 1.03,
+  freeKeyShift: 1,
+  lead: {
+    lo: 72,
+    hi: 88,
+    rest: 0.12,
+    cells: [
+      [s(0, 0.5), s(0.5, 0.5), s(1, 1), s(2.5, 0.5), s(3, 1)],
+      [s(0, 0.75), s(0.75, 0.75), s(1.5, 0.5), s(2, 2)],
+      [s(0.5, 0.5), s(1, 0.5), s(1.5, 0.5), s(2, 1), s(3, 0.5), s(3.5, 0.5)],
+      [s(0, 1.5), s(1.5, 0.5), s(2, 0.5), s(2.5, 0.5), s(3, 1)],
+    ],
+  },
+  keys: [
+    [s(0.5, 0.22, 0.6, 3), s(1.5, 0.22, 0.55, 3), s(2.5, 0.22, 0.6, 3), s(3.5, 0.22, 0.55, 3)],
+    [s(0.5, 0.22, 0.6, 3), s(1.25, 0.22, 0.5, 3), s(2.5, 0.22, 0.6, 3), s(3.25, 0.22, 0.5, 3), s(3.5, 0.22, 0.55, 3)],
+  ],
+  arp: [
+    arp16([0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 2, 3]),
+    arp16([0, 2, 1, 3, 2, 4, 3, 5, 4, 3, 2, 3, 1, 2, 0, 1]),
+    arp16([3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 5, 4]),
+  ],
+  bass: [
+    [bs(0.5, 'o', 0.3), bs(1.5, 'o', 0.3), bs(2.5, 'o', 0.3), bs(3.5, 'a', 0.3)],
+    [bs(0, 'r', 0.3), bs(0.5, 'o', 0.3), bs(1, 'r', 0.3), bs(1.5, 'o', 0.3), bs(2, 'r', 0.3), bs(2.5, 'o', 0.3), bs(3, '5', 0.3), bs(3.5, 'a', 0.3)],
+  ],
+  perc: [
+    [...beats([0, 1, 2, 3], 'kick', 0.4), ...beats([0.5, 1.5, 2.5, 3.5], 'hat', 0.25)],
+    [
+      ...beats([0, 1, 2, 3], 'kick', 0.5),
+      ...beats([1, 3], 'snare', 0.5),
+      ...beats([0.5, 1.5, 2.5, 3.5], 'hat', 0.3),
+    ],
+    [
+      ...beats([0, 1], 'kick', 0.5),
+      ...beats([1, 2, 2.5, 3, 3.25, 3.5, 3.75], 'snare', 0.5),
+      ...beats([0.5, 1.5], 'hat', 0.3),
+    ],
+  ],
+  freePerc: beats([0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75], 'hat', 0.22),
+}
+
 export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   bell: LOUNGE,
   fruit: TROPICAL,
@@ -786,4 +854,5 @@ export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   shrine: SHRINE,
   clockwork: CLOCKWORK,
   candy: CANDY,
+  idol: IDOL,
 }
