@@ -31,6 +31,7 @@ export interface RendererCore {
   setSpinSpeed(speed: SpinSpeed): void
   setSpinningIdle(on: boolean): void
   setMode(mode: RendererMode): void
+  setPaused(paused: boolean): void
   resize(): void
   destroy(): void
   diagnostics(): RendererDiagnostics

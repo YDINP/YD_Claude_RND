@@ -1,0 +1,1248 @@
+/*
+ * 말판 보너스 화면 — 한복 야시장의 윷판. 오방색(적 #d8433c · 청 #2f6fb0 · 황 #e8c34a · 백 #f2ece0)과 등불 빛(#ffb765).
+ *
+ * 세로 배치(430×932 기준, 390×844에서는 판이 358px로 줄어든다):
+ *   HUD 56 + 판 398 + 결과 글자 48 + 윷가락 112 + «지금 끝나면» 28 + 버튼 64 = 706px
+ * 판 한 변은 min(398, 폭, 높이 − 372)이라 짧은 화면에서도 전부 한 화면에 들어온다.
+ * 금액(지금 끝나면 N배)은 컨트롤 바로 위에 둔다. 판을 가로지르는 사선 광택·굵은 선은 쓰지 않는다.
+ */
+
+.board-bonus {
+  --board-gold: #e8c34a;
+  --board-gold-soft: #ffe28a;
+  --board-red: #d8433c;
+  --board-blue: #2f6fb0;
+  --board-ivory: #f2ece0;
+  --board-lantern: #ffb765;
+  --board-night: #1f2440;
+
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  color: var(--board-ivory);
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  background: var(--board-night);
+  font-family: var(--hub-sans);
+}
+
+/* 배경: 빈 멍석 그림(있으면) 위에 어둡게 눌러 판독을 지킨다. */
+.board-bonus__bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 32%, rgba(255, 183, 101, 0.22), transparent 62%),
+    linear-gradient(180deg, #2a2d52 0%, #1f2440 55%, #17192e 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.board-bonus__bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(18, 20, 40, 0.55) 0%, rgba(18, 20, 40, 0.28) 38%, rgba(18, 20, 40, 0.66) 100%);
+}
+
+.board-bonus__col {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: max(8px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
+}
+
+/* ── HUD ─────────────────────────────────────────────── */
+
+.board-hud {
+  width: min(398px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* 배경 그림의 큰 등롱 위에서도 글자가 읽히게 어두운 받침판 */
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(16, 12, 30, 0.72);
+  box-shadow: 0 0 0 1px rgba(232, 196, 104, 0.22);
+}
+
+.board-hud__cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 27px;
+}
+
+.board-hud__cell--mult,
+.board-hud__cell--pot {
+  justify-content: flex-start;
+}
+
+.board-hud__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(242, 236, 224, 0.92);
+  letter-spacing: 0;
+}
+
+.board-hud__value {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--board-gold-soft);
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+
+.board-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  display: inline-flex;
+}
+
+.board-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid rgba(242, 236, 224, 0.55);
+  display: block;
+  transition: background 160ms, border-color 160ms;
+}
+
+.board-dot--on {
+  background: var(--board-gold);
+  border-color: #fff2b0;
+  box-shadow: 0 0 6px rgba(232, 195, 74, 0.7);
+}
+
+.board-lanterns {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.board-lantern {
+  width: 19px;
+  height: 24px;
+  display: block;
+  overflow: visible;
+}
+
+.board-lantern--on {
+  filter: drop-shadow(0 0 5px rgba(255, 183, 101, 0.9));
+}
+
+.board-lantern--off {
+  opacity: 0.6;
+}
+
+.board-lantern--out {
+  animation: board-lantern-out 560ms ease-out;
+}
+
+@keyframes board-lantern-out {
+  0% {
+    transform: scale(1.5);
+    filter: drop-shadow(0 0 12px rgba(255, 120, 90, 1)) brightness(2);
+  }
+  100% {
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+/* 마지막 남은 등불은 깜빡인다. */
+.board-lantern--last {
+  animation: board-lantern-last 1s ease-in-out infinite;
+}
+
+@keyframes board-lantern-last {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ── 판 ─────────────────────────────────────────────── */
+
+.board-stage {
+  position: relative;
+  width: min(398px, 100%, calc(100dvh - 372px));
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.board-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  background: rgba(22, 25, 50, 0.52);
+  border: 1px solid rgba(232, 195, 74, 0.38);
+  box-shadow: inset 0 0 44px rgba(0, 0, 0, 0.38), 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.board-map__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.board-map__edges line {
+  stroke: rgba(242, 236, 224, 0.34);
+  stroke-width: 2.2;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+.board-node {
+  font-family: var(--hub-sans);
+}
+
+.board-node--visited {
+  opacity: 0.5;
+}
+
+.board-node__value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-node__light {
+  fill: none;
+  stroke: var(--board-lantern);
+  stroke-width: 2.4;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-light-on 520ms ease-out forwards;
+}
+
+@keyframes board-light-on {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  100% {
+    opacity: 0.78;
+    transform: scale(1);
+  }
+}
+
+/* 갈림길: 금빛 점선 고리 + «지름길» 작은 글자. 지름길이 열리면 고리가 실선으로 바뀐다. */
+.board-fork__ring {
+  fill: none;
+  stroke: #ffd45a;
+  stroke-width: 1.8;
+  stroke-dasharray: 3 4;
+  opacity: 0.88;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-fork-turn 16s linear infinite;
+}
+
+.board-fork--open .board-fork__ring {
+  stroke-dasharray: none;
+  stroke-width: 2.6;
+  opacity: 1;
+  animation: none;
+}
+
+.board-fork__label {
+  fill: #ffd45a;
+  font-size: 10.5px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: rgba(20, 22, 44, 0.9);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+@keyframes board-fork-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 도·개·걸·윷·모 꼬리표 */
+.board-chip rect {
+  fill: var(--board-gold);
+  stroke: #8a6a1a;
+  stroke-width: 1.3;
+}
+
+.board-chip__tail {
+  fill: var(--board-gold);
+  stroke: #8a6a1a;
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+
+.board-chip--fork .board-chip__tail {
+  stroke: #fff6c8;
+}
+
+.board-chip text {
+  fill: #3a2606;
+  font-size: 13.5px;
+  font-weight: 900;
+}
+
+.board-map__over {
+  z-index: 4;
+  pointer-events: none;
+}
+
+.board-goalbadge circle {
+  fill: #c8322b;
+  stroke: var(--board-gold);
+  stroke-width: 1.8;
+}
+
+.board-goalbadge text {
+  fill: #fff3c4;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.board-goalbadge--lit circle {
+  fill: #e0472f;
+  stroke: #fff3c4;
+}
+
+.board-chip--num rect,
+.board-chip--num .board-chip__tail {
+  /* 숫자 꼬리표(영어)는 노란 «코인 2» 칸과 섞이지 않게 먹색 바탕 + 금색 글자 */
+  fill: #2b1a33;
+  stroke: var(--board-gold);
+}
+
+.board-chip--num text {
+  fill: var(--board-gold);
+}
+
+.board-chip--fork rect {
+  stroke: #fff6c8;
+  stroke-width: 2.2;
+}
+
+.board-chip--hot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-chip-hot 700ms ease-in-out 2;
+}
+
+@keyframes board-chip-hot {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+/* 칸 위 순간 이펙트 */
+.board-nodefx__ring {
+  fill: none;
+  stroke-width: 3;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-ring 640ms ease-out forwards;
+}
+
+.board-nodefx__ring--2 {
+  animation-delay: 150ms;
+}
+
+@keyframes board-ring {
+  0% {
+    opacity: 0.95;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.board-nodefx__label {
+  font-size: 15px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(18, 20, 40, 0.92);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  opacity: 0;
+  animation: board-rise 950ms ease-out forwards;
+}
+
+@keyframes board-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  18% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+.board-nodefx__swirl {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-swirl 720ms ease-out forwards;
+}
+
+@keyframes board-swirl {
+  from {
+    opacity: 1;
+    transform: rotate(0deg) scale(1.5);
+  }
+  to {
+    opacity: 0;
+    transform: rotate(540deg) scale(0.6);
+  }
+}
+
+/* 말 */
+.board-token {
+  position: absolute;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+  will-change: left, top;
+}
+
+.board-token__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid var(--board-gold);
+  background: radial-gradient(circle at 40% 35%, #fff3d4, #e9b86a);
+  box-shadow: 0 0 0 2px rgba(31, 36, 64, 0.85);
+}
+
+.board-token__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.board-token__fallback {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, #ffb765 0 30%, var(--board-red) 33%);
+}
+
+/* 이펙트 풀이 붙는 층 — 엽전이 판 밖 HUD로 날아가므로 넘쳐도 보인다. */
+.board-map__fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.board-fx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  will-change: transform, opacity;
+}
+
+.board-fx--coin {
+  border-radius: 50%;
+  background: radial-gradient(circle, #f9e38e 0 38%, #e8c34a 40% 70%, #a98418 74%);
+  border: 1px solid #7a5c10;
+}
+
+.board-fx--coin::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  background: #1f2440;
+  border-radius: 1px;
+}
+
+.board-fx--spark {
+  width: 11px;
+  height: 11px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #ffd45a;
+  box-shadow: 0 0 8px rgba(255, 183, 101, 0.9);
+}
+
+.board-fx--spark1 {
+  background: #ff8a6a;
+}
+
+.board-fx--spark2 {
+  background: #fff2b0;
+}
+
+/* 안내·배너 */
+.board-banner {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  padding: 10px 22px;
+  border-radius: 18px;
+  background: rgba(18, 20, 40, 0.86);
+  border: 2px solid var(--board-gold);
+  font-size: 21px;
+  font-weight: 900;
+  white-space: nowrap;
+  color: var(--board-gold-soft);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  animation: board-banner-in 360ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  pointer-events: none;
+}
+
+.board-banner--fork {
+  font-size: 26px;
+  border-color: #fff2b0;
+  color: #fff2b0;
+  box-shadow: 0 0 28px rgba(255, 212, 90, 0.6), 0 8px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* 결승 도착: 판에서 가장 큰 보상 — 등불빛으로 크게 외친다 */
+.board-banner--goal {
+  top: 46%;
+  padding: 12px 26px;
+  font-size: 30px;
+  border-color: #ffe08a;
+  color: #fff3c4;
+  background: rgba(60, 24, 8, 0.9);
+  box-shadow: 0 0 40px rgba(255, 190, 80, 0.75), 0 0 90px rgba(255, 140, 40, 0.35), 0 8px 26px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 0 14px rgba(255, 200, 90, 0.8);
+  animation: board-banner-in 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+/* 결승 등불탑 점등: 탑에서 판 안쪽으로 번지는 빛 고리 두 겹 */
+.board-goal-halo {
+  fill: none;
+  stroke: #ffd36a;
+  stroke-width: 5;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-goal-halo 1100ms cubic-bezier(0.2, 0.7, 0.3, 1) 2;
+  pointer-events: none;
+}
+
+.board-goal-halo--2 {
+  stroke: #ff9a4a;
+  animation-delay: 260ms;
+}
+
+@keyframes board-goal-halo {
+  0% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(5.2);
+  }
+}
+
+.board-banner--last {
+  border-color: #ffb0a6;
+  color: #ffd0c8;
+  background: rgba(70, 20, 22, 0.88);
+}
+
+@keyframes board-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.board-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(18, 20, 40, 0.9);
+  border: 1px solid rgba(232, 195, 74, 0.7);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  animation: board-hint 2400ms ease both;
+  pointer-events: none;
+}
+
+@keyframes board-hint {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  12%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── 결과 글자 ─────────────────────────────────────── */
+
+.board-call {
+  /* 키 큰 화면에서는 판과 윷 멍석 사이 빈 띠를 외침 줄이 나눠 가진다(글자는 그 가운데) — 빈 멍석 띠가 한쪽에 몰리지 않게. */
+  flex: 1 1 48px;
+  min-height: 48px;
+  max-height: 132px;
+  width: min(398px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.board-call__text {
+  display: inline-block;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--board-gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 183, 101, 0.55);
+  animation: board-call-in 320ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+.board-call {
+  gap: 12px;
+}
+
+/* «지름길!» — 결과 외침 줄에 금빛 테두리 글씨로 */
+.board-call__text--fork {
+  color: #fff2b0;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 18px rgba(255, 212, 90, 0.85);
+}
+
+/* 윷·모: «한 번 더!» 도장 */
+.board-call__stamp {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 3px solid #ff8a6a;
+  border-radius: 9px;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #ff8a6a;
+  background: rgba(60, 20, 20, 0.45);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  transform: rotate(-8deg);
+  animation: board-stamp-in 280ms cubic-bezier(0.2, 1.6, 0.4, 1) 260ms both;
+}
+
+@keyframes board-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-8deg) scale(2.2);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-8deg) scale(1);
+  }
+}
+
+@keyframes board-call-in {
+  from {
+    opacity: 0;
+    transform: scale(0.55) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* ── 윷가락 ─────────────────────────────────────────── */
+
+.board-yutrow {
+  position: relative;
+  width: min(398px, 100%);
+  height: 112px;
+  /* 남는 세로 공간은 윷가락 위·아래로 나눠 가진다(버튼은 엄지 닿는 아래에 붙는다). */
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.board-yutrow__mat {
+  position: absolute;
+  inset: 16px 2px 4px;
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 11px),
+    linear-gradient(180deg, #c9a35e, #a97c3e);
+  box-shadow: inset 0 0 0 2px #7a5a2a, 0 5px 12px rgba(0, 0, 0, 0.38);
+}
+
+.board-yut__row {
+  position: relative;
+  display: inline-flex;
+  gap: 15px;
+  align-items: center;
+  height: 88px;
+}
+
+/* 슬롯: 원근과 그림자는 납작한 껍데기가 맡는다. preserve-3d 요소에 filter를 걸면 3D가 납작해져 뒷면이 비친다. */
+.board-yut__slot {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 86px;
+  border-radius: 9px;
+  perspective: 560px;
+  box-shadow: 0 5px 5px rgba(0, 0, 0, 0.32);
+}
+
+.board-yut__stick {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.board-yut__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.board-yut__face--flat {
+  background: linear-gradient(90deg, #fffaf0, #eadfc4 60%, #d9ccae);
+  border: 1.5px solid #8a7a62;
+}
+
+.board-yut__face--round {
+  transform: rotateY(180deg);
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 11px),
+    linear-gradient(90deg, #6e4220, #b5773a 48%, #6e4220);
+  border: 1.5px solid #4a2c12;
+}
+
+/* 도움말 안의 작은 윷가락 */
+.board-help .board-yut__row {
+  height: 44px;
+  gap: 7px;
+}
+
+.board-help .board-yut__slot {
+  width: 9px;
+  height: 43px;
+  box-shadow: none;
+  border-radius: 5px;
+}
+
+.board-help .board-yut__face {
+  border-radius: 5px;
+  border-width: 1px;
+}
+
+/* ── 지금 끝나면 · 버튼 ─────────────────────────────── */
+
+.board-endsnow {
+  width: min(398px, 100%);
+  margin-top: auto;
+  height: 28px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-endsnow__main {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--board-gold-soft);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.board-endsnow__coins {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(242, 236, 224, 0.78);
+}
+
+.board-controls {
+  width: min(398px, 100%);
+  height: 64px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+.board-btn {
+  min-height: 48px;
+  border-radius: 16px;
+  padding: 0 14px;
+  font-size: 17px;
+  font-weight: 900;
+  color: #2a1a06;
+  background: linear-gradient(180deg, #ffe28a, #e8b83a);
+  border: 2px solid #fff0b0;
+  box-shadow: 0 4px 0 #8a6a1a, 0 7px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 90ms, box-shadow 90ms, filter 120ms;
+}
+
+.board-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #8a6a1a, 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.board-btn:disabled {
+  filter: grayscale(0.55) brightness(0.78);
+  box-shadow: 0 2px 0 #5a4a2a;
+  cursor: default;
+}
+
+.board-btn--throw {
+  flex: 1;
+}
+
+.board-btn--last {
+  color: #fff;
+  background: linear-gradient(180deg, #ff9a8a, var(--board-red));
+  border-color: #ffd0c8;
+  box-shadow: 0 4px 0 #7a1f1b, 0 7px 14px rgba(0, 0, 0, 0.4);
+  animation: board-last-pulse 1s ease-in-out infinite;
+}
+
+@keyframes board-last-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+.board-btn--small,
+.board-btn--icon {
+  background: rgba(242, 236, 224, 0.14);
+  color: var(--board-ivory);
+  border: 2px solid rgba(242, 236, 224, 0.36);
+  box-shadow: none;
+}
+
+.board-btn__glyph {
+  display: block;
+  margin: 0 auto;
+}
+
+.board-btn--small {
+  width: 78px;
+  font-size: 14px;
+  padding: 0;
+}
+
+.board-btn--icon {
+  width: 58px;
+  font-size: 22px;
+  padding: 0;
+}
+
+.board-btn--on {
+  background: rgba(232, 195, 74, 0.3);
+  border-color: var(--board-gold);
+  color: var(--board-gold-soft);
+}
+
+/* ── 요약 카드 ─────────────────────────────────────── */
+
+.board-summary {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 28, 0.64);
+  animation: board-fade-in 300ms ease both;
+}
+
+.board-summary__card {
+  width: min(340px, 88%);
+  padding: 24px 20px 18px;
+  border-radius: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: linear-gradient(180deg, #2c3058, #1f2440);
+  border: 2px solid var(--board-gold);
+  box-shadow: 0 0 0 5px rgba(232, 195, 74, 0.16), 0 22px 54px rgba(0, 0, 0, 0.6);
+  animation: board-card-in 380ms cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+.board-summary__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--board-gold);
+}
+
+.board-summary__reason {
+  font-size: 14px;
+  color: rgba(242, 236, 224, 0.82);
+}
+
+.board-summary__formula {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--board-ivory);
+}
+
+.board-summary__min {
+  font-size: 13px;
+  color: var(--board-lantern);
+}
+
+.board-summary__coins {
+  margin: 6px 0 2px;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--board-gold-soft);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 183, 101, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.board-summary__coin {
+  vertical-align: -3px;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+}
+
+.board-summary__collect {
+  width: 100%;
+  height: 56px;
+  margin-top: 6px;
+  flex: none;
+}
+
+@keyframes board-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes board-card-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ── 진입·복귀 커튼 ──────────────────────────────────── */
+
+.board-curtain {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 220;
+  overflow: hidden;
+  /* 전환 중에는 아래 화면이 탭을 받으면 안 된다. */
+  pointer-events: auto;
+}
+
+.board-curtain__solid {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(216, 67, 60, 0.97) 0 25%, rgba(47, 111, 176, 0.97) 25% 50%, rgba(232, 195, 74, 0.97) 50% 75%, rgba(242, 236, 224, 0.97) 75% 100%),
+    #1f2440;
+}
+
+.board-curtain--clip .board-curtain__solid {
+  background: #1f2440;
+}
+
+.board-curtain--covering .board-curtain__solid {
+  animation: board-curtain-in var(--curtain-in, 320ms) ease-in forwards;
+}
+
+.board-curtain--covered .board-curtain__solid {
+  opacity: 1;
+}
+
+.board-curtain--revealing .board-curtain__solid {
+  opacity: 1;
+  animation: board-curtain-out var(--curtain-out, 280ms) ease-out forwards;
+}
+
+.board-curtain__clip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.board-curtain--revealing .board-curtain__clip {
+  animation: board-curtain-out var(--curtain-out, 280ms) ease-in forwards;
+}
+
+@keyframes board-curtain-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes board-curtain-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── 모션 축소 ──────────────────────────────────────── */
+
+.board-bonus[data-reduced='true'] *,
+.board-bonus[data-reduced='true'] *::before,
+.board-bonus[data-reduced='true'] *::after {
+  animation-duration: 1ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-fork__ring,
+  .board-lantern--last,
+  .board-btn--last {
+    animation: none;
+  }
+}
+
+/* ── 도움말: 말판 보너스 ─────────────────────────────── */
+
+.board-help {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board-help__title {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: var(--hub-gold-light);
+}
+
+.board-help__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.board-help__cell-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.board-help__num {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  color: #2a1a06;
+  background: var(--hub-gold);
+}
+
+.board-help__cell-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--hub-text);
+}
+
+.board-help__text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--hub-text-sub);
+}
+
+.board-help__figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: rgba(31, 36, 64, 0.7);
+}
+
+.board-help__symbol {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.board-help__yut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.board-help__yut-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--hub-text);
+}
+
+.board-help__yut-row .board-yut__row {
+  flex: none;
+  width: 66px;
+  justify-content: center;
+}
+
+.board-help__tag {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #2a1a06;
+  background: var(--hub-gold);
+}
+
+.board-help__tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.board-help__tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--hub-text);
+}
+
+.board-help__tile svg {
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+
+.board-help__map {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.board-help__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--hub-text);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}

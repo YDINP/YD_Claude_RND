@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { SUPPORTED_LOCALES } from './constants.js'
+import { BoardBonusFeatureSchema } from './board.js'
 
 export const LocaleSchema = z.enum(SUPPORTED_LOCALES)
 
@@ -116,6 +117,8 @@ export type ApiError = z.infer<typeof ApiErrorSchema>
  * `lose`: 무당첨에 피처 없음.
  * 연쇄 게임 전용: `cascade3`: 연쇄 3단계 이상. `orderRound`: 유료 스핀에 주문 카드 라운드 진입.
  * `orderComplete`: 라운드 중 주문 완료 1건 이상. 해당 피처가 없는 게임은 서버가 거부한다.
+ * 말판 게임 전용: `boardBonus`: 말판 진입. `boardGoal`: 결승 도착. `boardTraps`: 함정으로 끝남.
+ * `boardFork`: 갈림길에 한 번 이상 멈춤. `boardBig`: 말판 지급이 총 베팅의 100배 이상.
  */
 export const SpinDebugPresetSchema = z.enum([
   'win',
@@ -131,6 +134,11 @@ export const SpinDebugPresetSchema = z.enum([
   'columnWrap',
   'treasure',
   'coinRespinFull',
+  'boardBonus',
+  'boardGoal',
+  'boardTraps',
+  'boardFork',
+  'boardBig',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -527,6 +535,8 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
     capped: z.boolean(),
     hitHardCap: z.boolean(),
   }),
+  /** 말판 보너스 전체(던지기 기록·종료 사유·지급). 트리거 스핀에만 실린다 */
+  BoardBonusFeatureSchema,
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 

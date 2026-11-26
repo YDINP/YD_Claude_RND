@@ -1,0 +1,33 @@
+{
+  "id": "hanbok-night-market",
+  "name": {
+    "en": "Hanbok Night Market",
+    "ko": "한복 야시장"
+  },
+  "version": "0.0.0",
+  "thumbnail": "/games/hanbok-night-market/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 3,
+  "lines": 25,
+  "payModel": "lines",
+  "betLevels": [
+    25,
+    50,
+    100,
+    250,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "auditSpins": 30000000,
+  "volatility": "high",
+  "features": [
+    "boardBonus",
+    "scatter",
+    "wild"
+  ],
+  "sort": 10
+}

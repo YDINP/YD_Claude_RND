@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { CoinRespinSchema, checkCoinRespin } from './coinRespinSchema.js'
+import { BoardBonusConfigSchema, checkBoardConfig } from './boardSchema.js'
 
 export { VolatilitySchema }
 export type { Volatility } from '@tgslot/shared'
@@ -222,6 +223,8 @@ const BaseGameMathSchema = z.object({
   orderRound: OrderRoundConfigSchema.optional(),
   /** 코인 리스핀(홀드 앤 스핀). 보너스를 트리거 스핀 하나에서 다 푼다. */
   coinRespin: CoinRespinSchema.optional(),
+  /** 말판 보너스. 스캐터로 열리고 트리거 스핀 하나에서 끝까지 정한다. */
+  boardBonus: BoardBonusConfigSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -649,6 +652,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
   }
 
   checkCoinRespin(math, issue)
+  checkBoardConfig(math, issue)
 })
 
 export type GameMath = z.infer<typeof GameMathSchema>

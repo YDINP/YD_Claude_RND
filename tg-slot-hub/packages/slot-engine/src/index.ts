@@ -38,6 +38,31 @@ export {
   type CoinRespinConfig,
   type CoinValueEntry,
 } from './coinRespinSchema.js'
+export {
+  advanceBoard,
+  applyBoardBonus,
+  boardPayout,
+  boardStartNode,
+  boardStartRoute,
+  initialBoardState,
+  playBoard,
+  previewBoardLanding,
+  replayBoard,
+  stepBoard,
+  type BoardState,
+} from './board.js'
+export { boardExpectation, type BoardExpectation } from './boardExact.js'
+export { computeBoardRtp, type BoardRtpReport } from './boardRtp.js'
+export {
+  BOARD_MAX_THROWS_LIMIT,
+  BoardBonusConfigSchema,
+  BoardNodeSchema,
+  BoardThrowEntrySchema,
+  checkBoardConfig,
+  type BoardBonusConfig,
+  type BoardNode,
+  type BoardThrowEntry,
+} from './boardSchema.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
   computeAnalyticRtp,

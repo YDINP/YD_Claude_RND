@@ -4,6 +4,8 @@ import { CascadeAccumulator, buildCascadeReport } from './cascadeStats.js'
 import type { CascadeAccumulatorData } from './cascadeStats.js'
 import { CoinRespinAccumulator, buildCoinRespinReport } from './coinRespinStats.js'
 import type { CoinRespinAccumulatorData } from './coinRespinStats.js'
+import { BoardAccumulator, buildBoardReport } from './boardStats.js'
+import type { BoardAccumulatorData } from './boardStats.js'
 import {
   Accumulators,
   comboCount,
@@ -73,6 +75,8 @@ export interface SampleState {
   cascade: CascadeAccumulatorData | null
   /** 코인 리스핀 팩만. 없는 팩은 null(예전에 저장된 상태에는 키가 없을 수 있다). */
   coinRespin?: CoinRespinAccumulatorData | null
+  /** 말판 팩만. 없으면 null. */
+  board?: BoardAccumulatorData | null
   bucketCounts: number[]
   bucketMultiplier: number[]
   hits: number
@@ -127,6 +131,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
   const acc = new Accumulators(math)
   const cascade = math.cascade === undefined ? null : new CascadeAccumulator(math)
   const coinRespin = math.coinRespin === undefined ? null : new CoinRespinAccumulator(math)
+  const board = math.boardBonus === undefined ? null : new BoardAccumulator(math)
   const bucketCounts = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
   const bucketMultiplier = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
 
@@ -167,6 +172,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     )
     cascade?.observe(round, totalBet)
     coinRespin?.observe(round, totalBet, math)
+    board?.observe(round, math.boardBonus?.minPayout ?? 0)
     if (round.length > 1) triggers += 1
 
     if (roundWin > 0) {
@@ -192,6 +198,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     acc,
     cascade,
     coinRespin,
+    board,
     bucketCounts,
     bucketMultiplier,
     hits,
@@ -246,6 +253,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
   const acc = new Accumulators(math)
   const cascade = math.cascade === undefined ? null : new CascadeAccumulator(math)
   const coinRespin = math.coinRespin === undefined ? null : new CoinRespinAccumulator(math)
+  const board = math.boardBonus === undefined ? null : new BoardAccumulator(math)
   const merged: SampleState = {
     totalBet: first.totalBet,
     spins: 0,
@@ -254,6 +262,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     acc,
     cascade,
     coinRespin,
+    board,
     bucketCounts: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     bucketMultiplier: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     hits: 0,
@@ -271,6 +280,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     acc.absorb(part.acc)
     if (part.cascade !== null) cascade?.absorb(part.cascade)
     if (part.coinRespin !== undefined && part.coinRespin !== null) coinRespin?.absorb(part.coinRespin)
+    if (part.board != null) board?.absorb(part.board)
     part.bucketCounts.forEach((count, index) => {
       merged.bucketCounts[index] = (merged.bucketCounts[index] ?? 0) + count
     })
@@ -355,6 +365,7 @@ export function finishSample(math: GameMath, state: SampleState): DistributionRe
   if (state.coinRespin !== undefined && state.coinRespin !== null) {
     report.coinRespin = buildCoinRespinReport(math, state.coinRespin, totalBet)
   }
+  if (state.board != null) report.board = buildBoardReport(math, state.board, totalBet)
   return report
 }
 

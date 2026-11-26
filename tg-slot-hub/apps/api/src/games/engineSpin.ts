@@ -139,6 +139,31 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       positions: feature.positions.map(([reel, row]) => [reel, row] as [number, number]),
     }
   }
+  if (feature.type === 'boardBonus') {
+    // 키 순서 고정: jsonb 왕복 뒤에도 응답 바이트가 같아야 멱등 재전송이 성립한다.
+    return {
+      type: 'boardBonus',
+      throws: feature.throws.map((row) => ({
+        steps: row.steps,
+        extraThrow: row.extraThrow,
+        path: [...row.path],
+        ...(row.forward === undefined ? {} : { forward: [...row.forward] }),
+        at: row.at,
+        route: row.route,
+        tile: row.tile,
+        ...(row.value === undefined ? {} : { value: row.value }),
+        pot: row.pot,
+        multiplier: row.multiplier,
+        traps: row.traps,
+        throwsLeft: row.throwsLeft,
+      })),
+      end: feature.end,
+      pot: feature.pot,
+      multiplier: feature.multiplier,
+      payout: feature.payout,
+      win: feature.win,
+    }
+  }
   const exhaustive: never = feature
   throw new Error(`[engineSpin] unknown feature: ${JSON.stringify(exhaustive)}`)
 }

@@ -2593,6 +2593,22 @@ class PixiRenderer implements RendererCore {
     this.applyLayout()
   }
 
+  // ------------------------------------------------------------------ 일시정지
+
+  /**
+   * 티커를 세우면 Pixi가 더 이상 그리지 않는다(GSAP 값은 계속 흐르지만 화면에 안 나간다). 다시 켜면
+   * 한 번 곧장 그려 멈춘 사이 바뀐 상태를 화면에 올린다.
+   */
+  setPaused(paused: boolean): void {
+    if (this.destroyed) return
+    if (paused) {
+      this.app.ticker.stop()
+      return
+    }
+    this.app.ticker.start()
+    this.app.render()
+  }
+
   // ------------------------------------------------------------------ 해제
 
   destroy(): void {

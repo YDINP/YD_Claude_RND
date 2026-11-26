@@ -10,7 +10,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -435,6 +435,12 @@ export interface SlotRenderer {
    * `{ freeSpins: null }`로 되돌리면 금빛 테두리와 명판이 사라진다.
    */
   setMode(mode: RendererMode): void
+  /**
+   * 그리기 루프(Pixi 티커)를 멈추거나 다시 돌린다. 캔버스 전체를 불투명한 허브 화면이 덮는 동안
+   * (말판 보너스 등) GPU를 쉬게 하려는 것이다 — 결과·타이밍에는 영향이 없다. 해제 전에 켜 두지 않아도 안전하다.
+   * 선택 메서드: 가짜 렌더러(테스트)는 없어도 된다. 부르는 쪽은 `setPaused?.()`로 부른다.
+   */
+  setPaused?(paused: boolean): void
   resize(): void
   destroy(): void
   /**

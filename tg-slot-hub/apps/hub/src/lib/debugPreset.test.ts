@@ -33,4 +33,13 @@ describe('presetsFor', () => {
       expect(presetsFor(classic)).not.toContain(preset)
     }
   })
+
+  it('exposes the board presets only for board-bonus math, without freeSpins', () => {
+    const hanbok = { boardBonus: {}, scatter: {} } as never
+    const list = presetsFor(hanbok)
+    expect(list).toEqual(expect.arrayContaining(['boardBonus', 'boardGoal', 'boardTraps', 'boardFork', 'boardBig']))
+    expect(list).not.toContain('freeSpins')
+    expect(presetsFor(classic)).not.toContain('boardBonus')
+    expect(presetsFor(candy)).not.toContain('boardBonus')
+  })
 })

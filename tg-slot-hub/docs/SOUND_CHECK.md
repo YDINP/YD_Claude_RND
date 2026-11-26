@@ -510,3 +510,122 @@ CC0 라 크레딧 줄은 필수가 아니지만 출처는 `audioSamples.ts` 머�
 - 스템·믹스: `D:/park/tgslot-wt/_qa/new-a-sound/wav/deepsea_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup>.wav`, 리스핀 전용 `deepsea_<coinland|coinlands|sonar|pin0|pin6|pin12|pins|reset|last|wrapstart|wrapend|wrap|tsmall|tmedium|tlarge|settle|top|respinround>.wav`
 - BGM: `.../wav/bgm_deepsea_base.wav`, `bgm_deepsea_free.wav`(50초, 측정은 20~50초). 믹스: `mix_deepsea_{mix,sfx,duck}.wav`, 리스핀 장면 `rmix_deepsea_{mix,sfx,duck}.wav`
 - 하네스·분석 스크립트: `.../new-a-sound/{setup.js,run.mjs,analyze.py,intent.py,mixcheck.py,bgmmatch.py}`, 전체 측정 로그 `final_all.txt`
+## hanbok-night-market 사운드 (S 레인) — 2026-11-26
+
+`hanbok` 프리셋의 전용 레시피(`HANBOK_RECIPE`), 말판 전용 효과음 10종, 전용 BGM(`HANBOK`)을 earshot 으로 듣고 잰 기록. **수치는 참고값이고 최종 귀 판정은 사용자 몫이다.** realness 는 합성음이 목적이라 정보로만 봤다(`winbig` p_real 0.004, BGM 0.23 — 둘 다 «likely code-synthesized», 의도대로).
+
+### 방법
+
+- 실제 `audio.ts`·`bgm.ts`·`bgmVoices.ts` 를 esbuild 로 한 덩어리로 묶어 헤드리스 Chrome 의 OfflineAudioContext 로 렌더했다. `Math.random` 은 고정하고 `setTimeout`/`setInterval`/`performance.now` 는 가상 시계로 바꿔서, 렌더가 매번 같은 소리를 낸다(스템 이벤트마다 6초 칸, 말판 이벤트는 4초 칸).
+- 스템·하네스는 저장소 밖 `D:/park/tgslot-wt/_qa/new-b-sound/`(`setup.js`·`entry.ts`·`build.mjs`·`run.mjs`, 분석 `analyze.py`·`intent.py`·`peak.py`·`mixcheck.py`). 앞 절의 사운드 점검 하네스는 스크래치패드에서 사라져 새로 만들었고, 기존 프리셋 6개를 같은 방식으로 다시 렌더해 앞 절 값이 재현되는지 먼저 확인했다(shrine `winbig` −19.0 LUFS / −6.6 dBTP, 앞 절 −19.6 / −6.3).
+- 비교 대상: 같은 이벤트를 bell·fruit·western·shrine·clockwork·candy 로 새로 렌더. 코사인은 earshot 의 CLAP 임베딩(`vocab.embed_files`)에서 직접 계산했다.
+- 믹스는 30초 장면(스핀 → 기대감 + 큰 당첨 → 피처 + 커튼 → 스핀)을 합본 / 효과음만 / 음악만(효과음 음량 0, 덕킹은 그대로) 세 번 렌더했다. BGM 음량은 기본 40%.
+- 태거 어휘에 한국 악기가 없다. 가야금·해금·꽹과리는 «kalimba / success chime / music box» 같은 가장 가까운 소리로 읽힌다 — 그래서 아래 «의도 문구 z»가 낮은 것은 소리가 틀렸다는 뜻이 아니라 태거가 이 악기들을 모른다는 뜻일 수 있다. 짧은 원샷(<0.5 s)은 태거가 더 약하다.
+
+### 효과음 (평조 오음 G A B D E, G4~E6)
+
+| 이벤트 | 소리(설계) | 의도 문구 최고 z | 최상위 판독 | LUFS / dBTP | decay ms |
+|---|---|---|---|---|---|
+| spin | 가야금 글리산도 5음 + 낮은 딸깍 루프 | “a quick ascending glissando of plucked zither strings” +3.07 | a magic sparkle chime +3.58 | −29.5 / −16.1 | 565 |
+| reelstop | 장구 채편 «덕»(다섯째 릴은 궁편 «쿵» 겹침) | “a short hand drum slap” +3.42 | a snare hit +4.53 | −33.0 / −12.3 | 22 |
+| reelstops | 릴 정지 5연속 | “a series of short hand drum hits ending with a deeper thump” +2.72 | a kick drum +3.91 | −26.7 / −5.8 | 82 |
+| winsmall | 장구 «덩» + 가야금 3음 + 엽전 | “a short bright plucked string jingle” +1.55 | a success chime +3.46 | −20.4 / −9.6 | 707 |
+| winbig | 해금 활 긋기 스웰 + 꽹과리 + 가야금 상행 | “a bowed fiddle swell with a brass gong hit and falling coins” +0.14 | a success chime +2.98 | −19.7 / −7.9 | 461 |
+| feature | 꽹과리 «갱 갱 갱개갱» + 징 스웰 | “a metallic gong rhythm with a low gong rumble” +1.46 | a kalimba note +2.74 | −20.1 / −6.4 | 725 |
+| mutation | 가야금 하모닉(이 게임은 안 씀) | — | — | −33.8 / −20.7 | 146 |
+| riser | 낮은 톱니파 + 징 저음 맥놀이 층 | “a low rising drone with a pulsing vibrato” +2.14 | a downlifter falling sweep +3.47 | −24.6 / −10.2 | 183 |
+| rollup | 가야금 하모닉 «팅»(오음계 상행) + 징 | “a few high plucked string pings then a gong” −0.02 | a success chime +2.56 | −26.1 / −11.8 | 232 |
+
+- 클릭·잘린 꼬리: 효과음·말판 스템 37개 전부 마지막 소리 끝이 −84.6 dBFS 이하(가장 큰 것 `hop3`), 클리핑 0.
+- true peak 는 전부 −5.2 dBTP 이하(가장 큰 `goal`). **−1 dBTP 이하 충족.**
+- 레벨은 기존 프리셋 범위 안에 맞췄다(winbig −19.7: shrine −19.0 / western −21.6, winsmall −20.4: candy −21.0 / shrine −23.3, feature −20.1: shrine −20.7 / clockwork −19.7, reelstops −26.7: shrine −26.3 / candy −24.1).
+
+### 말판 전용 효과음 (`playYutToss` 등 10종, 말판 화면의 `boardSfx.ts` 가 직접 부른다)
+
+| 항목 | 결과 |
+|---|---|
+| 윷 결과음 도→모 | 스펙트럼 피크 392.2 → 440.2 → 494.0 → 587.4 → 659.2 Hz, **단조 증가**. 단위 테스트(`audioHanbok.test.ts`)도 같은 증가를 확인. 가장 큰 소리는 늘 제 음 하나(꽹과리·«한 번 더» 반짝은 더 작다) |
+| 배수 슬라이드 0→4 | 493.7 → 587.4 → 659.2 → 784.1 → 880.0 Hz, 단조 증가. 레벨 −25.4 ~ −24.8 LUFS 로 고르다 |
+| 말 건너기 0→5 | 494.4 → 524.0 → 555.9 → 589.6 → 625.1 → 662.5 Hz(반음씩), 12칸에서 멈춘다 |
+| 윷 착지 | 납작한 면이 위로 나온 가락은 밝고 짧게, 둥근 면은 둔하고 길게(모=5는 넷 다 둔함). 가락 간격 34·36·54 ms. earshot 은 130 ms 안의 네 번을 둘로 묶어 읽는다(onset 2개) — 네 번인지는 귀로 확인할 것 |
+
+| 스템 | LUFS / dBTP | earshot 판독 |
+|---|---|---|
+| yuttoss | −31.5 / −13.9 | “a stick whooshing through the air” z +4.61 (강함), 최상위 “a fast whoosh” +4.71. 처음에는 단번에 터지는 잡음이라 “a snare hit +5.04”로 읽혔고, 서서히 차오르는 swell 로 바꿔 해결 |
+| yutland(1~5) | −26.2 ~ −25.4 / −9.8 | 최상위 “a digital glitch” +2.66 — 짧은 연속 딱딱 소리라 어휘에 맞는 말이 없다. “rapid wooden clicks” +1.9. 귀 판정 필요 |
+| yutcall(1~5) | −24.6 ~ −23.8 / −10.0 ~ −10.7 | “a single plucked zither note ringing” +2.85 (그럴듯) |
+| hop(0~5) | −31.1 ~ −30.7 / −9.4 ~ −10.8 | 최상위 “a wooden block hit” +4.43 |
+| coin | −28.8 / −17.4 | “a short metallic coin jingle” +1.64 (약함), 최상위 kalimba / chime |
+| mult(0~4) | −25.4 ~ −24.8 / −16.0 ~ −17.5 | 최상위 “a success chime” +2.61, 두 번째 “an alarm clock beeping” +2.49 — 해금 슬라이드가 비프처럼 읽히는 위험, 귀 판정 필요 |
+| trap | −26.5 / −10.3 | 최상위 “a kick drum” +3.78 (쿵이 가장 커서) |
+| fork | −26.3 / −14.5 | 최상위 “a success chime” +3.77 |
+| goal | −17.6 / −5.2 | 최상위 “a kalimba note” +3.46. 가장 큰 소리(결승 클라이맥스), 음악 덕킹 2.6초 |
+| summary | −20.0 / −9.1 | 최상위 “a success chime” +4.20, 음악 덕킹 1.4초 |
+
+### 프리셋 구분 (같은 이벤트 CLAP 코사인, hanbok vs …)
+
+기준: 기획서 «같은 이벤트의 CLAP 코사인 hanbok↔shrine ≤ 0.90, hanbok↔candy ≤ 0.90» (기존 프리셋끼리 평균 0.77~0.87, 최고 0.96~0.99).
+
+| 이벤트 | shrine | candy | 가장 비슷한 프리셋 |
+|---|---|---|---|
+| spin | 0.65 | 0.55 | shrine 0.65 |
+| reelstop | 0.67 | 0.71 | western 0.75 |
+| reelstops | 0.72 | 0.76 | bell 0.83 |
+| winsmall | **0.89** | 0.75 | shrine 0.89 |
+| winbig | 0.84 | 0.74 | western 0.89 |
+| feature | 0.71 | 0.54 | shrine 0.71 |
+| mutation | 0.83 | **0.90** | candy 0.90 (이 게임은 안 씀) |
+| riser | 0.83 | 0.87 | western 0.89 |
+| rollup | 0.70 | 0.85 | bell·candy 0.85 |
+
+- 9개 이벤트 모두 shrine·candy 와 0.90 이하(작은 당첨 shrine 0.89, 안 쓰는 mutation candy 0.90 은 경계).
+- 처음 렌더는 기대감 상승음이 fruit 0.96 / candy 0.95 였고, 톱니파로 바꾸니 bell 0.96 / western 0.94 가 됐다. 상승음은 레시피 안에서 파라미터만 바뀌는 공통 구조(주음 + 5도 + 올라가는 대역 잡음)라 어떤 파형을 써도 0.90 아래로 잘 안 내려갔다. 그래서 `Recipe.riserLayer`(레시피가 징 저음 맥놀이 층을 얹는 훅)를 더하고, 음역도 낮추고(196→392 Hz) 필터를 어둡게(1 kHz)·떨림을 느리게(4 Hz) 했더니 전부 0.82~0.89 가 됐다.
+- 작은 당첨은 «가야금 3음 + 엽전»만으로는 shrine 0.91~0.92 여서 장구 «덩»을 앞에 붙이고 가야금 음을 G·D·G 로 넓혀 0.89 가 됐다.
+
+### BGM (굿거리 12/8, 점4분 = 80, 평조 G 오음, 가야금 분산화음 + 해금 선율 + 거문고 + 장구 장단 + 4마디마다 징)
+
+| 항목 | hanbok | 비교 |
+|---|---|---|
+| 기본 LUFS (20~50초) | **−31.3** (목표 −30~−32 충족) | shrine −29.6 / candy −31.0 / western −31.2 |
+| 말판 변주 LUFS | **−30.0** (목표 −30~−31 충족) | shrine −29.3 / candy −30.1 |
+| true peak | −14.2 / −13.7 dBTP, 클리핑 0 | shrine −14.8 / −14.7 |
+| CLAP 코사인 hanbok_base vs shrine_base / shrine_free | **0.863 / 0.843** (목표 ≤ 0.92) | candy_base 0.826, western_base 0.907, fruit 0.812, clockwork 0.758, bell 0.587 |
+| CLAP 코사인 hanbok_free vs shrine_base / shrine_free | **0.911 / 0.917** (목표 ≤ 0.92, 경계) | western_free 0.939(요구 밖이지만 가장 높다), candy_free 0.816 |
+| base ↔ free | 0.888 | candy 0.93 |
+| “traditional Korean folk music with plucked zither and drums” | base +3.19, free +3.59 | shrine_base +2.61 |
+| “traditional Asian plucked string music with a bowed fiddle melody” | base +4.00, free +3.36 | shrine_base +2.74 |
+| “happy upbeat cheerful” / “sad melancholic” | base +2.95 / +2.52, free +2.27 / +2.53 | shrine_base +1.30 / +2.86 |
+
+- 변주(말판): 자진모리 느낌으로 ×1.35(80 → 108), 악기를 두 음 올리고, 꽹과리가 박마다 짚고, 선율이 해금에서 대금으로 바뀐다(`Kit.freeVoices`). 단위 테스트(`bgmHanbok.test.ts`)가 12/8 박 위치(덩·기덕·더러러가 박의 3분할 자리)·징 4마디 간격·변주 +2 반음·×1.35·꽹과리 박을 확인한다.
+- 처음 렌더는 기본 −37.4 / 변주 −34.4 LUFS 였다. 키트 `gain` 을 2배로 올려 기본을 맞췄고, 변주가 +3 dB 더 큰 것은 꽹과리 믹스와 대금 선율 음량을 낮춰 −30.0 으로 맞췄다.
+- 짚어 둘 점: 변주는 western 변주와 가장 닮았다(0.939). 둘 다 «숨 섞인 관악 + 뜯는 현 + 박 타악»이라 CLAP 이 같은 군으로 묶는 것으로 보인다. **구분은 귀로 확인이 필요하다.**
+
+### 믹스 균형 (30초 장면, BGM 40%)
+
+| 항목 | hanbok | 비교(shrine) |
+|---|---|---|
+| 믹스 LUFS / true peak | −25.3 LUFS / −5.4 dBTP, 클리핑 0 | −25.9 / −6.5 |
+| SFX−BGM dB: 릴 정지 / 작은 당첨 / 기대감 / 큰 당첨 / 피처 | +9.4 / +13.5 / +16.6 / +14.3 / +28.9 | +5.1 / +5.9 / +12.8 / +16.8 / +23.1 |
+| 덕킹 | 기대감 −4.7 dB, 피처(커튼) −12.3 dB | −4.4 / −13.7 |
+
+- 이 장면은 첫 30초라 BGM 이 도입 편성(마디 0~9, 선율 없음)이어서 SFX−BGM 이 shrine 보다 커 보인다. 전체 편성(−31.3 LUFS) 위에서는 릴 정지가 그보다 약 4 dB 작아진다 — 기존 프리셋과 같은 조건이다.
+- 큰 당첨 구간 덕킹이 −0.9 dB 로만 나온 것은 같은 장면 안에서 편성이 달라(선율·아르페지오가 막 들어오는 마디) 비교가 어긋난 것이다. 덕킹 동작 자체(−6 dB, 커튼 −14 dB)는 프리셋과 무관한 공용 코드이고 `audio.test.ts` 가 확인한다.
+
+### 브라우저 확인 (개발 스택, 헤드리스 Chrome 430×932·390×844)
+
+디버그 프리셋 «말판 100배+»를 진입부터 요약·받기·복귀 클립·큰 당첨 연출까지 끝까지 돌리며 `BaseAudioContext.createOscillator/createBufferSource` 호출을 시간순으로 셌다. AudioContext 는 `running`, 콘솔 오류는 리소스 404 두 건뿐(개발 서버가 파비콘에 404 를 주는 것으로 보이며 소리와 무관). 초당 노드 생성: 진입 직후(피처 «갱»과 징) 111, 윷 던지기·착지·결과·말 이동 구간 35~90, 결승(요약 직전) 208, 이후 11~26(요약·복귀·큰 당첨, 배경음 포함). 말판 중 변주 BGM 으로 바뀌고 복귀 때 기본으로 돌아오는 것은 `useBoardBonus` 의 `bgmModeTransition` 호출과 `bgmHanbok.test.ts`(변주에서만 대금) 로만 확인했고, 귀로는 확인하지 못했다.
+
+### 남은 문제
+
+1. 태거 어휘에 한국 악기가 없어 가야금·해금·꽹과리 판독이 약하다(작은·큰 당첨, 피처, 롤업의 의도 문구 z < 2). 소리가 의도와 다른지는 귀로만 가린다.
+2. 윷 착지(딱딱딱딱)가 “a digital glitch”, 배수 슬라이드가 “an alarm clock beeping”(두 번째)로 읽힌다 — 어색하게 들리면 가장 먼저 의심할 곳.
+3. 말판 변주 BGM 이 western 변주와 0.939 로 가깝다. 귀로 구분이 안 되면 변주의 꽹과리·장구 비중을 더 키우거나 대금을 쓰는 구간을 늘린다.
+4. 합성음이라 realness 는 «code-synthesized». 녹음 샘플로 바꾸려면 `theme.json` 의 `sfx` override 를 쓴다.
+5. 12/8 흔들림(박 안의 3분할)은 earshot 이 bpm 을 읽지 못해(앞 절의 candy 때와 같다) 수치로는 확인하지 못했고, 시퀀서 단위 테스트의 음 위치로만 확인했다.
+
+### 들어볼 파일
+
+- 효과음 스템: `D:/park/tgslot-wt/_qa/new-b-sound/wav/hanbok_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 말판 `board_hanbok_<yuttoss|yutland1~5|yutcall1~5|hop0~5|coin|mult0~4|trap|fork|goal|summary>.wav`
+- BGM·믹스: `wav/bgm_hanbok_base.wav`, `bgm_hanbok_free.wav`(각 50초), `wav/mix_hanbok_mix.wav`(합본)·`mix_hanbok_sfx.wav`·`mix_hanbok_duck.wav`
+- 기준 프리셋 스템: 같은 폴더 `<preset>_<event>.wav`, `bgm_<preset>_<base|free>.wav`
+- 원자료: `final_sfx.txt`·`final_board.txt`·`final_bgm.txt`·`final_mix.txt`·`final_intent.txt`·`final_peak.txt`, 스펙트로그램 `spec/`

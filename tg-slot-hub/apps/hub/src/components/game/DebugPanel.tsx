@@ -34,6 +34,11 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   columnWrap: 'debugPresetColumnWrap',
   treasure: 'debugPresetTreasure',
   coinRespinFull: 'debugPresetCoinRespinFull',
+  boardBonus: 'boardDebugBonus',
+  boardGoal: 'boardDebugGoal',
+  boardTraps: 'boardDebugTraps',
+  boardFork: 'boardDebugFork',
+  boardBig: 'boardDebugBig',
 }
 
 interface DebugPanelProps {

@@ -1,6 +1,7 @@
 /**
  * 연쇄 팩 튜닝 CLI. 한 번 돌려 RTP 분해·적중률·최초 클러스터율·평균 연쇄·라운드 진입률·
  * 주문 완료율·σ·n*를 한 화면에 낸다. 밀도표로 스트립을 다시 만들고 배율을 걸어 볼 수 있다.
+ * 말판 팩(`boardBonus`)은 라인·스캐터 해석식 + 말판 DP로 정확 RTP를 먼저 내고, 표본으로 적중률·σ를 잰다.
  *
  * ```
  * pnpm --filter @tgslot/rtp-sim run tune candy-cluster-pop --spins 1000000 --shards 4 \
@@ -9,10 +10,10 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
-import { parseGameMath } from '@tgslot/slot-engine'
+import { boardExpectation, computeBoardRtp, parseGameMath } from '@tgslot/slot-engine'
 import type { GameMath } from '@tgslot/slot-engine'
-import { buildCascadeReport, buildCoinRespinReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
-import type { CascadeReport, CoinRespinReport } from './audit/index.js'
+import { buildBoardReport, buildCascadeReport, buildCoinRespinReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
+import type { BoardReport, CascadeReport, CoinRespinReport } from './audit/index.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
@@ -29,6 +30,7 @@ export interface TuneOptions {
   stripSeed: string
   payScale: number
   prizeScale: number
+  boardScale: number
   write: boolean
   json: boolean
 }
@@ -44,6 +46,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run tune <게임폴더|m
   --strip-seed <s>   스트립 생성 시드 (기본 1)
   --pay-scale <x>    기본 페이테이블 선형 배율 (0.05 눈금으로 반올림)
   --prize-scale <x>  주문 카드 상품 선형 배율 (0.05 눈금으로 반올림)
+  --board-scale <k>  말판 코인·큰 상·최소 지급 선형 배율 (정수 반올림, maxWin은 DP 최대로 다시 맞춤)
   --write            바꾼 수학을 math.json에 쓴다
   --json             요약을 JSON으로 낸다
   -h, --help         도움말`
@@ -59,6 +62,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
     stripSeed: '1',
     payScale: 1,
     prizeScale: 1,
+    boardScale: 1,
     write: false,
     json: false,
   }
@@ -96,6 +100,9 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
       case '--prize-scale':
         options.prizeScale = Number(takeValue())
         break
+      case '--board-scale':
+        options.boardScale = Number(takeValue())
+        break
       case '--write':
         options.write = true
         break
@@ -118,7 +125,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
   if (!Number.isInteger(options.shards) || options.shards < 1 || options.shards > 8) {
     throw new Error('--shards는 1~8 정수여야 한다')
   }
-  if (!(options.payScale > 0) || !(options.prizeScale > 0)) throw new Error('배율은 양수여야 한다')
+  if (!(options.payScale > 0) || !(options.prizeScale > 0) || !(options.boardScale > 0)) throw new Error('배율은 양수여야 한다')
   return options
 }
 
@@ -128,7 +135,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
  */
 export function applyTuning(
   raw: Record<string, unknown>,
-  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number },
+  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number; boardScale?: number },
 ): { raw: Record<string, unknown>; math: GameMath } {
   const base = parseGameMath(raw)
   const next: Record<string, unknown> = { ...raw }
@@ -137,7 +144,28 @@ export function applyTuning(
   if (knobs.prizeScale !== undefined && knobs.prizeScale !== 1 && base.orderRound !== undefined) {
     next['orderRound'] = { ...(raw['orderRound'] as Record<string, unknown>), pool: scalePrizes(base, knobs.prizeScale) }
   }
+  if (knobs.boardScale !== undefined && knobs.boardScale !== 1 && base.boardBonus !== undefined) {
+    next['boardBonus'] = scaleBoard(base.boardBonus, knobs.boardScale)
+  }
   return { raw: next, math: parseGameMath(next) }
+}
+
+type BoardConfig = NonNullable<GameMath['boardBonus']>
+
+/**
+ * 말판 값 배율. 코인·큰 상·최소 지급을 k배(정수 반올림)하면 말판 평균이 거의 정확히 k배가 된다(배수 칸은 그대로).
+ * 구조상 최대가 바뀌므로 `maxWin`은 DP 최대로 다시 맞춘다.
+ */
+export function scaleBoard(board: BoardConfig, scale: number): BoardConfig {
+  const nodes = Object.fromEntries(
+    Object.entries(board.nodes).map(([id, node]) =>
+      node.kind === 'coin' || node.kind === 'goal'
+        ? [id, { ...node, value: Math.max(node.kind === 'coin' ? 1 : 0, Math.round((node.value ?? 0) * scale)) }]
+        : [id, node],
+    ),
+  )
+  const scaled: BoardConfig = { ...board, nodes, minPayout: Math.round(board.minPayout * scale) }
+  return { ...scaled, maxWin: Math.max(1, boardExpectation(scaled).max) }
 }
 
 /** 스트립과 `name`은 한 줄로, 나머지는 2칸 들여쓰기로 쓴다. 원래 math.json 모양을 따른다. */
@@ -245,6 +273,53 @@ export function formatSummary(math: GameMath, summary: TuneSummary): string {
   return lines.join('\n')
 }
 
+export interface BoardTuneSummary {
+  /** 해석식(라인·스캐터) + DP(말판) 정확 RTP. */
+  exact: ReturnType<typeof computeBoardRtp>
+  spins: number
+  sampleRtp: number
+  sigma: number
+  nStar: number
+  nStarRounded: number
+  hitRate: number
+  maxWinMultiplier: number
+  board: BoardReport
+}
+
+export function summarizeBoard(math: GameMath, state: SampleState, totalBet: number): BoardTuneSummary {
+  if (state.board == null) throw new Error('말판 팩이 아니다')
+  const n = state.spins
+  const sampleRtp = state.multiplierSum / n
+  const variance = n > 1 ? Math.max(0, (state.multiplierSquareSum - n * sampleRtp * sampleRtp) / (n - 1)) : 0
+  const sigma = Math.sqrt(variance)
+  const nStar = requiredAuditSpins(sigma)
+  return {
+    exact: computeBoardRtp(math, totalBet),
+    spins: n,
+    sampleRtp,
+    sigma,
+    nStar,
+    nStarRounded: roundAuditSpins(nStar),
+    hitRate: state.hits / n,
+    maxWinMultiplier: state.maxWin / state.totalBet,
+    board: buildBoardReport(math, state.board, totalBet),
+  }
+}
+
+export function formatBoardSummary(math: GameMath, summary: BoardTuneSummary): string {
+  const e = summary.exact
+  const x = e.expectation
+  const b = summary.board
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${math.strips.map((strip) => strip.length).join('/')}`,
+    `정확 RTP ${p(e.rtp, 3)} (목표 ${p(math.rtpTarget)}) = 라인 ${p(e.lines, 3)} + 스캐터 ${p(e.scatter, 3)} + 말판 ${p(e.board, 3)}`,
+    `말판 진입 1/${(1 / e.triggerProbability).toFixed(1)}  평균 ${x.mean.toFixed(3)}x  σ ${x.sd.toFixed(2)}  최대 ${x.max}x (maxWin ${math.boardBonus?.maxWin ?? '-'})`,
+    `  결승 ${p(x.pEnd.goal, 1)}  함정 ${p(x.pEnd.traps, 1)}  기회 소진 ${p(x.pEnd.throws, 1)}  갈림길 ${p(x.pFork, 1)}  평균 던지기 ${x.meanThrows.toFixed(2)}  최소 지급 ${p(x.pMinPayout, 1)}`,
+    `표본 RTP ${p(summary.sampleRtp, 3)}  적중률 ${p(summary.hitRate)}  최대 ${summary.maxWinMultiplier.toFixed(1)}x  말판 MC 평균 ${b.meanPayout.toFixed(3)}x (${b.boards}판)`,
+    `σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})`,
+  ].join('\n')
+}
+
 async function main(): Promise<void> {
   const options = parseTuneArgs(process.argv.slice(2))
   const mathPath = resolveMathPath(options.target)
@@ -258,6 +333,7 @@ async function main(): Promise<void> {
     ...(densities === undefined ? {} : { densities, stripSeed: options.stripSeed }),
     payScale: options.payScale,
     prizeScale: options.prizeScale,
+    boardScale: options.boardScale,
   })
   const short = tuned.math.strips.filter((strip) => strip.length < MIN_STRIP_LENGTH).length
   if (short > 0) process.stderr.write(`[tune] 경고: 길이 ${MIN_STRIP_LENGTH} 미만 스트립 ${short}개\n`)
@@ -266,9 +342,15 @@ async function main(): Promise<void> {
     rtpSource: 'sample',
     skipEngineMc: true,
   })
-  const summary = summarize(tuned.math, state)
-  if (options.json) console.log(JSON.stringify({ ...summary, counts: stripCounts(tuned.math.strips) }, null, 2))
-  else console.log(formatSummary(tuned.math, summary))
+  if (tuned.math.boardBonus !== undefined) {
+    const summary = summarizeBoard(tuned.math, state, options.bet)
+    if (options.json) console.log(JSON.stringify({ ...summary, counts: stripCounts(tuned.math.strips) }, null, 2))
+    else console.log(formatBoardSummary(tuned.math, summary))
+  } else {
+    const summary = summarize(tuned.math, state)
+    if (options.json) console.log(JSON.stringify({ ...summary, counts: stripCounts(tuned.math.strips) }, null, 2))
+    else console.log(formatSummary(tuned.math, summary))
+  }
 
   if (options.write) {
     const text = formatMathJson(tuned.raw)

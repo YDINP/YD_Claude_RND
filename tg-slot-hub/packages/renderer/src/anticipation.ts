@@ -1,14 +1,14 @@
 import type { GameMath } from '@tgslot/slot-engine'
 
 export type AnticipationMath = Pick<GameMath, 'reels' | 'rows' | 'strips' | 'scatter'> &
-  Partial<Pick<GameMath, 'orderRound'>>
+  Partial<Pick<GameMath, 'orderRound' | 'boardBonus'>>
 
 /**
- * 보너스(프리스핀 또는 주문 카드 라운드)를 여는 스캐터 개수. 엔진 `featureTriggerCount`와 같다(테스트가 비교한다).
+ * 보너스(프리스핀·주문 카드 라운드·말판 보너스)를 여는 스캐터 개수. 엔진 `featureTriggerCount`와 같다(테스트가 비교한다).
  * 렌더러 루트는 slot-engine을 타입으로만 가져오므로 같은 규칙을 여기 둔다.
  */
 export function featureTriggerCount(math: AnticipationMath): number | undefined {
-  return math.orderRound?.trigger ?? math.scatter?.freeSpins?.trigger
+  return math.orderRound?.trigger ?? math.scatter?.freeSpins?.trigger ?? math.boardBonus?.trigger
 }
 
 /** 릴마다 화면 창에 멈출 스캐터 개수. 스캐터가 없는 게임이면 null. */
@@ -34,16 +34,21 @@ export function scatterCountsByReel(math: AnticipationMath, stops: readonly numb
  * 기대감을 걸 릴 목록(왼쪽부터). 앞 릴들에 이미 떨어진 스캐터가 `trigger - 1`개 이상이고
  * 아직 `trigger`개에는 못 미친 상태에서 멈출 릴이 남아 있으면 그 릴이 대상이다.
  * 프리스핀 트리거가 없는 게임은 비어 있다. 결과가 아니라 연출 시간만 정한다.
+ *
+ * 스트립에 스캐터가 하나도 없는 릴은 건너뛴다 — 거기서는 트리거가 완성될 수 없으니 감속은 가짜 기대감이다
+ * (말판 팩은 스캐터가 릴 1·3·5에만 있다). 모든 릴에 스캐터가 있는 팩은 결과가 그대로다.
  */
 export function anticipatedReels(math: AnticipationMath, stops: readonly number[]): number[] {
   const trigger = featureTriggerCount(math)
   if (trigger === undefined) return []
   const counts = scatterCountsByReel(math, stops)
   if (counts === null) return []
+  const scatter = math.scatter?.symbol
   const result: number[] = []
   let landed = 0
   for (let reel = 0; reel < counts.length; reel += 1) {
-    if (landed > 0 && landed >= trigger - 1 && landed < trigger) result.push(reel)
+    const canHold = scatter !== undefined && (math.strips[reel]?.includes(scatter) ?? false)
+    if (canHold && landed > 0 && landed >= trigger - 1 && landed < trigger) result.push(reel)
     landed += counts[reel] ?? 0
   }
   return result

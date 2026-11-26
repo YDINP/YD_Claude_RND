@@ -4,6 +4,7 @@ import { runCascades } from './cascade.js'
 import { resolveCoinRespinSpin } from './coinRespin.js'
 import { applyMutations } from './mutations.js'
 import { drawOrderCards, tallyOrders } from './orders.js'
+import { applyBoardBonus } from './board.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import type {
@@ -94,7 +95,7 @@ export function spinUnchecked(
 /**
  * 그리드가 정해진 뒤의 정산. 라인·스캐터·프리스핀을 한자리에서 처리한다.
  * 연쇄 팩이 아니면 RNG를 쓰지 않으므로 전수 조사와 재현 검증이 같은 코드를 공유한다.
- * 주문 카드 라운드 팩만 카드 추첨에 `rng`가 필요하다(없으면 던진다). 이 추첨이 스핀의 마지막 RNG 소비다.
+ * 주문 카드 라운드 팩은 카드 추첨에, 말판 팩은 윷 던지기에 `rng`가 필요하다(없으면 던진다). 이 추첨이 스핀의 마지막 RNG 소비다.
  */
 export function resolveSpin(
   math: GameMath,
@@ -118,7 +119,7 @@ export function resolveSpin(
     math.payModel === 'ways' ? evaluateWays(grid, math, betUnit) : evaluate(grid, math, betUnit)
   const scatter = evaluateScatter(grid, math, totalBet)
   const multiplier = state?.multiplier ?? 1
-  const totalWin = Math.round((lineWin + scatter.win) * multiplier)
+  let totalWin = Math.round((lineWin + scatter.win) * multiplier)
 
   const features: FeatureTrigger[] = []
   if (scatter.win > 0) {
@@ -129,6 +130,20 @@ export function resolveSpin(
       win: scatter.win,
       positions: scatter.positions,
     })
+  }
+
+  // 말판 보너스: 유료 스핀에서만 열리고 이 스핀 안에서 끝까지 정한다(스핀 간 상태 없음).
+  // RNG 계약: 릴 정지 → 뮤테이션 → 윷 던지기 k회. 캡은 말판 몫에만 건다(라인·스캐터는 그대로).
+  let boardWin: number | undefined
+  const board = math.boardBonus
+  // `== null`: 병합 뒤 다른 경로가 유료 스핀에 null을 넘겨도 말판이 닫히지 않게(닫히면 RTP가 약 22%p 빠진다).
+  if (board !== undefined && state == null && scatter.count >= board.trigger) {
+    if (rng === undefined) throw new RangeError('말판 보너스에는 rng가 필요하다')
+    const cap = math.round === undefined ? Infinity : Math.round(math.round.maxWinCap * totalBet)
+    const applied = applyBoardBonus(board, totalBet, rng, cap, totalWin)
+    features.push(...applied.features)
+    totalWin += applied.win
+    boardWin = applied.win
   }
 
   const config = math.scatter?.freeSpins
@@ -179,6 +194,7 @@ export function resolveSpin(
     features,
   }
   if (nextState !== undefined) result.nextState = nextState
+  if (boardWin !== undefined) result.boardWin = boardWin
   return result
 }
 

@@ -1,0 +1,64 @@
+{
+  "fx": {
+    "default": {
+      "win": [{ "type": "pulse", "scale": 1.1, "durationMs": 500 }]
+    },
+    "wild": {
+      "win": [
+        { "type": "burst", "particles": 18, "durationMs": 900 },
+        { "type": "glow", "color": "#ffb765", "durationMs": 900 }
+      ]
+    },
+    "bonus": {
+      "win": [
+        { "type": "glow", "color": "#ffb765", "durationMs": 800 },
+        { "type": "wobble", "degrees": 6, "durationMs": 800 }
+      ]
+    },
+    "lantern_girl": {
+      "win": [
+        { "type": "bounce", "px": 0.08, "durationMs": 700 },
+        { "type": "wobble", "degrees": 5, "durationMs": 700 }
+      ]
+    },
+    "scholar": {
+      "win": [
+        { "type": "bounce", "px": 0.07, "durationMs": 700 },
+        { "type": "wobble", "degrees": 6, "durationMs": 700 }
+      ]
+    },
+    "granny": {
+      "win": [
+        { "type": "wobble", "degrees": 5, "durationMs": 800 },
+        { "type": "pulse", "scale": 1.08, "durationMs": 800 }
+      ]
+    },
+    "norigae": {
+      "win": [
+        { "type": "wobble", "degrees": 9, "durationMs": 800 },
+        { "type": "glow", "color": "#e8c34a", "durationMs": 800 }
+      ]
+    },
+    "flower_shoes": {
+      "win": [{ "type": "bounce", "px": 0.09, "durationMs": 650 }]
+    },
+    "lucky_pouch": {
+      "win": [
+        { "type": "pulse", "scale": 1.16, "durationMs": 600 },
+        { "type": "glow", "color": "#e8c34a", "durationMs": 600 }
+      ]
+    },
+    "hotteok": {
+      "win": [{ "type": "bounce", "px": 0.08, "durationMs": 650 }]
+    },
+    "tteokbokki": {
+      "win": [{ "type": "wobble", "degrees": 8, "durationMs": 700 }]
+    },
+    "dalgona": {
+      "win": [
+        { "type": "spin", "durationMs": 500, "repeat": 1 },
+        { "type": "pulse", "scale": 1.1, "durationMs": 500 }
+      ]
+    }
+  }
+}

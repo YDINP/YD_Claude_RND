@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSfxVolume, getSoundPreset, isAudioMuted, setAudioMuted, setSfxVolume, setSoundPreset } from './audio'
 
-const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea'] as const
+const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea', 'hanbok'] as const
 
 describe('audio mute flag', () => {
   it('defaults to unmuted and reflects setAudioMuted()', () => {
@@ -141,7 +141,8 @@ describe('recipe table', () => {
       expect(lastContext!.oscillators, preset).toBeGreaterThan(before)
     }
     vi.unstubAllGlobals()
-  })
+    // 프리셋이 9종으로 늘어 병렬 실행(pnpm -r test) 중에는 기본 5초를 넘길 때가 있다.
+  }, 20_000)
 
   it('every preset plays the double-up cues, each mutation kind and the count-up, and each makes sound', async () => {
     vi.stubGlobal('AudioContext', FakeAudioContext)
