@@ -9,6 +9,9 @@ export const DEFAULT_DEBUG_MAX_TRIES = 5000
 /** 총 베팅의 몇 배부터 `bigWin`으로 치는지. */
 const BIG_WIN_MULTIPLIER = 10
 
+/** 말판 지급이 총 베팅의 몇 배부터 `boardBig`으로 치는지. */
+export const BOARD_BIG_PAYOUT = 100
+
 /**
  * `maxTries` 안에서 `preset` 조건을 만족하는 시드를 찾지 못했을 때.
  * 라우트가 `409 DEBUG_NO_MATCH`로 번역한다.
@@ -33,7 +36,8 @@ export function matchesDebugPreset(
   preset: SpinDebugPreset,
   result: SpinResult,
   totalBet: number,
-  isFreeSpin: boolean
+  isFreeSpin: boolean,
+  math?: GameMath
 ): boolean {
   const hasFeature = result.features.length > 0
   switch (preset) {
@@ -53,11 +57,28 @@ export function matchesDebugPreset(
       return !isFreeSpin && result.features.some((feature) => feature.type === 'orderRound')
     case 'orderComplete':
       return result.features.some((feature) => feature.type === 'orderComplete')
+    case 'boardBonus':
+      return boardOf(result) !== undefined
+    case 'boardGoal':
+      return boardOf(result)?.end === 'goal'
+    case 'boardTraps':
+      return boardOf(result)?.end === 'traps'
+    case 'boardFork':
+      // 갈림길 칸 목록은 math가 갖는다(math 없이 부르면 false).
+      return boardOf(result)?.throws.some((row) => math?.boardBonus?.forks[row.at] !== undefined) ?? false
+    case 'boardBig':
+      return (boardOf(result)?.payout ?? 0) >= BOARD_BIG_PAYOUT
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)
     }
   }
+}
+
+/** 스핀 결과의 말판 피처. 말판이 없으면 undefined. */
+function boardOf(result: SpinResult): Extract<SpinResult['features'][number], { type: 'boardBonus' }> | undefined {
+  for (const feature of result.features) if (feature.type === 'boardBonus') return feature
+  return undefined
 }
 
 export interface DebugSeedSearchParams {
@@ -106,7 +127,7 @@ export function findDebugSeed(params: DebugSeedSearchParams): DebugSeedSearchRes
     const seed = createRoundSeed()
     const rng = createRng(seed, nonce)
     const result = spinWithState(math, totalBet, rng, state)
-    if (matchesDebugPreset(preset, result, totalBet, isFreeSpin)) {
+    if (matchesDebugPreset(preset, result, totalBet, isFreeSpin, math)) {
       return { seed, rng, result, triesUsed: tries }
     }
   }

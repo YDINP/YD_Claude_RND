@@ -14,13 +14,21 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = ['win', 'bigWin', 'freeSpin
  * 이 게임에서 보여 줄 프리셋. `cascade3`는 연쇄 팩, `orderRound`·`orderComplete`는 주문 카드 라운드 팩에만
  * 나온다(서버도 해당 피처가 없는 게임에는 409). 스캐터 프리스핀이 없는 주문 카드 팩은 `freeSpins`를 뺀다.
  */
-export function presetsFor(math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter'> | null): readonly DebugPreset[] {
+export function presetsFor(
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'boardBonus'> | null,
+): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
   const hasOrders = math.orderRound !== undefined
-  const base = hasOrders && math.scatter?.freeSpins === undefined ? DEBUG_PRESETS.filter((p) => p !== 'freeSpins') : DEBUG_PRESETS
+  const hasBoard = math.boardBonus !== undefined
+  // 주문 카드·말판 팩은 스캐터 프리스핀이 없다(말판은 스키마가 공존을 막는다).
+  const base =
+    (hasOrders || hasBoard) && math.scatter?.freeSpins === undefined
+      ? DEBUG_PRESETS.filter((p) => p !== 'freeSpins')
+      : DEBUG_PRESETS
   return [
     ...base,
     ...(math.cascade !== undefined ? (['cascade3'] as const) : []),
     ...(hasOrders ? (['orderRound', 'orderComplete'] as const) : []),
+    ...(hasBoard ? (['boardBonus', 'boardGoal', 'boardTraps', 'boardFork', 'boardBig'] as const) : []),
   ]
 }

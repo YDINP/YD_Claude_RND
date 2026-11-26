@@ -1008,6 +1008,16 @@ describe('GameScreen', () => {
       expect(await screen.findByText('Total 250')).toHaveClass('hub-win-strip__line-label')
     })
 
+    it('라인 합계가 0인 판(스캐터·피처만 당첨)은 «Total 0»을 띄우지 않는다(회귀)', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+      await spinAndSettle(baseSpinResponse({ totalBet: 30, totalWin: 0, wins: [] }))
+      act(() => {
+        mockRenderer.onEvent?.({ type: 'winCycle', cycle: 0, totalWin: 0 })
+      })
+      expect(screen.queryByText('Total 0')).toBeNull()
+    })
+
     it('clears the line label when a new spin starts', async () => {
       const { container } = render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
@@ -2719,6 +2729,47 @@ describe('GameScreen', () => {
       })
 
       expect(await screen.findByText(/Reel stops: Does not match/)).toBeInTheDocument()
+    })
+
+    it('기본 판 시드 공개 검증: 서버가 stateBefore: null을 줘도 «상태 없음»으로 읽어 릴·금액이 맞다고 나온다(회귀)', async () => {
+      const math = parseGameMath(rawMath)
+      const seedInput = 'null-state-seed'
+      const replay = engineSpin(math, { totalBet: 10 }, createSeededRng(seedInput))
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      await act(async () => {
+        mockedApiSpin.mockResolvedValueOnce(
+          baseSpinResponse({ roundId: 'fairNull', stops: replay.stops, totalWin: replay.totalWin, wins: [], nonce: 1 }),
+        )
+        getSpinButton().click()
+      })
+      await waitFor(() => expect(getSpinButton()).not.toBeDisabled())
+
+      mockedGetRoundSeed.mockResolvedValueOnce({
+        roundId: 'fairNull',
+        gameId: 'classic-777',
+        seed: 'seed-null',
+        seedHash: 'irrelevant',
+        nonce: 1,
+        stops: replay.stops,
+        seedInput,
+        stateBefore: null,
+      })
+
+      act(() => {
+        screen.getByRole('button', { name: 'Help' }).click()
+      })
+      act(() => {
+        screen.getByRole('tab', { name: 'Fairness' }).click()
+      })
+      await act(async () => {
+        screen.getByRole('button', { name: 'Reveal seed' }).click()
+      })
+
+      expect(await screen.findByText(/Reel stops: Matches/)).toBeInTheDocument()
+      expect(screen.getByText(/Total win: Matches/)).toBeInTheDocument()
+      expect(screen.queryByText('Could not verify right now')).toBeNull()
     })
 
     it('resets the fairness verification result when a new round starts (roundId changes)', async () => {

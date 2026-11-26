@@ -16,6 +16,7 @@ import type {
   GambleState,
   CascadeStep,
   OrderRoundCarry,
+  BoardBonusFeature,
 } from '@tgslot/shared'
 import {
   getGameMath,
@@ -29,6 +30,7 @@ import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
 import { completedOrders, type CompletedOrder } from '../game/orders'
+import { boardFeatureOf, saveBoardSnapshot } from '../game/boardPlayback'
 import {
   ROUND_FLOW_IDLE,
   ROUND_POPUP_AUTO_CLOSE_MS,
@@ -123,6 +125,24 @@ function settleWinCelebration(get: StoreGet, set: StoreSet): void {
 }
 
 /**
+ * 말판 보너스 앞에 멈춰 서 있는 spin()을 다시 보내는 손잡이. 말판이 재생되는 동안에만 있다.
+ * 말판은 트리거 스핀 응답 하나에 통째로 들어 있고(서버 권위), 화면의 재생이 끝나야 그 판의 잔액·합계·빅윈이
+ * 공개된다 — 그래서 한 판의 서술은 여전히 spin() 하나에 선형으로 남고 여기서는 재생 끝 신호만 되돌려 보낸다.
+ */
+let boardGate: (() => void) | null = null
+
+/**
+ * 말판 화면(GameScreen의 `useBoardBonus`)이 붙어 있는가. 붙어 있지 않으면(테스트·다른 화면) 말판 재생을 열어
+ * 봤자 아무도 닫지 않으므로 spin()은 말판을 건너뛰고 곧장 결과를 공개한다.
+ */
+let boardPlayerReady = false
+
+/** 지갑에서 `held` 코인을 «아직 공개하지 않은 것»으로 덜어 낸 사본. 서버 값 자체는 건드리지 않는다. */
+function withHeldCoins<T extends { coins: number }>(wallet: T, held: number): T {
+  return held > 0 ? { ...wallet, coins: Math.max(0, wallet.coins - held) } : wallet
+}
+
+/**
  * 게임 화면이 렌더러(@tgslot/renderer)를 만든 뒤 store에 등록하는 최소 인터페이스.
  * store는 렌더러 패키지를 직접 import하지 않아 테스트에서 가짜 객체로 쉽게 대체할 수 있다.
  */
@@ -196,6 +216,8 @@ export interface SpinRenderer {
   clearWins?(): void
   /** 이후 스핀의 릴 속도 프로파일을 바꾼다. 돌고 있는 스핀은 건드리지 않는다. */
   setSpinSpeed?(speed: 'normal' | 'quick' | 'turbo'): void
+  /** 그리기 루프를 멈추거나 다시 돌린다. 말판 화면이 캔버스를 통째로 덮는 동안 GPU를 쉬게 한다. */
+  setPaused?(paused: boolean): void
 }
 
 /** FreeSpinsState(허브/서버 형태)를 렌더러의 setMode가 받는 최소 형태로 줄인다. GameScreen도 재사용한다. */
@@ -380,6 +402,24 @@ export interface GameState {
    * 오가는 상태 기계가 필요 없다 — canStartSpin의 게이트에도 이 값을 별도로 더한다(spin() 참고).
    */
   winCelebration: { totalWin: number; totalBet: number; hurried: boolean } | null
+  /**
+   * 지금 재생해야 하는 말판 보너스. null이면 없음. 값은 전부 서버 응답에서 온다.
+   * 진짜 판이면 spin()이 재생이 끝날 때까지 기다리고, 복원(`resumeBoard`)이면 기다리는 spin()이 없다.
+   */
+  boardPlay: BoardPlayRequest | null
+}
+
+/** 말판 재생 요청. */
+export interface BoardPlayRequest {
+  roundId: string
+  feature: BoardBonusFeature
+  totalBet: number
+  /** 이 판 응답의 `totalWin`(라인 + 초롱 + 말판). 재생이 끝난 뒤 WinStrip이 이 값까지 오른다. */
+  totalWin: number
+  /** 복원이면 이만큼 보여 준 상태에서 이어 간다. 진짜 판이면 undefined. */
+  resumeShown?: number
+  /** 오토스핀·프리스핀 중 진입했는가 — 자동 재생으로 시작한다. */
+  auto: boolean
 }
 
 export interface GameActions {
@@ -409,6 +449,12 @@ export interface GameActions {
    * 예약(scheduleNextRound)은 평범한 판과 똑같이 그 연출까지 끝난 뒤에 걸린다.
    */
   dismissWinCelebration: () => void
+  /** 말판 화면이 붙었다/떨어졌다. 붙어 있을 때만 spin()이 말판 재생을 열고 기다린다. */
+  setBoardPlayerReady: (ready: boolean) => void
+  /** 말판 재생(요약 [받기] 뒤 복귀 커튼까지)이 끝났다 — 멈춰 서 있던 spin()이 이어진다. */
+  finishBoard: () => void
+  /** 새로고침 뒤 복원: 보던 말판을 이어서 재생한다(기다리는 spin()은 없다). 이미 재생 중이면 무시한다. */
+  resumeBoard: (request: BoardPlayRequest) => void
   /**
    * 오토스핀을 `count`판만큼 무장하고, 지금 바로 돌 수 있는 상태면(idle, 프리스핀 아님) 첫 판을
    * 곧장 시작한다. 이미 스핀 중이면 예약만 해두고 그 판이 끝나는 대로 이어진다.
@@ -465,6 +511,7 @@ const initialState: GameState = {
   gambleIdempotencyKey: null,
   roundFlow: ROUND_FLOW_IDLE,
   winCelebration: null,
+  boardPlay: null,
 }
 
 type StoreGet = () => GameStore
@@ -599,7 +646,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 세리머니(프리스핀 진입/종료 팝업 + 커튼)나 빅윈 오버레이가 도는 동안에는 어떤 경로로도
     // 릴이 다시 돌지 않는다 — 자동진행·오토스핀·스핀 버튼·스테이지 탭·스페이스 전부 여기서
     // 한 번에 막힌다. 예약을 거두기 **전에** 돌아간다: 막힌 입력이 예약된 다음 판까지 지워버리면 안 된다.
-    if (!canStartSpin(get().roundFlow) || get().winCelebration !== null) return
+    if (!canStartSpin(get().roundFlow) || get().winCelebration !== null || get().boardPlay !== null) return
 
     // 이번 스핀이 수동이든(탭해서 속도 올리기) 방금 예약된 자동 프리스핀이든, 대기 중이던 다음
     // 자동 스핀 타이머는 취소한다 — 안 그러면 나중에 중복으로 또 스핀이 걸린다.
@@ -761,6 +808,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 실패했던 스핀의 idempotencyKey는 이제 쓸모가 없으니 지운다.
     set({ idempotencyKey: null })
 
+    // 말판 보너스: 응답을 받는 **즉시**(릴이 돌기 전) 복원 스냅숏을 쓴다. 릴이 도는 중이든 말판을 보는 중이든
+    // 새로고침하면 이 판을 이어서(또는 처음부터) 다시 보여 줄 수 있다. 지갑에는 아무 영향이 없다.
+    const board = boardFeatureOf(result.features)
+    if (board !== undefined) {
+      const userId = useSessionStore.getState().user?.id
+      saveBoardSnapshot(gameId, {
+        roundId: result.roundId,
+        savedAt: Date.now(),
+        totalBet: result.totalBet,
+        feature: board,
+        shown: 0,
+        totalWin: result.totalWin,
+        ...(userId === undefined ? {} : { userId }),
+      })
+    }
+    /** 릴 착지 때 아직 보여 주면 안 되는 말판 몫(코인). 말판 재생이 끝나야 풀린다. */
+    const boardHoldCoins = board !== undefined && boardPlayerReady ? board.win : 0
+    let boardHeld = 0
+
     // 더블업 세션 — gambleOffer가 있으면 이번 스핀 당첨을 걸 수 있는 새 세션이다. 값은 지금
     // 만들어 두되 **공개는 릴이 멈춘 뒤**다(아래 reveal).
     const gambleSession: GambleSession | null = result.gambleOffer
@@ -796,8 +862,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealed = true
 
       // 지갑·허브는 게임 화면을 벗어난 뒤에도 반영한다 — 이미 확정된 서버 권위 값이라
-      // 유실되면 로비 잔액이 스핀 전 값으로 남는다.
-      useSessionStore.setState({ wallet: result.wallet })
+      // 유실되면 로비 잔액이 스핀 전 값으로 남는다. 다만 말판 판은 말판 몫을 «재생이 끝날 때까지» 덜어 두고
+      // 보여 준다(결과 누설 방지) — 화면을 벗어났으면 곧장 서버 값 그대로다.
+      const holdNow = get().gameId === gameId ? boardHoldCoins : 0
+      boardHeld = holdNow
+      useSessionStore.setState({ wallet: withHeldCoins(result.wallet, holdNow) })
       useHubStore.getState().setJackpotPool(result.jackpot)
       if (result.missions && result.missions.length > 0) {
         useHubStore.getState().setMissions(result.missions)
@@ -824,6 +893,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // 재전송된 응답에는 안 실린다) — 그 외에는 항상 null이다.
         lastSpinDebug: result.debug ?? null,
       })
+    }
+
+    /**
+     * 말판 재생이 끝났다 — 덜어 둔 말판 몫을 지갑에 돌려놓는다. 그 사이 지갑이 서버 값으로 이미 맞춰졌으면
+     * (`/me` 새로고침 등) 그대로 둔다. 멱등이라 finally 안전망이 한 번 더 불러도 된다.
+     */
+    const releaseBoardHold = (): void => {
+      if (boardHeld === 0) return
+      const held = boardHeld
+      boardHeld = 0
+      const current = useSessionStore.getState().wallet
+      if (current === null || current.coins >= result.wallet.coins) return
+      useSessionStore.setState({ wallet: { ...current, coins: current.coins + held } })
     }
 
     // 그 사이 다른 게임으로 옮겨 갔으면 이 판의 연출은 남의 화면에 그릴 수 없다. 그래도 지갑·
@@ -874,7 +956,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       //
       // 세리머니(프리스핀 진입/종료 팝업)가 있는 판에서는 아예 띄우지 않는다 — 그 팝업이 이미 같은
       // 등급 연출로 총액을 보여주므로 두 번 띄울 이유가 없다(판정은 위에서 한 번만 한다).
-      if (!ceremony && celebrationTier(result.totalWin, result.totalBet) !== 'none') {
+      //
+      // 말판 판은 여기서 띄우지 않는다 — 합계(라인 + 초롱 + 말판)는 말판 요약이 끝난 뒤 한 번만 축하한다.
+      const celebrateIfBig = async (): Promise<boolean> => {
+        if (celebrationTier(result.totalWin, result.totalBet) === 'none') return true
         // 오토스핀이 돌고 있었거나 이미 프리스핀 중이었으면(둘 다 winPresentationMode와 같은
         // 신호) 서두른다 — 오버레이가 롤업·강조를 줄이고 붙드는 시간도 짧게 잡는다(winTiers.ts).
         set({
@@ -890,8 +975,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           winCelebrationGate = resolve
         })
         // 기다리는 동안 화면을 벗어났으면(reset) 남은 연출은 이 게임의 것이 아니다 — finally가 정리한다.
-        if (get().gameId !== gameId) return
+        return get().gameId === gameId
       }
+      if (!ceremony && board === undefined && !(await celebrateIfBig())) return
 
       // wins가 없어도 features(예: 스캐터 3개로 프리스핀 진입, 배당은 0)만 있을 수 있으므로
       // 어느 한쪽이라도 있으면 연출을 돌려 featureTriggered 이벤트가 나갈 기회를 준다.
@@ -907,10 +993,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // 전체 표시만 짧게 1회 보여준다 — 순환하는 전체 연출이 프리스핀 사이에 끼면 판
           // 간격이 20초를 넘겨 "진행이 멈춘 것"처럼 보인다(실측). 수동 기본 게임만 full +
           // 순환이다(옵션 자체를 넘기지 않아 기존 호출 형태를 그대로 유지한다).
-          const presentation = winPresentationMode({
-            autoSpinActive: get().autoSpin !== null,
-            freeSpinsActive: freeSpins !== null,
-          })
+          // 말판 판은 «초롱 3개 → 말판»이 주인공이라 라인 연출은 전체 표시 한 번으로 짧게 보여 주고 넘어간다.
+          const presentation =
+            board !== undefined
+              ? 'brief'
+              : winPresentationMode({
+                  autoSpinActive: get().autoSpin !== null,
+                  freeSpinsActive: freeSpins !== null,
+                })
           await renderer.showWins(result.wins, {
             totalBet: result.totalBet,
             features: result.features,
@@ -923,6 +1013,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
           timing.firstPassMs = Date.now() - winStartAt
         }
       }
+
+      // ---- 말판 보너스 — 릴·라인 연출이 끝난 뒤, 요약 [받기]와 복귀 커튼이 끝날 때까지 이 판은 여기서 멈춰 선다 ----
+      if (board !== undefined && boardPlayerReady && get().gameId === gameId) {
+        set({
+          phase: 'showingWin',
+          boardPlay: {
+            roundId: result.roundId,
+            feature: board,
+            totalBet: result.totalBet,
+            totalWin: result.totalWin,
+            auto: get().autoSpin !== null || freeSpins !== null,
+          },
+        })
+        await new Promise<void>((resolve) => {
+          boardGate = resolve
+        })
+        // 기다리는 동안 화면을 벗어났으면(reset) 남은 연출은 이 게임의 것이 아니다 — finally가 정리한다.
+        if (get().gameId !== gameId) return
+        releaseBoardHold()
+        // 합계 축하는 말판 요약이 끝난 뒤 한 번만이다.
+        if (!(await celebrateIfBig())) return
+      }
     } catch (err) {
       // 연출 실패는 서버 권위 결과에 영향을 주지 않는다 — 원인만 남기고 아래 finally가 phase를 회복시킨다.
       console.error('[game] renderer playback failed', err)
@@ -930,9 +1042,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 안전망 — 릴 연출이 중간에 터졌든 화면을 벗어났든, 확정된 결과가 유실된 채로 판이 끝나면
       // 안 된다. 정상 경로에서는 이미 공개됐으므로 여기서는 아무 일도 일어나지 않는다.
       reveal()
+      releaseBoardHold()
       currentSpinHandle = null
       if (get().gameId === gameId) {
-        set({ phase: 'idle', lastSpinTiming: timing })
+        set({ phase: 'idle', lastSpinTiming: timing, boardPlay: null })
 
         // 오토스핀 카운터 — 이번 판이 "유료" 판일 때만 하나 깎는다(프리스핀 중에 도는 판은 서버가
         // 공짜로 주는 것이라 오토스핀의 몫에서 빼지 않는다). 0이 되면 스스로 꺼진다.
@@ -972,6 +1085,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   dismissWinCelebration() {
     settleWinCelebration(get, set)
+  },
+
+  setBoardPlayerReady(ready) {
+    boardPlayerReady = ready
+  },
+
+  finishBoard() {
+    if (get().boardPlay !== null) set({ boardPlay: null })
+    const resume = boardGate
+    boardGate = null
+    resume?.()
+  },
+
+  resumeBoard(request) {
+    const { phase, boardPlay, gameId } = get()
+    if (boardPlay !== null || gameId === null) return
+    if (phase === 'spinning' || phase === 'showingWin') return
+    set({ boardPlay: request })
   },
 
   notifyCurtain(to, phase) {
@@ -1123,6 +1254,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 오버레이 앞에 멈춰 서 있던 판이 있으면 깨워 보낸다 — 안 그러면 그 spin()이 영영 대기한다
     // (깨어난 쪽은 gameId가 달라진 것을 보고 남은 연출 없이 물러난다).
     settleWinCelebration(get, set)
+    // 말판 앞에 멈춰 서 있던 판도 깨워 보낸다(깨어난 쪽은 gameId가 달라진 것을 보고 물러난다).
+    const resumeBoard = boardGate
+    boardGate = null
+    resumeBoard?.()
     currentSpinHandle = null
     skipRequested = false
     // 진행 중이던 승리 연출 순환을 걷어낸다 — 안 그러면 다음에 이 게임에 다시 들어왔을 때(또는

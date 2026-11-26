@@ -116,7 +116,7 @@ describe('recipe table', () => {
     window.dispatchEvent(new Event('pointerdown'))
     expect(lastContext).not.toBeNull()
 
-    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const) {
+    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'hanbok'] as const) {
       audio.setSoundPreset(preset)
       const before = lastContext!.oscillators
       expect(() => {

@@ -48,6 +48,8 @@ interface Kit {
   mix: Partial<Record<BgmRole, readonly [number, number]>>
   padCutoff: readonly [number, number]
   voices: Partial<Record<BgmRole, VoiceFn>>
+  /** 변주(free)에서만 같은 역할의 악기를 갈아 끼운다(예: 해금 → 대금). 없는 역할은 `voices`를 그대로 쓴다. */
+  freeVoices?: Partial<Record<BgmRole, VoiceFn>>
 }
 
 // ── 공용 재료 ─────────────────────────────────────────────
@@ -331,7 +333,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
+const BASE_KITS: Record<Exclude<SoundPreset, 'candy' | 'hanbok'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -564,7 +566,124 @@ const CANDY_KIT: Kit = {
   },
 }
 
-const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT }
+/** 가야금: 명주실 줄. 뜯은 직후 음이 살짝 올라가 자리 잡는다(농현). 고토보다 어둡고 부드럽다. */
+const GAYAGEUM: PluckSpec = { bright: 0.5, decay: 0.9965, pick: 0.3, seconds: 1.5 }
+/** 거문고: 굵은 줄을 술대로 내리쳐 어둡고 짧다. */
+const GEOMUNGO: PluckSpec = { bright: 0.18, decay: 0.988, pick: 0.3, seconds: 1 }
+
+function gayageum(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const { buffer, playbackRate } = k.pluckBuffer(midi, GAYAGEUM)
+  const src = k.c.createBufferSource()
+  src.buffer = buffer
+  src.playbackRate.setValueAtTime(playbackRate * 1.018, t)
+  src.playbackRate.exponentialRampToValueAtTime(playbackRate, t + 0.07)
+  const g = k.c.createGain()
+  const end = Math.min(t + buffer.duration / playbackRate, t + Math.max(0.25, dur) + 0.35)
+  g.gain.setValueAtTime(vel, t)
+  g.gain.setValueAtTime(vel, Math.max(t, end - 0.2))
+  g.gain.linearRampToValueAtTime(0, end)
+  src.connect(g).connect(out)
+  src.start(t)
+  src.stop(end + 0.01)
+  k.track(end)
+}
+
+/** 해금: 톱니파 + 콧소리 대역통과 + 늦게 들어오는 5.5Hz 비브라토. 음은 아래에서 미끄러져 올라온다. */
+function haegeum(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const o = k.c.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.setValueAtTime(f * 0.965, t)
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.07)
+  const lfo = k.c.createOscillator()
+  lfo.frequency.value = 5.5
+  const depth = k.c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.setValueAtTime(0, t + 0.2)
+  depth.gain.linearRampToValueAtTime(f * 0.011, t + 0.2 + Math.min(0.4, dur * 0.5))
+  lfo.connect(depth).connect(o.frequency)
+  const nasal = k.c.createBiquadFilter()
+  nasal.type = 'bandpass'
+  nasal.frequency.value = 1300
+  nasal.Q.value = 1.1
+  const body = k.c.createBiquadFilter()
+  body.type = 'lowpass'
+  body.frequency.value = Math.min(3600, f * 4)
+  body.Q.value = 0.5
+  const g = k.c.createGain()
+  const hold = t + Math.max(0.15, dur * 0.92)
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.07)
+  g.gain.setValueAtTime(vel * 0.9, hold)
+  g.gain.setTargetAtTime(0, hold, 0.1)
+  const end = hold + 0.6
+  o.connect(nasal).connect(g)
+  const bodyGain = k.c.createGain()
+  bodyGain.gain.value = 0.5
+  o.connect(body).connect(bodyGain).connect(g)
+  g.connect(out)
+  for (const node of [o, lfo]) {
+    node.start(t)
+    node.stop(end)
+  }
+  hiss(k, t, vel * 0.12, out, { type: 'bandpass', freq: 3000, q: 1, attack: 0.01, tau: 0.05 })
+  k.track(end)
+}
+
+/** 대금: 숨이 섞인 관악에 청(갈대 막)의 높은 울림 한 겹. 해금보다 맑고 빠르게 열린다. */
+function daegeum(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  breathy(k, t, mtof(midi), vel, dur, out, 0.34, 5.2, 0.05)
+  hiss(k, t, vel * 0.1, out, { type: 'highpass', freq: 4500, q: 0.7, attack: 0.03, tau: Math.max(0.08, dur * 0.4) })
+}
+
+/** 징: 낮게 부풀어 오르는 울림. 맥놀이하는 두 줄 + 위 배음. */
+const JING: readonly Partial3[] = [[1, 1, 0.7], [1.008, 0.7, 0.65], [2.32, 0.2, 0.4], [3.12, 0.1, 0.25]]
+
+/** 꽹과리: 놋쇠. 정수배가 아닌 배음이 한꺼번에 울고 짧게 끊긴다. */
+const KKWAENG: readonly Partial3[] = [[1, 1, 0.12], [1.47, 0.65, 0.1], [2.12, 0.5, 0.08], [2.91, 0.36, 0.06], [3.76, 0.22, 0.045]]
+
+/** 한복 야시장: 가야금 분산화음, 해금 선율(말판은 대금), 거문고, 장구(궁편·채편), 꽹과리, 징. */
+const HANBOK_KIT: Kit = {
+  gain: 2,
+  mix: {
+    keys: [0.22, 0.3],
+    arp: [0.18, 0.35],
+    lead: [0.16, 0.35],
+    bass: [0.2, 0.08],
+    kick: [0.3, 0.1],
+    snare: [0.12, 0.15],
+    hat: [0.03, 0.2],
+    gong: [0.2, 0.3],
+  },
+  padCutoff: [1200, 2200],
+  voices: {
+    keys: (k, t, m, v, d, out) => gayageum(k, t, m, v, d, out),
+    arp: (k, t, m, v, d, out) => gayageum(k, t, m, v, d, out),
+    lead: (k, t, m, v, d, out) => haegeum(k, t, m, v, d, out),
+    bass: (k, t, m, v, d, out) => {
+      pluck(k, t, m, v, d, out, GEOMUNGO)
+      hiss(k, t, v * 0.18, out, { type: 'bandpass', freq: 900, q: 1.5, attack: 0.001, tau: 0.008 })
+    },
+    kick: (k, t, _m, v, _d, out) => {
+      drum(k, t, 105, 72, v, out, 0.12)
+      hiss(k, t, v * 0.2, out, { type: 'lowpass', freq: 500, q: 0.7, attack: 0.001, tau: 0.02 })
+    },
+    snare: (k, t, _m, v, _d, out) => {
+      hiss(k, t, v, out, { type: 'bandpass', freq: 2800, q: 2.2, attack: 0.001, tau: 0.028 })
+      drum(k, t, 430, 330, v * 0.55, out, 0.03, 'triangle')
+    },
+    hat: (k, t, _m, v, _d, out) => {
+      partials(k, t, 1180, v, out, KKWAENG, 0.001)
+      hiss(k, t, v * 0.3, out, { type: 'highpass', freq: 3500, q: 0.7, attack: 0.001, tau: 0.01 })
+    },
+    gong: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, JING, 0.12),
+  },
+  freeVoices: {
+    lead: (k, t, m, v, d, out) => daegeum(k, t, m, v * 0.7, d, out),
+  },
+}
+
+const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, hanbok: HANBOK_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 
@@ -588,6 +707,7 @@ export function createBgmVoices(c: BaseAudioContext, preset: SoundPreset, dest: 
   padFilter.Q.value = 0.4
   padFilter.connect(tone)
   const buses = new Map<BgmRole, GainNode>()
+  let bright = false
   const plucks = new Map<string, { buffer: AudioBuffer; playbackRate: number }>()
   let ends: number[] = []
 
@@ -637,7 +757,7 @@ export function createBgmVoices(c: BaseAudioContext, preset: SoundPreset, dest: 
   return {
     output,
     play(note, time, spb) {
-      const voice = kit.voices[note.role]
+      const voice = (bright ? kit.freeVoices?.[note.role] : undefined) ?? kit.voices[note.role]
       if (!voice) return
       ends = ends.filter((e) => e > time)
       const essential = note.role === 'pad' || note.role === 'bass' || note.role === 'kick'
@@ -645,6 +765,7 @@ export function createBgmVoices(c: BaseAudioContext, preset: SoundPreset, dest: 
       voice(tools, time, note.midi, note.vel ** 1.4, note.dur * spb, bus(note.role))
     },
     setBright(on, time) {
+      bright = on
       padFilter.frequency.setTargetAtTime(kit.padCutoff[on ? 1 : 0], time, 0.6)
       tone.frequency.setTargetAtTime(on ? 12000 : 9000, time, 0.6)
     },

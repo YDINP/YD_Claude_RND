@@ -8,7 +8,7 @@
  */
 import type { SoundPreset } from '@tgslot/renderer'
 
-export type BgmRole = 'pad' | 'keys' | 'arp' | 'lead' | 'bass' | 'kick' | 'snare' | 'hat' | 'shaker' | 'wood' | 'tick' | 'counter'
+export type BgmRole = 'pad' | 'keys' | 'arp' | 'lead' | 'bass' | 'kick' | 'snare' | 'hat' | 'shaker' | 'wood' | 'tick' | 'counter' | 'gong'
 export type BgmVariant = 'base' | 'free'
 
 export interface BgmNote {
@@ -80,6 +80,8 @@ export interface BgmStyle {
   freeKeyShift?: number
   /** 변주(free)에서만 얹는 대선율(화음 구성음 인덱스 무늬). */
   counter?: { lo: number; patterns: readonly (readonly ArpStep[])[] }
+  /** `every`마디에 한 번(마디 첫 박) 치는 타악 한 방(징 같은). 음정 악기가 아니라 변주에서도 음이 오르지 않는다. */
+  accent?: { every: number; role: BgmRole; midi: number; vel: number }
 }
 
 export const BGM_CYCLE_BARS = 32
@@ -318,6 +320,8 @@ export function barEvents(style: BgmStyle, bar: number, variant: BgmVariant = 'b
       if (local >= 0 && local < BEATS_PER_BAR) push('lead', local, n.midi, n.dur, n.vel)
     }
   }
+
+  if (style.accent && b % style.accent.every === 0) push(style.accent.role, 0, style.accent.midi, 1, style.accent.vel, true)
 
   const percSets: (readonly PercStep[])[] = []
   if (layers.perc > 0) percSets.push(style.perc[layers.perc - 1]!)
@@ -711,6 +715,91 @@ const CLOCKWORK: BgmStyle = {
   freePerc: beats([0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75], 'hat', 0.25),
 }
 
+const T1 = 1 / 3
+const T2 = 2 / 3
+
+/**
+ * 한복 야시장: 굿거리 12/8. 한 마디 = 점4분음표 4박(박 안의 8분음표 셋은 1/3박씩), 점4분 = 80.
+ * 평조 오음(G A B D E)의 가야금 분산화음 반주에 해금 선율, 장구 장단 «덩 · 기덕 쿵 · 더러러 쿵 · 기덕 쿵 덕», 4마디마다 징 한 번.
+ * 말판(free)은 자진모리 느낌으로 ×1.35 빨라지고 두 음 올라가며 꽹과리가 박을 짚고 선율이 해금에서 대금으로 바뀐다.
+ */
+const HANBOK: BgmStyle = {
+  seed: 71,
+  bpm: 80,
+  swing: 0,
+  humanize: 0.012,
+  strum: 0.07,
+  key: 67,
+  scale: [0, 2, 4, 7, 9],
+  progression: [
+    'G:6', 'G:6', 'E:m7', 'E:m7', 'A:7sus', 'A:7sus', 'G:6', 'G:6',
+    'G:sus2', 'G:6', 'E:m7', 'E:m7', 'A:7sus', 'D:sus2', 'G:6', 'G:5',
+    'E:m7', 'E:m7', 'G:6', 'G:6', 'A:sus', 'A:7sus', 'D:sus2', 'D:sus2',
+    'G:6', 'E:m', 'A:7sus', 'D:sus2', 'E:m7', 'A:7sus', 'G:6', 'G:6',
+  ],
+  padLo: 55,
+  keysLo: 55,
+  arpLo: 67,
+  bassLo: 43,
+  freeArpShift: 0,
+  freeTempo: 1.35,
+  freeKeyShift: 2,
+  lead: {
+    lo: 67,
+    hi: 86,
+    rest: 0.15,
+    cells: [
+      [s(0, 2), s(2, T2), s(2 + T2, T1), s(3, 1)],
+      [s(0, 1), s(1, T2), s(1 + T2, T1), s(2, 2)],
+      [s(T2, T1), s(1, 1), s(2, T2), s(2 + T2, T1), s(3, 1)],
+      [s(0, 3)],
+      [s(1, 1 + T2), s(2 + T2, T1), s(3, 1)],
+    ],
+  },
+  keys: [
+    [s(0, 2, 0.75), s(2, 1.6, 0.6, 3)],
+    [s(0, 1.4, 0.75), s(1 + T2, 1, 0.5, 2), s(3, 1, 0.6, 3)],
+    [s(0, 2.2, 0.7, 3), s(2 + T2, 1.2, 0.55, 2)],
+  ],
+  arp: [
+    [a(T2, 2, T1, 0.5), a(1, 3, T1, 0.55), a(1 + T1, 4, T1, 0.5), a(2 + T2, 3, T1, 0.5), a(3, 2, T1, 0.5), a(3 + T1, 1, T1, 0.45)],
+    [a(0, 0, T1, 0.6), a(T1, 1, T1, 0.5), a(T2, 2, T1, 0.5), a(2, 3, T1, 0.55), a(2 + T1, 2, T1, 0.5), a(2 + T2, 1, T1, 0.5)],
+    [a(1, 1, T1, 0.5), a(1 + T1, 2, T1, 0.5), a(1 + T2, 3, T2, 0.55), a(3, 4, T1, 0.5), a(3 + T1, 3, T1, 0.45), a(3 + T2, 2, T1, 0.45)],
+  ],
+  bass: [
+    [bs(0, 'r', 1.5, 0.8), bs(2, '5', 1.2, 0.7)],
+    [bs(0, 'r', 1, 0.8), bs(1 + T2, '5', 0.5, 0.55), bs(2, 'r', 1, 0.75), bs(3, 'o', 0.7, 0.6)],
+  ],
+  perc: [
+    // 가볍게: 덩 · 쿵 · 덕
+    [p(0, 'kick', 0.5), p(0, 'snare', 0.3), p(2, 'kick', 0.35), p(2 + T2 + 1 / 6, 'snare', 0.28)],
+    // 꽉 차게: 덩 - 기덕 / 쿵 - 더러러 / 쿵 - 기덕 / 쿵 덕
+    [
+      p(0, 'kick', 0.55), p(0, 'snare', 0.4),
+      p(T2, 'snare', 0.2), p(T2 + 1 / 6, 'snare', 0.32),
+      p(1, 'kick', 0.45),
+      p(1 + T2, 'snare', 0.18), p(1 + T2 + 1 / 9, 'snare', 0.22), p(1 + T2 + 2 / 9, 'snare', 0.28),
+      p(2, 'kick', 0.45),
+      p(2 + T2, 'snare', 0.2), p(2 + T2 + 1 / 6, 'snare', 0.32),
+      p(3, 'kick', 0.45), p(3 + T1, 'snare', 0.32),
+    ],
+    // 필인: 꽉 찬 장단 + 마지막 박 더러러 몰아치기
+    [
+      p(0, 'kick', 0.55), p(0, 'snare', 0.4),
+      p(T2, 'snare', 0.2), p(T2 + 1 / 6, 'snare', 0.32),
+      p(1, 'kick', 0.45),
+      p(1 + T2, 'snare', 0.18), p(1 + T2 + 1 / 9, 'snare', 0.22), p(1 + T2 + 2 / 9, 'snare', 0.28),
+      p(2, 'kick', 0.45),
+      p(2 + T2, 'snare', 0.2), p(2 + T2 + 1 / 6, 'snare', 0.32),
+      p(3, 'kick', 0.5), p(3 + T1, 'snare', 0.34),
+      p(3 + T2, 'snare', 0.3), p(3 + T2 + 1 / 9, 'snare', 0.34), p(3 + T2 + 2 / 9, 'snare', 0.4),
+    ],
+  ],
+  // 말판: 꽹과리가 박마다 짚고 뒷박에 가볍게 받는다.
+  freePerc: [...beats([0, 1, 2, 3], 'hat', 0.5), ...beats([T2, 1 + T2, 2 + T2, 3 + T2], 'hat', 0.28)],
+  accent: { every: 4, role: 'gong', midi: 43, vel: 0.7 },
+}
+
 /** 캔디 팝: 글로켄 선율, 통통 튀는 신스 베이스, 핑거 스냅. D장조 116bpm. 라운드(free)는 반음 위 + 16분 하이햇 + 마림바 대선율. */
 const CANDY: BgmStyle = {
   seed: 37,
@@ -786,4 +875,5 @@ export const BGM_STYLES: Record<SoundPreset, BgmStyle> = {
   shrine: SHRINE,
   clockwork: CLOCKWORK,
   candy: CANDY,
+  hanbok: HANBOK,
 }

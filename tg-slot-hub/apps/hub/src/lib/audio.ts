@@ -363,6 +363,8 @@ interface Recipe {
   /** 롤업 중 틱. `progress`는 0..1. */
   tick(c: AudioContext, progress: number): void
   tickEnd(c: AudioContext, tier: WinTier): void
+  /** 기대감 상승음에 한 겹 더 얹는다(예: 징 저음). 돌려준 소스는 기대감이 끝날 때 함께 멈춘다. `out`은 상승음 공용 게인이다. */
+  riserLayer?(c: AudioContext, t: number, out: AudioNode): AudioScheduledSourceNode[]
 }
 
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98]
@@ -523,6 +525,260 @@ const CANDY_RECIPE: Recipe = {
   },
 }
 
+// ── 한복 야시장 (hanbok-night-market) ─────────────────────
+// 평조 오음(G A B D E) 한 옥타브 반. 가야금(명주실 줄)·해금(활)·대금(숨)·장구·꽹과리·징으로 만든다.
+// shrine 의 고토는 미야코부시 음계의 날카로운 뜯는 현이었다 — 여기는 장조 오음의 부드러운 현이고,
+// 금속성은 꽹과리(비조화 놋쇠)와 징(낮게 부푸는 울림)에서만 나온다.
+
+const HANBOK_SCALE = [392, 440, 493.88, 587.33, 659.25, 783.99, 880, 987.77, 1174.66, 1318.51] as const
+
+/** 사인 한 줄. `bend`가 있으면 그 비율만큼 위에서 시작해 50ms 안에 제 음으로 내려앉는다(농현). */
+function hbSine(c: AudioContext, f: number, at: number, dur: number, vol: number, o: { bend?: number; attack?: number } = {}): void {
+  const t = c.currentTime + at
+  const osc = c.createOscillator()
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(f * (o.bend ?? 1), t)
+  if (o.bend !== undefined && o.bend !== 1) osc.frequency.exponentialRampToValueAtTime(f, t + 0.05)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol, t + (o.attack ?? 0.002))
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  osc.connect(g).connect(master!)
+  osc.start(t)
+  osc.stop(t + dur + 0.02)
+}
+
+/** 가야금: 명주실 줄. 정수배음이 부드럽게 줄고, 뜯은 직후 음이 살짝 올라갔다 자리 잡는다. */
+const gayageumVoice: Voice = (c, f, at, vol) => {
+  hbSine(c, f, at, 1.1, vol, { bend: 1.012 })
+  hbSine(c, f * 2, at, 0.6, vol * 0.36, { bend: 1.012 })
+  hbSine(c, f * 3, at, 0.34, vol * 0.18)
+  hbSine(c, f * 4.01, at, 0.18, vol * 0.08)
+  noise(c, { at, dur: 0.02, vol: vol * 0.25, filter: 'bandpass', freq: 1700, q: 1.4 })
+}
+
+/** 가야금 하모닉 «팅»: 줄 가운데를 살짝 짚고 뜯은 높은 소리. */
+function gayageumHarmonic(c: AudioContext, f: number, at: number, vol: number): void {
+  hbSine(c, f * 2, at, 0.3, vol, { attack: 0.001 })
+  hbSine(c, f * 4.03, at, 0.08, vol * 0.18, { attack: 0.001 })
+}
+
+interface BowOpts {
+  /** 첫 음이 시작하는 높이(제 음 대비). 해금은 아래에서 미끄러져 올라온다. */
+  slide?: number
+  /** 콧소리 대역통과의 시작·끝 주파수. */
+  from?: number
+  to?: number
+  /** false 면 콧소리 대역을 빼서 기음이 가장 크게 남는다(상행 슬라이드용). */
+  nasal?: boolean
+  attack?: number
+}
+
+/** 해금: 톱니파 + 콧소리 대역통과 + 늦게 들어오는 5.5Hz 비브라토. 활을 긋는 거친 숨이 첫머리에 붙는다. */
+function haegeum(c: AudioContext, f: number, at: number, dur: number, vol: number, o: BowOpts = {}): void {
+  const t = c.currentTime + at
+  const osc = c.createOscillator()
+  osc.type = o.nasal === false ? 'triangle' : 'sawtooth'
+  osc.frequency.setValueAtTime(f * (o.slide ?? 0.96), t)
+  osc.frequency.exponentialRampToValueAtTime(f, t + 0.08)
+  const lfo = c.createOscillator()
+  lfo.frequency.value = 5.5
+  const depth = c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.setValueAtTime(0, t + 0.12)
+  depth.gain.linearRampToValueAtTime(f * 0.011, t + 0.12 + Math.min(0.35, dur * 0.5))
+  lfo.connect(depth).connect(osc.frequency)
+  const body = c.createBiquadFilter()
+  body.type = 'lowpass'
+  body.frequency.value = Math.min(4200, f * 3.2)
+  body.Q.value = 0.5
+  const attack = o.attack ?? 0.05
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol, t + attack)
+  g.gain.setValueAtTime(vol, t + Math.max(attack, dur * 0.75))
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  osc.connect(body).connect(g)
+  if (o.nasal !== false) {
+    const nasal = c.createBiquadFilter()
+    nasal.type = 'bandpass'
+    nasal.Q.value = 1.3
+    nasal.frequency.setValueAtTime(o.from ?? 1250, t)
+    if (o.to) nasal.frequency.exponentialRampToValueAtTime(o.to, t + dur)
+    const nasalGain = c.createGain()
+    nasalGain.gain.value = 1.1
+    osc.connect(nasal).connect(nasalGain).connect(g)
+  }
+  g.connect(master!)
+  osc.start(t)
+  lfo.start(t)
+  osc.stop(t + dur + 0.05)
+  lfo.stop(t + dur + 0.05)
+  noise(c, { at, dur: Math.min(0.2, dur), vol: vol * 0.3, filter: 'bandpass', freq: 3000, q: 1 })
+}
+
+/** 대금: 숨이 섞인 사인 + 대역 잡음 + 청(갈대 막) 울림의 높은 숨. */
+function daegeum(c: AudioContext, f: number, at: number, dur: number, vol: number): void {
+  hbSine(c, f, at, dur, vol, { attack: 0.04 })
+  hbSine(c, f * 2, at, dur * 0.7, vol * 0.12, { attack: 0.05 })
+  noise(c, { at, dur, vol: vol * 0.4, filter: 'bandpass', freq: f * 2, q: 1.6 })
+  noise(c, { at, dur: dur * 0.8, vol: vol * 0.1, filter: 'highpass', freq: 4500 })
+}
+
+/** 장구 궁편: 낮은 가죽 «쿵». */
+function gungpyeon(c: AudioContext, at: number, vol: number): void {
+  tone(c, { freq: 135, slideTo: 78, at, dur: 0.22, vol, type: 'sine', attack: 0.003 })
+  tone(c, { freq: 270, slideTo: 170, at, dur: 0.07, vol: vol * 0.25, type: 'triangle', attack: 0.002 })
+  noise(c, { at, dur: 0.03, vol: vol * 0.25, filter: 'lowpass', freq: 600, q: 0.7 })
+}
+
+/** 장구 채편: 얇은 가죽 «덕». 2.5kHz 대역 잡음 + 400Hz 몸통. `lift`가 크면 조금 높다. */
+function chaepyeon(c: AudioContext, at: number, vol: number, lift = 1): void {
+  noise(c, { at, dur: 0.06, vol: vol * 0.9, filter: 'bandpass', freq: 2500 * lift, q: 2.2 })
+  tone(c, { freq: 420 * lift, slideTo: 330 * lift, at, dur: 0.05, vol: vol * 0.5, type: 'triangle', attack: 0.001 })
+}
+
+/** 꽹과리 «갱»: 놋쇠. 정수배가 아닌 배음이 한꺼번에 울고 기음 곁에 맥놀이가 붙는다. */
+function kkwaeng(c: AudioContext, at: number, vol: number, f = 1180, ring = 0.32): void {
+  const partials: readonly (readonly [number, number, number])[] = [
+    [1, 1, 1],
+    [1.47, 0.65, 0.8],
+    [2.12, 0.5, 0.6],
+    [2.91, 0.36, 0.45],
+    [3.76, 0.3, 0.3],
+    [5.1, 0.2, 0.2],
+    [6.4, 0.12, 0.14],
+  ]
+  for (const [ratio, amp, decay] of partials) hbSine(c, f * ratio, at, ring * decay, vol * amp * 0.55, { attack: 0.001 })
+  hbSine(c, f * 1.012, at, ring * 0.9, vol * 0.25, { attack: 0.001 })
+  noise(c, { at, dur: 0.05, vol: vol * 0.3, filter: 'bandpass', freq: 4200, q: 0.8 })
+}
+
+/** 징: 낮게 부풀어 오르는 울림. 두 줄이 살짝 어긋나 맥놀이가 난다. */
+function jing(c: AudioContext, at: number, vol: number, dur = 2.2, swell = 0.28): void {
+  tone(c, { freq: 100, slideTo: 94, at, dur, vol, type: 'sine', attack: swell })
+  tone(c, { freq: 100.8, slideTo: 94.8, at, dur: dur * 0.9, vol: vol * 0.7, type: 'sine', attack: swell })
+  tone(c, { freq: 232, at, dur: dur * 0.5, vol: vol * 0.22, type: 'sine', attack: swell * 1.2 })
+  tone(c, { freq: 311, at, dur: dur * 0.35, vol: vol * 0.12, type: 'sine', attack: swell * 1.4 })
+  noise(c, { at, dur: 0.08, vol: vol * 0.15, filter: 'lowpass', freq: 900 })
+}
+
+/** 휙: 잡음의 대역이 올라가며 소리가 서서히 차올랐다 빠진다. 시작이 단번에 터지면 «탁»(타격)으로 들린다. */
+function swish(c: AudioContext, at: number, dur: number, vol: number, from: number, to: number): void {
+  if (!noiseBuffer) return
+  const t = c.currentTime + at
+  const src = c.createBufferSource()
+  src.buffer = noiseBuffer
+  const f = c.createBiquadFilter()
+  f.type = 'bandpass'
+  f.Q.value = 1.1
+  f.frequency.setValueAtTime(from, t)
+  f.frequency.exponentialRampToValueAtTime(to, t + dur)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.55)
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+  src.connect(f).connect(g).connect(master!)
+  src.start(t, Math.random() * 0.5)
+  src.stop(t + dur + 0.02)
+}
+
+/** 엽전 한 닢 «짤랑»: 짧은 고역 배음 네 개를 순서대로, 고정 패턴. */
+function yeopjeon(c: AudioContext, at: number, vol: number, partials = 4, pitch = 1): void {
+  const list: readonly (readonly [number, number, number, number])[] = [
+    [3150, 0, 0.16, 1],
+    [4230, 0.016, 0.13, 0.85],
+    [5360, 0.031, 0.1, 0.7],
+    [6580, 0.047, 0.08, 0.5],
+  ]
+  for (const [f, d, dur, amp] of list.slice(0, partials)) hbSine(c, f * pitch, at + d, dur, vol * amp, { attack: 0.001 })
+  if (partials > 3) hbSine(c, 1580 * pitch, at, 0.07, vol * 0.4, { attack: 0.001 })
+}
+
+/** 당첨 동안 엽전이 흩어져 떨어진다. 간격·음높이·세기가 들쭉날쭉하지만 고정된 수열이라 매번 같은 소리다. */
+function yeopjeonShower(c: AudioContext, dur: number, density: number, vol: number): void {
+  const count = Math.min(30, Math.round(dur * density))
+  let seed = 7
+  const next = (): number => {
+    seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff
+    return seed / 0x7fffffff
+  }
+  for (let i = 0; i < count; i++) {
+    const at = ((i + next() * 0.9) / count) * dur
+    yeopjeon(c, at, vol * (0.45 + next() * 0.55), 3, 0.86 + next() * 0.3)
+  }
+}
+
+/** 꽹과리 «갱 갱 갱개갱». */
+function kkwaengPhrase(c: AudioContext, at: number, vol: number): void {
+  ;[0, 0.2, 0.4].forEach((d) => kkwaeng(c, at + d, vol))
+  kkwaeng(c, at + 0.58, vol * 0.7, 1230, 0.2)
+  kkwaeng(c, at + 0.68, vol)
+}
+
+const HANBOK_RECIPE: Recipe = {
+  loop: { hz: 640, ticks: 12, tonal: 0.45, alt: 0.55, len: 0.03, vol: 0.12 },
+  riser: { wave: 'sawtooth', from: 196, to: 392, pulseHz: 4, lp: 1000, vol: 0.065 },
+  scale: HANBOK_SCALE,
+  spinStart(c) {
+    run(c, gayageumVoice, HANBOK_SCALE, [0, 1, 2, 3, 4], 0.04, 0.08)
+  },
+  reelStop(c, lift) {
+    // 릴이 뒤로 갈수록 lift 가 0.06 씩 오른다. 마지막(다섯째) 릴만 궁편 «쿵»이 같이 울린다.
+    const reel = Math.round((lift - 1) / 0.06)
+    chaepyeon(c, 0, 0.95, lift)
+    if (reel >= 4) gungpyeon(c, 0.01, 0.95)
+  },
+  winSmall(c, rollup) {
+    gungpyeon(c, 0, 0.3)
+    chaepyeon(c, 0, 0.3)
+    run(c, gayageumVoice, HANBOK_SCALE, [0, 3, 5], 0.1, 0.3)
+    yeopjeonShower(c, Math.min(rollup, 1.2), 7, 0.03)
+  },
+  winBig(c, tier, rollup) {
+    const strokes = { big: 1, mega: 2, epic: 3, max: 3 }[tier]
+    const stroke = [0, 3, 5]
+    for (let i = 0; i < strokes; i++) haegeum(c, HANBOK_SCALE[stroke[i]!]!, i * 0.55, 1.0, 0.24, { from: 900, to: 1500, attack: 0.28 })
+    for (let i = 0; i < strokes; i++) kkwaeng(c, 0.4 + i * 0.55, 0.42)
+    run(c, (cc, f, a, v) => gayageumVoice(cc, f, a + 0.45, v), HANBOK_SCALE, tier === 'big' ? [3, 5, 7] : [0, 2, 3, 5, 7], 0.07, 0.25)
+    if (tier === 'epic' || tier === 'max') jing(c, strokes * 0.55, 0.4)
+    if (tier === 'max') kkwaengPhrase(c, strokes * 0.55 + 0.1, 0.4)
+    yeopjeonShower(c, rollup, tier === 'big' ? 5 : 8, 0.03)
+  },
+  feature(c) {
+    kkwaengPhrase(c, 0, 0.5)
+    jing(c, 0, 0.5, 2.0, 0.5)
+    noise(c, { at: 0.2, dur: 1.0, vol: 0.12, filter: 'bandpass', freq: 500, sweepTo: 4200, q: 1.4 })
+  },
+  mutation(c) {
+    ;[7, 9].forEach((n, i) => gayageumHarmonic(c, HANBOK_SCALE[n]! / 2, i * 0.06, 0.12))
+  },
+  tick(c, progress) {
+    // 롤업이 오를수록 오음계를 한 칸씩 올라가는 «팅»
+    gayageumHarmonic(c, HANBOK_SCALE[5 + Math.min(4, Math.floor(progress * 5))]!, 0, 0.1)
+  },
+  tickEnd(c, tier) {
+    jing(c, 0, tier === 'none' ? 0.26 : 0.34, 0.6, 0.04)
+    if (tier !== 'none') kkwaeng(c, 0.02, 0.22)
+  },
+  riserLayer(c, t, out) {
+    // 징 저음이 서서히 부푼다. 두 줄이 어긋나 맥놀이가 난다.
+    const drone = (f: number, amp: number): OscillatorNode => {
+      const o = c.createOscillator()
+      o.type = 'sine'
+      o.frequency.setValueAtTime(f, t)
+      o.frequency.linearRampToValueAtTime(f * 1.06, t + 1.4)
+      const g = c.createGain()
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(amp, t + 1.3)
+      o.connect(g).connect(out)
+      o.start(t)
+      return o
+    }
+    return [drone(98, 3), drone(99.6, 2.2)]
+  },
+}
+
 const WESTERN_RECIPE: Recipe = {
   loop: { hz: 950, ticks: 12, tonal: 0.35, alt: 0.2, len: 0.026, vol: 0.2 },
   riser: { wave: 'sawtooth', from: 110, to: 440, pulseHz: 7, lp: 1500, vol: 0.1 },
@@ -661,6 +917,7 @@ const RECIPES: Record<SoundPreset, Recipe> = {
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
   candy: CANDY_RECIPE,
+  hanbok: HANBOK_RECIPE,
 }
 
 let preset: SoundPreset = 'bell'
@@ -880,6 +1137,7 @@ export function startAnticipation(): void {
   fifthGain.gain.value = 0.4
   fifth.connect(fifthGain).connect(lp)
   const extra: AudioScheduledSourceNode[] = [fifth]
+  if (recipe.riserLayer) extra.push(...recipe.riserLayer(c, t, gain))
   if (noiseBuffer) {
     const wash = c.createBufferSource()
     wash.buffer = noiseBuffer
@@ -937,6 +1195,126 @@ export function playRollupEnd(tier: WinTier): void {
   const c = live()
   if (!c) return
   recipe.tickEnd(c, tier)
+}
+
+// ── 말판 보너스 (hanbok-night-market) ─────────────────────
+// 음색은 HANBOK_RECIPE 와 같은 재료(가야금·해금·대금·장구·꽹과리·징)다. 이 소리들은 말판 화면에서만 불린다.
+// 결과는 서버가 이미 정했고 소리는 그 결과를 한 번씩 보여 줄 뿐이다 — 입력으로 달라지는 소리는 없다.
+
+/** 윷가락을 던진다: 막대가 공기를 가르는 «휙». 250ms 동안 잡음의 고역이 올라간다. */
+export function playYutToss(): void {
+  const c = live()
+  if (!c) return
+  swish(c, 0, 0.26, 0.7, 700, 4600)
+}
+
+/**
+ * 윷가락 넷이 떨어진다: 나무 막대 «딱딱딱딱». 가락마다 음높이와 간격(25~60ms)이 다르다.
+ * 납작한 면이 위로 나온 가락은 밝고 짧게, 둥근 면은 둔하고 길게 울린다. `steps`는 1(도)~5(모) — 모는 납작한 면이 하나도 없다.
+ */
+export function playYutLand(steps: number): void {
+  const c = live()
+  if (!c) return
+  const flat = steps >= 5 ? 0 : Math.min(4, Math.max(0, Math.round(steps)))
+  const at = [0, 0.034, 0.07, 0.124]
+  const pitch = [1, 1.13, 0.93, 1.22]
+  for (let i = 0; i < 4; i++) {
+    const p = pitch[i]!
+    // 막대가 바닥에 닿아 울리는 나무 몸통
+    tone(c, { freq: 380 * p, at: at[i]!, dur: 0.12, vol: 0.14, type: 'sine', attack: 0.002 })
+    if (i < flat) {
+      tone(c, { freq: 1100 * p, slideTo: 600 * p, at: at[i]!, dur: 0.07, vol: 0.5, type: 'triangle', attack: 0.001 })
+      noise(c, { at: at[i]!, dur: 0.04, vol: 0.4, filter: 'bandpass', freq: 1900, q: 1.5 })
+    } else {
+      tone(c, { freq: 560 * p, slideTo: 320 * p, at: at[i]!, dur: 0.09, vol: 0.55, type: 'triangle', attack: 0.001, lp: 2000, lpTo: 450 })
+      noise(c, { at: at[i]!, dur: 0.045, vol: 0.3, filter: 'bandpass', freq: 850, q: 1.4 })
+    }
+  }
+}
+
+/**
+ * 결과를 부른다: 도(1)→모(5)로 갈수록 오음계를 한 칸씩 올라간다. 윷(4)·모(5)는 꽹과리 장식과 «한 번 더» 반짝이 붙는다.
+ * 가장 큰 소리는 늘 제 음 하나라서 스펙트럼 피크가 단계마다 오른다.
+ */
+export function playYutCall(steps: number): void {
+  const c = live()
+  if (!c) return
+  const n = Math.min(5, Math.max(1, Math.round(steps)))
+  gayageumVoice(c, HANBOK_SCALE[n - 1]!, 0.06, 0.34)
+  if (n >= 2) gayageumVoice(c, HANBOK_SCALE[n - 2]!, 0, 0.08)
+  if (n >= 4) {
+    kkwaeng(c, 0.08, 0.14)
+    hbSine(c, 1568, 0.3, 0.14, 0.05, { attack: 0.001 })
+    hbSine(c, 2349.3, 0.36, 0.14, 0.05, { attack: 0.001 })
+  }
+}
+
+/** 말이 한 칸 건넌다: 부드러운 나무 «톡». 칸마다 반음씩 올라간다(한 번 이동은 12칸까지만 오른다). */
+export function playTokenHop(index: number): void {
+  const c = live()
+  if (!c) return
+  const f = 520 * 2 ** (Math.min(12, Math.max(0, Math.floor(index))) / 12)
+  tone(c, { freq: f, slideTo: f * 0.78, dur: 0.06, vol: 0.55, type: 'sine', attack: 0.002 })
+  tone(c, { freq: f * 2.4, dur: 0.025, vol: 0.1, type: 'sine', attack: 0.001 })
+  noise(c, { dur: 0.015, vol: 0.15, filter: 'bandpass', freq: 1500, q: 1.5 })
+}
+
+/** 엽전 칸: 짤랑. */
+export function playTileCoin(): void {
+  const c = live()
+  if (!c) return
+  yeopjeon(c, 0, 0.18)
+}
+
+/** 배수 칸: 해금이 짧게 올라 미끄러진다. `level`이 오를 때마다 오음계로 한 음 위다. */
+export function playTileMult(level: number): void {
+  const c = live()
+  if (!c) return
+  const n = Math.min(HANBOK_SCALE.length - 1, Math.max(0, Math.floor(level)) + 2)
+  haegeum(c, HANBOK_SCALE[n]!, 0, 0.3, 0.16, { slide: 0.8, nasal: false, attack: 0.02 })
+  gayageumHarmonic(c, HANBOK_SCALE[n]!, 0.12, 0.12)
+}
+
+/** 함정 칸: 바람 «쉬익», 등불이 꺼지는 «훅», 장구 «쿵»이 가라앉는다. */
+export function playTileTrap(): void {
+  const c = live()
+  if (!c) return
+  noise(c, { dur: 0.5, vol: 0.3, filter: 'lowpass', freq: 3500, sweepTo: 300, q: 0.8 })
+  noise(c, { at: 0.18, dur: 0.12, vol: 0.18, filter: 'bandpass', freq: 700, q: 1.2 })
+  gungpyeon(c, 0.3, 0.55)
+  tone(c, { freq: 180, slideTo: 60, at: 0.3, dur: 0.3, vol: 0.2, type: 'sine', attack: 0.004 })
+}
+
+/** 지름길이 열렸다: 대금의 숨이 섞인 세 음이 올라간다. */
+export function playFork(): void {
+  const c = live()
+  if (!c) return
+  ;[3, 4, 5].forEach((n, i) => daegeum(c, HANBOK_SCALE[n]!, i * 0.13, 0.22, 0.3))
+}
+
+/** 결승: 징이 부풀고, 꽹과리가 몰아치고, 가야금이 끝까지 올라간다. */
+export function playGoal(): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(2.6)
+  jing(c, 0, 0.4, 2.4, 0.05)
+  let at = 0.05
+  for (let i = 0; i < 10; i++) {
+    kkwaeng(c, at, 0.24, i % 2 ? 1230 : 1180, 0.18)
+    at += 0.12 - i * 0.007
+  }
+  run(c, (cc, f, a, v) => gayageumVoice(cc, f, a + 0.55, v), HANBOK_SCALE, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 0.05, 0.22)
+  jing(c, 1.2, 0.28, 1.6, 0.04)
+}
+
+/** 말판 요약 카드: 장구 «덩»(궁편+채편)과 가야금 화음. */
+export function playBoardSummary(): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(1.4)
+  gungpyeon(c, 0, 0.45)
+  chaepyeon(c, 0, 0.4)
+  chord(c, gayageumVoice, [HANBOK_SCALE[0]!, HANBOK_SCALE[2]!, HANBOK_SCALE[3]!, HANBOK_SCALE[5]!, HANBOK_SCALE[7]!], 0.04, 0.22, 0.03)
 }
 
 // ── 버튼음 ────────────────────────────────────────────────

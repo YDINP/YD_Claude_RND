@@ -27,6 +27,7 @@ import { useT, useEffectiveLocale } from '../../i18n'
 import { useSettingsStore, type SpinSpeed } from '../../store/settings'
 import { groupLabel, groupMembers, symbolLabel, winLineLabel } from '../../game/labels'
 import { useDialog } from '../../hooks/useDialog'
+import { useBoardBonus } from '../../hooks/useBoardBonus'
 import { detectDebugFlag, writeStoredDebugFlag } from '../../lib/debugFlag'
 import { presetsFor } from '../../lib/debugPreset'
 import { completedOrders, ladderIndexOf, orderCardText, type CompletedOrder } from '../../game/orders'
@@ -66,6 +67,7 @@ import { DebugPanel } from './DebugPanel'
 import { LadderMeter } from './LadderMeter'
 import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
 import { ClusterHelp, OrderRoundHelp } from './ClusterHelp'
+import { BoardHelp } from './board/BoardHelp'
 import './GameScreen.css'
 
 /** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
@@ -528,7 +530,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    * 세리머니(팝업 또는 커튼) 또는 빅윈 오버레이가 화면을 붙들고 있는 동안 — 스핀/스킵 입력을
    * 전부 무시하고 베팅 셀렉터도 잠근다. 팝업/오버레이 자신의 닫기 탭만 살아 있다.
    */
-  const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null
+  // 말판 보너스가 재생·전환 중일 때도 같다 — 말판 화면(전체 덮개) 아래 스핀 버튼이 눌려선 안 된다.
+  // `tickWinTo`는 함수 선언이라 아래에 있어도 쓸 수 있다.
+  const board = useBoardBonus({
+    gameId,
+    theme,
+    themeSettled: theme !== null || rendererError,
+    onWinStrip: (value, ms) => tickWinTo(value, Math.max(1, ms)),
+  })
+  const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null || board.active
   const roundPopup = activePopup(roundFlow)
 
   // WinStrip의 프리스핀 카운터가 참조하는 "표시용" freeSpins. store.freeSpins는 스핀 응답이
@@ -776,7 +786,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 판정할 수 있도록 사이클 번호를 먼저 적어 둔다.
       winCycleRef.current = event.cycle
       lineLabelKeyRef.current += 1
-      setLineLabelSource({ kind: 'cycle', totalWin: event.totalWin, key: lineLabelKeyRef.current })
+      // 라인 승리 없이 스캐터·피처만 이긴 판(예: 초롱 3개 → 말판)은 라인 합계가 0이다 — «합계 0»을 띄우지 않는다.
+      setLineLabelSource(
+        event.totalWin > 0 ? { kind: 'cycle', totalWin: event.totalWin, key: lineLabelKeyRef.current } : null,
+      )
       return
     }
 
@@ -1259,6 +1272,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       if (isEditableTarget(event.target)) return
       if (isActivatableTarget(event.target)) return
       if (spaceHeldRef.current) return // 오토리핏 — keyup에서 풀릴 때까지 무시한다.
+      // 말판 화면이 떠 있으면 스페이스는 말판이 쓴다(던지기·넘기기·받기) — 오토스핀 중지로 새면 안 된다.
+      if (board.active) return
 
       // 오토스핀 중이면 스페이스도 메인 버튼과 똑같이 "중지"다 — 그렇지 않으면 판 사이의 짧은
       // idle 틈에 스페이스가 여분의 스핀을 하나 더 끼워 넣는다.
@@ -1318,6 +1333,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     freeSpins,
     gambleModalOpen,
     roundBusy,
+    board.active,
     autoSpinning,
     handleSpin,
     handleSkipWinsAndAdvance,
@@ -1477,13 +1493,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       // 서버가 공개한 stops와 같아야 하고(계산이 재현 가능함), 그 공개된 stops도 이미 화면에서
       // 본 결과(lastResult.stops)와 같아야 한다(서버가 다른 라운드의 증명을 준 게 아님).
       const rng = createSeededRng(seedInfo.seedInput)
-      const replay = replaySpin(math, { totalBet: lastResult.totalBet }, rng, seedInfo.stateBefore)
+      // 서버는 상태 없는 라운드에 `stateBefore: null`을 준다. 엔진은 `undefined`만 «상태 없음»으로 읽는다 —
+      // null을 그대로 넘기면 기본 스핀을 프리스핀으로 착각해 터지고, 말판도 열리지 않아 금액이 어긋난다.
+      const stateBefore = seedInfo.stateBefore ?? undefined
+      const replay = replaySpin(math, { totalBet: lastResult.totalBet }, rng, stateBefore)
       const stopsMatch =
         stopsEqual(replay.stops, seedInfo.stops) && stopsEqual(seedInfo.stops, lastResult.stops)
       // 프리스핀·주문 라운드의 스핀은 시작 상태(배수·카드)가 있어야 같은 금액이 나온다. 서버가 `stateBefore`를
       // 주지 않는 라운드는 비교하지 않는다.
       const winMatch =
-        lastResult.isFreeSpin && seedInfo.stateBefore === undefined ? null : replay.totalWin === lastResult.totalWin
+        lastResult.isFreeSpin && stateBefore === undefined ? null : replay.totalWin === lastResult.totalWin
 
       setVerifyResult({ hashMatch, stopsMatch, winMatch })
       setVerifyState('done')
@@ -1697,6 +1716,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           skin={celebrationSkin}
         />
       )}
+
+      {/* 말판 보너스(커튼 + 말판 화면). 스토어가 boardPlay를 세운 동안만 뜨고, 끝나면 멈춰 있던 판이 이어진다. */}
+      {board.overlay}
 
       {/* gambleSession이 아니라 gambleModalOpen만으로 마운트를 결정한다 — 지는 픽은 세션을
           즉시 지우므로(store), 세션 존재를 조건으로 걸면 결과가 뜨기도 전에 모달이 닫혀버린다. */}
@@ -2187,6 +2209,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                     </div>
                   )}
                   {math.orderRound && <OrderRoundHelp math={math} locale={locale} />}
+                  {math.boardBonus && <BoardHelp math={math} symbols={theme?.symbols} />}
                 </>
               )}
 
