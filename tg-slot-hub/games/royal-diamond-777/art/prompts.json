@@ -97,7 +97,7 @@
     {
       "id": "frame",
       "kind": "frame",
-      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square art-deco cabinet frame on a deep black velvet body with polished platinum fluting, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: a black velvet plate with a platinum art-deco sunburst border, engraved wordmark 'ROYAL DIAMOND 777' in bold platinum art-deco caps, no other text. The reel window occupies x 2%-98% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% platinum rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim platinum side rails run the height of the window, each at most 1.5% of the frame width, styled as narrow stepped-chevron art-deco fluting each holding 2-3 small inset diamond-cyan gems for detail without bulk. The bottom y 83%-100% is a plain weighted platinum base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides.",
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a wide-window square art-deco cabinet frame on a deep black velvet body with polished platinum fluting, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-27%: a black velvet plate with a platinum art-deco sunburst border, engraved wordmark 'ROYAL DIAMOND 777' in bold platinum art-deco caps, no other text. The reel window occupies x 6%-95% and y 29%-76% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% platinum rim running just outside the green (this window will later be replaced with the live reel canvas). Two slim platinum side rails run the height of the window, each at most 5% of the frame width, styled as narrow stepped-chevron art-deco fluting each holding 2-3 small inset diamond-cyan gems for detail without bulk. The bottom y 78%-100% is a plain weighted platinum base molding with soft ambient shadow, no legend strip, no payline icons, no additional text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 1.9:1 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides.",
       "size": "1024x1024",
       "transparent": true,
       "out": "theme/frame.webp",
@@ -110,6 +110,15 @@
       "size": "1024x1536",
       "transparent": false,
       "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing and composition to the base black velvet lounge background so the two can crossfade cleanly — the same deep black velvet lounge now in a free-spins celebration moment: the out-of-focus chandelier points at the upper corners glow noticeably brighter in diamond-cyan (#8fe3f2) with a few slow sparkling glints, a faint deep velvet-red (#8f1f2e) accent light washes the lower wall fluting and the polished floor reflection, the platinum art-deco fluting catches richer cool highlights, a soft radial vignette still darkens the corners and edges so foreground content stays legible, more luminous and festive than the base background but still calm and low-contrast enough not to fight with reels and UI, no characters, no readable text, no sharp details competing for attention.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
       "outSize": 1080
     },
     {
