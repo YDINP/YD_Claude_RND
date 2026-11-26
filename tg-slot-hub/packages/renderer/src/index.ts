@@ -143,15 +143,25 @@ export {
 } from './transitionClip.js'
 export {
   findFreeSpins,
+  findStageRoulette,
   isFreeSpinsTrigger,
   isScatterWinTrigger,
+  isStageRouletteTrigger,
   scatterPositions,
   type FeatureTrigger,
   type FreeSpinsMode,
   type FreeSpinsTrigger,
   type RendererMode,
   type ScatterWinTrigger,
+  type StageRouletteTrigger,
 } from './features.js'
+export {
+  planRouletteHighlight,
+  rouletteHighlightMs,
+  type RouletteHighlightOptions,
+  type RouletteHighlightStage,
+  type RouletteHighlightStep,
+} from './rouletteFeature.js'
 export {
   buildPresentation,
   defaultLineLabel,

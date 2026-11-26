@@ -9,7 +9,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'idol'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -158,6 +158,11 @@ export type RendererEvent =
    * 인트로 배너는 허브가 띄운다. 렌더러는 릴 위 연출만 맡는다.
    */
   | { type: 'featureTriggered'; feature: FeatureTrigger }
+  /**
+   * 무대 룰렛 진입에서 응원봉 칸이 빛나기 시작했다(초대권 강조 다음 단계). 허브가 이 칸들의 좌표로
+   * 불빛 토큰을 날려 프레임 위 칩 «응원봉 ×N»으로 모은다. 응원봉이 없는 판에서는 오지 않는다.
+   */
+  | { type: 'rouletteCheer'; positions: readonly GridPosition[] }
   /**
    * 배경 전환이 시작하거나 끝났다.
    * 허브가 프리스핀 인트로/종료 배너를 이 신호에 맞춰 띄우고 내리라고 있는 이벤트다.

@@ -7,9 +7,20 @@ export type { FeatureTrigger }
 export type FreeSpinsTrigger = Extract<FeatureTrigger, { type: 'freeSpins' }>
 /** 스캐터 배당 트리거만 좁힌 형태. 좌표를 들고 있는 유일한 피처다. */
 export type ScatterWinTrigger = Extract<FeatureTrigger, { type: 'scatterWin' }>
+/** 무대 룰렛 진입 트리거만 좁힌 형태. 초대권·응원봉 좌표와 회전 결과 전체가 들어 있다. */
+export type StageRouletteTrigger = Extract<FeatureTrigger, { type: 'stageRoulette' }>
 
 export function isFreeSpinsTrigger(feature: FeatureTrigger): feature is FreeSpinsTrigger {
   return feature.type === 'freeSpins'
+}
+
+export function isStageRouletteTrigger(feature: FeatureTrigger): feature is StageRouletteTrigger {
+  return feature.type === 'stageRoulette'
+}
+
+/** 목록에서 무대 룰렛 트리거 하나. 없으면 null. */
+export function findStageRoulette(features: readonly FeatureTrigger[] = []): StageRouletteTrigger | null {
+  return features.find(isStageRouletteTrigger) ?? null
 }
 
 export function isScatterWinTrigger(feature: FeatureTrigger): feature is ScatterWinTrigger {
@@ -51,4 +62,9 @@ export interface RendererMode {
    * 방금 진입한 게 아니라 이미 그 모드였던 경우에 쓴다. 실제 진입 판은 이 값을 주지 않는다.
    */
   immediate?: boolean
+  /**
+   * true면 릴과 릴 뒤 패널을 감춘다(전환이 화면을 덮은 순간). 허브가 릴 자리를 DOM 오버레이로 쓰는 보너스
+   * (무대 룰렛)용이다. 모드가 바뀔 때마다 이 값으로 다시 맞춘다 — 생략하면 릴이 보인다.
+   */
+  hideReels?: boolean
 }

@@ -1268,6 +1268,16 @@ class PixiRenderer implements RendererCore {
     for (const view of this.reels) view.root.visible = visible
   }
 
+  /**
+   * 모드가 릴을 감추라고 하면(`hideReels`, 무대 룰렛) 릴과 릴 뒤 패널을 함께 감춘다. 연쇄 연출이 잠깐 릴을 감추는
+   * `setReelsVisible`과는 별개다 — 패널은 그쪽이 건드리지 않는다.
+   */
+  private applyReelsHidden(): void {
+    const hidden = this.mode.hideReels === true
+    this.setReelsVisible(!hidden)
+    this.backdropGraphics.visible = !hidden
+  }
+
   // ------------------------------------------------------------------ 승리
 
   /**
@@ -1400,6 +1410,11 @@ class PixiRenderer implements RendererCore {
       return
     }
 
+    if (step.phase === 'roulette') {
+      this.renderRouletteStep(step)
+      return
+    }
+
     if (step.phase === 'feature') {
       // 스캐터는 계속 밝게 두고, 자리마다 파티클이 가운데로 모인다.
       this.dimExcept(step.scatters)
@@ -1422,6 +1437,29 @@ class PixiRenderer implements RendererCore {
     this.playFxAt(win.positions)
     // 릴 위에는 글자를 찍지 않는다. 문구는 허브가 이 이벤트를 받아 릴 밖에 그린다.
     this.emit(winLineEvent(win, context))
+  }
+
+  /**
+   * 무대 룰렛 진입 두 단계. 초대권 칸은 두 단계 내내 밝게 남고, 응원봉 칸은 둘째 단계에서 분홍 광채를 입는다.
+   * 룰렛 화면은 허브 DOM 오버레이라 여기서는 릴 위 강조와 신호(`featureTriggered`·`rouletteCheer`)만 맡는다.
+   */
+  private renderRouletteStep(step: Extract<PresentationStep, { phase: 'roulette' }>): void {
+    if (step.stage === 'pass') {
+      this.dimExcept(step.scatters)
+      this.playFxAt(step.scatters)
+      this.showScatters(step.scatters)
+      if (!this.options.reducedMotion && step.scatters.length > 0) {
+        this.stopScatterBurst = burstScatters(this.particlePool, this.coinTexture, this.layout, step.scatters)
+      }
+      this.emit({ type: 'featureTriggered', feature: step.feature })
+      return
+    }
+    this.dimExcept([...step.scatters, ...step.cheer])
+    this.drawWinGlow(step.cheer, this.options.theme.palette.winLine[0])
+    this.crossfadeOverlay()
+    this.playFxAt(step.cheer)
+    this.showScatters(step.scatters)
+    this.emit({ type: 'rouletteCheer', positions: step.cheer })
   }
 
   /**
@@ -1643,8 +1681,8 @@ class PixiRenderer implements RendererCore {
    * 이긴 자리마다 브라스 광채 테두리를 두른다. 굵고 흐린 선부터 겹쳐 블러 없이 번짐을 만든다.
    * A단계(전체)와 B단계(라인별)가 같은 함수를 쓴다. 두 화면의 테두리가 달라 보이면 안 된다.
    */
-  private drawWinGlow(positions: readonly GridPosition[]): void {
-    const brass = this.options.theme.palette.frame
+  private drawWinGlow(positions: readonly GridPosition[], color?: string): void {
+    const brass = color ?? this.options.theme.palette.frame
     const radius = this.layout.radius * 0.5
     const rects = positionRects(this.layout, positions)
     for (const glow of WIN_GLOW_LAYERS) {
@@ -1733,6 +1771,7 @@ class PixiRenderer implements RendererCore {
     this.mode = mode
 
     if (target === null) {
+      this.applyReelsHidden()
       this.drawMode()
       return
     }
@@ -1910,6 +1949,7 @@ class PixiRenderer implements RendererCore {
     this.freeSpinsVisible = to === 'freeSpins'
     this.freeSpinsSprite.visible = this.freeSpinsVisible
     this.modeGraphics.alpha = 1
+    this.applyReelsHidden()
     this.drawMode()
   }
 

@@ -1,10 +1,13 @@
 import type { GameMath, GridPosition, WinLine } from '@tgslot/slot-engine'
 import {
   findFreeSpins,
+  findStageRoulette,
   scatterPositions,
   type FeatureTrigger,
   type FreeSpinsTrigger,
+  type StageRouletteTrigger,
 } from './features.js'
+import { planRouletteHighlight } from './rouletteFeature.js'
 import {
   BRIEF_PHASE_ALL_SCALE,
   PHASE_ALL_BIGWIN_MS,
@@ -61,6 +64,20 @@ export type PresentationStep =
       cascade?: true
     }
   | { phase: 'feature'; feature: FreeSpinsTrigger; scatters: GridPosition[]; durationMs: number }
+  /**
+   * 무대 룰렛 진입. `pass`는 초대권 칸 강조(`featureTriggered`), `cheer`는 응원봉 칸 강조(`rouletteCheer`).
+   * 룰렛 자체는 허브 오버레이가 이어받으므로 렌더러 순환(B단계·반복)에는 끼지 않는다 — 허브가 `brief`로 부른다.
+   */
+  | {
+      phase: 'roulette'
+      stage: 'pass' | 'cheer'
+      feature: StageRouletteTrigger
+      /** 초대권 칸(두 단계 모두 계속 밝게 남는다). */
+      scatters: GridPosition[]
+      /** 응원봉 칸. `pass` 단계에서는 비어 있다. */
+      cheer: GridPosition[]
+      durationMs: number
+    }
   | { phase: 'line'; win: WinLine; scatters: GridPosition[]; durationMs: number }
 
 export interface PresentationOptions {
@@ -175,8 +192,9 @@ export function buildPresentation(
   const features = options.features ?? []
   const scatters = scatterPositions(features)
   const freeSpins = findFreeSpins(features)
+  const roulette = findStageRoulette(features)
   if (options.mode === 'cascade') return buildCascadePresentation(wins, math, options, scatters, freeSpins)
-  if (wins.length === 0 && scatters.length === 0 && freeSpins === null) return []
+  if (wins.length === 0 && scatters.length === 0 && freeSpins === null && roulette === null) return []
 
   const reduced = options.reducedMotion === true
   const cap = (ms: number): number => (reduced ? Math.min(ms, REDUCED_WIN_CYCLE_MS) : ms)
@@ -192,8 +210,11 @@ export function buildPresentation(
   const ordered = isWaysGame(math) ? sortWaysWins(wins) : [...wins].sort((a, b) => a.line - b.line)
   const dwell = !brief && ordered.length > 1 ? PHASE_ALL_MULTI_DWELL_MS : 0
 
-  const steps: PresentationStep[] = [
-    {
+  const steps: PresentationStep[] = []
+  // 무대 룰렛만 걸린 스핀(기본 지급 없음)은 보여 줄 «전체 당첨»이 없다 — 0원 A단계를 거치지 않고 곧장 초대권 강조로 간다.
+  const rouletteOnly = roulette !== null && wins.length === 0 && scatters.length === 0 && freeSpins === null
+  if (!rouletteOnly) {
+    steps.push({
       phase: 'all',
       wins: ordered,
       totalWin: totalWinOf(ordered),
@@ -201,10 +222,26 @@ export function buildPresentation(
       scatters,
       durationMs: cap(dwell > 0 ? hold + dwell : hold),
       rollupMs: cap(hold),
-    },
-  ]
+    })
+  }
   if (freeSpins !== null) {
     steps.push({ phase: 'feature', feature: freeSpins, scatters, durationMs: cap(PHASE_FEATURE_MS) })
+  }
+  if (roulette !== null) {
+    // 무대 룰렛: 초대권 강조 → 응원봉 강조. 길이는 이 계획이 정하고 모션 축소는 `cap`이 아니라 계획이 따로 안다.
+    for (const highlight of planRouletteHighlight(roulette, {
+      reducedMotion: reduced,
+      ...(options.speed === undefined ? {} : { speed: options.speed }),
+    })) {
+      steps.push({
+        phase: 'roulette',
+        stage: highlight.stage,
+        feature: roulette,
+        scatters: copyPositions(roulette.positions),
+        cheer: highlight.stage === 'cheer' ? highlight.positions : [],
+        durationMs: highlight.durationMs,
+      })
+    }
   }
   // brief는 여기서 끝난다 — 라인별 순차(B단계)를 만들지 않는 것이 이 모드의 전부다.
   // 피처 스텝은 남긴다: 그걸 빼면 `featureTriggered`가 나가지 않아 허브의 프리스핀 인트로
@@ -214,6 +251,10 @@ export function buildPresentation(
     steps.push({ phase: 'line', win, scatters, durationMs: cap(PHASE_LINE_MS) })
   }
   return steps
+}
+
+function copyPositions(positions: readonly (readonly [number, number])[]): GridPosition[] {
+  return positions.map(([reel, row]) => [reel, row] as GridPosition)
 }
 
 /** 한 바퀴 전체 길이(ms). */
