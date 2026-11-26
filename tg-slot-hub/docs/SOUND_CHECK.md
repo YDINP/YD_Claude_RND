@@ -209,3 +209,144 @@
 - 효과음 스템: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/sfx/candy_<pops|ladder|drop|ordertick|ordercomplete|orderdeal|chain|spin|reelstop|winsmall|winbig|feature|rollup>.wav`
 - BGM·믹스: `C:/Users/parkk/AppData/Local/Temp/claude/e44e3bd3131a0c42/7a4e751a-17ec-4d49-a6fb-3a3c0dfd7b11/scratchpad/bgm/candy_base.wav`, `candy_free.wav`, `candy_mix.wav`, `candy_sfx.wav`(SFX만), `candy_duck.wav`(BGM만, 덕킹 포함)
 - 원자료: `scratchpad/bgm/candy_sfx_check.json`
+
+## idol-stage-live 사운드 (사운드 레인) — 2026-11-26
+
+`idol` 프리셋의 효과음 레시피(`IDOL_RECIPE`)·무대 룰렛 소리 6종·배경음(`BGM_STYLES.idol`, `IDOL_KIT`)을 earshot 으로 듣고 잰 기록. 방법은 위와 같다(실제 `audio.ts`를 헤드리스 Chrome OfflineAudioContext + 가상 시계로 렌더, 하네스 `D:/park/tgslot-wt/_qa/new-c-sound/run.mjs`·`analyze.py`, BGM 40%). **수치는 참고값이고 최종 귀 판정은 사용자 몫이다.** 합성음이 목적이라 realness 는 보지 않았다.
+
+### 무엇을 만들었나
+
+| 파일 | 내용 |
+|---|---|
+| `apps/hub/src/lib/audio.ts` | `IDOL_RECIPE`(스핀 시작·릴 정지·작은/큰 당첨·피처 진입·심볼 변형·롤업 틱·마감), 기대감 상승음 위에 겹치는 **손뼉 롤**(`Recipe.riserExtra`, 기대감이 끝나면 함께 멈춘다), 룰렛 소리 `playRouletteTick/Land/Light/Zoom/Summary`, 가장 큰 순간용 깊은 덕킹(`duckBgmDeepFor`) |
+| `apps/hub/src/lib/rouletteSfx.ts` | 룰렛 큐(`entry·light·tick·land·zoom·summary·exit`) → 위 소리를 잇는 싱크. `rouletteCues.ts` 의 기본 싱크가 이것이다 |
+| `apps/hub/src/lib/bgm.ts` · `bgmVoices.ts` | `IDOL`(128bpm E장조, 4박 킥·오프비트 코드 스탭·16분 펄스 아르페지오·하우스 베이스·손뼉 백비트·신스 리드) · `IDOL_KIT` |
+| `packages/game-sdk/src/theme.ts` · `packages/renderer/src/types.ts` | `sound.preset` 에 `'idol'` 추가 |
+
+기존 프리셋·함수 이름은 그대로다(덧붙임뿐). 테스트: `audio.test.ts`(idol 전 이벤트·룰렛 소리·손뼉 롤 정리), `bgm.test.ts`(idol 악보), `rouletteSfx.test.ts`(큐 → 소리 연결), `theme.test.ts`(프리셋 열거).
+
+### 합성 함성은 읽히지 않아 손뼉 롤로 바꿨다 (기획서 §9-1의 대체 규칙)
+
+기획서는 «함성»(대역 잡음 + 8Hz 떨림)을 진입·앙코르·대상에 썼다. 합성한 함성은 CLAP 이 군중으로 듣지 못했다(아래는 «a crowd cheering» z).
+
+| 시도 | z | 최상위 판독 |
+|---|---:|---|
+| 1차: 모음 공명대 잡음 + 8Hz 떨림 + 톱니 목소리 4줄 | −0.58 | a quick swipe / a fast whoosh |
+| 2차: 목소리 8줄(음높이·모음 제각각) + 박수 덩어리 + 숨소리 | −0.70 | a quick swipe / an uplifter sweep |
+| 변형 9종 실험(박수만·목소리만·웅성임·높은 «우» 10줄 등) | −0.5 ~ +0.9 | uplifter / downlifter / cloth whipping |
+| 손뼉 롤·무작위 박수 14~30개/초·휘파람 얹기 | +0.4 ~ +1.5 («applause» −0.3 ~ +2.3, 손뼉 3번이 +2.28) | glitch / balloon squeak (휘파람은 풍선 소리로 읽혀 뺌) |
+
+기획서 대체 규칙(«함성을 빼고 손뼉 롤로»)대로 **함성을 없애고 손뼉 롤**(`clapRoll`: 간격이 줄며 커지는 손뼉 n번)로 바꿨다. 손뼉 한 번은 «a hand clap» 으로 읽히기 때문이다(+3.3). 도움말·화면 문구에 «함성»을 쓰지 않는다.
+
+### 효과음 (최종 렌더, idol)
+
+z 는 의도 문구 두 가지 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거가 약하다.
+
+| 이벤트 | 레시피 | 의도 문구 최고 z | 최상위 판독 | LUFS / dBTP | 판정 |
+|---|---|---|---|---|---|
+| spin | 신스 상승 스윕(톱니+로우패스 열림) + 3kHz 래칫 루프 | “a fast ratchet clicking loop” +2.26 | a digital glitch +2.99 | −42.8 / −18.9 | 약함 |
+| reelstop | **손뼉**: 대역 잡음 세 겹(8·9ms 어긋남) + 꼬리 + 3kHz 핑, 릴마다 대역 +6% | “a hand clap” +3.26 | a snare hit +3.95, a hand clap +3.26 | −30.3 / −12.4 | 강함(**킥 아님**) |
+| reelstops | 손뼉 5연속 | “five quick hand claps” +4.49 | a snare hit +3.96 | −28.7 / −7.7 | 강함 |
+| winsmall | 신스 브라스 3음 장조(A5·C#6·E6) + 별빛 핑 | “three rising synthesizer brass notes” +2.49 | a success chime +3.55 | −21.4 / −9.6 | 그럴듯 |
+| winbig | 상승 스윕 → 크래시·서브 드롭 → 4박 킥 + 오프비트 베이스·하이햇 + 손뼉 + 코드 스탭(A·F#m·D·E) → 마지막 코드 | “a pop music celebration jingle” +2.56 (“an upbeat EDM stinger” +1.98) | a success chime +2.38 | −20.8 / −4.4 | 그럴듯 |
+| feature(진입) | 손뼉 롤이 빨라지며 상승 스윕이 차올라 0.9초에 킥 + 크래시 + 코드 | “synth brass chord stabs” +2.75 (“a crowd cheering” −0.1) | a success chime +2.01 | −19.8 / −8.4 | 그럴듯 |
+| mutation | 사각파 핑 2개 + 고역 잡음 | “a few quick high synth pings” +2.35 | a kalimba note +3.34 | −32.4 / −17.8 | 약함(원샷) |
+| riser | 삼각파 기대감 상승음 + **손뼉 롤 가속**(0.34→0.1초 간격) | “a rising noise sweep” +0.99 | a success chime +2.66, a police siren +2.19 | −27.7 / −16.2 | **불일치** |
+| rollup | 하이햇 틱 + 마감 브라스 | “rapid coin counter ticks ending with a chime” +0.88 | a success chime +3.22 | −27.2 / −5.6 | **불일치**(다른 프리셋도 z 1.7~2.5 대) |
+
+- 꼬리 −240 dB(스템 끝을 무음 직전에서 잘랐다), 클리핑 0, 전 스템 true peak −4.4 dBTP 이하.
+- 기대감 상승음은 3가지 파형·음높이를 비교했고 현재 값이 가장 높았다(+0.99 / +0.50 / +0.66). 5개 프리셋도 같은 구조에서 «siren»으로 읽혔던 영역이라 귀 판정이 필요하다.
+
+### 무대 룰렛 소리 (6종)
+
+`rouletteSfx.ts` 싱크가 큐에 따라 부른다. 같은 재료(손뼉·브라스·킥·코인 차임)다.
+
+| 큐 | 소리 | 의도 문구 최고 z | 최상위 판독 | LUFS / dBTP | 판정 |
+|---|---|---|---|---|---|
+| tick(칸 경계) | 2.8kHz 사각파 8ms + 고역 딸깍, 느려질수록 450Hz 낮아지고 커짐 | “a roulette wheel clicking” +3.46 | a ratchet clicking +3.01 | −37.9 / −16.7 | 강함 |
+| land 코인 | 레트로 «띠링»: 사각파 1.32kHz 짧게 → 5도 위 1.98kHz 길게 | “a retro video game coin pickup” +5.44 | a success chime +2.82 | −25.1 / −15.1 | 강함 |
+| land 코인(불 켜진 칸) | 위 + 반음 위 핑 2개 | +5.29 | a kalimba note +2.79 | −24.9 / −13.5 | 강함 |
+| land 한 단계 위로 | 상승 스윕 + **탐 필 4타**(0.12초부터 0.14초 간격, 음정 하강) + 크래시, 곧이어 줌 «웅»(130→55Hz) | “a drum fill with a rising sweep” +3.71 | a snare hit +3.35 | −25.3 / −12.5 | 강함 |
+| land 앙코르 | 손뼉 롤 5번(0.17초에서 빨라짐) | “five hand claps getting faster” +2.57 | a snare hit +2.94, a hand clap +2.47 | −28.8 / −11.3 | 그럴듯 |
+| land 대상 | 킥 + 크래시 + A 코드 5음 브라스(1.1초) + E 코드 + 손뼉 롤 10번 + 별빛 핑 + **음악 깊게 덕킹(2.2초)** | “a triumphant brass fanfare” +2.91 | a success chime +2.71 | −18.0 / −6.5 | 그럴듯 |
+| light(점등) | 사인 «휭» 120ms, 점등마다 반음씩 올라감(기본 1.5kHz) | “a magic sparkle chime” +2.30 | bubbles underwater +2.73 | −27.6 / −16.3 | 약함(원샷) |
+| zoom | 130→55Hz 사인 + 로우패스 잡음 | “a deep whoomp” +2.33 | a kick drum +3.92 | −29.9 / −14.5 | 약함(낮은 쿵이 의도) |
+| summary 큰 판 | 킥 + 크래시 + 코드 둘 + 손뼉 롤 6번, 음악 덕킹 2.2초 | “a triumphant fanfare” +3.61 | a success chime +2.47 | −19.6 / −5.5 | 강함 |
+| summary 작은 판 | 손뼉 둘 + 코인 차임 | “two hand claps then a retro coin chime” +0.94 | a success chime +3.11 | −26.3 / −15.8 | 불일치(차임으로 읽힘, 의도한 조용한 마감) |
+
+- 틱은 칸 경계마다 불리고(최소 25ms 간격은 `StageRoulette`가 거른다), 회전 동안 음악을 −6 dB 로 낮춰 둔다(틱이 꺼질 때쯤에만 덕킹을 이어 붙여 타이머를 매 틱 다시 걸지 않는다).
+- 처음 음량에서는 틱의 적분 LUFS 가 덕킹된 BGM 보다 5.4 dB 낮고 점등은 +0.1 dB 라 BGM 에 묻혔다. 틱 약 3배·점등 약 3배로 올렸다(아래 룰렛 장면 믹스는 올린 뒤 수치).
+
+### 기존 프리셋과 구분 (같은 이벤트, CLAP 코사인 — 낮을수록 다름)
+
+| 이벤트 | idol vs 가장 비슷한 프리셋 | 기존 프리셋끼리 평균/최대 |
+|---|---|---|
+| spin | 0.85 (candy) | 0.77 / 0.96 |
+| reelstop | **0.52** (western) | 0.79 / 0.92 |
+| reelstops | **0.48** (western) | 0.78 / 0.92 |
+| winsmall | 0.89 (bell·western) | 0.83 / 0.96 |
+| winbig | 0.76 (bell·western) | 0.85 / 0.96 |
+| feature | 0.72 (bell) | 0.78 / 0.88 |
+| mutation | 0.86 (bell) | 0.79 / 0.88 |
+| riser | 0.88 (fruit·candy) | 0.87 / 0.99 |
+| rollup | 0.89 (bell) | 0.79 / 0.89 |
+
+기준(< 0.90)을 전부 넘겼다. 가장 가까운 winsmall·rollup·riser 는 «짧은 상승 음계/틱»이라 모델이 같은 군으로 묶는다. **귀 확인이 필요하다.**
+
+### 배경음 (128 bpm, E 장조, 4박 킥 신스팝)
+
+| 항목 | idol | 비교 |
+|---|---|---|
+| 기본 LUFS (20~50초) | **−31.1** (목표 −30~−32 충족) | candy −31.0, fruit −32.0 |
+| 룰렛(free) 변주 LUFS | **−30.2** | candy −30.1 |
+| true peak | −15.5 / −15.3 dBTP, 클리핑 0 | |
+| “happy upbeat cheerful” z | +2.78(기본) / +3.25(룰렛) | “sad melancholic” +1.32 / +1.55 (기존 5곡은 sad 가 happy 보다 높았다) |
+| “EDM house music” z | +1.00 / +0.80 | 합성 BGM 은 장르 문구에 안 읽힌다 |
+| 가장 비슷한 기존 곡 (CLAP 코사인) | candy_free 0.864, candy_base 0.828, fruit_base 0.814 | 기준 < 0.90 충족 |
+| 기본 ↔ 룰렛 코사인 | 0.971 | |
+| 동시에 울리는 음(시뮬레이션) | 기본 26 / 룰렛 36 | candy 33/35, fruit 36/46, bell 33/43 (상한 32, 패드·베이스·킥은 상한을 넘겨도 친다) |
+
+- 룰렛 변주: 반음 위(+1), 아르페지오 음역 +7반음, 16분 하이햇, 8마디마다 손뼉 롤 필인(하프타임 빌드업은 마디 끝 필인으로 구현했다).
+- 템포는 128 이라 `bgm.test.ts` 의 «라운지 범위» 상한을 120 → 130 으로 올렸다.
+
+### 믹스 균형 (30초 장면, BGM 40%)
+
+| 항목 | 결과 |
+|---|---|
+| 믹스 | −26.1 LUFS, true peak **−4.0 dBTP**, 클리핑 0 |
+| SFX−BGM dB | 릴 정지 **+3.6** / 작은 당첨 +10.9 / 기대감 +10.8 / 큰 당첨 +17.8 / 피처 +23.3 |
+| 덕킹 | 기대감 −7.4, 큰 당첨 −8.2, 피처(커튼) −12.5 dB (조용한 구간 −30.6 LUFS 대비) |
+
+### 룰렛 장면 믹스 (룰렛 BGM 변주 위, 31초)
+
+진입 → 점등 6 → 회전(틱) → 코인 → 위로 → 회전 → 앙코르 → 대상 → 요약 한 판. 믹스 −26.1 LUFS, true peak −6.8 dBTP, 클리핑 0.
+
+| 구간 | SFX−BGM LUFS | SFX 피크 − BGM 피크 | BGM 덕킹 (조용한 구간 대비) |
+|---|---:|---:|---:|
+| 진입 | +18.1 | +16.5 | −7.6 |
+| 점등 6개 | +3.9 | +3.0 | −1.7 |
+| 회전(틱) | −1.7(틱은 드물어 적분 LUFS 가 낮다) | **+6.0** | −6.2 |
+| 코인(불) | +6.0 | +4.0 | −1.2 |
+| 위로 | +6.4 | +5.8 | −1.6 |
+| 앙코르 | +2.2 | +7.0 | −0.5 |
+| 대상 | +21.2 | +14.0 | −9.0 (깊은 덕킹 2.2초) |
+| 요약(큰 판) | +15.0 | +11.0 | −4.4 |
+
+### 브라우저 확인 (개발 스택, 헤드리스 Chrome 430×932 · 390×844)
+
+룰렛 진입 → 룰렛 3회전 → 요약 → 복귀 → 빅윈까지 끝까지 돌렸다. AudioContext 가 `running` 이고, 효과음·배경음이 노드를 계속 만들었으며(배경음 초당 약 34개), 콘솔 오류는 favicon 404 뿐이다. 데모 빌드(`vite build --mode demo`)도 통과한다.
+
+### 남은 문제 · 귀로 확인할 것
+
+1. riser(+0.99)·rollup(+0.88)은 CLAP 이 의도 문구로 읽지 못한다(5개 기존 프리셋도 비슷). 손뼉 롤이 기대감 소리 위에 자연스럽게 얹히는지 귀로 확인.
+2. «함성»은 합성으로 만들지 못해 빠졌다. 콘서트 분위기가 부족하면 실녹음 샘플을 `sfx` override 로 넣는 게 현실적이다(라이선스 확인 필요).
+3. 진입(feature)·대상·요약 큰 판의 코드가 서로 비슷한 브라스 음색이라 연속으로 들으면 같은 계열로 들릴 수 있다(진입 → 회전 → 대상 순서로 청취).
+4. 룰렛 틱 8ms 사각파는 회전 초반(초당 30개 이상)에 날카롭게 들릴 수 있다. 느낌이 거칠면 시작 vol 만 낮추면 된다(`playRouletteTick`).
+5. earshot 이 가장 높게 읽은 건 대부분 «success chime»이다(브라스·코인 차임이 차임으로 묶인다). 의도 문구 z 는 참고만.
+6. 룰렛 `exit` 큐(퇴장 클립 시작)는 통합 QA(2026-11-26)에서 연결했다 — 연출이 끝나면(`StageRoulette` 감독 `done`) 한 번 쏘고 UI «close» 소리가 난다(`rouletteSfx.ts`). 퇴장 클립·BGM 커튼 덕킹과 겹치니 귀로 확인할 것.
+
+### 파일
+
+- 효과음 스템: `D:/park/tgslot-wt/_qa/new-c-sound/wav/idol_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 룰렛 `idol_<rtick|rland_coin|rland_lit|rland_stepup|rland_encore|rland_grand|rlight|rzoom|rsummary_big|rsummary_small|rentry>.wav`
+- BGM·믹스: `wav/bgm_idol_base.wav`, `bgm_idol_free.wav`, `mix_idol_mix.wav`, `mix_idol_sfx.wav`, `mix_idol_duck.wav`, 룰렛 장면 `rmix_idol_mix.wav`(`_sfx`·`_duck`)
+- 원자료: `final_intent.txt`, `final_measure.txt`, `final_cos.txt`, `final_bgm.txt`, `final_mix.txt`, `final_rmix.txt`, 함성 실험 `exp_*.wav`(저장소 밖)
