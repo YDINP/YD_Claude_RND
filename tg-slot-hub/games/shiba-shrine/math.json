@@ -6,16 +6,16 @@
     {
       "id": "wild",
       "name": {
-        "en": "Torii Wild",
-        "ko": "토리이 와일드"
+        "en": "Paw Wild",
+        "ko": "발자국 와일드"
       },
       "wild": true
     },
     {
       "id": "scatter",
       "name": {
-        "en": "Shrine Lantern",
-        "ko": "신사 등롱"
+        "en": "Shrine Bell",
+        "ko": "신사 방울"
       },
       "scatter": true
     },

@@ -180,7 +180,7 @@
   "transitions": {
     "freeSpinsEnter": {
       "src": "transitions/fs-enter.webp",
-      "opaqueMs": 2510,
+      "opaqueMs": 1812,
       "durationMs": 2999
     },
     "freeSpinsExit": {
