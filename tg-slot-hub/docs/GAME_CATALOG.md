@@ -38,7 +38,7 @@
 | 7 | `olympus-nectar` | Olympus Nectar / 올림포스의 신주 | 스타일라이즈드 3D | 6×5 | 8+ 아무 위치 | 최고 | 텀블 + 누적 배수 오브 | P3·P4 | 2 |
 | 8 | `magi-stella` | Magi Stella / 마기 스텔라 | 애니 셀셰이딩 | 5×4 | 1024 ways | 고 | 프리스핀 스티키 와일드 | P2·P1 | 2 |
 | 9 | `kraken-cove` | Kraken Cove / 크라켄 만 | 스타일라이즈드 3D | 5×3 | 20라인 | 고 | 홀드&스핀 코인 + 4단 잭팟 | P5 | 3 |
-| 10 | `hanbok-night-market` | Hanbok Night Market / 한복 야시장 | 민화 하이브리드 | 5×3 | 25라인 | 중고 | 휠 보너스 + 심볼 승급 | P6·P1 | 3 |
+| 10 | `hanbok-night-market` | Hanbok Night Market / 한복 야시장 | 민화 하이브리드 | 5×3 | 25라인 | 중고 | 말판 보너스(윷판 + 갈림길 지름길) — **live(2026-11-26)** | 말판(한 응답 보너스) | 3 |
 | 11 | `idol-stage-live` | Idol Stage Live / 아이돌 스테이지 라이브 | 애니 아이돌 | 5×4 | 1024 ways 양방향 | 중고 | 픽미 보너스 + 응원 배수 미터 | P6·P3 | 3 |
 | 12 | `mecha-nova` | Mecha Nova / 메카 노바 | 하드서피스 3D | 5×4 | 243 ways | 고 | 워킹 와일드 리스핀 + 바이 피처 | P5·P1 | 3 |
 | 16 | `astral-clocktower` | Astral Clocktower / 별의 시계탑 | 스테인드글라스 + 황동 | **4×5** | 625 ways | 고 | 확장 와일드 빛기둥 + 층 승급 | (신규 0) | 2.5 |
@@ -243,33 +243,36 @@
 ---
 
 ### #10 `hanbok-night-market` — Hanbok Night Market / 한복 야시장
-> 청사초롱 세 개가 켜지면 야시장 룰렛이 돌고, 등불이 번질 때마다 심볼이 한 단계 승급한다.
+> 청사초롱 세 개가 켜지면 야시장 한복판 윷판이 펼쳐진다. 윷을 던져 말을 옮기고, 갈림길에 딱 멈추면 지름길로 꺾어 결승 등불탑의 큰 상을 노린다.
+
+> **개정(2026-11-26)**: 사용자 지시로 보너스를 **휠 → 말판**으로 바꿨다. 기본 게임 심볼 승급 뮤테이션은 뺐다. 실행 계획·수치·계약의 정본은 `docs/PLAN_hanbok-night-market.md`다. 아래는 요약이다.
+> 이전 판(휠 + 승급)은 git 기록에 남아 있다. WAVE2 §9-2의 «트레일 보드 → #15»는 이 게임이 먼저 가져간다 — #15 컨셉은 다른 피처로 다시 정해야 한다.
+> **출시(2026-11-26, `status: live`)**: 정식 감사 30M·4샤드 94.53%(±0.17%p, 게이트 13/13), 말판 1/175.6스핀·평균 38.5배·최대 200배. 통합 QA(기획서 §12 확인표 1회씩, 390/430, 체험판 포함)는 `docs/QA_LOG.md`와 `games/hanbok-night-market/CHECKLIST.md`. 플레이어 QA 뒤 2차: 꼬리표가 제 칸을 가리키는 말풍선 꼬리·결승 마무리 1.2s·«지름길!»은 외침 줄로. 3차: 최소 지급 판 요약 등식 수정(«식 = 바구니×배수, 아랫줄에서 최소 5배로»), 결승 탑 «+30» 딱지, 골든 해시에 이 팩 추가.
 
 | 항목 | 값 |
 |---|---|
-| 그리드 / 페이 | 5×3 / 25 페이라인 · 변동성 중고 · 휠 진입 `p ≈ 0.006` |
-| RTP 94.5 구성 | 라인 68.0 + 심볼 승급 14.0 + 휠 12.5 |
-| RTP 산출 | **analytic** — 승급은 두 모델의 `0.92/0.08` 가중합, 휠은 독립 이산 분포 |
-| 공수 | 12 / 10 / 5 / 12 h |
+| 그리드 / 페이 | 5×3 / 25 페이라인 · 변동성 중고 · 말판 진입 `p ≈ 0.0057` (약 175스핀당 1회) |
+| RTP 94.5 구성 | 라인 71.4 + 스캐터 지급 1.1 + 말판 21.9 (정확값 94.51%, 감사 MC 94.53%) |
+| RTP 산출 | **monte-carlo**(정식 감사) + 말판 기대값은 엔진 정확 DP(`boardExpectation`)로 튜닝·교차 검증 |
+| 공수 | 계획서 §14 (코어·연출·아트·사운드 각 1명, 약 5일) |
 
-**컨셉·아트** — 스타일: 민화(民畵) 텍스처 + 3D 하이브리드. 한지 결과 먹선을 살린 평면 채색 위에 얕은 입체 조명만 얹는다. 팔레트: 오방색 — 적 `#d8433c`, 청 `#2f6fb0`, 황 `#e8c34a`, 백 `#f2ece0`, 흑 `#1c1a18` + 야시장 전구 웜 `#ffb765`. 프레임: 처마 기와 + 청사초롱 두 개, 사이드는 단청 문양 기둥.
-심볼(11): `wild` `scatter` `bonus` `tiger` `magpie` `hanbok` `norigae` `moon_jar` `hotteok` `tteokbokki` `dalgona`
-승급 사다리: `dalgona → tteokbokki → hotteok → moon_jar → norigae → hanbok → magpie → tiger` (와일드·스캐터·보너스 제외)
+**컨셉·아트** — 스타일: 민화(民畵) 텍스처 + 부드러운 3D 하이브리드. 한지 결·먹선·오방색 평면 채색 위에 얕은 입체 조명과 야시장 등불 빛. 팔레트: 적 `#d8433c`, 청 `#2f6fb0`, 황 `#e8c34a`, 백 `#f2ece0`, 흑 `#1c1a18` + 등불 `#ffb765`. 프레임: 처마 기와 마퀴 + 청사초롱 두 개, 사이드는 얇은 단청 기둥(정사각 1024, 가로형 창). 한복 차림 상인·손님은 원작 없는 새 캐릭터.
+심볼(11): `wild`(호랑이 탈) `bonus`(청사초롱, 릴 1·3·5에만, 스캐터 겸 트리거) `lantern_girl` `scholar` `granny` `norigae` `flower_shoes` `lucky_pouch` `hotteok` `tteokbokki` `dalgona`
 
-**메커닉** — 트리거: 승급은 매 스핀 `chance = 0.08`로 화면의 최저 티어 심볼 전부가 1단계 승격. 휠은 `bonus` 심볼이 릴 0·2·4에 각 1개. 상태: `STOP → UPGRADE_ROLL(p) → EVALUATE →(bonus 3) WHEEL_SPIN(t1) →(segment=upgrade) WHEEL_SPIN(t2) → AWARD(배수 | 프리스핀) → END`. 수학: 휠 기대값은 `Σwᵢvᵢ / Σwᵢ`. 엣지: 승급 사다리는 유한 배열이고 최상단에서 고정 · 휠 티어 승급은 단방향 1회(`maxUpgrades = 1`), 순환 세그먼트 금지 · 클라이언트에 세그먼트 라벨은 미리 보내되 **당첨 인덱스는 스핀 응답에서만** 전달 · 승급이 스캐터 카운트를 바꾸면 안 된다. `RoundState`: `bonus?: { kind: 'wheel'; tier; spinsUsed; awarded }`.
+**메커닉** — 트리거: `bonus` 3개(릴 1·3·5 각 1개) → 총 베팅 ×2 + 말판 보너스. 말판: 윷판 29칸(바깥 길 20 + 대각선 안쪽 길), 윷가락 4개(도 1·개 2·걸 3·윷 4·모 5, 윷·모는 한 번 더). 칸: 코인(바구니에 담김) / 배수(마지막에 바구니 전체에 곱함) / 앞으로 N칸 / 한 번 더 / 함정(등불 하나 꺼짐, 3번이면 끝) / 결승(큰 상). **재미 장치: 첫째·둘째 모퉁이나 한가운데(방)에 딱 멈추면 다음 던지기부터 지름길.** 시작 기회 5번, 던지기 하드캡 12번, 지급 = max(5, 바구니 × 배수), 구조상 최대 200배, 한 판 상한 `round.maxWinCap` 1,000배. 엣지: 말판 전체를 트리거 스핀 응답 하나에서 서버가 정한다(화면 탭은 연출) · 말판 안 리트리거 없음 · 단조 감소 척도 = 결승까지 남은 걸음(길은 전부 비순환, 이동은 앞으로만) + `maxThrows − 던진 수` · 스핀 간 상태(`RoundCarry`·`game_states`) 무변경. RNG: 릴 5회 → 윷 k회(던질 때마다 1회) → 잭팟 1회.
 
-**UX** — 화면: 트리거 시 중앙 원형 휠 모달, 승급은 심볼이 상위 심볼로 바뀌는 모프 애니메이션. 배너: 휠 정지 시 핀 클릭음 누적 + 결과 하이라이트 + haptic 펄스, 승급 시 `UPGRADE!` 스탬프. 배경: 모달 동안 딤 + 야시장 등불 파티클, 상시 배경 교체 없음.
+**UX** — 화면: 별도 말판 전체 화면(HUD: 기회·등불·배수·바구니·«지금 끝나면 N배», 던지기 전 도~모 도착 칸 미리보기 꼬리표, 윷 던지기 버튼·자동·빨리 감기). 진입 전환은 오방색 비단이 휘감겨 덮고, 복귀는 윷가락 착지로 비단이 갈라진다. 배경음은 굿거리 느낌 12/8 + 해금·장구·꽹과리(`hanbok` 프리셋).
 
 ```json
-"mutations": [ { "type": "symbol-upgrade", "chance": 0.08, "steps": 1,
-  "ladder": ["dalgona","tteokbokki","hotteok","moon_jar","norigae","hanbok","magpie","tiger"] } ],
-"bonus": { "type": "wheel", "trigger": { "symbol": "bonus", "minCount": 3 }, "maxUpgrades": 1,
-  "tiers": [ { "id": "t1", "segments": [ { "kind": "multiplier", "value": 5, "weight": 40 },
-                                          { "kind": "upgrade", "to": "t2", "weight": 6 } ] },
-             { "id": "t2", "segments": [ { "kind": "multiplier", "value": 50, "weight": 10 },
-                                          { "kind": "freespins", "value": 15, "weight": 8 } ] } ] }
+"scatter": { "symbol": "bonus", "pays": { "3": 2 } },
+"round": { "maxWinCap": 1000 },
+"boardBonus": { "trigger": 3, "throws": 5, "maxThrows": 12, "trapLimit": 3, "maxMultiplier": 4, "minPayout": 5, "maxWin": 200,
+  "throwTable": [ { "steps": 1, "weight": 240 }, { "steps": 2, "weight": 380 }, { "steps": 3, "weight": 230 },
+                  { "steps": 4, "weight": 120, "extraThrow": true }, { "steps": 5, "weight": 30, "extraThrow": true } ],
+  "layout": "yut29", "nodes": { "…": "계획서 §3-5" }, "routes": { "…": "outer / a / b / center" },
+  "forks": { "o5": "a", "o10": "b", "c": "center" } }
 ```
-아트: 심볼 11 + frame + bg + thumb + 휠 2티어(판 2장 + 포인터) = 18장.
+아트: 심볼 11 + frame + bg + 말판 배경 + thumb + 시트 3 = 18장. 말은 `lantern_girl` 심볼 그림을 말 받침에 얹어 쓰고, 결승 등불탑·윷판 점선·칸 아이콘·윷가락은 코드 드로잉. 전환 클립 2편.
 
 ---
 
@@ -396,7 +399,7 @@ export interface RoundState {
 | 순 | 항목 | 해금하는 게임 | 선행 | 공수 |
 |---|---|---|---|---|
 | 1 | **RTP 감사 게이트에 `method: 'monte-carlo'` 수용** | 10종 중 7종 | 없음 | 8h |
-| 2 | **P1 `mutations` 파이프라인**(무상태 3종: mystery·expand·upgrade) | #3 #4 #10 | 1 | 14h |
+| 2 | **P1 `mutations` 파이프라인**(무상태 3종: mystery·expand·upgrade) | #3 #4 (#10은 2026-11-26 개정으로 미사용) | 1 | 14h |
 | 3 | **P2 `ways` 평가기**(243/1024 + `bothWays`) | #5 #8 #11 #12 | 없음 | 12h |
 | 4 | **P1 확장: 확률형 배치**(randomWild-drop) | #5 | 2·3 | 6h |
 | 5 | **`RoundState` 캐리 상태 일반화**(스핀 간 상태 저장·복원·서버 세션) | #8 #9 #11 #12 | 없음 | 10h |
@@ -405,7 +408,7 @@ export interface RoundState {
 | 8 | **P3 확장: 배수 오브 / 트레일 미터** | #7 #11 | 6 | 8h |
 | 9 | **P1 확장: 캐리형 와일드**(sticky·walking) | #8 #12 | 2·5 | 10h |
 | 10 | **P5 `respin` 상태 기계** + 코인 값 + 잭팟 4단 | #9 #12 | 5·9 | 20h |
-| 11 | **P6 `bonus` 프레임워크**(pick-me·wheel, 서버 권위 다단 인터랙션) | #10 #11 | 5 | 18h |
+| 11 | **P6 `bonus` 프레임워크**(pick-me·wheel, 서버 권위 다단 인터랙션) | #11 (#10은 한 응답 말판 보너스로 대체, `PLAN_hanbok-night-market.md`) | 5 | 18h |
 | 12 | **부가: 갬블 / 바이 피처**(엔진은 얇고 대부분 API 계층) | #4 #12 | 5·10 | 10h |
 | 13 | **공통 안전장치**: `maxWinCap`, 종료 척도 검증, 발산 정적 검사 | 전 게임 | 6·10 | 8h |
 

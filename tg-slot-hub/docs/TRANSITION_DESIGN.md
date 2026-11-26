@@ -658,6 +658,58 @@ Vertical full-screen game transition effect, soft toy-like 3D render, soft matte
 
 ---
 
+### 2-8. hanbok-night-market — 한복 야시장 (프리스핀 = 말판 보너스)
+
+팩 컨셉: 민화 + 부드러운 3D 하이브리드, 야시장 등불 밤. 오방색(적 `#d8433c`·청 `#2f6fb0`·황 `#e8c34a`·백 `#f2ece0`)과
+등불 빛 `#ffb765`. 보너스는 프리스핀이 아니라 **윷판 말판 보너스**이고, 말판 화면은 같은 키(`freeSpinsEnter`/`freeSpinsExit`)를 쓴다.
+말판 배경(`bg-freespins.webp`)은 위에서 본 빈 멍석이다.
+
+> fruit-fiesta의 복귀가 «등불이 올라간다»라서 등불을 주 소재로 쓰면 겹친다. 그래서 진입은 **비단 천**,
+> 복귀는 **윷가락 착지**로 잡았다. «hanbok»이라는 단어는 사람(한복 입은 인물)을 불러내므로 프롬프트에 쓰지 않고
+> «empty silk cloth»로만 부른다(K8).
+
+#### 진입 — 오방색 비단이 휘감겨 덮는다
+
+> 긴 비단 폭이 아래에서 소용돌이쳐 올라와 점점 풍성해지고, **겹겹이 접히며 휘감기는 그 동작으로** 화면 전체를 덮는다.
+> 덮인 뒤에도 비단이 계속 물결쳐서 단색으로 굳지 않는다.
+
+**왜 이 팩인가.** 천은 겹치면 구조적으로 불투명해지고(R1), 계속 물결쳐 «덮으면 멈춘다»(R11)를 소재 단계에서 피한다.
+말판은 «멍석 위에서 벌이는 윷놀이»라 비단 폭이 걷히는 것이 판이 펼쳐지는 느낌과 맞는다. 사람 없이 천이 스스로 움직인다(R4).
+
+**규칙 적용.** R1·R2(3초 사이클 ×4)·R3(`camera_fixed` 없이 본문 고정 문구)·R4·R5·R7·R8(휘감김 = 덮임 한 동작)·R9(주어 «silk panels»를
+첫 문단에)·R11·R12(`stylePrefix`의 민화·한지·오방색 hex, `negative`의 photorealistic)·R13(겪은 실패만).
+
+```
+Vertical full-screen game transition effect, Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine ink outlines, flat obangsaek colors with a warm lantern glow, not photorealistic, premium mobile game art. Long panels of empty silk cloth in red #d8433c, blue #2f6fb0, yellow #e8c34a and ivory #f2ece0, edged with thin gold trim, billow in front of a lantern-lit night market alley glowing warm #ffb765. One continuous motion repeats: the silk panels whirl up from the bottom of the frame and sweep in fuller and fuller, overlapping fold over fold in that same billowing swirl until the whole frame is completely opaque edge to edge, corner to corner, a seamless layered mass of rippling silk, holding fully covered for a beat while the silk keeps rippling and folding so the covered frame is never a flat still color, then the panels slide away and the alley glows through before the next swirl. The silk sweeping in and the frame being covered are one single motion, never separate steps. Each full cycle lasts about three seconds and repeats about four times across the clip. The cloth is plain with no writing. No text, no letters, no numbers, no logos, no watermark, no people, no faces, no hands, no arms, no fingers, no animals. Only the objects move; the camera never moves. Camera locked, no camera movement, no zoom, no pan.
+```
+
+#### 복귀 — 윷가락이 떨어져 비단이 갈라진다
+
+> 윷가락 넷이 비단 더미 위로 **착지하는 그 충격으로 비단이 한가운데부터 갈라져** 양옆으로 밀리고 골목이 드러난다.
+
+**왜 이 팩인가.** 말판의 끝을 윷 한 번으로 읽히게 한다. 진입이 «휘감겨 덮임»이니 복귀는 «찍고 갈라짐»으로 방향을 바꾼다(R6, 역재생 아님).
+윷가락은 **무늬 없는** 납작한 면/둥근 면 두 가지로만 못박는다(글자·무늬가 생기면 치명적).
+
+**규칙 적용.** R1·R2·R4·R6·R8(착지 = 갈라짐 한 동작)·R9(윷가락을 첫 문장에)·R11·R12·R13. 덮인 채 시작하므로 `opaqueMs: 0`.
+
+```
+Vertical full-screen game transition effect, Korean minhwa folk-painting style blended with soft toy-like 3D volume, hanji paper grain and fine ink outlines, flat obangsaek colors with a warm lantern glow, not photorealistic, premium mobile game art. Four plain wooden yut sticks, each a long half-round stick with one flat pale face and one rounded brown face, float centered above a thick drift of rippling silk cloth in red #d8433c, blue #2f6fb0, yellow #e8c34a and ivory #f2ece0 that fills the frame completely, edge to edge, corner to corner. One continuous motion repeats: the four sticks drop and land on the silk with a crisp clack, and that same impact splits the silk down the middle and throws the panels apart to both sides of the frame in rippling waves, revealing a calm lantern-lit night market alley glowing warm #ffb765, fully clear and still, then the silk sweeps back in and covers the whole frame corner to corner in complete opacity for a beat while it keeps rippling, before the sticks drop again. The sticks landing and the silk splitting apart are one single motion, never separate steps. While the frame is covered the silk keeps moving, never a flat still color. Each full cycle lasts about three seconds and repeats about four times across the clip. The sticks and the cloth have no markings. No text, no letters, no numbers, no logos, no watermark, no people, no faces, no hands, no arms, no fingers, no animals. Only the objects move; the camera never moves. Camera locked, no camera movement, no zoom, no pan.
+```
+
+> 발주 방식: 위 두 프롬프트를 **각각 한 편씩** 발주했다(편당 $0.93, 합계 **$1.86**, 재시도 없음 — 총 3편 상한 중 1편 여유).
+> `D:/park/tgslot-wt/_tools/vidgen-t2v.mjs`(`ratio:'9:16'`, `camera_fixed` 미전달, `generate_audio:false`)로 13초 t2v를 뽑았다.
+
+> **채택 결과 (hanbok-night-market).** 컷: 진입 `hanbok-enter.mp4` 2.25 → 5.25s(`opaqueMs: 2200`, 덮임이 2.0s 무렵 거의 차고 2.2s에 완전해진 뒤에도
+> 천이 계속 흐른다), 복귀 `hanbok-exit.mp4` 0.40 → 3.40s(`opaqueMs: 0`, 덮인 채 시작 → 윷가락 착지 → 비단이 가운데부터 갈라져 골목 노출).
+> 16fps/q60, 48프레임, 최대 프레임 63ms, 정지 0.0%(`check:clips` 통과). 진입 414 KiB / 복귀 557 KiB.
+> 브라우저(개발 스택, 430×932)에서 말판 진입·종료 전 구간을 돌려 두 클립이 단색 커튼 폴백 대신 실제로 재생되고
+> 복귀 클립이 끝난 뒤 기본 게임 화면으로 이어짐을 확인했다(2026-11-26).
+> 한계: 진입의 덮임 구간은 비친 등롱 보케가 어렴풋이 보이는 얇은 크림색 천이고, 복귀의 천 색은 지정 hex보다 바랜 청록·적갈이다.
+> 복귀 클립의 마지막 프레임은 가운데만 열리고 양옆에 비단이 남아 있어(약 3분의 1), 렌더러의 페이드가 그 잔상을 지워 준다.
+> 덮임은 두 편 모두 완전했고 사람·손·글자는 나오지 않았다.
+
+---
+
 ## 3. 생성 결과 실측
 
 `doubao-seedance-2-0` t2v, 9:16, 1080p, 13초, `generate_audio: false`.
@@ -1069,6 +1121,7 @@ fps와 quality는 다른 팩과 **동일하게 유지**하고, royal만 **소스
 | `fruit-fiesta` | 완료 (2차) | 완료 (2차) | $1.86 |
 | `royal-diamond-777` | 완료 (2차 `royal-exit` 후반) | 완료 (2차 `royal-exit` 전반) | $1.86 (1편 폐기) |
 | `shiba-shrine` | 완료 (2차 `shiba-exit` 전반) | 완료 (2차 `shiba-exit` 후반) | $1.86 (1편 폐기) |
+| `hanbok-night-market` | 완료 (1차, 2-8) | 완료 (1차, 2-8) | $1.86 |
 | `astral-clocktower` | 보류 | 보류 | 아트 완성 후 $0.93 (양방향 1편 전략) |
 | `classic-777` | 불필요 | 불필요 | 프리스핀 없음 |
 
@@ -1093,6 +1146,7 @@ sheriff v3와 v4 4팩은 발주를 시도했으나 계정 한도로 **거부되�
 | `fruit-fiesta` | 있음 | 있음 | 배선됨 | OK |
 | `royal-diamond-777` | 있음 (블러 1.2) | 있음 (블러 1.2) | 배선됨 | OK |
 | `shiba-shrine` | 있음 | 있음 | 배선됨 | OK |
+| `hanbok-night-market` | 있음 | 있음 | 배선됨 | 리드 커밋 전(추적 안 됨) 오류만 |
 | `astral-clocktower` | 없음 | 없음 | — | 아트 미착수 경고 28건(기존) |
 | `classic-777` | 해당 없음 | 해당 없음 | — | OK |
 
