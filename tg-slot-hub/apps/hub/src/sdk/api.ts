@@ -36,6 +36,20 @@ import type { RoundState } from '@tgslot/slot-engine'
 const API_BASE_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:8787'
 
 /**
+ * 브라우저 체험판(`vite build --mode demo`)이면 서버 대신 같은 탭 안에서 도는 API(src/demo/server.ts)로 보낸다.
+ * 일반 빌드에서는 상수 false라 demo 모듈이 번들에 들어가지 않는다.
+ */
+const IS_BROWSER_DEMO = import.meta.env.VITE_BROWSER_DEMO === 'true'
+
+async function send(path: string, init: RequestInit): Promise<Response> {
+  if (IS_BROWSER_DEMO) {
+    const { demoFetch } = await import('../demo/server')
+    return demoFetch(path, init)
+  }
+  return fetch(`${API_BASE_URL}${path}`, init)
+}
+
+/**
  * 세션 재인증 훅. store/session.ts가 모듈 로드 시 registerReauthHandler()로 딱 한 번 등록한다.
  * 여기서 '../store/session'을 직접 import하지 않는 이유: session.ts가 이미 이 파일(../sdk/api)을
  * import하고 있어서 정적 순환 import가 되면(특히 Vitest의 vi.mock 호이스팅 순서와 얽혀) 모듈 초기화
@@ -73,7 +87,7 @@ async function requestJson<T>(
 ): Promise<T> {
   let res: Response
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await send(path, {
       ...init,
       headers: {
         'Content-Type': 'application/json',

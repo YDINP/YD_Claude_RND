@@ -39,6 +39,8 @@ function errorMessageOf(err: unknown, fallback: string): string {
 
 /** bootstrap()과 reauth()가 공유하는 initData 판별 로직. 실기기 initData가 없으면 dev mock으로 폴백한다 */
 function resolveInitData(): string | null {
+  // 브라우저 체험판은 API가 같은 탭 안에서 돌아 봇 토큰이 없다. 텔레그램 안에서 열어도 서명 검증을 못 하므로 mock으로 들어간다.
+  if (import.meta.env.VITE_BROWSER_DEMO === 'true') return DEV_MOCK_INIT_DATA
   const realInitData = getInitDataRaw()
   // 프로덕션 빌드(PROD)에서는 환경변수가 실수로 켜져 있어도 mock 경로가 죽은 코드가 된다.
   const devMockEnabled = !import.meta.env.PROD && import.meta.env.VITE_DEV_MOCK_TMA === 'true'

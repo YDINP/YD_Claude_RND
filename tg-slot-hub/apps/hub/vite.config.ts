@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { gamesAssetsPlugin } from './vite-plugins/gamesAssets.js'
@@ -22,8 +23,29 @@ export default defineConfig(({ mode }) => {
     )
   }
 
+  // 브라우저 체험판: apps/api를 같은 탭 안에서 돌린다 (src/demo/server.ts). 서버·DB·봇 토큰이 필요 없다.
+  // API 코드가 import하는 Node 모듈은 브라우저용 대체물로 바꿔 끼운다.
+  const isBrowserDemo = mode === 'demo'
+  const shim = (file: string): string => fileURLToPath(new URL(`./src/demo/shims/${file}`, import.meta.url))
+  const demoAliases = isBrowserDemo
+    ? [
+        { find: /^node:crypto$/, replacement: shim('node-crypto.ts') },
+        { find: /^node:(fs|path|url|os|child_process)$/, replacement: shim('node-stub.ts') },
+        { find: /^@tgslot\/game-sdk\/node$/, replacement: shim('node-stub.ts') },
+      ]
+    : []
+  const demoDefines = isBrowserDemo
+    ? {
+        'import.meta.env.VITE_BROWSER_DEMO': JSON.stringify('true'),
+        'import.meta.env.VITE_DEV_MOCK_TMA': JSON.stringify('true'),
+        // apps/api 라우트가 인라인으로 읽는다. 체험판은 결과 강제(debug spin)를 열지 않도록 production으로 둔다.
+        'process.env.NODE_ENV': JSON.stringify('production'),
+      }
+    : {}
+
   return {
     plugins: [react(), gamesAssetsPlugin()],
+    resolve: { alias: demoAliases },
     server: {
       port: 5173,
     },
@@ -32,6 +54,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
+      ...demoDefines,
     },
   }
 })
