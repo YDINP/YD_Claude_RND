@@ -7,7 +7,7 @@ import { parsePromptsFile } from './schema.js'
 
 const USAGE = `사용법: pnpm --filter @tgslot/theme-gen contact <게임 폴더>
 
-모든 심볼을 512 / 58 / 28px 타일로 id 라벨과 함께 art/contact.png 에 그린다.
+모든 심볼을 512 / 58 / 28px 타일로 id 라벨과 함께 art/raw/contact.png 에 그린다(gitignore, pack:check 고아 검사 제외).
 dHash 해밍 거리가 8 미만인 쌍이 있으면 실패한다(codex 회수가 엉뚱한 이미지를 집은 경우).`
 
 export const CONTACT_MIN_HAMMING = 8
@@ -122,7 +122,8 @@ async function main(): Promise<void> {
   const hashes = new Map<string, bigint>()
   for (const t of tiles) hashes.set(t.id, await dHash(t.file))
 
-  const outPath = join(gameDir, 'art', 'contact.png')
+  // 검수용 산출물이라 팩 자산이 아니다. gitignore되고 pack:check 고아 검사가 건너뛰는 art/raw/에 쓴다.
+  const outPath = join(gameDir, 'art', 'raw', 'contact.png')
   writeBuffer(outPath, await buildContactSheet(tiles))
   console.log(`contact sheet: ${outPath} (${tiles.length}개)`)
 

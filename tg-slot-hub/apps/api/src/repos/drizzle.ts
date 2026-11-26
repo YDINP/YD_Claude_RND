@@ -455,7 +455,8 @@ export class DrizzleRepos implements Repos {
       // 다른 게임에서 다 써 버린 뒤 더블업으로 마이너스를 만드는 경로가 생기지 않는다.
       let gambleAfter: GambleState | null = null
       let gambleOffer: ApplySpinResult['gambleOffer']
-      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble }) && input.gamble) {
+      const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
+      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble, opensFreeSpins }) && input.gamble) {
         // 방어: 이번 스핀의 당첨금이 그대로 잠기므로 잔액이 모자랄 수 없다.
         if (locked.coins + walletDelta >= result.totalWin) {
           entries.push({

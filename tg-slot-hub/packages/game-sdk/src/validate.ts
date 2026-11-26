@@ -74,6 +74,11 @@ const DOC_FILES = new Set(['README.md', 'CHECKLIST.md', 'HOWTO.md'])
 const RAW_DIR_PREFIX = 'art/raw/'
 /** 일부러 버전 관리에서 빼는 경로. 추적 검사에서 제외한다 (`.gitignore`가 팩마다 `art/raw/`를 뺀다). */
 const UNTRACKED_BY_DESIGN_PREFIXES: readonly string[] = [RAW_DIR_PREFIX]
+/**
+ * theme-gen `contact`가 예전에 쓰던 검수용 컨택트 시트 자리. 지금은 `art/raw/contact.png`에 쓰지만
+ * 예전 위치에 남은 파일이 고아 경고를 되살리지 않게 건너뛴다(루트 `.gitignore`도 뺀다).
+ */
+const LEGACY_CONTACT_SHEET = 'art/contact.png'
 
 export function validateGamePack(pack: GamePack, source: PackSource, options: ValidateOptions = {}): PackProblem[] {
   const ungenerated = options.ungeneratedAssets ?? 'warn'
@@ -131,7 +136,7 @@ export function validateGamePack(pack: GamePack, source: PackSource, options: Va
     if (options.orphans !== false) {
       for (const file of [...files].sort()) {
         if (referenced.has(file)) continue
-        if (file.startsWith(RAW_DIR_PREFIX)) continue
+        if (file.startsWith(RAW_DIR_PREFIX) || file === LEGACY_CONTACT_SHEET) continue
         add('warn', file, '', '아무도 참조하지 않는 파일이다')
       }
     }

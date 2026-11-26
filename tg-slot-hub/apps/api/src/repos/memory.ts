@@ -305,7 +305,8 @@ export class MemoryRepos implements Repos {
     // 다른 게임에서 다 써 버린 뒤 더블업으로 마이너스를 만드는 경로가 생기지 않는다.
     let gambleAfter: GambleState | null = null
     let gambleOffer: ApplySpinResult['gambleOffer']
-    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble }) && input.gamble) {
+    const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
+    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble, opensFreeSpins }) && input.gamble) {
       // 방어: 방금 당첨금을 넣었으므로 잔액이 모자랄 수 없다. 그래도 확인하고 못 잠그면 제안을 열지 않는다.
       if (wallet.coins + walletDelta >= result.totalWin) {
         stage(-result.totalWin, LEDGER_REASONS.gambleEscrow, gambleEscrowRefId(roundId))

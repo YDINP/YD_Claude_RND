@@ -94,6 +94,15 @@ describe('RoundPopupView', () => {
     await waitFor(() => expect(valueText()).toBe('4,820'), { timeout: 4000 })
   })
 
+  it('drops the coin shower and switches to a consoling line when the round paid nothing', () => {
+    const { container } = render(
+      <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 0 }} onDismiss={() => {}} freeSpinsPlayed={8} />,
+    )
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(0)
+    expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
+    expect(screen.getByText('No wins this time · 8 free spins')).toBeInTheDocument()
+  })
+
   it('falls back to the generic summary line when the spin count was not supplied', () => {
     render(<RoundPopupView popup={EXIT} onDismiss={() => {}} />)
     expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()

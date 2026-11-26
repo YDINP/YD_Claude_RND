@@ -180,6 +180,15 @@
   animation: hub-win-fx-in 1ms linear 320ms backwards;
 }
 
+/*
+ * 빅윈 오버레이는 금액이 화면 한가운데 온다. 샤워(코인·꽃잎·심볼)가 그 위를 지나가며 숫자를 가렸다
+ * (검수 F12, 390 «560»이 꽃잎에 가림) — 가운데 띠에서는 파티클이 옅어져 숫자 **뒤로** 지나가 보이게 한다.
+ */
+.hub-win-overlay .hub-win-fx__shower {
+  -webkit-mask-image: radial-gradient(48% 9% at 50% 50%, transparent 62%, #000 100%);
+  mask-image: radial-gradient(48% 9% at 50% 50%, transparent 62%, #000 100%);
+}
+
 /* 원반 하나. rotateY로 뒤집으면 원근 없이도 가로로 납작해졌다 펴지며 "도는 동전"으로 읽힌다. */
 .hub-win-fx__coin {
   position: absolute;

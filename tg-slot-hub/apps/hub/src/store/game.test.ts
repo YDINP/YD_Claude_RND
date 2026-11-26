@@ -2152,11 +2152,16 @@ describe('game store', () => {
 
       await playRound()
 
-      expect(renderer.showWins).toHaveBeenLastCalledWith(wins, {
-        totalBet: 10,
-        features: [],
-        presentation: 'brief',
-      })
+      // 프리스핀 배수(스핀 전 세션의 multiplier)를 곱한 표시용 금액으로 넘긴다(검수 FF-01).
+      const multiplier = makeFreeSpinsState({ left: 5 }).multiplier
+      expect(renderer.showWins).toHaveBeenLastCalledWith(
+        wins.map((win) => ({ ...win, win: win.win * multiplier })),
+        {
+          totalBet: 10,
+          features: [],
+          presentation: 'brief',
+        },
+      )
       useGameStore.getState().reset()
     })
 

@@ -19,6 +19,7 @@ import { Modal } from '../Modal'
 import { useT } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import type { RoundPopup } from '../../game/roundFlow'
+import { playCountUp, playRollupEnd, stopCountUp } from '../../lib/audio'
 import { WinCelebration, WinCelebrationFx, celebrationStyle, useWinRollup } from './WinCelebration'
 import {
   ENTRY_SPARKLES,
@@ -84,6 +85,14 @@ export function RoundPopupView({
   const duration = entry ? countUpMs(reducedMotion) : celebrationTiming(tier, { reducedMotion }).rollupMs
 
   const roll = useWinRollup(target, duration)
+
+  // 숫자 올라가기 소리. 렌더러 winTotal 경로 밖이라 여기서 직접 깐다(틱·마감음은 오디오 시계에 미리 깔린다).
+  // 감기로 끝나면 handleTap에서 끊고 마감음만 내고, 팝업이 닫히면 남은 틱을 끊는다.
+  useEffect(() => {
+    if (target <= 0) return
+    playCountUp(duration, 'none')
+    return () => stopCountUp()
+  }, [target, duration])
   /**
    * 스크린리더에 한 번만 읽히는 최종 문장. 첫 렌더에서 비워 두었다가 롤업이 끝난 뒤 채우는 게
    * 요점이다 — 처음부터 값이 들어 있으면 live 영역은 "변화"가 없어 아예 읽히지 않고,
@@ -105,16 +114,23 @@ export function RoundPopupView({
   /** 탭 한 번의 뜻: 굴러가는 중이면 "끝까지 감기", 다 굴렀으면 "닫기". */
   const handleTap = (): void => {
     if (roll.phase === 'rolling') {
+      stopCountUp()
+      playRollupEnd('none')
       roll.complete()
       return
     }
     onDismiss()
   }
 
-  const summary =
+  // 한 푼도 못 딴 라운드(무당첨 8회 ≈ 4.6%)에 색종이와 «획득 0»은 결과와 어긋난다 — 위로 톤으로 바꾼다.
+  const noWin = !entry && target === 0
+  const playedText =
     freeSpinsPlayed !== undefined && freeSpinsPlayed > 0
-      ? t('freeSpinsPopupSpins', { spins: freeSpinsPlayed })
+      ? t(popup.kind === 'freeSpinsExit' && popup.orders !== undefined ? 'orderRoundPopupSpins' : 'freeSpinsPopupSpins', {
+          spins: freeSpinsPlayed,
+        })
       : t('freeSpinsComplete')
+  const summary = noWin ? `${t('freeSpinsEndNoWin')} · ${playedText}` : playedText
 
   const cardClass = [
     'hub-round-popup',
@@ -130,7 +146,7 @@ export function RoundPopupView({
     <Modal onClose={handleTap} titleId={TITLE_ID}>
       {/* 배경 연출은 카드의 형제여야 한다(z-index/컨테이닝 블록 — WinCelebration.css 참고).
           진입에는 코인 샤워 대신 심볼 주위의 반짝임을 쓴다. */}
-      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry} skin={skin} />
+      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry && !noWin} skin={skin} />
 
       {/* 카드 전체가 하나의 탭 영역이다 — 탭/클릭은 물론 키보드(Enter/Space)로도 같은 뜻이다.
           Modal이 열릴 때 카드 안 첫 포커스 가능 요소로 포커스를 옮기므로 이게 그 대상이 된다. */}
@@ -172,7 +188,11 @@ export function RoundPopupView({
           labels={labels}
           skin={skin}
           plainTitle={
-            entry ? t(popup.kind === 'freeSpinsEntry' && popup.order ? 'orderRoundPopupTitle' : 'freeSpinsPopupTitle') : t('winTierPlain')
+            entry
+              ? t(popup.kind === 'freeSpinsEntry' && popup.order ? 'orderRoundPopupTitle' : 'freeSpinsPopupTitle')
+              : noWin
+                ? t('freeSpinsComplete')
+                : t('winTierPlain')
           }
           unit={entry ? t('freeSpinsPopupCountUnit') : undefined}
           titleId={TITLE_ID}

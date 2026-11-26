@@ -1,5 +1,6 @@
 import type {
   CelebrationFont,
+  CelebrationLabel,
   CelebrationMotion,
   CelebrationRayStyle,
   CelebrationShape,
@@ -77,7 +78,8 @@ export interface ResolvedCelebrationSkin {
   }
   readonly rayStyle: CelebrationRayStyle
   readonly waveStyle: CelebrationWaveStyle
-  readonly labels: Readonly<Partial<Record<CelebrationTierKey, string>>>
+  /** 문자열 또는 `{ ko, en }`. 화면 언어를 아는 허브가 고른다(렌더러는 글자를 그리지 않는다). */
+  readonly labels: Readonly<Partial<Record<CelebrationTierKey, CelebrationLabel>>>
   readonly levels: Readonly<Record<CelebrationLevel, ResolvedCelebrationLevel>>
 }
 
@@ -185,9 +187,12 @@ export function resolveCelebrationSkin(
   }
   if (kinds.length === 0) kinds.push({ kind: 'shape', shape: 'coin' })
 
-  const labels: Partial<Record<CelebrationTierKey, string>> = {}
+  const labels: Partial<Record<CelebrationTierKey, CelebrationLabel>> = {}
   for (const [key, label] of Object.entries(skin?.labels ?? {})) {
-    if (label !== undefined && label.trim() !== '') labels[key as CelebrationTierKey] = label
+    if (label === undefined) continue
+    if (typeof label === 'string' ? label.trim() !== '' : Boolean(label.ko?.trim() || label.en?.trim())) {
+      labels[key as CelebrationTierKey] = label
+    }
   }
 
   return {

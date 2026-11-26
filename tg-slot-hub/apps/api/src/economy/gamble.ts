@@ -66,9 +66,16 @@ export function gamblePayout(pendingWin: number, payout: number): number {
 /**
  * 이 라운드로 더블업을 열 수 있는지.
  * 유료 스핀의 당첨만 대상이다. 프리스핀 당첨까지 열어 주면 공짜로 얻은 돈을 무한히 굴릴 수 있다.
+ * 프리스핀을 **여는** 유료 스핀도 뺀다 — 진입 팝업 뒤에 «받기/더블»이 깔렸다가 첫 프리스핀에
+ * 자동 회수되는 어색한 흐름이었다(검수 F7). 더블업은 기대값 중립이라 RTP는 그대로다.
  */
-export function isGambleEligible(input: { isFreeSpin: boolean; totalWin: number; config?: GambleConfig }): boolean {
-  return input.config !== undefined && !input.isFreeSpin && input.totalWin > 0
+export function isGambleEligible(input: {
+  isFreeSpin: boolean
+  totalWin: number
+  config?: GambleConfig
+  opensFreeSpins?: boolean
+}): boolean {
+  return input.config !== undefined && !input.isFreeSpin && input.opensFreeSpins !== true && input.totalWin > 0
 }
 
 /** 더 도전할 수 있는 횟수. 상한에 닿았거나 판돈이 0이면 0이다. */

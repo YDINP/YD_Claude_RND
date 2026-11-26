@@ -4,8 +4,7 @@
  * 줄 튕김(기타·고토)은 Karplus-Strong 버퍼를 음높이마다 한 번 만들어 캐시한다(24kHz, 개수 상한).
  * 실시간(AudioContext)과 오프라인 렌더(OfflineAudioContext) 둘 다에서 쓴다.
  */
-import type { SoundPreset } from '@tgslot/renderer'
-import type { BgmNote, BgmRole } from './bgm'
+import type { AudioPreset, BgmNote, BgmRole } from './bgm'
 
 export interface BgmVoices {
   readonly output: GainNode
@@ -242,6 +241,52 @@ function breathy(k: Tools, t: number, f: number, vel: number, dur: number, out: 
   k.track(end)
 }
 
+/** 하모니카: 갈대 소리 — 톱니파를 대역 필터로 걸러 콧소리를 내고, 늦게 들어오는 비브라토와 숨 잡음을 얹는다. */
+function harmonica(k: Tools, t: number, f: number, vel: number, dur: number, out: AudioNode): void {
+  const o = k.c.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.setValueAtTime(f * 0.99, t)
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.05)
+  const lfo = k.c.createOscillator()
+  lfo.frequency.value = 5.2
+  const depth = k.c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.linearRampToValueAtTime(0, t + 0.25)
+  depth.gain.linearRampToValueAtTime(f * 0.009, t + 0.6)
+  lfo.connect(depth).connect(o.frequency)
+  const bp = k.c.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.frequency.value = Math.min(4200, f * 3)
+  bp.Q.value = 1.1
+  const g = k.c.createGain()
+  const hold = t + Math.max(0.12, dur * 0.95)
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.045)
+  g.gain.setValueAtTime(vel * 0.9, hold)
+  g.gain.setTargetAtTime(0, hold, 0.07)
+  const end = hold + 0.45
+  o.connect(bp).connect(g).connect(out)
+  const n = k.c.createBufferSource()
+  n.buffer = k.noise
+  n.loop = true
+  const nbp = k.c.createBiquadFilter()
+  nbp.type = 'bandpass'
+  nbp.frequency.value = f * 2
+  nbp.Q.value = 2
+  const ng = k.c.createGain()
+  ng.gain.setValueAtTime(vel * 0.1, t)
+  ng.gain.setTargetAtTime(vel * 0.04, t + 0.05, 0.2)
+  ng.gain.setTargetAtTime(0, hold, 0.06)
+  n.connect(nbp).connect(ng).connect(out)
+  for (const node of [o, lfo]) {
+    node.start(t)
+    node.stop(end)
+  }
+  n.start(t, Math.random() * 0.5)
+  n.stop(end)
+  k.track(end)
+}
+
 function pluck(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode, spec: PluckSpec): void {
   const { buffer, playbackRate } = k.pluckBuffer(midi, spec)
   const src = k.c.createBufferSource()
@@ -314,6 +359,7 @@ const SHO: PadSpec = { types: ['sine', 'sine', 'triangle'], detune: 5, attack: 1
 
 const GUITAR: PluckSpec = { bright: 0.55, decay: 0.997, pick: 0.18, seconds: 1.4 }
 const GUITAR_BASS: PluckSpec = { bright: 0.25, decay: 0.986, pick: 0.25, seconds: 0.9 }
+const BANJO: PluckSpec = { bright: 0.95, decay: 0.982, pick: 0.1, seconds: 0.5 }
 const KOTO: PluckSpec = { bright: 0.85, decay: 0.993, pick: 0.11, seconds: 1.2 }
 const KOTO_LOW: PluckSpec = { bright: 0.4, decay: 0.991, pick: 0.2, seconds: 1.2 }
 
@@ -331,7 +377,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
+const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -389,24 +435,24 @@ const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
     },
   },
   western: {
-    gain: 2.0,
+    gain: 2.3,
     mix: {
-      pad: [0.03, 0.3],
-      keys: [0.22, 0.3],
-      arp: [0.26, 0.3],
-      lead: [0.07, 0.45],
-      bass: [0.2, 0.1],
-      kick: [0.24, 0.05],
-      snare: [0.07, 0.25],
-      wood: [0.09, 0.2],
-      shaker: [0.04, 0.15],
+      pad: [0.03, 0.2],
+      keys: [0.2, 0.15],
+      arp: [0.24, 0.15],
+      lead: [0.1, 0.25],
+      bass: [0.2, 0.06],
+      kick: [0.34, 0.03],
+      snare: [0.12, 0.12],
+      wood: [0.14, 0.1],
+      shaker: [0.06, 0.1],
     },
     padCutoff: [1000, 1800],
     voices: {
       pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['triangle', 'sine'], detune: 4, attack: 1.2, release: 1.4 }),
       keys: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, GUITAR),
-      arp: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, GUITAR),
-      lead: (k, t, m, v, d, out) => breathy(k, t, mtof(m), v, d, out, 0.12, 5.6, 0.06),
+      arp: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, BANJO),
+      lead: (k, t, m, v, d, out) => harmonica(k, t, mtof(m), v, d, out),
       bass: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, GUITAR_BASS),
       kick: (k, t, _m, v, _d, out) => drum(k, t, 80, 44, v, out, 0.1),
       snare: (k, t, _m, v, _d, out) => hiss(k, t, v, out, BRUSH),
@@ -418,12 +464,12 @@ const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
     },
   },
   shrine: {
-    gain: 2.57,
+    gain: 1.5,
     mix: {
-      pad: [0.025, 0.45],
-      keys: [0.22, 0.35],
-      arp: [0.28, 0.4],
-      lead: [0.08, 0.5],
+      pad: [0.05, 0.55],
+      keys: [0.18, 0.4],
+      arp: [0.2, 0.45],
+      lead: [0.1, 0.55],
       bass: [0.15, 0.2],
       kick: [0.3, 0.15],
       wood: [0.14, 0.25],
@@ -476,7 +522,6 @@ const BASE_KITS: Record<Exclude<SoundPreset, 'candy'>, Kit> = {
   },
 }
 
-const GLOCK: readonly Partial3[] = [[1, 1, 0.5], [2.76, 0.35, 0.22], [5.4, 0.2, 0.1], [8.93, 0.08, 0.05]]
 
 /** 통통 튀는 신스 베이스: 톱니파가 열렸다 닫히는 짧은 옥타브 베이스. */
 function bounceBass(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
@@ -528,47 +573,204 @@ function synthPluck(k: Tools, t: number, midi: number, vel: number, out: AudioNo
   k.track(end)
 }
 
-/** 핑거 스냅: 대역 잡음 한 번 + 짧은 딱 소리. */
-function snap(k: Tools, t: number, vel: number, out: AudioNode): void {
-  hiss(k, t, vel, out, { type: 'bandpass', freq: 2300, q: 3, attack: 0.001, tau: 0.018 })
-  drum(k, t, 1900, 900, vel * 0.5, out, 0.006, 'triangle')
+/** 하우스 스탭: 어긋난 톱니 둘이 짧게 울리고 필터가 빠르게 닫힌다. 뒷박에 찍는 화음 한 방. */
+function sawStab(k: Tools, t: number, midi: number, vel: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.5
+  lp.frequency.setValueAtTime(Math.min(6500, f * 10), t)
+  lp.frequency.setTargetAtTime(f * 1.8, t + 0.005, 0.07)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.003)
+  g.gain.setTargetAtTime(0, t + 0.003, 0.08)
+  const end = t + 0.5
+  lp.connect(g).connect(out)
+  for (const detune of [-12, 12]) {
+    const o = k.c.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = f
+    o.detune.value = detune
+    o.connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
 }
 
-/** 캔디 팝: 글로켄 선율, 신스 키·셀레스타 반주, 통통 베이스, 핑거 스냅. 라운드의 대선율은 마림바. */
+/** 사각파 선율: 칩튠처럼 곧고 밝다. 음이 자리 잡은 뒤 약한 비브라토. */
+function pulseLead(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const o = k.c.createOscillator()
+  o.type = 'square'
+  o.frequency.value = f
+  const lfo = k.c.createOscillator()
+  lfo.frequency.value = 6
+  const depth = k.c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.linearRampToValueAtTime(0, t + 0.12)
+  depth.gain.linearRampToValueAtTime(f * 0.005, t + 0.3)
+  lfo.connect(depth).connect(o.frequency)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = Math.min(5200, f * 4)
+  lp.Q.value = 0.8
+  const g = k.c.createGain()
+  const hold = t + Math.max(0.08, dur * 0.85)
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.005)
+  g.gain.setTargetAtTime(vel * 0.55, t + 0.005, 0.12)
+  g.gain.setTargetAtTime(0, hold, 0.045)
+  const end = hold + 0.3
+  o.connect(lp).connect(g).connect(out)
+  o.start(t)
+  lfo.start(t)
+  o.stop(end)
+  lfo.stop(end)
+  k.track(end)
+}
+
+/** 박수: 짧은 잡음 세 번이 어긋나게 겹친다. */
+function clap(k: Tools, t: number, vel: number, out: AudioNode): void {
+  ;[0, 0.011, 0.022].forEach((d, i) => hiss(k, t + d, vel * (i === 2 ? 1 : 0.7), out, { type: 'bandpass', freq: 1500, q: 1.1, attack: 0.001, tau: i === 2 ? 0.05 : 0.01 }))
+}
+
+/** 댄스 킥: 빠르게 떨어지는 사인 + 앞의 짧은 딱. */
+function danceKick(k: Tools, t: number, vel: number, out: AudioNode): void {
+  drum(k, t, 150, 46, vel, out, 0.075)
+  hiss(k, t, vel * 0.3, out, { type: 'highpass', freq: 3000, q: 0.7, attack: 0.0005, tau: 0.004 })
+}
+
+/** 캔디 팝: 하우스풍 4박 킥과 박수, 뒷박 톱니 스탭, 사각파 선율, 16분 신스 플럭, 통통 베이스. */
 const CANDY_KIT: Kit = {
-  gain: 0.95,
+  gain: 1.15,
   mix: {
-    pad: [0.05, 0.2],
-    keys: [0.18, 0.1],
-    arp: [0.07, 0.2],
-    lead: [0.22, 0.2],
-    counter: [0.2, 0.12],
+    pad: [0.05, 0.25],
+    keys: [0.2, 0.25],
+    arp: [0.1, 0.2],
+    lead: [0.16, 0.2],
+    counter: [0.1, 0.25],
     bass: [0.34, 0.02],
-    kick: [0.28, 0.02],
-    snare: [0.4, 0.12],
+    kick: [0.36, 0.02],
+    snare: [0.32, 0.25],
     hat: [0.06, 0.04],
-    shaker: [0.1, 0.05],
+    shaker: [0.07, 0.04],
   },
   padCutoff: [1500, 2800],
   voices: {
-    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sine', 'triangle'], detune: 7, attack: 0.5, release: 0.8 }),
-    keys: (k, t, m, v, d, out) => fmKey(k, t, mtof(m), v, Math.min(d, 0.3), out, 2.2, 0.14),
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sawtooth', 'sawtooth'], detune: 11, attack: 0.3, release: 0.5 }),
+    keys: (k, t, m, v, _d, out) => sawStab(k, t, m, v, out),
     arp: (k, t, m, v, _d, out) => synthPluck(k, t, m, v, out),
-    lead: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, GLOCK, 0.001),
-    counter: (k, t, m, v, _d, out) => marimba(k, t, m, v, out),
+    lead: (k, t, m, v, d, out) => pulseLead(k, t, m, v, d, out),
+    counter: (k, t, m, v, _d, out) => synthPluck(k, t, m + 12, v, out),
     bass: (k, t, m, v, _d, out) => bounceBass(k, t, m, v, out),
-    kick: (k, t, _m, v, _d, out) => drum(k, t, 125, 50, v, out, 0.07),
-    snare: (k, t, _m, v, _d, out) => snap(k, t, v, out),
-    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...RIDE, freq: 8500, tau: 0.02 }),
-    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, SHAKER),
+    kick: (k, t, _m, v, _d, out) => danceKick(k, t, v, out),
+    snare: (k, t, _m, v, _d, out) => clap(k, t, v, out),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'highpass', freq: 9000, q: 0.7, attack: 0.001, tau: 0.012 }),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'highpass', freq: 7500, q: 0.7, attack: 0.002, tau: 0.05 }),
   },
 }
 
-const KITS: Record<SoundPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT }
+/** 브라스 스탭: 톱니 둘이 25ms 동안 열리며 한 방 울리고 닫힌다. 빅밴드 혼 섹션의 짧은 찍기. */
+function brassStab(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.2
+  lp.frequency.setValueAtTime(f * 2.2, t)
+  lp.frequency.linearRampToValueAtTime(Math.min(5000, f * 6), t + 0.03)
+  lp.frequency.setTargetAtTime(f * 2, t + 0.05, 0.12)
+  const g = k.c.createGain()
+  const hold = t + Math.max(0.12, Math.min(0.35, dur * 0.7))
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.02)
+  g.gain.setValueAtTime(vel * 0.85, hold)
+  g.gain.setTargetAtTime(0, hold, 0.07)
+  const end = hold + 0.4
+  lp.connect(g).connect(out)
+  for (const detune of [-7, 7]) {
+    const o = k.c.createOscillator()
+    o.type = 'sawtooth'
+    o.frequency.value = f
+    o.detune.value = detune
+    o.connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 약음기 트럼펫: 톱니파를 좁은 대역으로 거르고 필터를 와와 흔든다. 늦게 들어오는 비브라토. */
+function mutedTrumpet(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const o = k.c.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.setValueAtTime(f * 0.985, t)
+  o.frequency.exponentialRampToValueAtTime(f, t + 0.04)
+  const lfo = k.c.createOscillator()
+  lfo.frequency.value = 5.4
+  const depth = k.c.createGain()
+  depth.gain.setValueAtTime(0, t)
+  depth.gain.linearRampToValueAtTime(0, t + 0.2)
+  depth.gain.linearRampToValueAtTime(f * 0.008, t + 0.5)
+  lfo.connect(depth).connect(o.frequency)
+  const bp = k.c.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.Q.value = 3.5
+  bp.frequency.setValueAtTime(Math.min(3000, f * 2), t)
+  bp.frequency.linearRampToValueAtTime(Math.min(3600, f * 3.4), t + Math.max(0.1, dur * 0.4))
+  const g = k.c.createGain()
+  const hold = t + Math.max(0.1, dur * 0.9)
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel * 1.3, t + 0.03)
+  g.gain.setTargetAtTime(vel, t + 0.03, 0.15)
+  g.gain.setTargetAtTime(0, hold, 0.06)
+  const end = hold + 0.35
+  o.connect(bp).connect(g).connect(out)
+  o.start(t)
+  lfo.start(t)
+  o.stop(end)
+  lfo.stop(end)
+  k.track(end)
+}
+
+const HARP: PluckSpec = { bright: 0.7, decay: 0.995, pick: 0.15, seconds: 1.3 }
+const RIDE_CYMBAL: NoiseSpec = { type: 'highpass', freq: 6500, q: 0.7, attack: 0.001, tau: 0.09 }
+
+/** 로열: 빅밴드 혼 스탭 + 약음기 트럼펫 + 하프 + 걷는 베이스 + 라이드. */
+const ROYAL_KIT: Kit = {
+  gain: 1.7,
+  mix: {
+    pad: [0.04, 0.35],
+    keys: [0.13, 0.25],
+    arp: [0.2, 0.4],
+    lead: [0.14, 0.3],
+    bass: [0.2, 0.05],
+    kick: [0.22, 0.03],
+    snare: [0.08, 0.2],
+    hat: [0.05, 0.2],
+    shaker: [0.05, 0.15],
+  },
+  padCutoff: [900, 1700],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sawtooth', 'triangle'], detune: 6, attack: 0.3, release: 0.7 }),
+    keys: (k, t, m, v, d, out) => brassStab(k, t, m, v, d, out),
+    arp: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, HARP),
+    lead: (k, t, m, v, d, out) => mutedTrumpet(k, t, m, v, d, out),
+    bass: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, GUITAR_BASS),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 85, 45, v, out, 0.09),
+    snare: (k, t, _m, v, _d, out) => hiss(k, t, v, out, BRUSH),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, RIDE_CYMBAL),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...RIDE_CYMBAL, tau: 0.05 }),
+  },
+}
+
+const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 
-export function createBgmVoices(c: BaseAudioContext, preset: SoundPreset, dest: AudioNode): BgmVoices {
+export function createBgmVoices(c: BaseAudioContext, preset: AudioPreset, dest: AudioNode): BgmVoices {
   const kit = KITS[preset]
   const output = c.createGain()
   const tone = c.createBiquadFilter()

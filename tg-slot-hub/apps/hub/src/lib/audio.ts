@@ -6,8 +6,8 @@
  * AudioContext는 첫 사용자 제스처에서 만든다(iOS/텔레그램 웹뷰 자동재생 정책).
  * 그 전에 온 재생 요청은 조용히 버린다 — 스핀은 늘 버튼 탭으로 시작하므로 놓칠 일이 없다.
  */
-import type { SoundPreset, WinTier } from '@tgslot/renderer'
-import { BGM_STYLES, BgmSequencer, type BgmVariant } from './bgm'
+import type { WinTier } from '@tgslot/renderer'
+import { BGM_STYLES, BgmSequencer, type AudioPreset, type BgmVariant } from './bgm'
 import { createBgmVoices, type BgmVoices } from './bgmVoices'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
@@ -20,10 +20,15 @@ let bgmBus: GainNode | null = null
 let bgmDuck: GainNode | null = null
 let noiseBuffer: AudioBuffer | null = null
 let spinLoop: { src: AudioBufferSourceNode; gain: GainNode } | null = null
-let riser: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode; extra: AudioScheduledSourceNode[] } | null = null
+let riser: { gain: GainNode; nodes: AudioScheduledSourceNode[] } | null = null
+let countUp: { bus: GainNode; timer: ReturnType<typeof setTimeout> } | null = null
 let riserStep = 0
 let lastStopAt = 0
 let lastTickAt = 0
+/** 지금 소리를 몇 초 뒤로 예약할지. `playCountUp`처럼 한꺼번에 여러 소리를 미리 깔 때만 잠깐 0이 아니다. */
+let sched = 0
+/** 값이 있으면 `tone`/`noise`가 마스터 대신 이 노드로 보낸다(미리 깔아 둔 소리를 한 번에 끊기 위해). */
+let busOverride: AudioNode | null = null
 let overrideUrls: Partial<Record<SfxKey, string>> = {}
 const overrideBuffers = new Map<string, Promise<AudioBuffer | null>>()
 
@@ -40,6 +45,7 @@ export function setAudioMuted(nextMuted: boolean): void {
   if (muted) {
     stopSpinLoop()
     stopAnticipation()
+    stopCountUp()
     stopBgmSession(0.15)
   } else {
     tryStartBgm()
@@ -158,17 +164,19 @@ interface ToneOpts {
 }
 
 function tone(c: AudioContext, o: ToneOpts): void {
-  const t = c.currentTime + (o.at ?? 0)
+  const t = c.currentTime + sched + (o.at ?? 0)
   const osc = c.createOscillator()
   const g = c.createGain()
   osc.type = o.type ?? 'triangle'
   osc.frequency.setValueAtTime(o.freq, t)
   if (o.slideTo) osc.frequency.exponentialRampToValueAtTime(o.slideTo, t + o.dur)
   const a = o.attack ?? 0.004
+  // 자동화가 시작하기 전 한 샘플이 기본값 1로 새지 않게 먼저 0으로 눌러 둔다(사각파·잡음의 첫 샘플 클릭).
+  g.gain.value = 0
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(o.vol, t + a)
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur)
-  const out = o.out ?? master!
+  const out = o.out ?? busOverride ?? master!
   if (o.lp) {
     const f = c.createBiquadFilter()
     f.type = 'lowpass'
@@ -187,7 +195,7 @@ function noise(
   o: { at?: number; dur: number; vol: number; filter: BiquadFilterType; freq: number; q?: number; sweepTo?: number },
 ): void {
   if (!noiseBuffer) return
-  const t = c.currentTime + (o.at ?? 0)
+  const t = c.currentTime + sched + (o.at ?? 0)
   const src = c.createBufferSource()
   src.buffer = noiseBuffer
   const f = c.createBiquadFilter()
@@ -196,10 +204,11 @@ function noise(
   if (o.sweepTo) f.frequency.exponentialRampToValueAtTime(o.sweepTo, t + o.dur)
   f.Q.value = o.q ?? 1
   const g = c.createGain()
+  g.gain.value = 0
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(o.vol, t + 0.005)
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur)
-  src.connect(f).connect(g).connect(master!)
+  src.connect(f).connect(g).connect(busOverride ?? master!)
   src.start(t, Math.random() * 0.5)
   src.stop(t + o.dur + 0.02)
 }
@@ -224,7 +233,7 @@ const popVoice: Voice = (c, f, at, vol) => {
 
 /** 서부 기타: 밝게 시작해 어두워지는 톱니파 + 몸통 삼각파, 끝이 살짝 처진다(트왱). */
 function pluck(c: AudioContext, f: number, at: number, vol: number, ring: number): void {
-  const t = c.currentTime + at
+  const t = c.currentTime + sched + at
   const osc = c.createOscillator()
   osc.type = 'sawtooth'
   osc.frequency.setValueAtTime(f, t)
@@ -234,10 +243,11 @@ function pluck(c: AudioContext, f: number, at: number, vol: number, ring: number
   lp.frequency.setValueAtTime(Math.min(9000, f * 10), t)
   lp.frequency.setTargetAtTime(f * 1.2, t + 0.004, 0.05)
   const g = c.createGain()
+  g.gain.value = 0
   g.gain.setValueAtTime(0.0001, t)
   g.gain.exponentialRampToValueAtTime(vol * 0.75, t + 0.002)
   g.gain.setTargetAtTime(0.0001, t + 0.002, ring)
-  osc.connect(lp).connect(g).connect(master!)
+  osc.connect(lp).connect(g).connect(busOverride ?? master!)
   osc.start(t)
   osc.stop(t + ring * 5 + 0.05)
   tone(c, { freq: f * 2, at, dur: Math.min(0.3, ring * 1.4), vol: vol * 0.18, type: 'sine', attack: 0.002 })
@@ -270,18 +280,227 @@ function clack(c: AudioContext, freq: number, at: number, vol: number): void {
   noise(c, { at, dur: 0.035, vol: vol * 0.5, filter: 'bandpass', freq: 1900, q: 2 })
 }
 
-/** 총성 같은 딸깍: 짧은 잡음 폭발 + 낮은 쿵. 큰 당첨에서만 쓴다. */
-function gunshot(c: AudioContext, at: number, vol: number): void {
-  noise(c, { at, dur: 0.03, vol: vol * 1.2, filter: 'highpass', freq: 1200, q: 0.7 })
-  noise(c, { at, dur: 0.35, vol, filter: 'lowpass', freq: 3000, sweepTo: 200, q: 0.7 })
-  tone(c, { freq: 90, slideTo: 40, at, dur: 0.25, vol: vol * 0.9, type: 'sine', attack: 0.002 })
-  noise(c, { at: at + 0.02, dur: 0.9, vol: vol * 0.15, filter: 'bandpass', freq: 900, q: 0.7 })
+// ── 총성 (서부) ───────────────────────────────────────────
+// 녹음 샘플(`audioSamples.ts`, Freesound CC0)이 있으면 그것을 쓰고, 아직 못 불러왔거나 실패하면
+// 계산으로 만든 합성 총성(1~3 ms 크랙 + 짧은 폭발 + 140→50 Hz 몸통 + 120/260 ms 반사음)으로 대신한다.
+
+const GUNSHOT_SAMPLE_GAIN = 0.8
+let gunLoad: Promise<void> | null = null
+let gunSample: { data: Float32Array; rate: number } | null = null
+let gunBuffer: { ctx: AudioContext; buffer: AudioBuffer; real: boolean } | null = null
+
+/** western 프리셋이 걸리면 총성 녹음을 별도 청크로 풀어 둔다. 다른 프리셋으로 가면 `releaseGunshot`이 버린다. */
+function warmGunshot(): void {
+  if (gunLoad) return
+  const load: Promise<void> = import('./audioSamples')
+    .then((m) => {
+      if (gunLoad === load) gunSample = m.decodeGunshot()
+    })
+    .catch(() => undefined)
+  gunLoad = load
+}
+
+function releaseGunshot(): void {
+  gunLoad = null
+  gunSample = null
+  gunBuffer = null
+}
+
+/** 총성 녹음이 풀려 있으면 true. western 프리셋에서만 그렇다(테스트·점검용). */
+export function hasGunshotSample(): boolean {
+  return gunSample !== null
+}
+
+/** 합성 총성 버퍼. 난수는 매번 달라도 되지만 한 번 만든 것을 재사용한다. */
+function synthGunshotBuffer(c: AudioContext): AudioBuffer {
+  const sr = c.sampleRate
+  const len = Math.floor(sr * 0.9)
+  const buf = c.createBuffer(1, len, sr)
+  const d = buf.getChannelData(0)
+  const blast = new Float32Array(len)
+  let lp = 0
+  for (let i = 0; i < len; i++) {
+    const t = i / sr
+    const white = Math.random() * 2 - 1
+    lp += 0.3 * (white - lp)
+    const crack = white * Math.exp(-t / 0.0018)
+    blast[i] = lp * Math.exp(-t / 0.028)
+    const body = Math.sin(2 * Math.PI * (50 + 90 * Math.exp(-t / 0.05)) * t) * Math.exp(-t / 0.07)
+    d[i] = crack * 0.9 + blast[i]! * 1.1 + body * 0.7
+  }
+  for (const [delay, level] of [[0.12, 0.3], [0.26, 0.16]] as const) {
+    const off = Math.floor(sr * delay)
+    for (let i = off; i < len; i++) d[i] = d[i]! + blast[i - off]! * level * 0.8
+  }
+  let tail = 0
+  for (let i = 0; i < len; i++) {
+    tail += 0.05 * (Math.random() * 2 - 1 - tail)
+    d[i] = d[i]! + tail * Math.exp(-(i / sr) / 0.25) * 0.5
+  }
+  let peak = 1e-6
+  for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(d[i]!))
+  for (let i = 0; i < len; i++) d[i] = (d[i]! / peak) * 0.9
+  return buf
+}
+
+function gunshotBuffer(c: AudioContext): AudioBuffer {
+  if (gunBuffer && gunBuffer.ctx === c && (gunBuffer.real || !gunSample)) return gunBuffer.buffer
+  if (gunSample) {
+    const buffer = c.createBuffer(1, gunSample.data.length, gunSample.rate)
+    buffer.getChannelData(0).set(gunSample.data)
+    gunBuffer = { ctx: c, buffer, real: true }
+  } else {
+    gunBuffer = { ctx: c, buffer: synthGunshotBuffer(c), real: false }
+  }
+  return gunBuffer.buffer
+}
+
+/** 총성 한 발. `rate`로 음정을 살짝 바꿔 두 번째 발이 같은 소리로 겹치지 않게 한다. */
+function gunshot(c: AudioContext, at: number, vol: number, rate = 1): void {
+  const src = c.createBufferSource()
+  src.buffer = gunshotBuffer(c)
+  src.playbackRate.value = rate
+  const g = c.createGain()
+  g.gain.value = vol * GUNSHOT_SAMPLE_GAIN * 2
+  src.connect(g).connect(busOverride ?? master!)
+  src.start(c.currentTime + sched + at)
 }
 
 /** 톱니바퀴가 한 칸 넘어가는 소리. */
 function gearTick(c: AudioContext, at: number, vol: number, pitch = 1): void {
   tone(c, { freq: 2600 * pitch, slideTo: 1500 * pitch, at, dur: 0.018, vol, type: 'square', attack: 0.001 })
   noise(c, { at, dur: 0.012, vol: vol * 0.6, filter: 'highpass', freq: 4500 })
+}
+
+/** 카드 뒤집기(미스터리 공개): 종이 쓸림 + 톡 + 시안빛 유리 반짝임. bell·royal 의 변형은 미스터리뿐이라 종류 구분이 없다. */
+function revealFlip(c: AudioContext): void {
+  noise(c, { dur: 0.1, vol: 0.2, filter: 'bandpass', freq: 1500, sweepTo: 6500, q: 1.1 })
+  noise(c, { at: 0.09, dur: 0.014, vol: 0.22, filter: 'bandpass', freq: 3200, q: 2 })
+  tone(c, { freq: 190, slideTo: 120, at: 0.09, dur: 0.06, vol: 0.2, type: 'triangle', attack: 0.002 })
+  ;[3136, 3951, 4699].forEach((f, i) => glassVoice(c, f, 0.12 + i * 0.045, 0.07))
+  noise(c, { at: 0.12, dur: 0.3, vol: 0.05, filter: 'highpass', freq: 7000 })
+}
+
+/** 브라스 한 방: 톱니 둘이 살짝 어긋나 열리며 울린다(혼 섹션 스탭). */
+function brassHit(c: AudioContext, freq: number, at: number, vol: number, dur = 0.35): void {
+  tone(c, { freq, at, dur, vol, type: 'sawtooth', attack: 0.02, lp: freq * 6, lpTo: freq * 2 })
+  tone(c, { freq: freq * 1.006, at, dur: dur * 0.9, vol: vol * 0.7, type: 'sawtooth', attack: 0.025, lp: freq * 5, lpTo: freq * 1.8 })
+}
+
+/** 팀파니 한 방: 떨어지는 저음 사인 + 가죽 치는 짧은 잡음. */
+function timpani(c: AudioContext, at: number, vol: number, freq = 98): void {
+  tone(c, { freq: freq * 1.5, slideTo: freq, at, dur: 0.5, vol, type: 'sine', attack: 0.003 })
+  noise(c, { at, dur: 0.04, vol: vol * 0.5, filter: 'lowpass', freq: 700, q: 0.8 })
+}
+
+/** 스네어 롤: 촘촘한 대역 잡음. 간격이 줄고 커진다. */
+function snareRoll(c: AudioContext, at: number, dur: number, vol: number): void {
+  let t = 0
+  let gap = 0.07
+  while (t < dur) {
+    noise(c, { at: at + t, dur: 0.04, vol: vol * (0.5 + 0.5 * (t / dur)), filter: 'bandpass', freq: 1900, q: 0.9 })
+    t += gap
+    gap = Math.max(0.03, gap * 0.9)
+  }
+}
+
+/** 심벌: 길게 번지는 고역 잡음. */
+function cymbal(c: AudioContext, at: number, dur: number, vol: number): void {
+  noise(c, { at, dur, vol, filter: 'highpass', freq: 6500, q: 0.7 })
+  noise(c, { at, dur: dur * 0.6, vol: vol * 0.5, filter: 'bandpass', freq: 9500, q: 1.5 })
+}
+
+/** 금속 동전 한 닢: 비정수 배음 셋이 짧게 울린다. */
+function coinPing(c: AudioContext, at: number, vol: number, base = 2600, ring = 0.2): void {
+  tone(c, { freq: base, at, dur: ring, vol, type: 'sine', attack: 0.001 })
+  tone(c, { freq: base * 1.52, at, dur: ring * 0.6, vol: vol * 0.55, type: 'sine', attack: 0.001 })
+  tone(c, { freq: base * 2.43, at, dur: ring * 0.3, vol: vol * 0.3, type: 'sine', attack: 0.001 })
+}
+
+/** 톡톡 터지는 알갱이(팝핑 캔디). 고역 잡음 한 번이 짧게 흩어진다. */
+function crackle(c: AudioContext, dur: number, density: number, vol: number, from = 0): void {
+  const count = Math.min(70, Math.round(dur * density))
+  for (let i = 0; i < count; i++) {
+    noise(c, {
+      at: from + Math.random() * dur,
+      dur: 0.012,
+      vol: vol * (0.4 + Math.random() * 0.6),
+      filter: 'highpass',
+      freq: 5200 + Math.random() * 3200,
+      q: 0.7,
+    })
+  }
+}
+
+/** 이어지는 잡음 한 줄(필터 + 게인). 끊을 수 있는 긴 소리용이라 노드를 돌려준다. */
+function noiseLoop(c: AudioContext, out: AudioNode, filter: BiquadFilterType, freq: number, q: number, vol: number) {
+  if (!noiseBuffer) return null
+  const src = c.createBufferSource()
+  src.buffer = noiseBuffer
+  src.loop = true
+  const f = c.createBiquadFilter()
+  f.type = filter
+  f.frequency.value = freq
+  f.Q.value = q
+  const g = c.createGain()
+  g.gain.value = vol
+  src.connect(f).connect(g).connect(out)
+  src.start(c.currentTime)
+  return { src, f, g }
+}
+
+interface RiseOpts {
+  type: OscillatorType
+  from: number
+  to: number
+  vol: number
+  lp?: number
+  /** 위로 훑는 잡음 띠. */
+  wash?: { filter: BiquadFilterType; f0: number; f1: number; q: number; vol: number }
+}
+
+/** 기대감 소리가 "오르고 있다"로 읽히게 하는 가는 스윕 한 줄(+ 잡음 띠). 프리셋 고유 소리 밑에 깐다. */
+function sweepRise(c: AudioContext, bus: AudioNode, lift: number, o: RiseOpts): AudioScheduledSourceNode[] {
+  const t = c.currentTime
+  const secs = 1.5
+  const osc = c.createOscillator()
+  osc.type = o.type
+  osc.frequency.setValueAtTime(o.from * lift, t)
+  osc.frequency.exponentialRampToValueAtTime(o.to * lift, t + secs)
+  const g = c.createGain()
+  g.gain.value = 0
+  g.gain.setValueAtTime(0.0001, t)
+  g.gain.exponentialRampToValueAtTime(o.vol, t + 0.35)
+  if (o.lp) {
+    const f = c.createBiquadFilter()
+    f.type = 'lowpass'
+    f.frequency.setValueAtTime(o.lp * 0.4, t)
+    f.frequency.exponentialRampToValueAtTime(o.lp, t + secs)
+    osc.connect(f).connect(g)
+  } else {
+    osc.connect(g)
+  }
+  g.connect(bus)
+  osc.start(t)
+  const nodes: AudioScheduledSourceNode[] = [osc]
+  if (o.wash && noiseBuffer) {
+    const src = c.createBufferSource()
+    src.buffer = noiseBuffer
+    src.loop = true
+    const bp = c.createBiquadFilter()
+    bp.type = o.wash.filter
+    bp.Q.value = o.wash.q
+    bp.frequency.setValueAtTime(o.wash.f0, t)
+    bp.frequency.exponentialRampToValueAtTime(o.wash.f1, t + secs)
+    const wg = c.createGain()
+    wg.gain.value = 0
+    wg.gain.setValueAtTime(0.0001, t)
+    wg.gain.exponentialRampToValueAtTime(o.wash.vol, t + secs)
+    src.connect(bp).connect(wg).connect(bus)
+    src.start(t)
+    nodes.push(src)
+  }
+  return nodes
 }
 
 interface SparkleOpts {
@@ -291,13 +510,15 @@ interface SparkleOpts {
   lo: number
   hi: number
   voice: 'coin' | 'bubble' | 'suzu' | 'glass'
+  /** 흩뿌리기 시작을 몇 초 늦출지. 앞소리(총성 등)를 가리지 않으려고 쓴다. */
+  from?: number
 }
 
 /** 당첨 동안 흩뿌리는 작은 소리들. 프리셋마다 동전/거품/방울/유리다. */
 function sparkle(c: AudioContext, o: SparkleOpts): void {
   const count = Math.min(60, Math.round(o.dur * o.density))
   for (let i = 0; i < count; i++) {
-    const at = (i / count) * o.dur + Math.random() * 0.05
+    const at = (o.from ?? 0) + (i / count) * o.dur + Math.random() * 0.05
     const f = o.lo + Math.random() * (o.hi - o.lo)
     const v = o.vol * (0.6 + Math.random() * 0.4)
     if (o.voice === 'bubble') {
@@ -316,8 +537,8 @@ function sparkle(c: AudioContext, o: SparkleOpts): void {
 }
 
 /** 한 음계를 일정 간격으로 훑는다. */
-function run(c: AudioContext, voice: Voice, scale: readonly number[], notes: readonly number[], step: number, vol: number): void {
-  notes.forEach((n, i) => voice(c, scale[n]!, i * step, vol))
+function run(c: AudioContext, voice: Voice, scale: readonly number[], notes: readonly number[], step: number, vol: number, from = 0): void {
+  notes.forEach((n, i) => voice(c, scale[n]!, from + i * step, vol))
 }
 
 /** 화음을 `strum`초 간격으로 쓸어내린다(기타) 또는 동시에 친다(strum=0). */
@@ -350,19 +571,31 @@ interface RiserSpec {
   vol: number
 }
 
+/** 심볼 변형 종류. `playMutation`이 프리셋 레시피에 알려 준다(없으면 기본 소리). */
+export type MutationKind = 'mystery' | 'expandWild' | 'upgrade' | 'randomWild'
+
 interface Recipe {
   loop: LoopSpec
   riser: RiserSpec
   scale: readonly number[]
+  /**
+   * 기대감을 단순한 소리 스윕(`riser`) 말고 프리셋 고유 소리로 낸다. `bus`로 보내고, 끊을 수 있는 긴 소리 노드를 돌려준다.
+   * 이 함수 안에서 `tone`/`noise`로 깐 짧은 소리는 `bus`째로 끊긴다(`busOverride`).
+   */
+  anticipate?(c: AudioContext, lift: number, bus: GainNode): AudioScheduledSourceNode[]
   spinStart(c: AudioContext): void
   reelStop(c: AudioContext, lift: number): void
   winSmall(c: AudioContext, rollup: number): void
   winBig(c: AudioContext, tier: Exclude<WinTier, 'none'>, rollup: number): void
   feature(c: AudioContext): void
-  mutation(c: AudioContext): void
+  mutation(c: AudioContext, kind?: MutationKind): void
   /** 롤업 중 틱. `progress`는 0..1. */
   tick(c: AudioContext, progress: number): void
   tickEnd(c: AudioContext, tier: WinTier): void
+  /** 더블업: 동전을 던진다 / 맞혔다 / 틀렸다. */
+  gambleToss(c: AudioContext): void
+  gambleWin(c: AudioContext): void
+  gambleLose(c: AudioContext): void
 }
 
 const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98]
@@ -407,8 +640,7 @@ const BELL_RECIPE: Recipe = {
     ;[4, 5, 6, 7, 8].forEach((n, i) => bell(c, PENTA[n]!, 0.6 + i * 0.06, 0.18, 1.1))
   },
   mutation(c) {
-    noise(c, { dur: 0.35, vol: 0.12, filter: 'highpass', freq: 5000 })
-    ;[6, 8].forEach((n, i) => bell(c, PENTA[n]!, i * 0.05, 0.14, 0.5))
+    revealFlip(c)
   },
   tick(c, progress) {
     tone(c, { freq: 1500 + progress * 1100, dur: 0.03, vol: 0.05, type: 'square', attack: 0.001 })
@@ -417,12 +649,46 @@ const BELL_RECIPE: Recipe = {
     bell(c, PENTA[tier === 'none' ? 3 : 5]!, 0, 0.12, 0.6)
     bell(c, PENTA[tier === 'none' ? 5 : 7]!, 0.07, 0.1, 0.7)
   },
+  gambleToss(c) {
+    noise(c, { dur: 0.05, vol: 0.15, filter: 'bandpass', freq: 2500, q: 2 })
+    coinPing(c, 0.02, 0.16, 2800, 0.5)
+    tone(c, { freq: 1200, slideTo: 3000, at: 0.03, dur: 0.3, vol: 0.05, type: 'sine', attack: 0.01 })
+  },
+  gambleWin(c) {
+    bell(c, PENTA[5]!, 0, 0.2, 0.7)
+    bell(c, PENTA[8]!, 0.1, 0.22, 0.9)
+    sparkle(c, { dur: 0.5, density: 14, vol: 0.05, lo: 2400, hi: 4200, voice: 'coin' })
+  },
+  gambleLose(c) {
+    bell(c, 196, 0, 0.18, 0.5)
+    tone(c, { freq: 130, slideTo: 82, dur: 0.3, vol: 0.28, type: 'triangle', attack: 0.004, lp: 700, lpTo: 200 })
+  },
 }
 
 const FRUIT_RECIPE: Recipe = {
   loop: { hz: 1500, ticks: 12, tonal: 0.9, alt: 0.25, len: 0.022, vol: 0.14 },
   riser: { wave: 'triangle', from: 330, to: 1320, pulseHz: 11, lp: 3200, vol: 0.1 },
   scale: FRUIT_SCALE,
+  anticipate(c, lift, bus) {
+    // 거품 사다리: 간격이 좁아지며 음이 올라가는 방울들 + 가는 사인 스윕
+    let at = 0
+    let gap = 0.2
+    let f = 420 * lift
+    while (at < 3.4) {
+      tone(c, { freq: f * 0.7, slideTo: f * 1.25, at, dur: 0.07, vol: 0.17 + Math.min(0.12, at * 0.05), type: 'sine', attack: 0.002 })
+      at += gap
+      gap = Math.max(0.06, gap * 0.9)
+      f = Math.min(2400, f * 1.07)
+    }
+    return sweepRise(c, bus, lift, {
+      type: 'triangle',
+      from: 330,
+      to: 1320,
+      vol: 0.08,
+      lp: 3200,
+      wash: { filter: 'bandpass', f0: 500, f1: 3500, q: 1.2, vol: 0.09 },
+    })
+  },
   spinStart(c) {
     tone(c, { freq: 260, slideTo: 620, dur: 0.16, vol: 0.32, type: 'sine', attack: 0.004 })
     noise(c, { dur: 0.14, vol: 0.18, filter: 'bandpass', freq: 900, sweepTo: 2600, q: 1.2 })
@@ -432,30 +698,45 @@ const FRUIT_RECIPE: Recipe = {
     tone(c, { freq: 1500 * lift, at: 0.02, dur: 0.05, vol: 0.1, type: 'sine', attack: 0.002 })
   },
   winSmall(c, rollup) {
-    run(c, popVoice, FRUIT_SCALE, [0, 2, 4], 0.08, 0.5)
-    sparkle(c, { dur: Math.min(rollup, 1.2), density: 11, vol: 0.1, lo: 900, hi: 1900, voice: 'bubble' })
+    run(c, popVoice, FRUIT_SCALE, [0, 2, 4], 0.08, 0.7)
+    sparkle(c, { dur: Math.min(rollup, 1.2), density: 11, vol: 0.13, lo: 900, hi: 1900, voice: 'bubble' })
   },
   winBig(c, tier, rollup) {
     const steps = { big: 6, mega: 8, epic: 9, max: 9 }[tier]
-    for (let i = 0; i < steps; i++) popVoice(c, FRUIT_SCALE[i]!, i * 0.065, 0.32)
+    for (let i = 0; i < steps; i++) popVoice(c, FRUIT_SCALE[i]!, i * 0.065, 0.45)
     const at = steps * 0.065 + 0.05
-    chord(c, (cc, f, a, v) => tone(cc, { freq: f, at: a, dur: 0.9, vol: v, type: 'sine', attack: 0.01 }), [523.25, 659.25, 783.99, 1046.5], at, 0.15)
-    tone(c, { freq: 180, slideTo: 520, at, dur: 0.18, vol: 0.25, type: 'sine' })
+    chord(c, (cc, f, a, v) => tone(cc, { freq: f, at: a, dur: 0.9, vol: v, type: 'sine', attack: 0.01 }), [523.25, 659.25, 783.99, 1046.5], at, 0.21)
+    tone(c, { freq: 180, slideTo: 520, at, dur: 0.18, vol: 0.32, type: 'sine' })
     sparkle(c, { dur: rollup, density: tier === 'big' ? 16 : 24, vol: 0.08, lo: 800, hi: 2300, voice: 'bubble' })
   },
   feature(c) {
     noise(c, { dur: 0.8, vol: 0.18, filter: 'bandpass', freq: 500, sweepTo: 5000, q: 2 })
-    tone(c, { freq: 260, dur: 0.8, vol: 0.2, type: 'sine', slideTo: 1040, attack: 0.04 })
-    run(c, popVoice, FRUIT_SCALE, [3, 4, 5, 6, 7, 8], 0.07, 0.3)
+    tone(c, { freq: 260, dur: 0.8, vol: 0.26, type: 'sine', slideTo: 1040, attack: 0.04 })
+    run(c, popVoice, FRUIT_SCALE, [3, 4, 5, 6, 7, 8], 0.07, 0.4)
   },
   mutation(c) {
-    run(c, popVoice, FRUIT_SCALE, [6, 8], 0.05, 0.22)
+    run(c, popVoice, FRUIT_SCALE, [4, 6, 8], 0.05, 0.3)
+    sparkle(c, { dur: 0.3, density: 14, vol: 0.08, lo: 1200, hi: 2400, voice: 'bubble' })
   },
   tick(c, progress) {
     tone(c, { freq: 900 + progress * 800, slideTo: 1400 + progress * 900, dur: 0.045, vol: 0.07, type: 'sine', attack: 0.002 })
+    noise(c, { dur: 0.012, vol: 0.05, filter: 'highpass', freq: 5000 })
   },
   tickEnd(c, tier) {
     run(c, popVoice, FRUIT_SCALE, tier === 'none' ? [2, 4] : [4, 6, 8], 0.06, 0.26)
+  },
+  gambleToss(c) {
+    popVoice(c, 520, 0, 0.35)
+    popVoice(c, 860, 0.07, 0.3)
+    coinPing(c, 0.12, 0.06, 3200, 0.3)
+  },
+  gambleWin(c) {
+    run(c, popVoice, FRUIT_SCALE, [3, 5, 7], 0.07, 0.4)
+    sparkle(c, { dur: 0.5, density: 14, vol: 0.08, lo: 900, hi: 2300, voice: 'bubble' })
+  },
+  gambleLose(c) {
+    tone(c, { freq: 520, slideTo: 150, dur: 0.28, vol: 0.4, type: 'sine', attack: 0.004 })
+    popVoice(c, 200, 0.2, 0.25)
   },
 }
 
@@ -483,43 +764,89 @@ const marimbaVoice: Voice = (c, f, at, vol) => {
   noise(c, { at, dur: 0.012, vol: vol * 0.25, filter: 'bandpass', freq: 2400, q: 1.2 })
 }
 
+/** 사탕 신스 플럭: 톱니+사각이 살짝 어긋나고 필터가 빠르게 닫힌다. 말렛·종과 다른 전자 알갱이 소리. */
+const candyPluckVoice: Voice = (c, f, at, vol) => {
+  tone(c, { freq: f, at, dur: 0.2, vol: vol * 0.7, type: 'sawtooth', attack: 0.002, lp: Math.min(6000, f * 7), lpTo: f * 1.4 })
+  tone(c, { freq: f * 1.005, at, dur: 0.14, vol: vol * 0.45, type: 'square', attack: 0.002, lp: Math.min(5000, f * 5), lpTo: f * 1.3 })
+}
+
 const CANDY_RECIPE: Recipe = {
-  loop: { hz: 1800, ticks: 12, tonal: 0.8, alt: 0.3, len: 0.016, vol: 0.13 },
+  loop: { hz: 2600, ticks: 14, tonal: 0.3, alt: 0.45, len: 0.011, vol: 0.12 },
   riser: { wave: 'triangle', from: 392, to: 1568, pulseHz: 13, lp: 3800, vol: 0.09 },
   scale: CANDY_SCALE,
+  anticipate(c, lift, bus) {
+    // 사탕 계단: 펜타토닉을 한 칸씩 오르는 플럭. 간격이 좁아지고 꼭대기에서 두 음이 번갈아 뛴다.
+    let at = 0
+    let gap = 0.17
+    let i = 0
+    while (at < 3.4) {
+      const n = i < 9 ? i : 8 + (i % 2)
+      candyPluckVoice(c, CANDY_SCALE[n]! * 0.5 * lift, at, 0.07 + Math.min(0.06, i * 0.006))
+      at += gap
+      gap = Math.max(0.08, gap * 0.93)
+      i++
+    }
+    crackle(c, 3.2, 9, 0.03)
+    return sweepRise(c, bus, lift, {
+      type: 'square',
+      from: 262,
+      to: 1046,
+      vol: 0.07,
+      lp: 3000,
+      wash: { filter: 'highpass', f0: 2500, f1: 9000, q: 0.7, vol: 0.09 },
+    })
+  },
   spinStart(c) {
-    tone(c, { freq: 300, slideTo: 900, dur: 0.12, vol: 0.28, type: 'sine', attack: 0.003 })
-    noise(c, { dur: 0.12, vol: 0.14, filter: 'bandpass', freq: 1400, sweepTo: 4200, q: 1.2 })
+    // 뽑기 손잡이: 짧은 삐 소리 세 번이 올라가고 반짝임이 흩어진다.
+    ;[700, 940, 1250].forEach((f, i) => tone(c, { freq: f, at: i * 0.045, dur: 0.03, vol: 0.1, type: 'square', attack: 0.001, lp: 4200, lpTo: 2200 }))
+    noise(c, { at: 0.02, dur: 0.1, vol: 0.12, filter: 'highpass', freq: 5000 })
   },
   reelStop(c, lift) {
     marimbaVoice(c, 330 * lift, 0, 0.55)
     noise(c, { dur: 0.02, vol: 0.2, filter: 'bandpass', freq: 1800, q: 1.2 })
   },
   winSmall(c, rollup) {
-    run(c, glockVoice, CANDY_SCALE, [0, 2, 4], 0.07, 0.34)
-    sparkle(c, { dur: Math.min(rollup, 1.2), density: 12, vol: 0.07, lo: 1800, hi: 3600, voice: 'glass' })
+    run(c, candyPluckVoice, CANDY_SCALE, [2, 4, 6, 8], 0.055, 0.3)
+    crackle(c, Math.min(rollup, 1.2), 14, 0.14, 0.08)
   },
   winBig(c, tier, rollup) {
     const steps = { big: 6, mega: 8, epic: 9, max: 9 }[tier]
-    for (let i = 0; i < steps; i++) marimbaVoice(c, CANDY_SCALE[i]! * 0.5, i * 0.06, 0.34)
-    const at = steps * 0.06 + 0.05
-    chord(c, glockVoice, [783.99, 987.77, 1174.66, 1567.98], at, 0.22, 0.03)
-    tone(c, { freq: 160, slideTo: 420, at, dur: 0.16, vol: 0.22, type: 'sine' })
-    sparkle(c, { dur: rollup, density: tier === 'big' ? 16 : 24, vol: 0.07, lo: 1800, hi: 3800, voice: 'glass' })
+    for (let i = 0; i < steps; i++) candyPluckVoice(c, CANDY_SCALE[i]!, i * 0.05, 0.3)
+    const at = steps * 0.05 + 0.05
+    for (const f of [392, 493.88, 587.33, 783.99]) {
+      tone(c, { freq: f, at, dur: 1.1, vol: 0.12, type: 'sawtooth', attack: 0.02, lp: 2400, lpTo: 900 })
+      tone(c, { freq: f * 1.006, at, dur: 1.1, vol: 0.09, type: 'square', attack: 0.02, lp: 2000, lpTo: 800 })
+    }
+    tone(c, { freq: 200, slideTo: 640, at, dur: 0.18, vol: 0.28, type: 'sine' })
+    crackle(c, rollup, tier === 'big' ? 22 : 34, 0.13, at)
   },
   feature(c) {
-    noise(c, { dur: 0.8, vol: 0.16, filter: 'bandpass', freq: 600, sweepTo: 5600, q: 2 })
-    tone(c, { freq: 300, dur: 0.8, vol: 0.18, type: 'sine', slideTo: 1200, attack: 0.04 })
-    run(c, glockVoice, CANDY_SCALE, [3, 4, 5, 6, 7, 8], 0.07, 0.26)
+    noise(c, { dur: 0.8, vol: 0.24, filter: 'bandpass', freq: 600, sweepTo: 5600, q: 2 })
+    tone(c, { freq: 300, dur: 0.8, vol: 0.26, type: 'sawtooth', slideTo: 1200, attack: 0.04, lp: 2600, lpTo: 4200 })
+    run(c, candyPluckVoice, CANDY_SCALE, [3, 4, 5, 6, 7, 8], 0.07, 0.34, 0.5)
+    crackle(c, 0.8, 24, 0.12, 0.5)
   },
   mutation(c) {
     run(c, marimbaVoice, CANDY_SCALE, [6, 8], 0.05, 0.28)
   },
   tick(c, progress) {
-    tone(c, { freq: 2200 + progress * 1000, dur: 0.026, vol: 0.055, type: 'sine', attack: 0.001 })
+    tone(c, { freq: 3000 + progress * 1500, dur: 0.012, vol: 0.05, type: 'square', attack: 0.001, lp: 6000 })
+    noise(c, { dur: 0.01, vol: 0.08, filter: 'highpass', freq: 6500 })
   },
   tickEnd(c, tier) {
-    run(c, glockVoice, CANDY_SCALE, tier === 'none' ? [3, 5] : [4, 6, 8], 0.06, 0.26)
+    run(c, candyPopVoice, CANDY_SCALE, tier === 'none' ? [4, 6] : [5, 7, 9], 0.06, 0.4)
+  },
+  gambleToss(c) {
+    candyPopVoice(c, 1200, 0, 0.55)
+    noise(c, { at: 0.02, dur: 0.25, vol: 0.1, filter: 'bandpass', freq: 2500, sweepTo: 6000, q: 1.5 })
+    crackle(c, 0.3, 20, 0.08, 0.05)
+  },
+  gambleWin(c) {
+    run(c, candyPluckVoice, CANDY_SCALE, [4, 7], 0.09, 0.34)
+    crackle(c, 0.5, 20, 0.12, 0.05)
+  },
+  gambleLose(c) {
+    tone(c, { freq: 700, slideTo: 220, dur: 0.3, vol: 0.3, type: 'square', attack: 0.004, lp: 1800, lpTo: 300 })
   },
 }
 
@@ -527,35 +854,82 @@ const WESTERN_RECIPE: Recipe = {
   loop: { hz: 950, ticks: 12, tonal: 0.35, alt: 0.2, len: 0.026, vol: 0.2 },
   riser: { wave: 'sawtooth', from: 110, to: 440, pulseHz: 7, lp: 1500, vol: 0.1 },
   scale: WESTERN_SCALE,
+  anticipate(c, lift, bus) {
+    // 방울뱀 꼬리: 점점 빨라지는 딸랑임 + 낮은 현이 서서히 오른다
+    const t = c.currentTime
+    const nodes: AudioScheduledSourceNode[] = []
+    const rattle = noiseLoop(c, bus, 'bandpass', 5200, 1.4, 0.06)
+    if (rattle) {
+      const lfo = c.createOscillator()
+      lfo.type = 'square'
+      lfo.frequency.setValueAtTime(9, t)
+      lfo.frequency.exponentialRampToValueAtTime(26, t + 1.6)
+      const depth = c.createGain()
+      depth.gain.value = 0.06
+      lfo.connect(depth).connect(rattle.g.gain)
+      lfo.start(t)
+      nodes.push(rattle.src, lfo)
+    }
+    const lp = c.createBiquadFilter()
+    lp.type = 'lowpass'
+    lp.frequency.value = 520
+    const gain = c.createGain()
+    gain.gain.value = 0
+    gain.gain.setValueAtTime(0.0001, t)
+    gain.gain.exponentialRampToValueAtTime(0.07, t + 0.4)
+    lp.connect(gain).connect(bus)
+    for (const ratio of [1, 1.5]) {
+      const o = c.createOscillator()
+      o.type = 'sawtooth'
+      o.frequency.setValueAtTime(98 * lift * ratio, t)
+      o.frequency.exponentialRampToValueAtTime(131 * lift * ratio, t + 1.4)
+      o.connect(lp)
+      o.start(t)
+      nodes.push(o)
+    }
+    return nodes
+  },
   spinStart(c) {
     // 권총 약실이 돌아가는 철커덕 + 낮은 현 한 번
     ;[0, 0.045, 0.09].forEach((at, i) => gearTick(c, at, 0.2, 0.55 + i * 0.05))
     pluckVoice(c, 110, 0.02, 0.4)
   },
   reelStop(c, lift) {
-    clack(c, 820 * lift, 0, 0.5)
-    tone(c, { freq: 260 * lift, slideTo: 170 * lift, dur: 0.07, vol: 0.4, type: 'triangle', attack: 0.001, lp: 1800, lpTo: 400 })
+    // 부츠 뒤꿈치가 마룻바닥에 닿는 쿵 + 가죽 스침 + 박차 짤랑 한 번
+    tone(c, { freq: 125 * lift, slideTo: 58 * lift, dur: 0.12, vol: 0.6, type: 'sine', attack: 0.001 })
+    noise(c, { dur: 0.05, vol: 0.28, filter: 'lowpass', freq: 900, sweepTo: 300, q: 0.8 })
+    tone(c, { freq: 700 * lift, slideTo: 430 * lift, at: 0.003, dur: 0.04, vol: 0.2, type: 'triangle', attack: 0.001 })
+    coinPing(c, 0.015, 0.08, 3300, 0.12)
   },
   winSmall(c, rollup) {
     run(c, pluckVoice, WESTERN_SCALE, [0, 2, 3], 0.09, 0.3)
     sparkle(c, { dur: Math.min(rollup, 1.2), density: 9, vol: 0.05, lo: 1800, hi: 3200, voice: 'coin' })
   },
   winBig(c, tier, rollup) {
+    // 총성 한 발이 먼저 울리고 그 여운 뒤에 기타가 쓸어내린다
     gunshot(c, 0, 0.5)
     const steps = { big: 5, mega: 7, epic: 8, max: 9 }[tier]
-    for (let i = 0; i < steps; i++) pluckVoice(c, WESTERN_SCALE[i]!, 0.2 + i * 0.07, 0.3)
-    const at = 0.2 + steps * 0.07 + 0.05
+    const from = 0.34
+    for (let i = 0; i < steps; i++) pluckVoice(c, WESTERN_SCALE[i]!, from + i * 0.07, 0.3)
+    const at = from + steps * 0.07 + 0.05
     chord(c, pluckVoice, [164.81, 246.94, 329.63, 415.3, 493.88], at, 0.28, 0.035)
-    if (tier !== 'big') gunshot(c, at + 0.2, 0.4)
-    sparkle(c, { dur: rollup, density: tier === 'big' ? 12 : 18, vol: 0.06, lo: 1800, hi: 3400, voice: 'coin' })
+    if (tier !== 'big') gunshot(c, at + 0.2, 0.4, 1.08)
+    sparkle(c, { dur: rollup, density: tier === 'big' ? 12 : 18, vol: 0.06, lo: 1800, hi: 3400, voice: 'coin', from: from })
   },
   feature(c) {
     gunshot(c, 0, 0.45)
-    tone(c, { freq: 110, dur: 0.9, vol: 0.2, type: 'sawtooth', slideTo: 440, attack: 0.05, lp: 1800, lpTo: 600 })
-    run(c, pluckVoice, WESTERN_SCALE, [4, 5, 6, 7, 8], 0.07, 0.3)
+    tone(c, { freq: 110, at: 0.3, dur: 0.9, vol: 0.2, type: 'sawtooth', slideTo: 440, attack: 0.05, lp: 1800, lpTo: 600 })
+    run(c, pluckVoice, WESTERN_SCALE, [4, 5, 6, 7, 8], 0.07, 0.3, 0.34)
   },
   mutation(c) {
-    ;[0, 0.04, 0.08].forEach((at, i) => bell(c, 2200 + i * 260, at, 0.07, 0.25))
+    // 확장 와일드: 금속 슬램 — 쇠판을 치는 짧은 충격 + 막대처럼 비정수로 울리는 금속 배음 + 저역 몸통
+    noise(c, { dur: 0.09, vol: 0.3, filter: 'lowpass', freq: 5200, sweepTo: 600, q: 0.7 })
+    noise(c, { dur: 0.05, vol: 0.22, filter: 'highpass', freq: 3000, q: 0.7 })
+    ;[1, 1.43, 2.07, 2.76, 3.42, 4.9, 6.6].forEach((r, i) => {
+      tone(c, { freq: 620 * r, dur: 0.4 / (1 + i * 0.35), vol: 0.09 / (1 + i * 0.3), type: 'sine', attack: 0.001 })
+      tone(c, { freq: 620 * r * 1.007, dur: 0.34 / (1 + i * 0.35), vol: 0.055 / (1 + i * 0.3), type: 'sine', attack: 0.001 })
+    })
+    tone(c, { freq: 110, slideTo: 50, dur: 0.22, vol: 0.32, type: 'sine', attack: 0.002 })
   },
   tick(c, progress) {
     clack(c, 520 + progress * 360, 0, 0.1)
@@ -564,12 +938,59 @@ const WESTERN_RECIPE: Recipe = {
     pluckVoice(c, WESTERN_SCALE[tier === 'none' ? 1 : 2]!, 0, 0.3)
     pluckVoice(c, WESTERN_SCALE[tier === 'none' ? 3 : 5]!, 0.08, 0.3)
   },
+  gambleToss(c) {
+    // 동전 튕김: 엄지로 튕기는 금속 핑 + 날아오르는 바람결 + 공중에서 도는 떨림
+    coinPing(c, 0, 0.14, 2400, 0.4)
+    noise(c, { at: 0.03, dur: 0.25, vol: 0.05, filter: 'bandpass', freq: 2000, sweepTo: 5200, q: 1.2 })
+    tone(c, { freq: 3500, at: 0.05, dur: 0.6, vol: 0.04, type: 'sine', attack: 0.02 })
+    tone(c, { freq: 3514, at: 0.05, dur: 0.6, vol: 0.04, type: 'sine', attack: 0.02 })
+  },
+  gambleWin(c) {
+    run(c, pluckVoice, WESTERN_SCALE, [3, 6], 0.1, 0.3)
+    coinPing(c, 0.12, 0.1, 3000, 0.25)
+    sparkle(c, { dur: 0.5, density: 12, vol: 0.05, lo: 1800, hi: 3200, voice: 'coin' })
+  },
+  gambleLose(c) {
+    // 낮은 나무 퉁 + 맨 아래 현 한 번
+    tone(c, { freq: 160, slideTo: 90, dur: 0.14, vol: 0.5, type: 'triangle', attack: 0.002, lp: 900, lpTo: 250 })
+    noise(c, { dur: 0.05, vol: 0.2, filter: 'lowpass', freq: 700, q: 0.8 })
+    pluckVoice(c, 82.41, 0.04, 0.4)
+  },
 }
 
 const SHRINE_RECIPE: Recipe = {
   loop: { hz: 1250, ticks: 10, tonal: 0.45, alt: 0.12, len: 0.03, vol: 0.18 },
   riser: { wave: 'sine', from: 160, to: 640, pulseHz: 5, lp: 1800, vol: 0.11 },
   scale: SHRINE_SCALE,
+  anticipate(c, lift, bus) {
+    // 태고 연타: 간격이 좁아지며 커지는 북 + 쇼 같은 가는 음이 천천히 오른다
+    let at = 0
+    let gap = 0.26
+    while (at < 3.4) {
+      const v = 0.14 + Math.min(0.2, at * 0.1)
+      tone(c, { freq: 130 * lift, slideTo: 62, at, dur: 0.14, vol: v, type: 'sine', attack: 0.002 })
+      noise(c, { at, dur: 0.03, vol: v * 0.45, filter: 'bandpass', freq: 900, q: 1.5 })
+      at += gap
+      gap = Math.max(0.07, gap * 0.88)
+    }
+    const t = c.currentTime
+    const nodes: AudioScheduledSourceNode[] = []
+    const g = c.createGain()
+    g.gain.value = 0
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.8)
+    g.connect(bus)
+    for (const [type, ratio] of [['sine', 1], ['triangle', 1.5]] as const) {
+      const o = c.createOscillator()
+      o.type = type
+      o.frequency.setValueAtTime(164 * lift * ratio, t)
+      o.frequency.exponentialRampToValueAtTime(330 * lift * ratio, t + 2.4)
+      o.connect(g)
+      o.start(t)
+      nodes.push(o)
+    }
+    return nodes
+  },
   spinStart(c) {
     clack(c, 900, 0, 0.35)
     clack(c, 1100, 0.07, 0.3)
@@ -601,7 +1022,8 @@ const SHRINE_RECIPE: Recipe = {
     run(c, bellVoice, SHRINE_SCALE, [4, 5, 7, 8], 0.12, 0.16)
   },
   mutation(c) {
-    sparkle(c, { dur: 0.3, density: 24, vol: 0.07, lo: 3200, hi: 5000, voice: 'suzu' })
+    sparkle(c, { dur: 0.3, density: 24, vol: 0.11, lo: 3200, hi: 5000, voice: 'suzu' })
+    coinPing(c, 0, 0.05, 3800, 0.2)
   },
   tick(c, progress) {
     clack(c, 1100 + progress * 500, 0, 0.09)
@@ -609,12 +1031,44 @@ const SHRINE_RECIPE: Recipe = {
   tickEnd(c, tier) {
     templeVoice(c, SHRINE_SCALE[tier === 'none' ? 2 : 0]! / (tier === 'none' ? 1 : 2), 0, 0.22)
   },
+  gambleToss(c) {
+    sparkle(c, { dur: 0.35, density: 22, vol: 0.08, lo: 3000, hi: 5000, voice: 'suzu' })
+    coinPing(c, 0.02, 0.1, 3600, 0.4)
+  },
+  gambleWin(c) {
+    templeVoice(c, SHRINE_SCALE[2]! / 2, 0, 0.22)
+    sparkle(c, { dur: 0.5, density: 26, vol: 0.09, lo: 3000, hi: 4800, voice: 'suzu' })
+  },
+  gambleLose(c) {
+    clack(c, 380, 0, 0.5)
+    templeVoice(c, SHRINE_SCALE[0]! / 4, 0.02, 0.14)
+  },
 }
 
 const CLOCK_RECIPE: Recipe = {
   loop: { hz: 3200, ticks: 20, tonal: 0.5, alt: 0.3, len: 0.012, vol: 0.14 },
   riser: { wave: 'square', from: 520, to: 2080, pulseHz: 14, lp: 3600, vol: 0.05 },
   scale: CLOCK_SCALE,
+  anticipate(c, lift, bus) {
+    // 톱니바퀴가 점점 빨리 돈다 + 유리 같은 소리가 위로 올라간다
+    let at = 0
+    let gap = 0.17
+    let k = 0
+    while (at < 3.4) {
+      gearTick(c, at, 0.15 + Math.min(0.1, at * 0.05), (0.8 + k * 0.03) * lift)
+      at += gap
+      gap = Math.max(0.035, gap * 0.9)
+      k++
+    }
+    return sweepRise(c, bus, lift, {
+      type: 'sawtooth',
+      from: 200,
+      to: 800,
+      vol: 0.07,
+      lp: 2600,
+      wash: { filter: 'bandpass', f0: 900, f1: 5000, q: 3, vol: 0.04 },
+    })
+  },
   spinStart(c) {
     for (let i = 0; i < 6; i++) gearTick(c, i * 0.03, 0.14, 0.8 + i * 0.07)
     tone(c, { freq: 330, slideTo: 990, at: 0.02, dur: 0.18, vol: 0.14, type: 'triangle', lp: 2400 })
@@ -641,7 +1095,23 @@ const CLOCK_RECIPE: Recipe = {
     tone(c, { freq: 260, dur: 0.9, vol: 0.14, type: 'triangle', slideTo: 1040, attack: 0.05, lp: 3000 })
     run(c, glassVoice, CLOCK_SCALE, [4, 5, 6, 7, 8], 0.07, 0.2)
   },
-  mutation(c) {
+  mutation(c, kind) {
+    if (kind === 'expandWild') {
+      // 빛 기둥: 유리 소리가 아래에서 위로 쭉 올라가고, 꼭대기에서 화음이 한꺼번에 켜진다
+      tone(c, { freq: 700, slideTo: 2800, dur: 0.5, vol: 0.12, type: 'sine', attack: 0.04, lp: 4000 })
+      noise(c, { dur: 0.5, vol: 0.06, filter: 'bandpass', freq: 1200, sweepTo: 6000, q: 1.5 })
+      chord(c, glassVoice, [CLOCK_SCALE[0]!, CLOCK_SCALE[2]!, CLOCK_SCALE[4]!, CLOCK_SCALE[7]!], 0.42, 0.14, 0.02)
+      return
+    }
+    if (kind === 'upgrade') {
+      // 승급: 래칫이 한 칸 걸리는 철컥 + 맑은 두 음이 한 단계 올라간다
+      tone(c, { freq: 1300, slideTo: 760, dur: 0.03, vol: 0.2, type: 'square', attack: 0.001 })
+      noise(c, { dur: 0.015, vol: 0.14, filter: 'highpass', freq: 3500 })
+      glassVoice(c, CLOCK_SCALE[2]!, 0.1, 0.16)
+      glassVoice(c, CLOCK_SCALE[5]!, 0.2, 0.18)
+      bell(c, 2093, 0.2, 0.05, 0.4)
+      return
+    }
     gearTick(c, 0, 0.16)
     run(c, glassVoice, CLOCK_SCALE, [6, 8], 0.05, 0.13)
   },
@@ -652,33 +1122,148 @@ const CLOCK_RECIPE: Recipe = {
     glassVoice(c, CLOCK_SCALE[tier === 'none' ? 3 : 5]!, 0, 0.16)
     glassVoice(c, CLOCK_SCALE[tier === 'none' ? 5 : 8]!, 0.07, 0.14)
   },
+  gambleToss(c) {
+    // 래칫이 빨라지는 튕김 + 유리 핑
+    ;[0, 0.03, 0.055, 0.075].forEach((at, i) => gearTick(c, at, 0.14, 1 + i * 0.12))
+    glassVoice(c, CLOCK_SCALE[6]!, 0.1, 0.1)
+  },
+  gambleWin(c) {
+    run(c, glassVoice, CLOCK_SCALE, [4, 7], 0.09, 0.2)
+  },
+  gambleLose(c) {
+    // 태엽이 풀리듯 간격이 벌어지는 틱 + 낮게 떨어지는 사인
+    ;[0, 0.06, 0.15, 0.28].forEach((at, i) => gearTick(c, at, 0.2, 0.9 - i * 0.12))
+    tone(c, { freq: 420, slideTo: 140, at: 0.05, dur: 0.4, vol: 0.22, type: 'sine', attack: 0.01 })
+  },
 }
 
-const RECIPES: Record<SoundPreset, Recipe> = {
+/** 로열: 5음 장조(C6~G7). 다이아몬드가 부딪히는 높고 맑은 음계. */
+const GEM_SCALE = [1046.5, 1174.66, 1318.51, 1568, 1760, 2093, 2349.32, 2637.02, 3136]
+/** 로열 브라스 음(B♭3~B♭5 근처). */
+const BRASS_NOTES = [233.08, 293.66, 349.23, 466.16, 587.33, 698.46]
+
+const ROYAL_RECIPE: Recipe = {
+  loop: { hz: 1700, ticks: 14, tonal: 0.5, alt: 0.2, len: 0.02, vol: 0.16 },
+  riser: { wave: 'sawtooth', from: 180, to: 540, pulseHz: 8, lp: 2000, vol: 0.08 },
+  scale: GEM_SCALE,
+  anticipate(c, lift, bus) {
+    // 스네어 롤이 점점 촘촘해지고 금관 스웰이 올라간다
+    let at = 0
+    let gap = 0.14
+    while (at < 3.4) {
+      noise(c, { at, dur: 0.05, vol: 0.2 + Math.min(0.2, at * 0.1), filter: 'bandpass', freq: 1900, q: 0.9 })
+      at += gap
+      gap = Math.max(0.045, gap * 0.93)
+    }
+    return sweepRise(c, bus, lift, {
+      type: 'sawtooth',
+      from: 180,
+      to: 540,
+      vol: 0.08,
+      lp: 1600,
+      wash: { filter: 'highpass', f0: 3000, f1: 8000, q: 0.7, vol: 0.05 },
+    })
+  },
+  spinStart(c) {
+    // 칩 더미가 쓸리는 소리: 짧은 도자기 칩 부딪힘이 빠르게 여섯 번 + 낮은 쿵
+    ;[1900, 2500, 2100, 2900, 2300, 3100].forEach((f, i) => {
+      coinPing(c, i * 0.028, 0.09, f, 0.05)
+      noise(c, { at: i * 0.028, dur: 0.012, vol: 0.12, filter: 'bandpass', freq: 3800, q: 2 })
+    })
+    tone(c, { freq: 140, slideTo: 80, dur: 0.12, vol: 0.28, type: 'triangle' })
+  },
+  reelStop(c, lift) {
+    // 림샷 같은 딱 + 부드러운 브러시 + 짧은 혼 한 점
+    tone(c, { freq: 210 * lift, slideTo: 110 * lift, dur: 0.09, vol: 0.7, type: 'triangle', attack: 0.001, lp: 1500, lpTo: 300 })
+    noise(c, { dur: 0.012, vol: 0.55, filter: 'bandpass', freq: 3000, q: 1.5 })
+    noise(c, { at: 0.01, dur: 0.07, vol: 0.2, filter: 'bandpass', freq: 2400, q: 0.7 })
+    brassHit(c, BRASS_NOTES[0]! * lift, 0.005, 0.14, 0.1)
+  },
+  winSmall(c, rollup) {
+    brassHit(c, BRASS_NOTES[0]!, 0, 0.18, 0.28)
+    brassHit(c, BRASS_NOTES[2]!, 0.09, 0.16, 0.3)
+    run(c, glassVoice, GEM_SCALE, [2, 4, 6], 0.07, 0.14, 0.12)
+    sparkle(c, { dur: Math.min(rollup, 1.2), density: 10, vol: 0.05, lo: 2600, hi: 5000, voice: 'glass' })
+  },
+  winBig(c, tier, rollup) {
+    // 빅밴드 팡파르: 올라가는 혼 스탭 + 마지막 화음 + 심벌 + 다이아 소나기
+    const stabs = { big: 4, mega: 5, epic: 6, max: 6 }[tier]
+    timpani(c, 0, 0.5)
+    snareRoll(c, 0.05, 0.3, 0.18)
+    const from = 0.38
+    for (let i = 0; i < stabs; i++) brassHit(c, BRASS_NOTES[i]!, from + i * 0.11, 0.28, 0.3)
+    const at = from + stabs * 0.11 + 0.04
+    for (const f of [BRASS_NOTES[0]!, BRASS_NOTES[2]!, BRASS_NOTES[3]!]) brassHit(c, f, at, 0.2, 0.9)
+    timpani(c, at, 0.45, 116)
+    cymbal(c, at, 1.4, 0.18)
+    sparkle(c, { dur: rollup, density: tier === 'big' ? 16 : 24, vol: 0.06, lo: 2600, hi: 5200, voice: 'glass' })
+  },
+  feature(c) {
+    // 팀파니 롤 + 올라가는 혼 스탭 + 심벌 스웰
+    ;[0, 0.12, 0.22, 0.3, 0.37, 0.43].forEach((at, i) => timpani(c, at, 0.25 + i * 0.05, 90 + i * 4))
+    run(c, (cc, f, at, v) => brassHit(cc, f, at, v, 0.35), BRASS_NOTES, [0, 1, 2, 3, 4, 5], 0.09, 0.2, 0.45)
+    cymbal(c, 0.9, 1.0, 0.16)
+    run(c, glassVoice, GEM_SCALE, [5, 6, 7, 8], 0.07, 0.14, 0.95)
+  },
+  mutation(c) {
+    revealFlip(c)
+    brassHit(c, BRASS_NOTES[2]!, 0.1, 0.12, 0.25)
+    timpani(c, 0.1, 0.25, 110)
+    cymbal(c, 0.14, 0.5, 0.08)
+  },
+  tick(c, progress) {
+    tone(c, { freq: 1800 + progress * 900, dur: 0.02, vol: 0.05, type: 'triangle', attack: 0.001 })
+    noise(c, { dur: 0.008, vol: 0.06, filter: 'bandpass', freq: 3000, q: 2 })
+  },
+  tickEnd(c, tier) {
+    brassHit(c, BRASS_NOTES[tier === 'none' ? 2 : 3]!, 0, 0.12, 0.22)
+    glassVoice(c, GEM_SCALE[tier === 'none' ? 4 : 6]!, 0.05, 0.14)
+  },
+  gambleToss(c) {
+    // 카드 튕기기: 종이 쓸림 + 다이아 핑
+    noise(c, { dur: 0.1, vol: 0.25, filter: 'bandpass', freq: 1500, sweepTo: 5000, q: 1.1 })
+    glassVoice(c, GEM_SCALE[5]!, 0.08, 0.14)
+  },
+  gambleWin(c) {
+    brassHit(c, BRASS_NOTES[2]!, 0, 0.18, 0.28)
+    brassHit(c, BRASS_NOTES[3]!, 0.1, 0.2, 0.4)
+    run(c, glassVoice, GEM_SCALE, [5, 7], 0.08, 0.12, 0.12)
+  },
+  gambleLose(c) {
+    // 약음기 트럼펫이 와와 하며 내려앉는다
+    tone(c, { freq: 233, slideTo: 155, dur: 0.4, vol: 0.2, type: 'sawtooth', attack: 0.03, lp: 1400, lpTo: 350 })
+    tone(c, { freq: 233.5, slideTo: 155.5, dur: 0.36, vol: 0.12, type: 'sawtooth', attack: 0.03, lp: 900, lpTo: 300 })
+  },
+}
+
+const RECIPES: Record<AudioPreset, Recipe> = {
   bell: BELL_RECIPE,
   fruit: FRUIT_RECIPE,
   western: WESTERN_RECIPE,
   shrine: SHRINE_RECIPE,
   clockwork: CLOCK_RECIPE,
   candy: CANDY_RECIPE,
+  royal: ROYAL_RECIPE,
 }
 
-let preset: SoundPreset = 'bell'
+let preset: AudioPreset = 'bell'
 let recipe: Recipe = BELL_RECIPE
-const spinLoopBuffers = new Map<SoundPreset, AudioBuffer>()
+const spinLoopBuffers = new Map<AudioPreset, AudioBuffer>()
 
 /** 게임의 소리 세트를 바꾼다. 모르는 값이나 undefined면 기본 `bell`. */
-export function setSoundPreset(next: SoundPreset | undefined): void {
-  const key: SoundPreset = next !== undefined && next in RECIPES ? next : 'bell'
+export function setSoundPreset(next: AudioPreset | undefined): void {
+  const key: AudioPreset = next !== undefined && next in RECIPES ? next : 'bell'
   if (key === preset) return
   stopSpinLoop()
   stopAnticipation()
   preset = key
   recipe = RECIPES[key]
+  if (key === 'western') warmGunshot()
+  else releaseGunshot()
   if (bgm) tryStartBgm()
 }
 
-export function getSoundPreset(): SoundPreset {
+export function getSoundPreset(): AudioPreset {
   return preset
 }
 
@@ -776,11 +1361,38 @@ export function playFeature(): void {
   recipe.feature(c)
 }
 
-/** 심볼 변형(미스터리 공개·확장 와일드 등): 짧은 반짝임. */
-export function playMutation(): void {
+/**
+ * 심볼 변형(미스터리 공개·확장 와일드·승급·랜덤 와일드). `kind`를 주면 프리셋이 종류별로 다른 소리를 낸다.
+ * 안 주면 그 프리셋의 기본 변형음.
+ */
+export function playMutation(kind?: MutationKind): void {
   const c = live()
   if (!c) return
-  recipe.mutation(c)
+  recipe.mutation(c, kind)
+}
+
+// ── 더블업 ────────────────────────────────────────────────
+
+/** 더블업에서 빨강/검정을 골라 동전이 날아오른다. */
+export function playGambleToss(): void {
+  const c = live()
+  if (!c) return
+  recipe.gambleToss(c)
+}
+
+/** 더블업 적중. 배당이 두 배가 된다. */
+export function playGambleWin(): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(1)
+  recipe.gambleWin(c)
+}
+
+/** 더블업 실패. 걸린 금액을 잃는다. */
+export function playGambleLose(): void {
+  const c = live()
+  if (!c) return
+  recipe.gambleLose(c)
 }
 
 // ── 연쇄·주문 카드 (candy-cluster-pop) ─────────────────────
@@ -855,6 +1467,21 @@ export function startAnticipation(): void {
   const lift = 1 + riserStep * 0.18
   riserStep += 1
   const t = c.currentTime
+  if (recipe.anticipate) {
+    const bus = c.createGain()
+    bus.connect(master)
+    busOverride = bus
+    let nodes: AudioScheduledSourceNode[] = []
+    try {
+      nodes = recipe.anticipate(c, lift, bus)
+    } finally {
+      busOverride = null
+    }
+    riser = { gain: bus, nodes }
+    anticipating = true
+    refreshDuck()
+    return
+  }
   const osc = c.createOscillator()
   osc.type = spec.wave
   osc.frequency.setValueAtTime(spec.from * lift, t)
@@ -864,6 +1491,7 @@ export function startAnticipation(): void {
   lp.frequency.setValueAtTime(spec.lp * 0.4, t)
   lp.frequency.exponentialRampToValueAtTime(spec.lp, t + 1.4)
   const gain = c.createGain()
+  gain.gain.value = 0
   gain.gain.setValueAtTime(0.0001, t)
   gain.gain.exponentialRampToValueAtTime(spec.vol, t + 0.25)
   const lfo = c.createOscillator()
@@ -890,6 +1518,7 @@ export function startAnticipation(): void {
     bp.frequency.setValueAtTime(spec.lp * 0.5, t)
     bp.frequency.exponentialRampToValueAtTime(spec.lp * 2.5, t + 1.4)
     const washGain = c.createGain()
+    washGain.gain.value = 0
     washGain.gain.setValueAtTime(0.0001, t)
     washGain.gain.exponentialRampToValueAtTime(1.2, t + 1.4)
     wash.connect(bp).connect(washGain).connect(gain)
@@ -899,7 +1528,7 @@ export function startAnticipation(): void {
   osc.start(t)
   fifth.start(t)
   lfo.start(t)
-  riser = { osc, gain, lfo, extra }
+  riser = { gain, nodes: [osc, lfo, ...extra] }
   anticipating = true
   refreshDuck()
 }
@@ -910,14 +1539,12 @@ export function stopAnticipation(): void {
     refreshDuck()
   }
   if (!riser || !ctx) return
-  const { osc, gain, lfo, extra } = riser
+  const { gain, nodes } = riser
   riser = null
   const t = ctx.currentTime
   gain.gain.cancelScheduledValues(t)
   gain.gain.setTargetAtTime(0.0001, t, 0.03)
-  osc.stop(t + 0.15)
-  lfo.stop(t + 0.15)
-  for (const n of extra) n.stop(t + 0.15)
+  for (const n of nodes) n.stop(t + 0.15)
 }
 
 // ── 롤업 틱 ───────────────────────────────────────────────
@@ -937,6 +1564,55 @@ export function playRollupEnd(tier: WinTier): void {
   const c = live()
   if (!c) return
   recipe.tickEnd(c, tier)
+}
+
+/**
+ * 렌더러 `winTotal` 경로가 아닌 곳(빅윈 오버레이·프리스핀 결과 팝업)의 숫자 올라가기 소리.
+ * 시작할 때 한 번 부르면 `durationMs` 동안의 틱과 마감음을 오디오 시계에 미리 깔아 두므로 rAF 틱에 기대지 않는다.
+ * 건너뛰기를 누르거나 팝업이 닫히면 `stopCountUp()`으로 끊고, 마감음은 `playRollupEnd`로 따로 낸다.
+ */
+export function playCountUp(durationMs: number, tier: WinTier): void {
+  const c = live()
+  if (!c || !master) return
+  stopCountUp()
+  const dur = Math.min(8, Math.max(0.3, durationMs / 1000))
+  const gap = Math.min(0.14, Math.max(0.07, dur / 36))
+  const n = Math.max(2, Math.floor(dur / gap))
+  const bus = c.createGain()
+  bus.connect(master)
+  busOverride = bus
+  try {
+    for (let i = 0; i < n; i++) {
+      sched = i * gap
+      recipe.tick(c, i / (n - 1))
+    }
+    sched = dur
+    recipe.tickEnd(c, tier)
+  } finally {
+    sched = 0
+    busOverride = null
+  }
+  // 끝까지 다 울렸으면 노드는 저절로 사라진다 — 참조만 놓는다.
+  countUp = {
+    bus,
+    timer: setTimeout(() => {
+      if (countUp?.bus === bus) countUp = null
+    }, (dur + 2) * 1000),
+  }
+}
+
+/** `playCountUp`이 미리 깔아 둔 틱을 끊는다. 깔린 게 없으면 아무 일도 없다. */
+export function stopCountUp(): void {
+  if (!countUp) return
+  const { bus, timer } = countUp
+  countUp = null
+  clearTimeout(timer)
+  if (ctx) {
+    const t = ctx.currentTime
+    bus.gain.cancelScheduledValues(t)
+    bus.gain.setTargetAtTime(0.0001, t, 0.02)
+  }
+  setTimeout(() => bus.disconnect(), 200)
 }
 
 // ── 버튼음 ────────────────────────────────────────────────
@@ -990,7 +1666,7 @@ let bgmEnabled = true
 let bgmVolume = 0.4
 let bgmWanted = false
 let bgmVariant: BgmVariant = 'base'
-let bgm: { preset: SoundPreset; voices: BgmVoices; seq: BgmSequencer; timer: ReturnType<typeof setInterval> } | null = null
+let bgm: { preset: AudioPreset; voices: BgmVoices; seq: BgmSequencer; timer: ReturnType<typeof setInterval> } | null = null
 let anticipating = false
 let curtain = false
 let duckUntil = 0

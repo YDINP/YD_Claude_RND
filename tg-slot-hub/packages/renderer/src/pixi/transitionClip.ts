@@ -27,8 +27,8 @@ export function isDevBuild(): boolean {
  */
 export const devTransitionClipSink: TransitionClipSink = (message, detail) => {
   if (!isDevBuild()) return
-  if (detail === undefined) console.warn(`[transition-clip] ${message}`)
-  else console.warn(`[transition-clip] ${message}`, detail)
+  if (detail === undefined) console.info(`[transition-clip] ${message}`)
+  else console.info(`[transition-clip] ${message}`, detail)
 }
 
 /** 이 화면(게임 하나) 동안 같은 사유를 한 번만 남기는 개발용 로거. */

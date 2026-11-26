@@ -18,7 +18,7 @@ import { BottomTabs } from './components/hub/BottomTabs'
 import { MissionsScreen } from './components/hub/MissionsScreen'
 import { LeaderboardScreen } from './components/hub/LeaderboardScreen'
 import { useRoute, navigateToGame } from './router'
-import { useEffectiveLocale } from './i18n'
+import { t, useEffectiveLocale } from './i18n'
 import './styles/tokens.css'
 import './styles/global.css'
 
@@ -44,6 +44,12 @@ export function App(): ReactNode {
   useEffect(() => {
     void bootstrap()
   }, [bootstrap])
+
+  // 문서 언어·제목을 화면 언어에 맞춘다(스크린 리더 발음, 브라우저 번역 제안). 기본은 index.html의 ko.
+  useEffect(() => {
+    document.documentElement.lang = effectiveLocale
+    document.title = t(effectiveLocale, 'appTitle')
+  }, [effectiveLocale])
 
   useEffect(() => {
     if (status === 'ready' && gamesStatus === 'idle') {

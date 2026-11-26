@@ -44,7 +44,8 @@ export function matchesDebugPreset(
     case 'freeSpins':
       return result.features.some((feature) => feature.type === 'freeSpins')
     case 'gamble':
-      return !isFreeSpin && result.totalWin > 0
+      // 프리스핀을 여는 스핀은 더블업을 열지 않는다(isGambleEligible) — 그런 판은 맞추지 않는다.
+      return !isFreeSpin && result.totalWin > 0 && result.nextState === undefined
     case 'lose':
       return result.totalWin === 0 && !hasFeature
     case 'cascade3':

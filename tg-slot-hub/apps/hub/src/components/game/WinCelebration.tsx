@@ -20,7 +20,7 @@ import {
   celebrationShapeClipPath,
   type ResolvedCelebrationSkin,
 } from '@tgslot/renderer'
-import { useT, type TranslationKey } from '../../i18n'
+import { useEffectiveLocale, useT, type TranslationKey } from '../../i18n'
 import {
   ROLLUP_BACKSTOP_MS,
   digitCount,
@@ -250,8 +250,9 @@ export function WinCelebration({
   skin = DEFAULT_CELEBRATION_SKIN,
 }: WinCelebrationProps): ReactNode {
   const t = useT()
+  const locale = useEffectiveLocale()
   const title =
-    tier === 'none' ? plainTitle : (overrideLabel(tier, labels ?? skin.labels) ?? t(TIER_LABEL_KEY[tier]))
+    tier === 'none' ? plainTitle : (overrideLabel(tier, labels ?? skin.labels, locale) ?? t(TIER_LABEL_KEY[tier]))
 
   const className = [
     'hub-win',

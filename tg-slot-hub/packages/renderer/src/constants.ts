@@ -11,8 +11,12 @@ export const FRAME_PADDING_RATIO = 0.1
 export const FRAME_BORDER_RATIO = 0.05
 /** 프레임 모서리 반경 = 심볼 한 변 x 이 값. */
 export const FRAME_RADIUS_RATIO = 0.16
-/** 심볼 스프라이트가 셀 안에서 차지하는 비율. 1보다 작게 두어 숨 쉴 공간을 준다. */
-export const SYMBOL_FILL_RATIO = 0.86
+/**
+ * 심볼 스프라이트가 셀 안에서 차지하는 비율. 1보다 작게 두어 숨 쉴 공간을 준다.
+ * 심볼 PNG에도 가장자리 여백(약 8%×2)이 있어 0.86이면 보이는 크기가 칸의 68%였다(검수 R9,
+ * «릴은 크게»). 0.92로 올려 약 7% 키웠다 — 이웃 칸과 겹치지 않는 선(7팩 390·430 확인).
+ */
+export const SYMBOL_FILL_RATIO = 0.92
 /** 캔버스 최소 심볼 크기(px). 이보다 작아지면 심볼을 알아볼 수 없다. */
 export const MIN_SYMBOL_SIZE = 24
 /** 캔버스 최대 심볼 크기(px). 태블릿에서 과하게 커지는 것을 막는다. */

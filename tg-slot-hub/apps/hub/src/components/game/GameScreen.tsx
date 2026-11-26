@@ -13,9 +13,16 @@ import {
   type Theme,
   type RendererEvent,
 } from '@tgslot/renderer'
-import { createSeededRng, spin as replaySpin, type GameMath } from '@tgslot/slot-engine'
+import { createSeededRng, getWildIds, pickIdleStops, spin as replaySpin, type GameMath } from '@tgslot/slot-engine'
 import type { GambleSide, Locale } from '@tgslot/shared'
-import { useGameStore, toRendererFreeSpinsMode, hasCascadeSteps, AUTO_SPIN_COUNTS } from '../../store/game'
+import {
+  useGameStore,
+  toRendererFreeSpinsMode,
+  hasCascadeSteps,
+  winsForDisplay,
+  freeSpinMultiplierOf,
+  AUTO_SPIN_COUNTS,
+} from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
@@ -23,7 +30,9 @@ import { navigateToLobby } from '../../router'
 import { showBackButton, hideBackButton, haptic } from '../../sdk/tma'
 import { getRoundSeed } from '../../sdk/api'
 import { Odometer } from '../Odometer'
-import { useT, useEffectiveLocale } from '../../i18n'
+import { t as translate, useT, useEffectiveLocale } from '../../i18n'
+import { FeatureRules, featureRuleSections, payRuleLines } from './FeatureRules'
+import { SettingsModal } from '../SettingsModal'
 import { useSettingsStore, type SpinSpeed } from '../../store/settings'
 import { groupLabel, groupMembers, symbolLabel, winLineLabel } from '../../game/labels'
 import { useDialog } from '../../hooks/useDialog'
@@ -40,6 +49,9 @@ import {
   playOrderComplete,
   playOrderDeal,
   playOrderTick,
+  playGambleLose,
+  playGambleToss,
+  playGambleWin,
   playMutation,
   playReelStop,
   playRollupEnd,
@@ -286,7 +298,7 @@ function buildWinLineIcons(
         ? symbolLabel(math, source.symbol, locale)
         : groupLabel(math, source.group, locale)
     } ×${source.count}`,
-    suffix: [...(source.ways ? [`${source.ways} ways`] : []), source.win.toLocaleString('en-US')].join(' · '),
+    suffix: [...(source.ways ? [translate(locale, 'waysCount', { n: source.ways })] : []), source.win.toLocaleString('en-US')].join(' · '),
   }
 }
 
@@ -368,6 +380,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const [betSheetOpen, setBetSheetOpen] = useState(false)
   const [autoSpinSheetOpen, setAutoSpinSheetOpen] = useState(false)
   const [helpSheetOpen, setHelpSheetOpen] = useState(false)
+  // 게임 도중에도 음량·배경음·언어를 바꿀 수 있게 로비와 같은 설정 팝업(중앙)을 연다.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const sessionUser = useSessionStore((s) => s.user)
   const [helpPage, setHelpPage] = useState<HelpPage>(() => readStoredHelpPage(gameId) ?? 'paytable')
   // 디버그 패널 노출 여부 — URL(쿼리/해시쿼리)/localStorage로 마운트 시 한 번 판정하고, 그 뒤로는
   // 게임 제목 5탭 제스처(handleTitleTap)로도 켤 수 있다(껐다 다시 켜는 건 이 세션에서는 지원하지
@@ -410,6 +425,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 하단 시트 3개(도움말/베팅 목록/코인 소진) 모두 포커스 트랩 + Esc로 닫기 + 배경 스크롤 잠금을
   // 공유한다(useDialog) — 각 시트가 실제로 열려 있을 때만(enabled) 동작한다.
   const helpSheetRef = useDialog<HTMLDivElement>(() => setHelpSheetOpen(false), helpSheetOpen)
+  const helpScrollRef = useRef<HTMLDivElement | null>(null)
+  // 탭을 바꾸면 새 탭의 첫 줄부터 보이게 스크롤을 맨 위로 되돌린다(이전 탭 위치가 남아 규칙이 가려졌다).
+  useEffect(() => {
+    if (helpScrollRef.current) helpScrollRef.current.scrollTop = 0
+  }, [helpPage])
   const betSheetRef = useDialog<HTMLDivElement>(() => setBetSheetOpen(false), betSheetOpen)
   const outOfCoinsSheetRef = useDialog<HTMLDivElement>(dismissError, errorCode === 'INSUFFICIENT_FUNDS')
 
@@ -443,6 +463,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    * 신뢰 원본으로 쓴다 — 그래야 순환이 스킵/재시작을 거쳐도 어긋나지 않는다.
    */
   const winCycleRef = useRef(0)
+  /** 금액 롤업(winTotal)이 시작된 판의 roundId — 프리스핀 누적을 그 판 롤업 전에 미리 올리지 않으려고 쓴다. */
+  const rolledRoundIdRef = useRef<string | null>(null)
   /** showingWin 중 SPIN을 눌러 skipWins()를 부른 뒤, phase가 idle로 돌아오면 곧장 다음 스핀을 건다. */
   const autoAdvanceAfterSkipRef = useRef(false)
 
@@ -616,7 +638,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     writeStoredHelpPage(gameId, helpPage)
   }, [gameId, helpPage])
 
-  const hasFeaturesPage = Boolean(math?.wild || math?.scatter)
+  // 규칙 카드(기본 규칙·뮤테이션·묶음 배당·더블업). 있으면 와일드/스캐터가 없어도 «특수 기능» 탭을 연다.
+  const ruleSections = useMemo(
+    () => (math ? featureRuleSections(math, locale, (key, vars) => translate(locale, key, vars)) : []),
+    [math, locale],
+  )
+  const hasFeaturesPage = Boolean(math?.wild || math?.scatter || ruleSections.length > 0)
+  const payRules = math ? payRuleLines(math, t) : []
   // 저장돼 있던 탭이 피처인데 이 게임엔 와일드/스캐터가 없으면 배당표로 되돌린다 — 있지도 않은
   // 탭에 머물러 있을 수 없다. math가 아직 안 왔을 때는 판단을 미룬다(로딩 중 잠깐의 false를
   // "피처 없음"으로 오판해 막 로드된 진짜 값을 보기도 전에 탭을 되돌려버리면 안 된다).
@@ -675,7 +703,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       return
     }
     if (event.type === 'mutation') {
-      if (event.phase === 'start') playMutation()
+      if (event.phase === 'start') playMutation(event.mutation.type)
       return
     }
     if (event.type === 'cascadeStep') {
@@ -781,6 +809,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
 
     if (event.type !== 'winTotal') return
+    rolledRoundIdRef.current = useGameStore.getState().lastResult?.roundId ?? null
 
     // 등급 단어 배너는 더 이상 없다 — 이 이벤트는 이제 WinStrip 금액 롤업만 다룬다.
     const target = event.totalWin
@@ -938,6 +967,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           math,
           theme: loadedTheme,
           fit: 'window',
+          // 정지 위치 0은 스트립 첫 칸(와일드인 팩이 많다)이라 «스핀 전부터 대박» 화면이 된다.
+          // 와일드·스캐터·당첨이 없는 결정적 대기 위치로 연다. 표시 전용이라 결과·골든과 무관하다.
+          initialStops: pickIdleStops(math),
           // 마운트 시점 값만 읽는다(구독 아님) — 설정을 바꿔도 이 화면에 있는 동안은 재생성하지
           // 않고, 게임을 나갔다 다시 들어올 때 반영된다. 설정 시트 안내 문구에도 그렇게 적혀 있다.
           reducedMotion: useSettingsStore.getState().reducedMotion,
@@ -1034,6 +1066,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const betLocked = freeSpins !== null || roundBusy || autoSpin !== null
   // 페이테이블에 1개짜리 배당이 하나라도 있으면(단일 심볼이 1번 릴에 있을 때만 인정) 각주를 보여준다.
   const hasSingleCountPay = math ? Object.values(math.paytable).some((rule) => 1 in rule) : false
+  // 스캐터가 있는 팩의 «모든 심볼 대체» 와일드는 스캐터를 대체하지 않는다 — 그 사실까지 적는다.
+  const wildAllKey = math?.scatter ? 'wildSubstitutesAllButScatter' : 'wildSubstitutesAll'
 
   // 베팅이 잠기는 동안(스핀 중/프리스핀 중) 베팅 목록 시트가 열려 있으면 안 된다.
   useEffect(() => {
@@ -1086,6 +1120,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // "더블" 버튼에 실제 확률을 보여준다 — math.gamble이 없을 리 없다(showGambleActions가 이미
   // 그 존재를 전제한다), 그래도 방어적으로 50%를 기본값으로 둔다.
   const gambleChancePercent = math?.gamble ? Math.round(math.gamble.chance * 100) : 50
+  // 더블업 동전은 게임 그림으로 — 앞면은 와일드, 뒷면은 스캐터, 버튼은 테마 강조색(palette.frame).
+  const gambleWildId = math ? [...getWildIds(math)][0] : undefined
+  const gambleCoinLook = {
+    headsImage: gambleWildId !== undefined ? theme?.symbols[gambleWildId] : undefined,
+    tailsImage: math?.scatter ? theme?.symbols[math.scatter.symbol] : undefined,
+    accentColor: theme?.palette.frame,
+  }
 
   const title = gameSummary ? (locale === 'ko' && gameSummary.name.ko ? gameSummary.name.ko : gameSummary.name.en) : gameId
 
@@ -1097,10 +1138,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // math.gamble이 없는데(설정이 아예 없는 게임) gambleSession이 있는 건 있을 수 없는 상태지만,
   // 방어적으로 한 번 더 걸어 둔다 — 서버/엔진 쪽 계약이 어긋나도 UI가 조용히 숨는 쪽이 안전하다.
   const showGambleActions = gambleSession !== null && math?.gamble !== undefined
+  // 릴이 멈추면(공개) 서버 누적에는 이번 판 당첨이 이미 들어 있다. 그 판의 롤업이 시작되기 전에
+  // 누적이 먼저 오르면 결과를 미리 알려 주는 셈이라(검수 F13), 판이 끝날 때까지는 이번 판 몫을 뺀 값을 보인다.
+  const unrolledFreeSpinWin =
+    freeSpins &&
+    lastResult?.isFreeSpin === true &&
+    phase !== 'idle' &&
+    winRollupValue === 0 &&
+    rolledRoundIdRef.current !== lastResult.roundId
+      ? lastResult.totalWin
+      : 0
   const winStripAmount = showGambleActions
     ? gambleSession.pendingWin
     : freeSpins && winRollupValue === 0
-      ? freeSpins.accumulatedWin
+      ? Math.max(0, freeSpins.accumulatedWin - unrolledFreeSpinWin)
       : winRollupValue
   // 연쇄 2단계부터는 라벨이 "연쇄 n"이고, 주문 완료 때는 "주문 완료"다. 둘 다 금액이 있을 때만이다.
   const chainStep =
@@ -1124,16 +1175,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 도는 동안은 displayedFreeSpins(전환이 끝나야 갱신되는 스냅샷)를 대신 쓴다 — 릴은 아직 커튼에
   // 가려 있는데 카운터만 먼저 갈아 끼워지면 어색하다. 배수는 1보다 클 때만 붙인다(×1은 정보가
   // 없고 시야만 어지럽힌다 — 릴 위 명판이 지키던 규칙을 그대로 옮겼다).
-  const freeSpinsCounter = displayedFreeSpins
+  // 라운드가 끝났는데(서버 freeSpins는 null) 종료 팝업·복귀 커튼이 도는 동안 마지막 판 전 값 «1/8»이
+  // 남으면 낡은 정보다(검수 R5). 커튼이 걷힐 때까지 줄은 남기되 남은 횟수는 0으로 맞춘다.
+  const counterState =
+    displayedFreeSpins && freeSpins === null ? { ...displayedFreeSpins, left: 0 } : displayedFreeSpins
+  const freeSpinsCounter = counterState
     ? isOrderRound
-      ? t('orderRoundCounter', { left: displayedFreeSpins.left, total: displayedFreeSpins.total })
-      : displayedFreeSpins.multiplier > 1
+      ? t('orderRoundCounter', { left: counterState.left, total: counterState.total })
+      : counterState.multiplier > 1
       ? t('freeSpinsCounterWithMultiplier', {
-          left: displayedFreeSpins.left,
-          total: displayedFreeSpins.total,
-          multiplier: displayedFreeSpins.multiplier,
+          left: counterState.left,
+          total: counterState.total,
+          multiplier: counterState.multiplier,
         })
-      : t('freeSpinsCounter', { left: displayedFreeSpins.left, total: displayedFreeSpins.total })
+      : t('freeSpinsCounter', { left: counterState.left, total: counterState.total })
     : null
 
   // WinStrip 아래 라인 문구 — 항상 최신 t()/locale/math로 지금 계산한다(handleRendererEvent는
@@ -1164,7 +1219,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 : math
                   ? [
                       `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
-                      ...(lineLabelSource.ways ? [`${lineLabelSource.ways} ways`] : []),
+                      ...(lineLabelSource.ways ? [t('waysCount', { n: lineLabelSource.ways })] : []),
                       ...(lineLabelSource.ladder !== undefined ? [`×${lineLabelSource.ladder}`] : []),
                       lineLabelSource.win.toLocaleString('en-US'),
                     ].join(' · ')
@@ -1365,9 +1420,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 디버그 패널의 "연출 다시 재생" — 마지막 결과로 승리 연출만 다시 튼다(라인 문구도 다시 순환). */
   const handleReplayWins = (): void => {
     if (!rendererInstance || !lastResult) return
-    void rendererInstance.showWins(lastResult.wins, {
+    const shown = winsForDisplay(lastResult, freeSpinMultiplierOf(lastResult))
+    void rendererInstance.showWins(shown.wins, {
       totalBet: lastResult.totalBet,
-      features: lastResult.features,
+      features: shown.features,
       ...(hasCascadeSteps(lastResult) ? { mode: 'cascade' as const } : {}),
     })
   }
@@ -1417,6 +1473,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const handleGamblePick = async (pick: GambleSide): Promise<void> => {
     setGambleFlip({ flipping: true, side: null, outcome: null })
     haptic('medium')
+    playGambleToss()
     try {
       const response = await gambleAction(pick)
       if (!response) return
@@ -1433,6 +1490,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       const side = outcome === 'collected' ? null : (response.side ?? null)
       setGambleFlip({ flipping: false, side, outcome })
       haptic(outcome === 'win' ? 'success' : 'light')
+      if (outcome === 'win') playGambleWin()
+      else if (outcome === 'lose') playGambleLose()
 
       // 더블업 세션이 끝났으면(졌거나, 이겼지만 상한에 닿아 즉시 회수됐거나, 판정 없이 회수됐으면)
       // WinStrip이 다음 스핀 전까지 보여줄 금액을 이 결과로 맞춘다 — response.pendingWin은
@@ -1544,6 +1603,19 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         >
           ?
         </button>
+        {sessionUser && (
+          <button
+            type="button"
+            className="hub-game-screen__icon-btn hub-game-screen__icon-btn--settings"
+            onClick={() => {
+              playUiSound('open')
+              setSettingsOpen(true)
+            }}
+            aria-label={t('settings')}
+          >
+            <span aria-hidden="true">⚙</span>
+          </button>
+        )}
         <span className="hub-game-screen__wallet-pill" aria-label={t('coins')}>
           <span aria-hidden="true">🪙</span>
           <Odometer value={wallet?.coins ?? 0} />
@@ -1711,6 +1783,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           payout={math?.gamble?.payout ?? 2}
           chancePercent={gambleChancePercent}
           lockedPick={gambleLockedPick}
+          {...gambleCoinLook}
         />
       )}
 
@@ -1728,8 +1801,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           phase={phase}
           freeSpins={freeSpins}
           gambleSession={gambleSession}
-          presets={presetsFor(math)}
+          presets={presetsFor(math, { inRound: freeSpins !== null })}
           orderRoundActive={orderRound !== null && freeSpins !== null}
+          diagnostics={slotRendererRef.current?.diagnostics?.() ?? null}
         />
       )}
 
@@ -1819,7 +1893,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               : phase === 'spinning'
                 ? t('stop')
                 : freeSpins
-                  ? t('freeSpinButton', { n: freeSpins.left })
+                  ? t(isOrderRound ? 'orderRoundSpinButton' : 'freeSpinButton', { n: freeSpins.left })
                   : t('spin')}
           </button>
 
@@ -1853,7 +1927,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           <h2 id={AUTO_SPIN_SHEET_TITLE_ID} className="hub-sheet__title">
             {t('autoSpinTitle')}
           </h2>
-          <p className="hub-sheet__message">{t('autoSpinHint')}</p>
+          <p className="hub-sheet__message">{t(math?.scatter?.freeSpins || math?.orderRound ? 'autoSpinHint' : 'autoSpinHintNoFreeSpins')}</p>
           <div className="hub-autospin__counts">
             {AUTO_SPIN_COUNTS.map((count) => (
               <button
@@ -1951,6 +2025,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         </div>
       )}
 
+      {settingsOpen && sessionUser && <SettingsModal user={sessionUser} onClose={() => setSettingsOpen(false)} />}
+
       {helpSheetOpen && math && (
         <div className="hub-sheet-backdrop" role="presentation" onClick={() => setHelpSheetOpen(false)}>
           <div
@@ -2010,7 +2086,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               </button>
             </div>
 
-            <div className="hub-sheet__scroll">
+            <div className="hub-sheet__scroll" ref={helpScrollRef}>
               {helpPage === 'paytable' && (
                 <>
                   <p className="hub-paytable__bet-per-line">
@@ -2018,6 +2094,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       ? t('clusterHelpBetBasis')
                       : t(isWays ? 'betPerWay' : 'betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
                   </p>
+                  {/* 1개 지급 각주는 표 위에 둔다 — 아래에 두면 390폭에서 스크롤해야 보였다. */}
+                  {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
                   <ul className="hub-paytable__list">
                     {Object.entries(math.paytable).map(([id, payrule]) => {
                       const isGroup = Boolean(math.groups?.[id])
@@ -2071,7 +2149,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                             <div className="hub-paytable__chips">
                               {counts.map((count) => (
                                 <span key={count} className="hub-paytable__chip">
-                                  {count}: ×{payrule[count]}
+                                  {t('payChip', { n: count, pay: payrule[count] ?? 0 })}
                                 </span>
                               ))}
                             </div>
@@ -2080,9 +2158,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       )
                     })}
                   </ul>
-                  {math.wild && <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : 'wildSubstitutesAll')}</p>}
-                  {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
+                  {math.wild && <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : wildAllKey)}</p>}
                 </>
+              )}
+
+              {helpPage === 'paylines' && payRules.length > 0 && (
+                <ul className="hub-features__rules hub-paylines__rules">
+                  {payRules.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
               )}
 
               {helpPage === 'paylines' && isWays && (
@@ -2129,6 +2214,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
               {helpPage === 'features' && hasFeaturesPage && (
                 <>
+                  <FeatureRules sections={ruleSections.filter((section) => section.title === t('rulesTitle'))} />
                   {math.wild && (
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresWildTitle')}</h3>
@@ -2136,7 +2222,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                         {isCluster
                           ? t('wildClusterNote')
                           : math.wild.substitutesFor === 'all'
-                          ? t('wildSubstitutesAll')
+                          ? t(wildAllKey)
                           : t('wildSubstitutesSome', {
                               symbols: math.wild.substitutesFor.map((id) => symbolLabel(math, id, locale)).join(', '),
                             })}
@@ -2167,7 +2253,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                               .sort((a, b) => a[0] - b[0])
                               .map(([count, multiplier]) => (
                                 <span key={count} className="hub-paytable__chip">
-                                  {count}: {t('scatterPayOfTotalBet', { n: multiplier })}
+                                  {t('scatterPayChip', { n: count, pay: multiplier })}
                                 </span>
                               ))}
                         </div>
@@ -2181,11 +2267,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                               multiplier: math.scatter.freeSpins.multiplier,
                             })}
                           </p>
-                          {math.scatter.freeSpins.retrigger && <p>{t('freeSpinsRetriggerRule')}</p>}
+                          {math.scatter.freeSpins.multiplier > 1 && (
+                            <p>{t('freeSpinsMultiplierRule', { multiplier: math.scatter.freeSpins.multiplier })}</p>
+                          )}
+                          <p>{t('freeSpinsNoBetRule')}</p>
+                          {math.scatter.freeSpins.retrigger && (
+                            <p>{t('freeSpinsRetriggerRule', { spins: math.scatter.freeSpins.count })}</p>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
+                  <FeatureRules sections={ruleSections.filter((section) => section.title !== t('rulesTitle'))} />
                   {math.orderRound && <OrderRoundHelp math={math} locale={locale} />}
                 </>
               )}

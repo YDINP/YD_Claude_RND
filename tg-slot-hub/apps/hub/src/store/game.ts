@@ -255,6 +255,40 @@ export function hasCascadeSteps(result: Pick<SpinResponse, 'cascades'>): boolean
   return result.cascades !== undefined && result.cascades.length > 0
 }
 
+/**
+ * 프리스핀 배수를 당첨 표시에 반영한다. 엔진의 `wins[].win`과 스캐터 배당(`scatterWin.win`)은
+ * **배수 전** 값이고 서버 `totalWin`·지갑은 배수 후라서, 그대로 보여 주면 표시가 지갑 증가의 절반이 된다.
+ * 연쇄 팩은 배수를 사다리로 이미 반영하므로 건드리지 않는다. 배수가 1이면 원본을 그대로 돌려준다.
+ */
+export function winsForDisplay(
+  result: Pick<SpinResponse, 'wins' | 'features' | 'cascades'>,
+  multiplier: number,
+): { wins: WinLine[]; features: FeatureTrigger[] } {
+  if (!(multiplier > 1) || hasCascadeSteps(result)) return { wins: result.wins, features: result.features }
+  return {
+    wins: result.wins.map((win) => ({ ...win, win: Math.round(win.win * multiplier) })),
+    features: result.features.map((feature) =>
+      feature.type === 'scatterWin' ? { ...feature, win: Math.round(feature.win * multiplier) } : feature,
+    ),
+  }
+}
+
+/**
+ * 결과만 보고 프리스핀 배수를 되짚는다(디버그 «연출 다시 재생»처럼 스핀 전 상태가 없을 때).
+ * 서버 `totalWin = round((라인 + 스캐터) × 배수)`의 역산이라 정수 배수는 정확히 돌아온다.
+ */
+export function freeSpinMultiplierOf(
+  result: Pick<SpinResponse, 'isFreeSpin' | 'wins' | 'features' | 'totalWin' | 'orderWin' | 'cascades'>,
+): number {
+  if (!result.isFreeSpin || hasCascadeSteps(result)) return 1
+  let base = 0
+  for (const win of result.wins) base += win.win
+  for (const feature of result.features) if (feature.type === 'scatterWin') base += feature.win
+  if (base <= 0) return 1
+  const ratio = (result.totalWin - (result.orderWin ?? 0)) / base
+  return ratio > 1 ? Math.round(ratio * 100) / 100 : 1
+}
+
 /** 서버 응답의 주문 카드 이월 상태. 쓰는 피처가 없으면 null. 값의 출처는 서버뿐이다. */
 export function orderCarryOf(freeSpins: FreeSpinsState | null | undefined): OrderRoundCarry | null {
   return freeSpins?.carry?.orders ?? null
@@ -565,6 +599,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const gambleSession = toGambleSession(state.state.gamble)
           if (get().gameId === gameId) {
             set({ freeSpins: state.freeSpins, orderRound: orderCarryOf(state.freeSpins), gambleSession })
+            // 렌더러가 이 응답보다 먼저 준비됐으면 GameScreen의 복원 effect는 null을 보고 지나갔다.
+            // 새로고침·재진입으로 이어지는 프리스핀이면 여기서 배경·테두리를 곧장(커튼·클립 없이) 맞춘다.
+            if (state.freeSpins !== null) {
+              get().renderer?.setMode?.({ freeSpins: toRendererFreeSpinsMode(state.freeSpins), immediate: true })
+            }
           }
         } catch (stateErr) {
           console.error('[game] failed to resume free spins/gamble state', stateErr)
@@ -911,9 +950,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
             autoSpinActive: get().autoSpin !== null,
             freeSpinsActive: freeSpins !== null,
           })
-          await renderer.showWins(result.wins, {
+          // freeSpins는 이 스핀 **전** 상태다 — 이번 스핀에 걸린 배수가 그것이다.
+          const shown = winsForDisplay(result, freeSpins?.multiplier ?? 1)
+          await renderer.showWins(shown.wins, {
             totalBet: result.totalBet,
-            features: result.features,
+            features: shown.features,
             ...(hasCascadeSteps(result) ? { mode: 'cascade' as const } : {}),
             // brief는 자기만의 짧은 홀드를 쓴다 — 여기서 늘리면 짧게 스쳐 지나간다는 약속이 깨진다.
             ...(presentation === 'brief'

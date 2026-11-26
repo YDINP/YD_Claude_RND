@@ -217,6 +217,20 @@
   letter-spacing: 0;
 }
 
+.hub-gamble-coin__img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
+
+/* 게임 테마 강조색(palette.frame)으로 두 면 고르기 버튼을 칠한다. */
+.hub-gamble--themed .hub-gamble-picks .hub-sheet__reveal {
+  background: var(--hub-gamble-theme);
+  color: #1a1208;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
 .hub-gamble-coin__label {
   font-size: 9px;
   opacity: 0.72;

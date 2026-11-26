@@ -714,6 +714,14 @@ describe('피처가 있는 연출', () => {
     }
   })
 
+  it('A단계 합계에 스캐터 배당이 들어간다(지갑과 카운터가 맞는다)', () => {
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 500, features: [scatterWin] })
+    expect(steps[0]?.phase).toBe('all')
+    if (steps[0]?.phase === 'all') expect(steps[0].totalWin).toBe(20 + 200)
+    const only = buildPresentation([], math, { totalBet: 500, features: [scatterWin, freeSpins] })
+    if (only[0]?.phase === 'all') expect(only[0].totalWin).toBe(200)
+  })
+
   it('라인 승리가 없어도 스캐터만으로 연출이 생긴다', () => {
     const steps = buildPresentation([], math, { totalBet: 500, features: [scatterWin] })
     expect(steps.map((step) => step.phase)).toEqual(['all'])

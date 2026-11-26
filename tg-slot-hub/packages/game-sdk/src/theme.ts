@@ -314,19 +314,32 @@ export type CelebrationParticles = z.infer<typeof CelebrationParticlesSchema>
  * 한 게임의 빅윈이 화면마다 다른 게임처럼 보이면 안 된다.
  * 공통 값(`palette`·`title`)이 먼저 깔리고 등급별 값(`tiers`)이 그 위를 덮는다.
  */
+/**
+ * 등급 이름 하나. 문자열이면 모든 언어에 같은 이름, `{ ko, en }`이면 화면 언어에 맞춰 고른다
+ * (빠진 언어는 en → 다른 언어 순으로 대신한다). 문자열 하나로는 한국어 기본·영어 사전 병행을 못 해서 넓혔다.
+ */
+export const CelebrationLabelSchema = z.union([
+  z.string().trim().min(1),
+  z
+    .object({ ko: z.string().trim().min(1).optional(), en: z.string().trim().min(1).optional() })
+    .strict()
+    .refine((value) => value.ko !== undefined || value.en !== undefined, { message: 'ko 또는 en 중 하나는 있어야 한다' }),
+])
+export type CelebrationLabel = z.infer<typeof CelebrationLabelSchema>
+
 export const CelebrationSkinSchema = z.object({
   palette: CelebrationTierSkinSchema.pick({ core: true, edge: true, glow: true }).optional(),
   particles: CelebrationParticlesSchema.optional(),
   rays: z.object({ style: z.enum(CELEBRATION_RAY_STYLES) }).optional(),
   waves: z.object({ style: z.enum(CELEBRATION_WAVE_STYLES) }).optional(),
   title: CelebrationTitleSchema.optional(),
-  /** 등급 이름 덮어쓰기. 빠진 등급은 허브 기본(i18n). */
+  /** 등급 이름 덮어쓰기. 빠진 등급은 허브 기본(i18n). 값은 문자열 또는 `{ ko, en }`. */
   labels: z
     .object({
-      surge: z.string().trim().min(1).optional(),
-      blast: z.string().trim().min(1).optional(),
-      storm: z.string().trim().min(1).optional(),
-      cataclysm: z.string().trim().min(1).optional(),
+      surge: CelebrationLabelSchema.optional(),
+      blast: CelebrationLabelSchema.optional(),
+      storm: CelebrationLabelSchema.optional(),
+      cataclysm: CelebrationLabelSchema.optional(),
     })
     .optional(),
   tiers: z

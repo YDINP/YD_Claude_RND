@@ -44,6 +44,7 @@ export {
   themeAssetRefs,
   type ArtFxFile,
   type CelebrationFont,
+  type CelebrationLabel,
   type CelebrationMotion,
   type CelebrationParticles,
   type CelebrationRayStyle,

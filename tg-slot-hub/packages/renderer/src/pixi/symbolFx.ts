@@ -25,8 +25,11 @@ const GLOW_TEXTURE_SIZE = 96
 /** 파티클 텍스처 크기(px). */
 const SPARK_TEXTURE_SIZE = 32
 
-/** 광채 스프라이트가 심볼보다 커지는 배수. */
-const GLOW_SCALE = 1.45
+/**
+ * 광채 스프라이트가 심볼보다 커지는 배수. 1.45였을 때 칸을 넘어 이웃 칸·릴 창 가장자리로 번져
+ * 어두운 바탕에서 회색 안개처럼 보였다(검수 C777-03). 칸 안에 머무는 크기로 줄였다.
+ */
+const GLOW_SCALE = 1.0
 /** 빛줄기 띠 폭 = 심볼 한 변 x 이 값. */
 const SHINE_BAND_RATIO = 0.35
 /** 파티클이 날아가는 거리 = 심볼 한 변 x 이 값. */
@@ -438,9 +441,16 @@ function playShine(
   band.y = 0
 
   // 심볼 모양대로만 빛나도록 심볼 스프라이트 자체를 마스크로 쓴다.
+  // 새로 만든 마스크는 앵커가 0(왼쪽 위)이라 반납 때만 도는 reset 훅을 믿으면 첫 사용이 반 칸
+  // 어긋난다(회색 조각이 칸 오른쪽 아래로 삐져나옴). 앵커·위치·회전·배율을 매번 심볼에서 옮겨 온다.
   mask.texture = target.sprite.texture
-  mask.width = target.sprite.width
-  mask.height = target.sprite.height
+  const syncMask = (): void => {
+    mask.anchor.copyFrom(target.sprite.anchor)
+    mask.position.copyFrom(target.sprite.position)
+    mask.rotation = target.sprite.rotation
+    mask.scale.copyFrom(target.sprite.scale)
+  }
+  syncMask()
   band.mask = mask
 
   target.view.addChild(mask, band)
@@ -456,6 +466,8 @@ function playShine(
       repeat: repeatOf(effect),
       repeatDelay: effect.loop ? effect.durationMs / 1000 : 0,
       ease: 'sine.inOut',
+      // wobble 회전·pulse 확대·bounce 이동과 함께 걸려도 마스크가 심볼을 따라간다.
+      onUpdate: syncMask,
     },
   )
   return onceStopped(() => {

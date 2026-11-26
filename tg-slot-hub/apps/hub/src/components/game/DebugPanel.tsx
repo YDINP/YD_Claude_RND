@@ -13,6 +13,7 @@
  */
 import { useState, type ReactNode } from 'react'
 import type { FreeSpinsState, SpinResponse } from '@tgslot/shared'
+import type { RendererDiagnostics } from '@tgslot/renderer'
 import type { GambleSession, GamePhase, SpinTiming } from '../../store/game'
 import type { DebugPreset } from '../../lib/debugPreset'
 import { DEBUG_PRESETS } from '../../lib/debugPreset'
@@ -49,6 +50,8 @@ interface DebugPanelProps {
   presets?: readonly DebugPreset[]
   /** 주문 카드 라운드 중인가. 아니면 `orderComplete`는 잠기고 안내가 뜬다. */
   orderRoundActive?: boolean
+  /** 패널을 연 순간 렌더러의 풀·텍스처 장부. 없으면(렌더러 없음) 구획을 그리지 않는다. «앱 메모리 최적화» 확인용. */
+  diagnostics?: RendererDiagnostics | null
 }
 
 function formatMs(ms: number | null): string {
@@ -70,6 +73,7 @@ export function DebugPanel({
   gambleSession,
   presets = DEBUG_PRESETS,
   orderRoundActive = false,
+  diagnostics = null,
 }: DebugPanelProps): ReactNode {
   const t = useT()
   const [copied, setCopied] = useState(false)
@@ -172,6 +176,29 @@ export function DebugPanel({
             : t('debugStateGambleNone')}
         </p>
       </section>
+
+      {diagnostics && (
+        <section className="hub-debug-panel__section">
+          <h3 className="hub-sheet__subtitle">{t('debugDiagnosticsTitle')}</h3>
+          {(['owned', 'sheets'] as const).map((key) => {
+            const tex = diagnostics.textures[key]
+            return (
+              <p key={key} className="hub-debug-panel__state-line">
+                {`texture.${key}: live ${tex.live} · idle ${tex.idle} · cached ${tex.cached} · evicted ${tex.evicted} / cap ${tex.capacity}`}
+              </p>
+            )
+          })}
+          {(Object.keys(diagnostics.pools) as (keyof RendererDiagnostics['pools'])[]).map((key) => {
+            const pool = diagnostics.pools[key]
+            return (
+              <p key={key} className="hub-debug-panel__state-line">
+                {`pool.${key}: live ${pool.live} · free ${pool.free} · created ${pool.created}`}
+              </p>
+            )
+          })}
+          <p className="hub-debug-panel__state-line">{`sheetSpriteKeys: ${diagnostics.sheetSpriteKeys}`}</p>
+        </section>
+      )}
 
       <section className="hub-debug-panel__section">
         <div className="hub-debug-panel__response-header">

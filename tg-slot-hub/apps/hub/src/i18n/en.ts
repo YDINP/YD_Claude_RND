@@ -102,7 +102,8 @@ const en = {
   freeSpinsPopupMultiplierLabel: 'Multiplier ×{multiplier}',
   // 승리 축하 제목 — 총 획득 ÷ 총 베팅 등급(winTiers.ts). 빅윈 오버레이와 프리스핀 종료 팝업이 함께 쓴다.
   winTierPlain: 'WIN',
-  // 라틴 대문자 그대로 쓴다(ko도 번역하지 않는다). 게임팩이 theme.json의 winTiers로 덮어쓸 수 있다.
+  // 영어는 라틴 대문자. ko는 뜻이 바로 보이는 쉬운 한국어를 쓴다(공용 검수 2026-11-26). 게임팩이
+  // theme.json의 celebration.labels로 덮어쓸 수 있고, 값은 문자열 또는 {ko, en} 로케일 맵이다.
   winTierSurge: 'SURGE',
   winTierBlast: 'BLAST',
   winTierStorm: 'STORM',
@@ -115,7 +116,7 @@ const en = {
   // cluster / chain / order round (candy-cluster-pop)
   chainLabel: 'CHAIN {n}',
   orderDoneLabel: 'ORDER DONE',
-  orderRoundCounter: 'Order round {left}/{total}',
+  orderRoundCounter: 'Order round · spins left {left}/{total}',
   orderRoundTotalLabel: 'ORDER ROUND TOTAL',
   orderRoundPopupTitle: 'ORDER ROUND!',
   orderBoardLabel: 'Order cards',
@@ -162,7 +163,7 @@ const en = {
   scatterPayOfTotalBet: '×{n} total bet',
   freeSpinsTriggerRule: '{count}+ scatters trigger free spins',
   freeSpinsGrantRule: '{spins} spins, ×{multiplier} multiplier',
-  freeSpinsRetriggerRule: 'Retriggering during free spins adds more spins',
+  freeSpinsRetriggerRule: 'Retriggering during free spins adds {spins} more spins',
   fairnessNoRoundYet: 'Spin once to see the fairness proof for that round.',
   // ways games (Wave 1)
   tabWays: 'Ways',
@@ -219,6 +220,43 @@ const en = {
   debugStateGamble: 'Gamble: {amount} pending, {steps} steps left',
   debugStateGambleNone: 'Gamble: none',
   debugAppliedPreset: 'Applied preset: {preset} ({tries} tries)',
+  // 공용 검수(2026-11-26) — 로비 사양·당첨 줄 단위, 오토스핀 안내, 프리스핀 종료 0코인, 도움말 규칙 카드
+  specLines: '{n} lines',
+  specWays: '{n} ways',
+  specCluster: 'Cluster {n}+',
+  waysCount: '{n} ways',
+  autoSpinHintNoFreeSpins: 'Stops when you run low on coins or the count runs out.',
+  freeSpinsEndNoWin: 'No wins this time',
+  payChip: '{n}: ×{pay}',
+  scatterPayChip: '{n}: ×{pay} total bet',
+  wildSubstitutesAllButScatter: 'Wild substitutes for every symbol except Scatter',
+  freeSpinsNoBetRule: 'Free spins play at the bet you started with and cost no coins',
+  freeSpinsMultiplierRule: 'The ×{multiplier} multiplier applies to both line and Scatter wins',
+  rulesTitle: 'Basic rules',
+  ruleLinesLeftToRight: 'Line wins must run left to right starting from reel 1',
+  ruleHighestPerLine: 'Only the highest win on each line is paid',
+  ruleWaysAdjacent: 'Wins need the same symbol on neighbouring reels starting from reel 1 — any row counts',
+  ruleWildReels: 'Wild appears only on reels {reels}',
+  ruleGroupMix: '{group}: any mix of {members} counts as the same symbol',
+  ruleSingleOnReel1: '{symbol} pays even for one, but only on reel 1',
+  mysteryTitle: 'Question-mark tiles',
+  mysteryRule: 'After the reels stop, every question-mark tile on screen turns into the same single symbol at once.',
+  mysteryNoSpecial: 'They never turn into Wild or Scatter.',
+  expandWildTitle: 'Wild fills the reel',
+  expandWildRule: 'When a Wild lands on reel {reels}, that whole reel turns Wild.',
+  expandWildRuleMin: 'When {min} or more Wilds land on reel {reels}, that whole reel turns Wild.',
+  expandWildKeepsScatter: 'Scatter cells are not covered.',
+  upgradeTitle: 'Symbol upgrade',
+  upgradeRule: '{min}+ {from} on screen: {chance}% chance they all become {to}',
+  upgradeRuleAlways: '{min}+ {from} on screen: they all become {to}',
+  randomWildTitle: 'Wild drop',
+  randomWildRule: 'Each spin has a {chance}% chance to drop {count} Wilds on reels {reels}.',
+  gambleRulesTitle: 'Double or nothing',
+  gambleRule: 'After a win you can flip a coin to try for ×{payout} ({percent}% chance), up to {steps} times in a row.',
+  orderRoundSpinButton: 'ROUND SPIN ({n})',
+  orderRoundPopupSpins: '{spins} round spins',
+  debugDiagnosticsTitle: 'Renderer memory (pools · textures)',
+  gambleRuleKeep: 'If you lose, that win is gone. If you skip it, the win simply stays in your wallet.',
 } as const
 
 export default en

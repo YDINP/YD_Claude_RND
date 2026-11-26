@@ -442,7 +442,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
       ? `표본 ${num(dist.observations)} 라운드에서 나온 승리를 지급 근거(심볼·그룹·라인·매치 개수)로 귀속시킨 것이다. ${ESTIMATED}`
       : '전수 조사에서 나온 승리 라인 하나하나를 지급 근거(심볼·그룹·라인·매치 개수)로 귀속시킨 것이다.',
     dist.estimated
-      ? `표본 기여 합계 ${pct(dist.contributionTotal)} vs 정확한 RTP ${pct(dist.rtp)} (차이 ${pp(dist.contributionTotal - dist.rtp)}).`
+      ? `표본 기여 합계 ${pct(dist.contributionTotal)} vs ${dist.method === 'monte-carlo' ? 'RTP(표본 추정)' : '정확한 RTP'} ${pct(dist.rtp)} (차이 ${pp(dist.contributionTotal - dist.rtp)}).`
       : '프리스핀 몫은 같은 스트립을 다시 돌리는 것이므로 기본 게임 기여에 비례 배분했다. 기여의 총합은 전체 RTP와 정확히 같다.',
     '',
     '### 심볼별',

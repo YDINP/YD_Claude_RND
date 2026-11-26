@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSfxVolume, getSoundPreset, isAudioMuted, setAudioMuted, setSfxVolume, setSoundPreset } from './audio'
 
+const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal'] as const
+
 describe('audio mute flag', () => {
   it('defaults to unmuted and reflects setAudioMuted()', () => {
     setAudioMuted(false)
@@ -116,7 +118,7 @@ describe('recipe table', () => {
     window.dispatchEvent(new Event('pointerdown'))
     expect(lastContext).not.toBeNull()
 
-    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy'] as const) {
+    for (const preset of PRESETS) {
       audio.setSoundPreset(preset)
       const before = lastContext!.oscillators
       expect(() => {
@@ -138,6 +140,155 @@ describe('recipe table', () => {
       }, preset).not.toThrow()
       expect(lastContext!.oscillators, preset).toBeGreaterThan(before)
     }
+    vi.unstubAllGlobals()
+  })
+
+  it('every preset plays the double-up cues, each mutation kind and the count-up, and each makes sound', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    const kinds = ['mystery', 'expandWild', 'upgrade', 'randomWild'] as const
+    for (const preset of PRESETS) {
+      audio.setSoundPreset(preset)
+      const cues: [string, () => void][] = [
+        ['gambleToss', () => audio.playGambleToss()],
+        ['gambleWin', () => audio.playGambleWin()],
+        ['gambleLose', () => audio.playGambleLose()],
+        ['countUp', () => audio.playCountUp(2000, 'big')],
+        ...kinds.map((kind): [string, () => void] => [`mutation:${kind}`, () => audio.playMutation(kind)]),
+      ]
+      for (const [name, play] of cues) {
+        const before = lastContext!.oscillators + lastContext!.sources
+        expect(play, `${preset} ${name}`).not.toThrow()
+        expect(lastContext!.oscillators + lastContext!.sources, `${preset} ${name}`).toBeGreaterThan(before)
+      }
+      expect(() => audio.stopCountUp()).not.toThrow()
+    }
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps the royal set as its own preset and still falls back to bell for unknown ones', () => {
+    setSoundPreset('royal')
+    expect(getSoundPreset()).toBe('royal')
+    setSoundPreset('nope' as never)
+    expect(getSoundPreset()).toBe('bell')
+  })
+
+  it('count-up lays its ticks ahead on the audio clock and is cut cleanly by stopCountUp or mute', async () => {
+    const starts: number[] = []
+    class RecordingContext extends FakeAudioContext {
+      createOscillator = () => {
+        this.oscillators += 1
+        const node = fakeNode()
+        node.start = vi.fn((t: number) => starts.push(t))
+        return node
+      }
+    }
+    vi.stubGlobal('AudioContext', RecordingContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('clockwork')
+    audio.playCountUp(3000, 'big')
+    expect(starts.length).toBeGreaterThan(20)
+    expect(Math.min(...starts)).toBeCloseTo(0, 5)
+    // 마감음까지 3초 안팎에 걸쳐 미리 깔린다
+    expect(Math.max(...starts)).toBeGreaterThan(2.5)
+    expect(Math.max(...starts)).toBeLessThan(3.5)
+    // 일반 호출은 예약 오프셋을 물려받지 않는다
+    starts.length = 0
+    audio.playRollupTick(0.5)
+    expect(starts.every((t) => t < 0.05)).toBe(true)
+    audio.stopCountUp()
+    audio.playCountUp(1000, 'none')
+    audio.setAudioMuted(true)
+    expect(() => audio.stopCountUp()).not.toThrow()
+    vi.unstubAllGlobals()
+  })
+
+  it('clockwork tells an expanding wild from an upgrade, and each preset anticipates with its own sound', async () => {
+    const seen: number[] = []
+    class RecordingContext extends FakeAudioContext {
+      createOscillator = () => {
+        this.oscillators += 1
+        const node = fakeNode()
+        const freq = node.frequency as { setValueAtTime: (v: number) => void }
+        freq.setValueAtTime = vi.fn((v: number) => seen.push(Math.round(v)))
+        return node
+      }
+    }
+    vi.stubGlobal('AudioContext', RecordingContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('clockwork')
+    const record = (play: () => void): number[] => {
+      seen.length = 0
+      play()
+      return [...seen]
+    }
+    const expand = record(() => audio.playMutation('expandWild'))
+    const upgrade = record(() => audio.playMutation('upgrade'))
+    const plain = record(() => audio.playMutation())
+    expect(expand.length).toBeGreaterThan(0)
+    expect(upgrade.length).toBeGreaterThan(0)
+    expect(expand).not.toEqual(upgrade)
+    expect(plain).not.toEqual(upgrade)
+    // 확장은 아래에서 위로 쭉 올라가는 소리라 시작 음이 낮고, 승급은 높은 두 음이다
+    expect(Math.min(...expand)).toBeLessThan(800)
+    expect(Math.min(...upgrade)).toBeGreaterThan(500)
+
+    // 기대감은 프리셋마다 다른 소리를 깐다
+    const risers = new Set<string>()
+    for (const preset of PRESETS) {
+      audio.setSoundPreset(preset)
+      const freqs = record(() => {
+        audio.startAnticipation()
+        audio.stopAnticipation()
+      })
+      expect(freqs.length, preset).toBeGreaterThan(0)
+      risers.add(JSON.stringify(freqs))
+    }
+    expect(risers.size).toBe(PRESETS.length)
+    vi.unstubAllGlobals()
+  })
+
+  it('loads the western gunshot recording lazily, plays it, and frees it when the preset changes', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    expect(audio.hasGunshotSample()).toBe(false)
+    audio.setSoundPreset('western')
+    await vi.waitFor(() => expect(audio.hasGunshotSample()).toBe(true))
+
+    const before = lastContext!.sources
+    audio.playWin('big', 2000)
+    expect(lastContext!.sources).toBeGreaterThan(before)
+
+    audio.setSoundPreset('bell')
+    expect(audio.hasGunshotSample()).toBe(false)
+    audio.setSoundPreset('western')
+    await vi.waitFor(() => expect(audio.hasGunshotSample()).toBe(true))
+    vi.unstubAllGlobals()
+  })
+
+  it('plays the synthesized gunshot when the recording has not loaded yet', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    audio.setSoundPreset('western')
+    expect(audio.hasGunshotSample()).toBe(false)
+    const before = lastContext!.sources
+    expect(() => audio.playFeature()).not.toThrow()
+    expect(lastContext!.sources).toBeGreaterThan(before)
     vi.unstubAllGlobals()
   })
 

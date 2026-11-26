@@ -196,7 +196,8 @@ export function buildPresentation(
     {
       phase: 'all',
       wins: ordered,
-      totalWin: totalWinOf(ordered),
+      // 스캐터 배당도 이 스핀의 당첨이다 — 빼면 지갑엔 들어갔는데 카운터는 0으로 남는다.
+      totalWin: totalWinOf(ordered) + featurePayout(features),
       tier,
       scatters,
       durationMs: cap(dwell > 0 ? hold + dwell : hold),

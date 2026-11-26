@@ -17,9 +17,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--hub-space-sm);
+  /* 390폭에서 잭팟·도움말·설정·코인이 폭을 먹어 제목이 «클래식…»으로 잘렸다 — 간격을 줄이고 제목은 두 줄까지 허용한다. */
+  gap: 4px;
   height: 52px;
-  padding: 0 var(--hub-space-md);
+  padding: 0 10px;
   background: var(--hub-secondary-bg);
   border-bottom: 1px solid var(--hub-border);
   position: sticky;
@@ -63,18 +64,23 @@
   text-align: center;
   font-size: var(--hub-font-body);
   font-weight: 700;
+  line-height: 1.15;
   color: var(--hub-text);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .hub-game-screen__wallet-pill,
 .hub-game-screen__jackpot-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
+  gap: 2px;
+  padding: 5px 7px;
   border-radius: 999px;
   background: var(--hub-card-bg);
   border: 1px solid rgba(216, 169, 74, 0.4);
@@ -254,14 +260,16 @@
    붙어 한 블록으로 읽힌다. lineRow와 같은 이유로 비어 있어도 높이를 유지해(min-height)
    프리스핀 진입/이탈 시 금액/버튼 줄이 들썩이지 않는다. */
 .hub-win-strip__free-spins-row {
-  min-height: 14px;
+  min-height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .hub-win-strip__free-spins-counter {
-  font-size: var(--hub-font-tiny, 11px);
+  /* 검수 R5: 보조 줄이 너무 작고 흐렸다. 줄 높이를 min-height와 같게 고정해 빈 줄↔글자 줄이 높이를 바꾸지 않는다. */
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 700;
   color: var(--hub-gold-light);
   font-variant-numeric: tabular-nums;
@@ -289,9 +297,11 @@
 .hub-win-strip__line-label {
   display: inline-flex;
   align-items: center;
-  font-size: var(--hub-font-small);
+  font-size: 13px;
+  line-height: 18px;
   font-weight: 600;
   color: var(--hub-text-sub);
+  color: color-mix(in srgb, var(--hub-text) 80%, var(--hub-text-sub));
   animation: hub-win-strip-line-pop 260ms ease-out;
 }
 
@@ -976,6 +986,21 @@
 
 .hub-features__section:first-child {
   margin-top: var(--hub-space-sm);
+}
+
+/* 규칙 카드 본문(FeatureRules) — 와일드 안내와 같은 크기·색으로 맞춘다. */
+.hub-features__rules.hub-paylines__rules {
+  margin: 0 0 var(--hub-space-sm);
+}
+
+.hub-features__rules {
+  margin: var(--hub-space-xs) 0 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 4px;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  line-height: 1.45;
 }
 
 .hub-features__freespins-rules {

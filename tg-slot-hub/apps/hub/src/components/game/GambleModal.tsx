@@ -62,6 +62,13 @@ interface GambleModalProps {
    * 없으면 확률 칩을 아예 렌더하지 않는다(50%를 짐작해서 보여주지 않는다).
    */
   chancePercent?: number
+  /**
+   * 게임 테마에서 온 동전 그림(앞면=와일드, 뒷면=스캐터)과 강조색(palette.frame). 없으면 허브 기본
+   * 글리프(7/◆)와 기본 버튼색이다 — 서부극 게임에 파란 버튼과 «7» 동전이 뜨던 문제(검수 F7).
+   */
+  headsImage?: string
+  tailsImage?: string
+  accentColor?: string
 }
 
 export function GambleModal({
@@ -74,6 +81,9 @@ export function GambleModal({
   payout,
   lockedPick,
   chancePercent,
+  headsImage,
+  tailsImage,
+  accentColor,
 }: GambleModalProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -187,6 +197,7 @@ export function GambleModal({
     phase === 'revealed' && outcome ? `hub-gamble--${outcome}` : '',
     outcome === 'win' && winStep > 0 ? `hub-gamble--step-${Math.min(winStep, MAX_WIN_STEP)}` : '',
     reducedMotion ? 'hub-gamble--no-motion' : '',
+    accentColor ? 'hub-gamble--themed' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -230,7 +241,10 @@ export function GambleModal({
 
   return (
     <Modal onClose={flipping ? () => {} : onClose} titleId="hub-gamble-title">
-      <div className={rootClass}>
+      <div
+        className={rootClass}
+        style={accentColor ? ({ '--hub-gamble-theme': accentColor } as CSSProperties) : undefined}
+      >
         {showWinFx && <div className="hub-gamble__flash" aria-hidden="true" />}
 
         <header className="hub-gamble__head">
@@ -259,11 +273,19 @@ export function GambleModal({
           <div className={liftClass}>
             <div className={coinClass}>
               <div className="hub-gamble-coin__face hub-gamble-coin__face--heads">
-                <span className="hub-gamble-coin__glyph">7</span>
+                {headsImage ? (
+                  <img className="hub-gamble-coin__img" src={headsImage} alt="" />
+                ) : (
+                  <span className="hub-gamble-coin__glyph">7</span>
+                )}
                 <span className="hub-gamble-coin__label">{t('gambleHeads')}</span>
               </div>
               <div className="hub-gamble-coin__face hub-gamble-coin__face--tails">
-                <span className="hub-gamble-coin__glyph">◆</span>
+                {tailsImage ? (
+                  <img className="hub-gamble-coin__img" src={tailsImage} alt="" />
+                ) : (
+                  <span className="hub-gamble-coin__glyph">◆</span>
+                )}
                 <span className="hub-gamble-coin__label">{t('gambleTails')}</span>
               </div>
             </div>

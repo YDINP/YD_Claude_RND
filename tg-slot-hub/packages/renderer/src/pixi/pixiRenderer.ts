@@ -69,6 +69,7 @@ import {
   buildModeTransition,
   clipAlphaAt,
   curtainAlphaAt,
+  isFreeSpinsActive,
   modeTransitionTarget,
   type ModeTarget,
   type TransitionPlan,
@@ -1733,6 +1734,13 @@ class PixiRenderer implements RendererCore {
     this.mode = mode
 
     if (target === null) {
+      if (mode.immediate === true) {
+        // 복원 경로(새로고침·재진입으로 이어지는 프리스핀): 커튼·클립 없이 배경까지 곧장 맞춘다.
+        // 테두리만 그리면 프리스핀 전용 배경이 기본 배경으로 남았다(검수 R3·AC-07).
+        this.finishModeTransition()
+        this.applyModeSwap(isFreeSpinsActive(mode) ? 'freeSpins' : 'base')
+        return
+      }
       this.drawMode()
       return
     }

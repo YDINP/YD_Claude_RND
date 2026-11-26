@@ -46,12 +46,12 @@ describe('arrangement', () => {
 describe.each(PRESETS)('score: %s', (preset) => {
   const style = BGM_STYLES[preset]
 
-  it('has a 32-bar progression of valid chords and a tempo in the lounge range', () => {
+  it('has a 32-bar progression of valid chords and a tempo from ambient to dance', () => {
     expect(style.progression).toHaveLength(BGM_CYCLE_BARS)
     for (const sym of style.progression) expect(() => parseChord(sym)).not.toThrow()
-    expect(style.bpm).toBeGreaterThanOrEqual(70)
-    // candy(116)가 가장 빠르다. 라운지 범위는 70..120이다.
-    expect(style.bpm).toBeLessThanOrEqual(120)
+    // shrine(62)이 가장 느리고 candy(128)가 가장 빠르다.
+    expect(style.bpm).toBeGreaterThanOrEqual(60)
+    expect(style.bpm).toBeLessThanOrEqual(130)
   })
 
   it('produces sorted, in-bar, in-range notes for two whole cycles', () => {
@@ -117,13 +117,24 @@ describe('candy score', () => {
   const roles = (bar: number, variant: 'base' | 'free', role: string): BgmNote[] =>
     barEvents(style, bar, variant).filter((n) => n.role === role)
 
-  it('is its own song, not the tropical one', () => {
+  it('is its own song, not the tropical one: faster, major scale, four-on-the-floor', () => {
     expect(style).not.toBe(BGM_STYLES.fruit)
-    expect(style.bpm).toBe(116)
+    expect(style.bpm).toBe(128)
+    expect(style.bpm).toBeGreaterThan(BGM_STYLES.fruit.bpm + 15)
     expect(style.scale).toEqual([0, 2, 4, 5, 7, 9, 11])
+    // 꽉 찬 마디(10번)의 킥은 네 박 모두에 온다.
+    const kicks = roles(10, 'base', 'kick').map((n) => Math.round(n.beat))
+    expect(kicks).toEqual([0, 1, 2, 3])
   })
 
-  it('round variation goes up one key, adds 16th hats and a marimba counter melody', () => {
+  it('puts the chord stabs and the bass on the off-beats, not on the beat', () => {
+    for (const n of roles(10, 'base', 'keys')) expect(n.beat % 1).toBeGreaterThan(0.2)
+    const bass = roles(10, 'base', 'bass')
+    expect(bass.length).toBeGreaterThan(0)
+    for (const n of bass.slice(0, 3)) expect(n.beat % 1).toBeGreaterThan(0.2)
+  })
+
+  it('round variation goes up one key, adds 16th hats and a high sparkle counter melody', () => {
     const bar = 10
     expect(roles(bar, 'base', 'counter')).toHaveLength(0)
     expect(roles(bar, 'free', 'counter').length).toBeGreaterThan(0)
@@ -132,13 +143,13 @@ describe('candy score', () => {
     expect(freeBass).toEqual(baseBass.map((m) => m + 1))
     const hats = (variant: 'base' | 'free'): number => roles(bar, variant, 'hat').length
     expect(hats('base')).toBe(0)
-    expect(hats('free')).toBeGreaterThanOrEqual(16)
+    expect(hats('free')).toBeGreaterThanOrEqual(12)
   })
 
-  it('uses finger snaps on the backbeat', () => {
-    const snaps = roles(9, 'base', 'snare').map((n) => Math.round(n.beat))
-    expect(snaps).toContain(1)
-    expect(snaps).toContain(3)
+  it('claps on the backbeat', () => {
+    const claps = roles(9, 'base', 'snare').map((n) => Math.round(n.beat))
+    expect(claps).toContain(1)
+    expect(claps).toContain(3)
   })
 })
 

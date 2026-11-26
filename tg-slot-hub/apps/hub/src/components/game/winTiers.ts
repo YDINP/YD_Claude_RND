@@ -10,6 +10,8 @@
  * (`celebrationTiming`), 빅윈 오버레이는 금액이 길이를 정하는 세 박자다(`bigWinTimeline`) —
  * 사용자가 "당첨금액에 비례해서 길게"를 요구한 곳이 후자다.
  */
+import type { CelebrationLabel } from '@tgslot/game-sdk'
+import type { Locale } from '@tgslot/shared'
 import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import {
   celebrationParticleCount,
@@ -60,13 +62,18 @@ export function celebrationTier(totalWin: number, totalBet?: number): Celebratio
  * 게임팩이 `theme.json`으로 덮어쓴 등급 이름. 주어진 것만 갈아 끼우는 널 오브젝트라
  * 빠진 등급은 허브 기본값(i18n)을 그대로 쓴다 — 서부극이 `storm`만 "STAMPEDE"로 바꿔도 된다.
  */
-export type WinTierLabels = Partial<Record<NamedTier, string>>
+export type WinTierLabels = Partial<Record<NamedTier, CelebrationLabel>>
 
-/** 게임팩 라벨이 있으면 그것, 없으면 null(호출부가 i18n 기본값으로 떨어진다). */
-export function overrideLabel(tier: CelebrationTier, labels?: WinTierLabels): string | null {
+/**
+ * 게임팩 라벨이 있으면 그것, 없으면 null(호출부가 i18n 기본값으로 떨어진다).
+ * `{ ko, en }` 라벨은 화면 언어 → en → ko 순으로 고른다. 문자열 라벨은 언어와 무관하게 그대로 쓴다.
+ */
+export function overrideLabel(tier: CelebrationTier, labels?: WinTierLabels, locale: Locale = 'en'): string | null {
   if (tier === 'none' || labels === undefined) return null
   const label = labels[tier]
-  return label !== undefined && label.trim() !== '' ? label : null
+  if (label === undefined) return null
+  const picked = typeof label === 'string' ? label : (label[locale] ?? label.en ?? label.ko)
+  return picked !== undefined && picked.trim() !== '' ? picked : null
 }
 
 // ---- 타임라인 ----

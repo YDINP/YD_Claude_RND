@@ -655,7 +655,7 @@ describe('GameScreen', () => {
       expect(await screen.findByText('바 아무거나 ×3 · 50')).toBeInTheDocument()
     })
 
-    it('renders the ways line label in Korean, keeping the "ways" word untranslated (genre term)', async () => {
+    it('renders the ways line label in Korean, with the ways unit in Korean too', async () => {
       useSessionStore.setState((s) => ({ ...s, user: { ...s.user!, locale: 'ko' } })); useSettingsStore.setState({ locale: 'auto' })
       mockedGetGameMath.mockResolvedValueOnce({
         ...waysRawMath,
@@ -689,7 +689,8 @@ describe('GameScreen', () => {
         })
       })
 
-      expect(await screen.findByText('타이거 ×5 · 4 ways · 348')).toBeInTheDocument()
+      // ko는 단위도 한국어로(검수 AC-06): «4 ways» → «4웨이».
+      expect(await screen.findByText('타이거 ×5 · 4웨이 · 348')).toBeInTheDocument()
     })
 
     describe('symbol icons instead of the name (theme has the symbol image)', () => {
@@ -1495,12 +1496,12 @@ describe('GameScreen', () => {
       })
 
       // store는 이미 null이 됐지만(실제로는 커튼이 뜨기 전에 이미 그렇다), 커튼이 걷히기
-      // 전까지는 카운터가 예전 값 그대로 남아 있어야 한다 — 릴은 아직 가려 있는데 카운터만
-      // 먼저 사라지면 어색하다.
+      // 전까지는 카운터 줄이 남아 있어야 한다 — 릴은 아직 가려 있는데 카운터만 먼저 사라지면
+      // 어색하다. 다만 라운드는 끝났으므로 남은 횟수는 0으로 맞춘다(검수 R5: 낡은 «n/10»).
       act(() => {
         useGameStore.setState({ freeSpins: null })
       })
-      expect(screen.getByText('Free spins 3/10 ×2')).toBeInTheDocument()
+      expect(screen.getByText('Free spins 0/10 ×2')).toBeInTheDocument()
 
       // 커튼이 다 걷힌 뒤에야(end) 최신 상태(프리스핀 없음)로 맞춘다.
       act(() => {
@@ -1824,7 +1825,9 @@ describe('GameScreen', () => {
       expect(screen.getByText('1', { selector: '.hub-paylines__number' })).toBeInTheDocument()
     })
 
-    it('hides the Features tab entirely when the game has no wild and no scatter', async () => {
+    it('hides the Features tab entirely when the game has no wild, scatter, mutation, group or gamble', async () => {
+      const { gamble: _gamble, ...plainMath } = rawMath
+      mockedGetGameMath.mockResolvedValue(plainMath)
       render(<GameScreen gameId="classic-777" />)
       await screen.findByText('10')
 
@@ -1832,6 +1835,22 @@ describe('GameScreen', () => {
       await screen.findByText('Paytable')
 
       expect(screen.queryByRole('tab', { name: 'Features' })).not.toBeInTheDocument()
+    })
+
+    it('explains the double-up rule on the Features tab when the game has gamble', async () => {
+      render(<GameScreen gameId="classic-777" />)
+      await screen.findByText('10')
+
+      screen.getByRole('button', { name: 'Help' }).click()
+      await screen.findByText('Paytable')
+      act(() => {
+        screen.getByRole('tab', { name: 'Features' }).click()
+      })
+
+      expect(await screen.findByText('Double or nothing')).toBeInTheDocument()
+      expect(
+        screen.getByText('After a win you can flip a coin to try for ×2 (50% chance), up to 3 times in a row.'),
+      ).toBeInTheDocument()
     })
 
     it('shows wild rule, scatter pays (× total bet) and free spins rules on the Features tab', async () => {
@@ -1846,13 +1865,16 @@ describe('GameScreen', () => {
         screen.getByRole('tab', { name: 'Features' }).click()
       })
 
-      expect(await screen.findByText('Wild substitutes for all symbols')).toBeInTheDocument()
+      // 스캐터가 있는 팩의 «모든 심볼» 와일드는 스캐터를 대체하지 않는다는 사실까지 적는다.
+      expect(await screen.findByText('Wild substitutes for every symbol except Scatter')).toBeInTheDocument()
       expect(screen.getByText('3: ×5 total bet')).toBeInTheDocument()
       expect(screen.getByText('4: ×10 total bet')).toBeInTheDocument()
       expect(screen.getByText('5: ×50 total bet')).toBeInTheDocument()
       expect(screen.getByText('3+ scatters trigger free spins')).toBeInTheDocument()
       expect(screen.getByText('10 spins, ×2 multiplier')).toBeInTheDocument()
-      expect(screen.getByText('Retriggering during free spins adds more spins')).toBeInTheDocument()
+      expect(screen.getByText('Retriggering during free spins adds 10 more spins')).toBeInTheDocument()
+      expect(screen.getByText('The ×2 multiplier applies to both line and Scatter wins')).toBeInTheDocument()
+      expect(screen.getByText('Free spins play at the bet you started with and cost no coins')).toBeInTheDocument()
     })
 
     it('shows a placeholder on the Fairness tab before any round, and the reveal UI after one', async () => {
