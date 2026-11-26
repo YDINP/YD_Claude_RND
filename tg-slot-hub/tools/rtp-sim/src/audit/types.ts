@@ -175,6 +175,56 @@ export interface DistributionReport {
   precision: RtpPrecision | null
   /** 연쇄 팩의 연쇄·클러스터·주문 카드 통계. 연쇄가 없거나 전수·해석 모드면 없다. */
   cascade?: CascadeReport
+  /** 말판 팩의 진입·지급·종료 사유·DP 대조. 말판이 없으면 없다. */
+  board?: BoardReport
+}
+
+/** 말판 종료 사유 한 칸. `exact`는 엔진 DP(`boardExpectation`)의 정확 확률이다. */
+export interface BoardEndRow {
+  end: 'goal' | 'traps' | 'throws'
+  count: number
+  probability: number
+  exact: number
+}
+
+/** 말판 보너스 통계. 확률은 말판 1회 기준, RTP는 유료 스핀 기준이다. */
+export interface BoardReport {
+  paidSpins: number
+  boards: number
+  /** 유료 스핀이 말판을 연 비율. */
+  entryRate: number
+  /** 관측 평균 지급(총 베팅 배수, 최소 지급 포함)과 그 표준편차·표준오차. */
+  meanPayout: number
+  sdPayout: number
+  stdErr: number
+  /** DP 정확값. */
+  exactMean: number
+  exactSd: number
+  exactMax: number
+  /** math.json `boardBonus.maxWin`. */
+  maxWin: number
+  /** 관측 최대 지급. */
+  maxPayout: number
+  /** 관측 지급이 maxWin을 넘은 말판 수 (0이어야 한다). */
+  overMaxWin: number
+  longestThrows: number
+  maxThrows: number
+  /** maxThrows를 넘긴 말판 수 (0이어야 한다). */
+  overMaxThrows: number
+  meanThrows: number
+  exactMeanThrows: number
+  ends: BoardEndRow[]
+  /** 갈림길 칸에 한 번 이상 멈춘 비율. */
+  forkRate: number
+  exactForkRate: number
+  minPayoutRate: number
+  exactMinPayoutRate: number
+  throws: { throws: number; count: number; probability: number; exact: number }[]
+  multipliers: { multiplier: number; count: number; probability: number; exact: number }[]
+  payoutBuckets: { label: string; count: number; probability: number }[]
+  winCappedSpins: number
+  capLossRtp: number
+  breakdown: { lines: number; scatter: number; board: number }
 }
 
 /** 연쇄 깊이 한 칸. 깊이 = 그 스핀에서 지급된 연쇄 단계 수. */

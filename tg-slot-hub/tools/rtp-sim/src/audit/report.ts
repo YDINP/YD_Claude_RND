@@ -1,6 +1,7 @@
 import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import type {
   AuditResult,
+  BoardReport,
   CascadeReport,
   OrderReport,
   DistributionMethod,
@@ -197,6 +198,77 @@ function cascadeSections(cascade: CascadeReport): string[] {
   ]
 }
 
+/** 말판 절. 진입률·평균 지급·종료 사유·던지기 분포·갈림길률을 DP 정확값과 나란히. */
+function boardSections(board: BoardReport): string[] {
+  const b = board.breakdown
+  return [
+    '## 5-3. 말판 보너스',
+    '',
+    `말판 지급 = max(최소 지급, 바구니 x 배수), **총 베팅액 배수**다. «DP»는 엔진 \`boardExpectation\`의 정확값, «MC»는 이번 표본이다. ${ESTIMATED}`,
+    '',
+    table(
+      ['지표', 'MC', 'DP'],
+      [
+        ['진입 (유료 스핀)', `1/${triggerOdds(board.entryRate)} (${num(board.boards)}판)`, '-'],
+        ['평균 지급', `${fixed(board.meanPayout, 3)}x ± ${fixed(1.96 * board.stdErr, 3)}`, `${fixed(board.exactMean, 3)}x`],
+        ['표준편차', fixed(board.sdPayout, 2), fixed(board.exactSd, 2)],
+        ['최대 지급', `${board.maxPayout}x`, `${board.exactMax}x (maxWin ${board.maxWin}x)`],
+        ['평균 던지기', fixed(board.meanThrows, 3), fixed(board.exactMeanThrows, 3)],
+        ['최장 던지기', `${board.longestThrows}번 (위반 ${board.overMaxThrows})`, `maxThrows ${board.maxThrows}`],
+        ['갈림길에 멈춤', pct(board.forkRate, 2), pct(board.exactForkRate, 2)],
+        ['최소 지급 적용', pct(board.minPayoutRate, 2), pct(board.exactMinPayoutRate, 2)],
+        ['winCapped 도달', `${num(board.winCappedSpins)}스핀`, '-'],
+      ],
+    ),
+    '',
+    '### 지급 출처',
+    '',
+    table(
+      ['출처', 'RTP 몫'],
+      [
+        ['기본 라인 (lines)', pct(b.lines)],
+        ['기본 스캐터 (scatter)', pct(b.scatter)],
+        ['말판 (board)', pct(b.board)],
+        ['합계 (표본)', pct(b.lines + b.scatter + b.board)],
+      ],
+    ),
+    '',
+    '### 종료 사유',
+    '',
+    table(
+      ['사유', '판', 'MC', 'DP'],
+      board.ends.map((row) => [
+        row.end === 'goal' ? '결승 도착' : row.end === 'traps' ? '등불이 모두 꺼짐 (함정)' : '기회를 다 씀',
+        num(row.count),
+        pct(row.probability, 2),
+        pct(row.exact, 2),
+      ]),
+    ),
+    '',
+    '### 던지기 수 분포',
+    '',
+    table(
+      ['던지기', '판', 'MC', 'DP'],
+      board.throws.map((row) => [String(row.throws), num(row.count), pct(row.probability, 2), pct(row.exact, 2)]),
+    ),
+    '',
+    '### 끝 배수 분포',
+    '',
+    table(
+      ['배수', '판', 'MC', 'DP'],
+      board.multipliers.map((row) => [`x${row.multiplier}`, num(row.count), pct(row.probability, 2), pct(row.exact, 2)]),
+    ),
+    '',
+    '### 지급 구간 (총 베팅 배수)',
+    '',
+    table(
+      ['구간', '판', '비율'],
+      board.payoutBuckets.map((row) => [row.label, num(row.count), pct(row.probability, 2)]),
+    ),
+    '',
+  ]
+}
+
 /** 주문 카드 절. 등장률·완료율·라운드 길이·완료 장수. */
 function orderSections(orders: OrderReport, breakdown: CascadeReport['breakdown']): string[] {
   return [
@@ -268,6 +340,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
   const allPass = passed === result.gates.length
 
   const sections: string[] = []
+  /** 스캐터가 프리스핀이 아니라 말판 보너스를 여는 팩. 프리스핀 줄은 0뿐이라 오해만 부른다. */
+  const boardOnly = dist.board !== undefined && mc.freeSpinsPlayed === 0 && (features === null || features.spinsPerTrigger === 0)
 
   sections.push(
     `# RTP 검수 리포트 — ${title} (\`${game.id}\`)`,
@@ -378,7 +452,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
             ] as [string, string][])),
         ['  ├ 페이라인', pct(dist.breakdown.lines)],
         ['  ├ 스캐터', pct(dist.breakdown.scatter)],
-        ['  └ 프리스핀', pct(dist.breakdown.freeSpins)],
+        [dist.board === undefined ? '  └ 프리스핀' : '  └ 피처 (말판)', pct(dist.breakdown.freeSpins)],
         ['적중률', `${pct(dist.hitRate)}${estimatedNote}`],
         ['최대 배수', `${dist.maxWinMultiplier.toFixed(2)}x${estimatedNote}`],
         [
@@ -420,8 +494,13 @@ export function buildAuditMarkdown(result: AuditResult): string {
         ['표준편차 (배수)', mc.stdDev.toFixed(4)],
         ['표준오차', pp(agreement.standardError)],
         ['적중률', pct(mc.hitRate)],
-        ['프리스핀 트리거율', pct(mc.triggerRate)],
-        ['돌아간 프리스핀', num(mc.freeSpinsPlayed)],
+        // 말판 팩(프리스핀 없음)은 «프리스핀 0%» 대신 말판 진입률을 적는다 — 0%가 «피처가 안 열린다»로 읽힌다.
+        ...(boardOnly
+          ? [['말판 진입률 (유료 스핀)', `${pct(dist.board?.entryRate ?? 0)} (약 1/${triggerOdds(dist.board?.entryRate ?? 0)}, 5-3 참고)`]]
+          : [
+              ['프리스핀 트리거율', pct(mc.triggerRate)],
+              ['돌아간 프리스핀', num(mc.freeSpinsPlayed)],
+            ]),
         ['최대 승리', `${num(mc.maxWin)} 코인 (${(mc.maxWin / mc.totalBet).toFixed(2)}x)`],
         ['소요 시간', `${(mc.elapsedMs / 1000).toFixed(2)}s`],
         [
@@ -493,7 +572,25 @@ export function buildAuditMarkdown(result: AuditResult): string {
     )
   }
 
-  if (features !== null) {
+  if (features !== null && boardOnly) {
+    sections.push(
+      '## 5-1. 스캐터',
+      '',
+      '이 팩의 스캐터는 프리스핀이 아니라 **말판 보너스**를 연다(프리스핀 없음). 진입률·지급 분포는 5-3에 있다.',
+      '',
+      table(
+        ['항목', '값'],
+        [
+          ['스캐터 심볼', `\`${features.scatterSymbol ?? '없음'}\``],
+          ['스캐터 배당 몫', `${pct(features.scatterShare, 2)} of RTP`],
+          // 분석 분포는 피처 몫을 프리스핀 칸에 모은다 — 이 팩에서는 그 칸이 곧 말판 몫이다.
+          ['말판 몫 (분석 분포의 피처 칸)', `${pct(features.freeSpinsShare, 2)} of RTP`],
+          ['말판 진입 (표본)', `1/${triggerOdds(dist.board?.entryRate ?? 0)}`],
+        ],
+      ),
+      '',
+    )
+  } else if (features !== null) {
     sections.push(
       '## 5-1. 스캐터와 프리스핀',
       '',
@@ -532,6 +629,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
       '',
     )
   }
+
+  if (dist.board !== undefined) sections.push(...boardSections(dist.board))
 
   if (dist.cascade !== undefined) {
     sections.push(...cascadeSections(dist.cascade))

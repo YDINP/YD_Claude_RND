@@ -13,6 +13,7 @@ import type {
   AuditOptions,
   AuditResult,
   BetLevelRow,
+  BoardReport,
   CascadeReport,
   DistributionMethod,
   DistributionReport,
@@ -357,6 +358,7 @@ export function buildGates(input: GateInput): GateRow[] {
   }
 
   if (distribution.cascade !== undefined) gates.push(...cascadeGates(distribution.cascade))
+  if (distribution.board !== undefined) gates.push(...boardGates(distribution.board))
 
   if (jackpot !== null) {
     gates.push({
@@ -415,6 +417,39 @@ export function cascadeGates(cascade: CascadeReport): GateRow[] {
     },
   )
   return gates
+}
+
+/** 말판 보너스 게이트. 기획서 §5-3 «말판» 줄. */
+export function boardGates(board: BoardReport): GateRow[] {
+  const endSum = board.ends.reduce((sum, row) => sum + row.probability, 0)
+  const diff = board.meanPayout - board.exactMean
+  return [
+    {
+      label: `최장 던지기 ≤ maxThrows(${board.maxThrows}) (위반 0건)`,
+      pass: board.overMaxThrows === 0 && board.boards > 0,
+      detail: `최장 ${board.longestThrows}번, 위반 ${board.overMaxThrows}건 / ${board.boards.toLocaleString('en-US')}판`,
+    },
+    {
+      label: '말판 평균 지급(MC)이 DP 정확값과 3 표준오차 안',
+      pass: Math.abs(diff) <= 3 * board.stdErr,
+      detail: `MC ${board.meanPayout.toFixed(3)}x / DP ${board.exactMean.toFixed(3)}x (차 ${diff.toFixed(3)}, 3SE ${(3 * board.stdErr).toFixed(3)})`,
+    },
+    {
+      label: `관측 최대 말판 지급 ≤ maxWin(${board.maxWin}x)`,
+      pass: board.overMaxWin === 0 && board.maxPayout <= board.maxWin,
+      detail: `관측 최대 ${board.maxPayout}x, DP 최대 ${board.exactMax}x`,
+    },
+    {
+      label: '종료 사유 비율 합 = 1 (리포트에 있다)',
+      pass: Math.abs(endSum - 1) < SUM_EPSILON,
+      detail: board.ends.map((row) => `${row.end} ${pct(row.probability, 2)}`).join(', '),
+    },
+    {
+      label: 'winCapped 도달 0건 (구조상 캡에 닿지 않는다)',
+      pass: board.winCappedSpins === 0,
+      detail: `${board.winCappedSpins.toLocaleString('en-US')}스핀`,
+    },
+  ]
 }
 
 /** 따로 계산해 둔 검수 조각들. GUI는 분포(전수/표본)와 몬테카를로를 나눠 돌린다. */
