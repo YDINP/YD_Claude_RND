@@ -1,0 +1,224 @@
+{
+  "game": "kraken-cove",
+  "concept": "Lagoon Cave Vinyl Toy: bright, chunky soft vinyl-toy 3D sea creatures and treasure in a sunlit lagoon-teal cave with a kraken-violet tentacle motif, wet sheen only on the material and never as a streak across the frame. 5x3 reel in a square rock-arch frame with violet tentacles curling from the marquee corners. The wild kraken is the only symbol with a face; the gold coin has an empty smooth face because the game prints the amount in code; upper symbols read as gold/coral/brass, lower ones as red, pink, orange and mint sea animals told apart by silhouette. props (treasure coins, chest, tentacle strip) use the thumb kind because theme-gen has no prop kind yet; their outputs are trimmed by hand and listed under theme.json props.",
+  "stylePrefix": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality —",
+  "negative": "photorealistic photography, dark horror mood, scary teeth, blurry, watermark, signature, text, letters, numbers, random glyphs, diagonal light streak across the image, busy cluttered background, baked-in drop shadow, cropped edges, multiple duplicate objects, people, hands, cheap clip-art look",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a cute round kraken head, the top-tier wild: a plump round kraken-violet (#7b5cff) head with a friendly cute face — two big round shiny eyes with white highlights, a small happy smile and soft pink cheeks — wearing a small coral-pink scallop-shell tiara trimmed with gold and set with one turquoise diamond gem, and two thick violet tentacles that curl up high into tall spirals on both the left and right sides like the handles of a vase, with pale pink round suckers, friendly and adorable and not scary, the largest and most ornate symbol, the ONLY symbol in the set with a face. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "coin",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a front-on gold coin seen straight from the front (not tilted): a perfectly round thick gold disc with a raised rim carrying a ring of tiny scallop-shell reliefs around the edge, and a very wide, smooth, polished plain gold face in the middle that is completely empty — no engraving, no emblem, no pattern, no shape, nothing at all in the centre because a game will print the coin amount there, only a subtle ring step separates the rim from the empty smooth centre. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/coin.webp",
+      "outSize": 512
+    },
+    {
+      "id": "crown",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a coral crown, the top-tier pay symbol: a golden crown band whose tall pointed tips are branching red-pink coral twigs, three round pink pearls set into the gold band and two tiny turquoise gems, tall spiky crown silhouette, gold and coral red dominant. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/crown.webp",
+      "outSize": 512
+    },
+    {
+      "id": "compass",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a brass compass: a chunky SQUARE brass case with clearly square corners tilted slightly, its hinged lid swung open at the top, a deep navy dial under a turquoise glass with a red and cream needle and tiny brass tick marks, NOT a round disc, square boxy silhouette with an open lid. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/compass.webp",
+      "outSize": 512
+    },
+    {
+      "id": "seahorse",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a coral-salmon (#ff7f6b) seahorse in a bold vertical S-curve, curled tail at the bottom, tube snout pointing left, ridged cream belly, small translucent fin, one tiny black bead eye, no mouth, no smile, tall narrow S silhouette. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/seahorse.webp",
+      "outSize": 512
+    },
+    {
+      "id": "pufferfish",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a round inflated sunny-yellow (#ffd23f) pufferfish ball covered all around in short stubby spikes, cream-white belly, small blue-violet fins and tail, tiny black bead eyes and a small round pursed mouth, spiky round ball silhouette. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/pufferfish.webp",
+      "outSize": 512
+    },
+    {
+      "id": "crab",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a scarlet red-orange (#f0503c) crab seen from above-front, a very wide silhouette with two large pincers held open wide on both sides, little stalk eyes, stubby legs along the sides, no smile, wider than tall. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/crab.webp",
+      "outSize": 512
+    },
+    {
+      "id": "jellyfish",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a soft pink (#ff9ec7) jellyfish with a round dome bell with a few lilac spots and four wavy ribbon tentacles hanging below, opaque soft jelly toy material (NOT glass-like, NOT transparent), bell on top and long dangling strands below, no eyes, no face. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/jellyfish.webp",
+      "outSize": 512
+    },
+    {
+      "id": "starfish",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a chunky five-pointed starfish in warm golden-orange (#ffa62b) with cream-white bumps dotted along each arm, thick rounded arm tips, clean five-point star silhouette, no eyes, no face. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/starfish.webp",
+      "outSize": 512
+    },
+    {
+      "id": "shell",
+      "kind": "symbol",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a pale mint-aqua (#9be8d0) scallop shell: a fan-shaped shell with eight clear radiating ridges and a small hinge at the bottom, cream-white ridge highlights and one small pearl resting at the hinge, clean fan silhouette. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/shell.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Wide front-on elevation view (not 3/4 top-down), full-bleed square artwork with no isolated chroma background around the frame itself — a bright lagoon-cave cabinet frame carved like a rock arch crusted with pink coral and pearly shells, built around one large centered window rather than wide ornate pillars, so the reels can fill almost the entire phone screen. A compact marquee spans y 0%-17%: the top of the rock arch, with two thick kraken-violet (#7b5cff) tentacles with pale pink round suckers curling down symmetrically from the upper left and upper right corners and hugging the frame, a few small glowing pearls strung between them, no head, no face, no eyes, no text. The reel window occupies x 2%-98% and y 19%-81% (the dominant element of the frame), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel and NO gradient inside it, bordered by only a hairline 0.5% gold-and-coral rim running just outside the green (this window will later be replaced with the live reel canvas). Reel window interior must be pure flat #00FF00, nothing painted inside — no white, no glass, no reflection, no grid lines, no symbols. Two slim rails run the height of the window, each at most 1.5% of the frame width, styled as narrow coral-pink rock columns with a few tiny shells. The bottom y 83%-100% is a base of golden sand with a few small piles of gold coins and pearls and soft ambient shadow, no legend strip, no payline icons, no text. Overall symmetrical, centered, no characters. The reel window is clearly wider than tall (about 3:2 landscape proportion) so a 5-reel by 3-row grid fills it edge to edge; the frame's overall canvas is square. The window must reach almost to the left and right edges of the canvas so that on a phone the reels span nearly the full screen width; put all decorative bulk in the marquee above and the base below, never at the sides. No diagonal light streaks."
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a sunlit shallow lagoon cave seen softly out of focus: a calm turquoise water surface high at the top with soft rippling caustic light patterns glowing on the cave wall and the pale sand floor, pink and violet coral and swaying sea plants in muted tones along the left and right edges, round pearly shells on the sand, lagoon teal (#2ec4d6) fading to deep navy (#10285a) toward the bottom corners. Desaturated and soft, mid-to-low contrast, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, calm uncluttered composition, no characters, no creatures, no readable text, no sharp details competing for attention, no diagonal light beams or god rays, no light streaks."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background, identical camera framing to the calm lagoon cave background so the two can crossfade — the inner treasure chamber deeper in the same cave: big glowing heaps of gold coins and pearls piled along the lower third and sides, and far in the back only a huge coiled kraken-violet (#7b5cff) body of tentacles with pale pink suckers curling around the heaps (tentacles only, no head, no face, no eyes), warm golden light and soft rippling caustic patterns on the cave wall, richer and warmer than the calm lagoon scene, mid-to-low contrast, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, no readable text, no diagonal light beams or god rays, no light streaks."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a friendly cute kraken-violet (#7b5cff) kraken with a big happy smiling face hugging a tall vertical stack of shiny plain gold coins with one thick tentacle wrapped around it, gold coins popping up in the air around it, a few pearls and an open treasure chest at its side, set in a bright sunlit lagoon-teal underwater cave with soft coral, bright and vivid, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no numbers, no clutter, no diagonal light streaks."
+    },
+    {
+      "id": "coin-small",
+      "kind": "thumb",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a small-treasure coin: a front-on round coin disc seen straight from the front, thick silver rim with a ring of tiny dots, a lagoon-teal (#2ec4d6) smooth face with ONE single small round white pearl set exactly in the centre, nothing else on the face, silver and teal. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/coin-small.webp",
+      "outSize": 384
+    },
+    {
+      "id": "coin-medium",
+      "kind": "thumb",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a medium-treasure coin: a front-on round coin disc seen straight from the front, thick sunny-gold rim with a ring of tiny dots, a smooth gold face with THREE round white pearls arranged in a small triangle in the centre, nothing else on the face, gold and pearl white. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/coin-medium.webp",
+      "outSize": 384
+    },
+    {
+      "id": "coin-large",
+      "kind": "thumb",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a large-treasure coin: a front-on round coin disc seen straight from the front, thick kraken-violet (#7b5cff) rim with gold studs, a smooth deep violet face with ONE large faceted ruby-red gem set exactly in the centre, nothing else on the face, violet, gold and ruby red. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/coin-large.webp",
+      "outSize": 384
+    },
+    {
+      "id": "treasure-top",
+      "kind": "thumb",
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a wooden treasure chest with its lid thrown open and overflowing with shiny plain gold coins, white pearls and a few red and turquoise gems heaped high above the rim, chunky gold-banded chest in warm brown wood, 3/4 view from slightly above. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/treasure-top.webp",
+      "outSize": 512
+    },
+    {
+      "id": "tentacle",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": true,
+      "out": "theme/props/tentacle.webp",
+      "outSize": 1024,
+      "prompt": "Bright stylized 3D mobile game icon render, chunky soft vinyl-toy shapes with a subtle wet sheen on the material only, underwater lagoon cave theme, 3/4 top-down camera angle, soft top light from above, vivid palette of lagoon teal (#2ec4d6), coral pink (#ff6f91), sunny gold (#ffc83d), kraken violet (#7b5cff) with deep navy (#10285a) accents, bold simple silhouette that reads at 64px, no diagonal light streaks, no lens flare, no watermark, no baked-in drop shadow, premium casual mobile slot game asset quality — a single kraken tentacle drawn as a perfectly STRAIGHT horizontal rope-like strip, side view, lying flat from the far left edge to the far right edge of the image: kraken-violet (#7b5cff) body, very thick on the left and tapering smoothly to a thin rounded tip on the right, a single neat row of round pale pink (#ffc0d6) suckers along the lower edge, NOT curved, NOT curled, NOT bent, perfectly horizontal and straight like a plank so it can be used as a rope texture, no head, no face, no eyes. No text, no letters, no numbers anywhere on the object. isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill)."
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a cute round kraken head, the top-tier wild: a plump round kraken-violet (#7b5cff) head with a friendly cute face — two big round shiny eyes with white highlights, a small happy smile and soft pink cheeks — wearing a small coral-pink scallop-shell tiara trimmed with gold and set with one turquoise diamond gem, and two thick violet tentacles that curl up high into tall spirals on both the left and right sides like the handles of a vase, with pale pink round suckers, friendly and adorable and not scary. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). Win-celebration animation timeline across the sequence: frames 1-3 the kraken squishes down slightly then bounces up while both side tentacles uncurl outward; frames 4-6 at peak size it winks one eye with a happy grin and both tentacles wave, small sparkles pop around it; frames 7-9 the tentacles curl back in and it settles to its resting pose, ending close to frame 1 for a seamless loop. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, sparkle and pose motion, no diagonal light sweeps.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "coin-win",
+      "kind": "sheet",
+      "symbol": "coin",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a front-on gold coin seen straight from the front: a perfectly round thick gold disc with a raised rim carrying a ring of tiny scallop-shell reliefs around the edge, and a very wide, smooth, polished plain gold face in the middle that is completely empty — no engraving, no emblem, no pattern, nothing in the centre. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). Win-celebration animation timeline across the sequence: frames 1-3 the coin hops up slightly and starts a half turn around its vertical axis, narrowing to a thin edge-on view; frames 4-6 it completes the half turn and faces front again at peak size with the scallop reliefs on the rim lighting up one after another and small star-shaped sparkles twinkling on the rim; frames 7-9 it settles back down to its resting pose facing front, ending close to frame 1 for a seamless loop. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, sparkle and pose motion, no diagonal light sweeps.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/coin-win.webp",
+      "outSize": 768
+    },
+    {
+      "id": "crown-win",
+      "kind": "sheet",
+      "symbol": "crown",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "prompt": "a coral crown: a golden crown band whose tall pointed tips are branching red-pink coral twigs, three round pink pearls set into the gold band and two tiny turquoise gems, tall spiky crown silhouette. No text, no letters, no numbers anywhere on the object. centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). Win-celebration animation timeline across the sequence: frames 1-3 the crown bobs up slightly while the first pearl lights up with a small star sparkle; frames 4-6 the second and third pearls light up in turn and the coral tips glow warmly at peak size with small sparkles around the crown; frames 7-9 the glow fades and the crown settles back to its resting pose, ending close to frame 1 for a seamless loop. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described glow, sparkle and pose motion, no diagonal light sweeps.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/crown-win.webp",
+      "outSize": 768
+    }
+  ]
+}

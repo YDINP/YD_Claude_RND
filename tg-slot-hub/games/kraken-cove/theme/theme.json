@@ -1,0 +1,262 @@
+{
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "coin": "symbols/coin.webp",
+    "crown": "symbols/crown.webp",
+    "compass": "symbols/compass.webp",
+    "seahorse": "symbols/seahorse.webp",
+    "pufferfish": "symbols/pufferfish.webp",
+    "crab": "symbols/crab.webp",
+    "jellyfish": "symbols/jellyfish.webp",
+    "starfish": "symbols/starfish.webp",
+    "shell": "symbols/shell.webp"
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 16,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#7b5cff",
+          "durationMs": 900
+        }
+      ]
+    },
+    "coin": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#ffc83d",
+          "durationMs": 800
+        },
+        {
+          "type": "pulse",
+          "scale": 1.08,
+          "durationMs": 600
+        }
+      ]
+    },
+    "crown": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#ff6f91",
+          "durationMs": 800
+        },
+        {
+          "type": "bounce",
+          "px": 0.06,
+          "durationMs": 700
+        }
+      ]
+    },
+    "compass": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 10,
+          "durationMs": 700
+        },
+        {
+          "type": "glow",
+          "color": "#2ec4d6",
+          "durationMs": 700
+        }
+      ]
+    },
+    "seahorse": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 7,
+          "durationMs": 700
+        },
+        {
+          "type": "bounce",
+          "px": 0.05,
+          "durationMs": 700
+        }
+      ]
+    },
+    "pufferfish": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.18,
+          "durationMs": 600
+        }
+      ]
+    },
+    "crab": {
+      "win": [
+        {
+          "type": "wobble",
+          "degrees": 9,
+          "durationMs": 650
+        }
+      ]
+    },
+    "jellyfish": {
+      "win": [
+        {
+          "type": "bounce",
+          "px": 0.08,
+          "durationMs": 750
+        }
+      ]
+    },
+    "starfish": {
+      "win": [
+        {
+          "type": "spin",
+          "durationMs": 600,
+          "repeat": 1
+        }
+      ]
+    },
+    "shell": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.12,
+          "durationMs": 600
+        },
+        {
+          "type": "glow",
+          "color": "#b8f5e8",
+          "durationMs": 600
+        }
+      ]
+    }
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#ff6f91",
+    "reelBg": "#10285a",
+    "winLine": [
+      "#ffc83d",
+      "#2ec4d6",
+      "#ff6f91",
+      "#7b5cff",
+      "#b8f5e8"
+    ],
+    "text": "#f2fbff"
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.0509,
+      "y": 0.2722,
+      "w": 0.8991,
+      "h": 0.525
+    }
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "props": {
+    "coin-small": "props/coin-small.webp",
+    "coin-medium": "props/coin-medium.webp",
+    "coin-large": "props/coin-large.webp",
+    "treasure-top": "props/treasure-top.webp",
+    "tentacle": "props/tentacle.webp"
+  },
+  "reelBackdrop": {
+    "color": "#10285a",
+    "alpha": 0.72,
+    "radius": 0.12
+  },
+  "celebration": {
+    "palette": {
+      "core": "#ffe27a",
+      "edge": "#2ec4d6",
+      "glow": "#7b5cff80"
+    },
+    "particles": {
+      "shapes": [
+        "coin",
+        "gem",
+        "spark"
+      ],
+      "symbols": [
+        "coin",
+        "starfish"
+      ],
+      "colors": [
+        "#ffe27a",
+        "#2ec4d6",
+        "#ff6f91",
+        "#7b5cff",
+        "#b8f5e8"
+      ],
+      "motion": "flip",
+      "size": 0.9
+    },
+    "rays": {
+      "style": "halo"
+    },
+    "waves": {
+      "style": "ring"
+    },
+    "title": {
+      "font": "rounded",
+      "weight": 900,
+      "stroke": 2,
+      "strokeColor": "#10285ab3",
+      "tracking": 0.02
+    },
+    "tiers": {
+      "surge": {
+        "density": 1.1
+      },
+      "storm": {
+        "glow": "#ff6f9180",
+        "edge": "#ff6f91"
+      },
+      "cataclysm": {
+        "core": "#ffffff",
+        "edge": "#7b5cff",
+        "glow": "#ffe27a8a",
+        "density": 1.15
+      }
+    }
+  },
+  "sound": {
+    "preset": "deepsea"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2500,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
+  },
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "coin": {
+      "win": "sheets/coin-win.json"
+    },
+    "crown": {
+      "win": "sheets/crown-win.json"
+    }
+  }
+}
