@@ -1,0 +1,49 @@
+{
+  "fx": {
+    "default": {
+      "win": [{ "type": "pulse", "scale": 1.1, "durationMs": 550 }]
+    },
+    "wild": {
+      "win": [
+        { "type": "burst", "particles": 16, "durationMs": 850 },
+        { "type": "glow", "color": "#ffd166", "durationMs": 850 }
+      ]
+    },
+    "bonus": {
+      "win": [
+        { "type": "glow", "color": "#ffd166", "durationMs": 800 },
+        { "type": "spin", "durationMs": 400, "repeat": 1 }
+      ]
+    },
+    "lightstick": {
+      "win": [
+        { "type": "pulse", "scale": 1.14, "durationMs": 600 },
+        { "type": "glow", "color": "#ff5fa2", "durationMs": 600 }
+      ]
+    },
+    "idol_pink": {
+      "win": [
+        { "type": "bounce", "px": 0.07, "durationMs": 700 },
+        { "type": "glow", "color": "#ff5fa2", "durationMs": 700 }
+      ]
+    },
+    "idol_blue": {
+      "win": [
+        { "type": "bounce", "px": 0.07, "durationMs": 700 },
+        { "type": "glow", "color": "#4aa8ff", "durationMs": 700 }
+      ]
+    },
+    "idol_gold": {
+      "win": [
+        { "type": "bounce", "px": 0.07, "durationMs": 700 },
+        { "type": "glow", "color": "#ffd166", "durationMs": 700 }
+      ]
+    },
+    "heart_balloon": {
+      "win": [
+        { "type": "bounce", "px": 0.06, "durationMs": 750 },
+        { "type": "wobble", "degrees": 6, "durationMs": 750 }
+      ]
+    }
+  }
+}

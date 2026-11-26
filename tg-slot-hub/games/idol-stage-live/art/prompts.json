@@ -1,0 +1,173 @@
+{
+  "game": "idol-stage-live",
+  "concept": "Anime idol concert, clean 2D cel-shaded illustration with dark plum line art and two-tone shading, soft bloom only on glowing lights. Neon pink #ff5fa2, electric blue #4aa8ff, spotlight gold #ffd166, silver #d9dde8 on deep stage night #14101f. Three original idols (pink center, blue vocal, gold dancer) plus stage props. 5x4 ways board in a 1024x1024 frame with a landscape window; bg is a lightstick sea seen from the stage, bgFreeSpins is the empty roulette stage. The roulette wheel, pointer and help diagrams are drawn in code (numbers must match math.json) and are not generated.",
+  "stylePrefix": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality —",
+  "negative": "photorealistic photography, 3D render, glossy plastic, diagonal light streaks, lens flare streaks, blurry, out of focus, watermark, signature, text, letters, numbers, random glyphs, logos, busy cluttered background, baked-in drop shadow, cropped edges, multiple duplicate objects, real person likeness, cheap clip-art look",
+  "assets": [
+    {
+      "id": "lightstick",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a concert penlight lightstick standing upright on its own, a slim cylindrical white handle with a pink grip band and a large round glowing neon pink (#ff5fa2) orb at the top with a soft bloom glow and a tiny sparkle, the orb is about 40% of the total height so it still reads at 24px, nothing holding it, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/lightstick.webp",
+      "outSize": 512
+    },
+    {
+      "id": "idol_pink",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — head-and-shoulders bust of an original anime idol girl facing front, long pink hair tied in a high side ponytail with a gold star hair clip, big sparkling magenta eyes, winking with a warm smile, pink and white stage outfit with a frilly ribbon collar, an original character design that does not resemble any existing anime character, idol group or real person, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/idol_pink.webp",
+      "outSize": 512
+    },
+    {
+      "id": "idol_blue",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — head-and-shoulders bust of an original anime idol girl facing front, short wavy blue bob haircut, a slim headset microphone beside her mouth, singing with her eyes closed and mouth open, electric blue (#4aa8ff) jacket with silver piping, an original character design that does not resemble any existing anime character, idol group or real person, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/idol_blue.webp",
+      "outSize": 512
+    },
+    {
+      "id": "idol_gold",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — head-and-shoulders bust of an original anime idol girl facing front, gold blonde hair in a long braid over one shoulder under a small gold cap with a star on it, energetic open grin, cropped gold jacket with pink trim, an original character design that does not resemble any existing anime character, idol group or real person, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/idol_gold.webp",
+      "outSize": 512
+    },
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a golden stage microphone standing upright in front of a large round gold emblem: a radiant twelve-ray gold starburst with a pink (#ff5fa2) ring around its centre, so the whole symbol is wide and round and fills the cell, the microphone has a round gold mesh-grille ball head with a small gold star and a slim gold handle with a pink satin ribbon wrapped around it ending in a small bow, a few tiny sparkles, the top-tier wild symbol and the most ornate, radiant item, gold (#ffd166) and pink (#ff5fa2), centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bonus",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a glowing pink-and-gold concert pass ticket tilted 15 degrees, a wide horizontal rectangle with small notched semicircles on both short sides, a star-shaped punch hole near the left end, a short gold lanyard loop at the top, pink (#ff5fa2) and gold (#ffd166) halves split by a dotted perforation line, completely blank face with no text, no numbers and no barcode, soft glow, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bonus.webp",
+      "outSize": 512
+    },
+    {
+      "id": "album",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a square music album case seen from the front with a shiny silver disc half slid out of the right side, the pink cover has a simple gold star pattern, completely blank cover without any title or text, no faces, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/album.webp",
+      "outSize": 512
+    },
+    {
+      "id": "heart_balloon",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — an electric blue (#4aa8ff) foil heart balloon with a clearly pointed bottom and two round lobes, one soft white highlight, a curly silver ribbon string hanging down from the bottom, simple bold heart silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/heart_balloon.webp",
+      "outSize": 512
+    },
+    {
+      "id": "star_badge",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a gold (#ffd166) five-pointed star shaped fan badge pin with thick rounded points and a thin pink rim, a tiny round pin clasp visible at the bottom, simple bold star silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/star_badge.webp",
+      "outSize": 512
+    },
+    {
+      "id": "note",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a neon pink (#ff5fa2) double beamed eighth note, two round note heads joined by a thick beam, with a soft pink glow, bold simple music note silhouette, no staff lines, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/note.webp",
+      "outSize": 512
+    },
+    {
+      "id": "ribbon",
+      "kind": "symbol",
+      "prompt": "Anime idol concert slot icon, clean 2D anime cel-shaded illustration with crisp dark plum line art and two-tone cel shading, soft bloom only on glowing light sources, vivid neon pink (#ff5fa2), electric blue (#4aa8ff) and spotlight gold (#ffd166) accents against deep stage night (#14101f), bold simple silhouette that reads at 64px, centered single subject, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a silver (#d9dde8) and pink satin ribbon bow with two big loops and two short tails, a pink (#ff5fa2) centre knot, symmetrical butterfly bow silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/ribbon.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Front-on elevation view (not 3/4 top-down), full-bleed SQUARE 1:1 artwork with no isolated chroma background around the frame itself — a clean 2D anime cel-shaded illustration (the same crisp dark plum line art and two-tone cel shading as the idol concert icons) of a concert stage slot cabinet frame: a lighting truss with small round PAR stage lights in pink, blue and gold, the front edge of a stage with a row of footlights and two small speakers, slim dark plum rails with a thin silver edge. EXACT LAYOUT: the reel window is a rectangle spanning x 2% to 98% and y 11% to 88% of the canvas, i.e. 96% of the width by 77% of the height, a window that is 1.25 times WIDER than it is tall (5:4, landscape, almost filling the whole square canvas). It is filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel, NO gradient and NO ornament inside it, bordered by only a hairline 0.5% silver rim just outside the green. Reel window interior must be pure flat #00FF00, nothing painted inside — no white, no glass, no reflection, no grid lines, no symbols. THIN TOP BAND: above the window, only y 0% to 10% holds a slim horizontal lighting truss with a single row of small round PAR lights in pink, blue and gold that sit INSIDE the thin strip (never taller than 10% of the canvas) and one small gold star at the exact centre, NO text. THIN BOTTOM BAND: below the window, only y 89% to 100% holds the front edge of a dark stage with a row of tiny footlights and a small speaker at each end, no text, no legend. SIDES: the left and right rails are extremely slim dark plum strips, each at most 1.5% of the canvas width (x 0%-2% and x 98%-100%), no big pillars. MARGINS: the artwork fills the entire square canvas with NO empty transparent margin anywhere: the lighting truss touches the very top edge of the canvas (y = 0), the stage front touches the very bottom edge (y = 100%), and the slim rails touch the left and right edges. In pixels of a 1024 canvas: the top band is only about 100 px tall (y 0-100), the window runs from y 113 to y 901 and from x 20 to x 1004, the bottom band is only about 120 px tall (y 903-1024). Overall symmetrical, centered, no characters. Lit lamps glow softly but there are no diagonal light streaks, no lens flare streaks and no light beams crossing the image. CRITICAL PROPORTION: the window is a WIDE landscape rectangle, 96% of the canvas width and 77% of the canvas height, so a grid of 5 columns by 4 rows of square cells fits it edge to edge with no leftover space; all decorative bulk lives only in the thin top band and the thin bottom band, never at the sides, and the green window must NOT shrink into a small inner rectangle surrounded by thick decoration."
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a concert hall at night seen from the stage: a vast sea of glowing pink and electric blue lightsticks held up by the audience, the crowd only as faceless dark silhouettes, spotlight pillars falling perfectly straight down from above (exactly vertical, never diagonal), deep stage night (#14101f) darkness. Desaturated and low contrast, the middle area behind where the reels sit is darker, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, calm uncluttered composition, no performers on stage, no readable text, no sharp details competing for attention, no diagonal light streaks, no lens flare streaks."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the roulette stage: a round concert stage platform seen from a low front angle, a large circular LED ring pattern on the floor made of concentric rings of tiny pink, blue and gold LED dots, spotlight pillars in pink, blue and gold falling perfectly straight down from above (exactly vertical, never diagonal), two tall LED screens at the left and right edges showing abstract glowing stars, deep stage night (#14101f). The large centre of the image is left empty and calm because a game board will be placed on top of it, no performers, no people, no readable text, no diagonal light streaks, no lens flare streaks. Mid-to-low contrast with a gentle radial vignette darkening the corners so the board and UI read clearly in front of it."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — three original anime idol girls standing together (a pink-haired girl with a high side ponytail and a gold star clip, a blue-haired girl with a short wavy bob and a headset microphone, a gold-blonde girl with a long braid and a star cap) in front of a giant three-ring concentric roulette wheel with several glowing pink lit segments (the wheel has no numbers and no letters, only plain coloured segments and tiny lamps), ribbon streamers drifting in the air, neon pink, electric blue and gold on deep stage night, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no logos, no diagonal light streaks, no lens flare streaks, no clutter, original character designs that do not resemble any existing character, idol group or real person."
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768,
+      "prompt": "a golden stage microphone standing upright in front of a large round gold emblem: a radiant twelve-ray gold starburst with a pink (#ff5fa2) ring around its centre, so the whole symbol is wide and round and fills the cell, the microphone has a round gold mesh-grille ball head with a small gold star and a slim gold handle with a pink satin ribbon wrapped around it ending in a small bow, a few tiny sparkles, the top-tier wild symbol and the most ornate, radiant item, gold (#ffd166) and pink (#ff5fa2), centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands. Win-celebration animation timeline across the sequence: frames 1-3 the golden microphone squashes down slightly then jumps up while tilting 12 degrees to the left, small gold stars popping out around it; frames 4-6 at peak size it swings through upright to a 12 degree tilt to the right with a warm gold glow and more tiny stars; frames 7-9 the swing slows and the microphone settles back to the upright resting pose, ending close to frame 1 for a seamless loop. The object keeps exactly the same design, proportions, colours and details as in frame 1 in every frame (only its pose, glow and sparkles change). All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background (no green on the object), changes between cells limited to the described motion, glow and sparkle."
+    },
+    {
+      "id": "bonus-win",
+      "kind": "sheet",
+      "symbol": "bonus",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/bonus-win.webp",
+      "outSize": 768,
+      "prompt": "a glowing pink-and-gold concert pass ticket tilted 15 degrees, a wide horizontal rectangle with small notched semicircles on both short sides, a star-shaped punch hole near the left end, a short gold lanyard loop at the top, pink (#ff5fa2) and gold (#ffd166) halves split by a dotted perforation line, completely blank face with no text, no numbers and no barcode, soft glow, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill), no text, no letters, no numbers, no hands. Win-celebration animation timeline across the sequence: frames 1-3 the ticket lifts a little and starts to flip over its horizontal axis, squashing vertically; frames 4-6 it has flipped and shows its back, an identical blank gold-and-pink face with a soft round gold glow and tiny sparkles; frames 7-9 it flips back and settles into the tilted resting pose, ending close to frame 1 for a seamless loop. The object keeps exactly the same design, proportions, colours and details as in frame 1 in every frame (only its pose, glow and sparkles change). All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background (no green on the object), changes between cells limited to the described motion, glow and sparkle."
+    }
+  ]
+}
