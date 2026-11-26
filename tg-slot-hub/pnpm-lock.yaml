@@ -94,6 +94,9 @@ importers:
       '@telegram-apps/sdk-react':
         specifier: ^3.3.9
         version: 3.3.9(@types/react@19.2.18)(react@19.2.8)(typescript@5.9.3)
+      '@tgslot/game-sdk':
+        specifier: workspace:*
+        version: link:../../packages/game-sdk
       '@tgslot/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
