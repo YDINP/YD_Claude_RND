@@ -1,4 +1,5 @@
-import type { CascadeStep, GameMath, GridPosition, MutationEvent, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, CoinCell, GameMath, GridPosition, MutationEvent, SymbolId, TreasureTier, WinLine } from '@tgslot/slot-engine'
+import type { RespinInput } from './respin.js'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
 import type { CelebrationSkin, FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
@@ -9,7 +10,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -74,6 +75,12 @@ export interface Theme {
   celebration?: CelebrationSkin
   /** 게임별 합성 효과음 세트. 허브의 오디오가 읽는다. 없으면 기본 `bell`. */
   sound?: { preset: SoundPreset }
+  /**
+   * 심볼이 아닌 그림(보물 코인·촉수 등). 키는 게임 팩이 정한다.
+   * 코인 리스핀 팩은 `coin-small`·`coin-medium`·`coin-large`(보물 코인), `treasure-top`(최고 보물), `tentacle`(촉수 한 가닥)을 읽는다.
+   * 없는 키는 코드로 그린 대체 그림으로 동작한다.
+   */
+  props?: Record<string, string>
 }
 
 /**
@@ -193,6 +200,52 @@ export type RendererEvent =
       removed: readonly GridPosition[]
       removedSymbols: readonly SymbolId[]
     }
+  /**
+   * 코인 리스핀 진입 펄스. 기본 판 코인이 릴 → 행 순서로 하나씩 «칭» 한다(`index`는 0부터).
+   * 허브가 코인마다 효과음을 올릴 때 쓴다.
+   */
+  | { type: 'respinPulse'; index: number; total: number }
+  /**
+   * 동굴이 열렸다(전환 클립이 화면을 덮은 뒤). 허브가 남은 횟수 점과 «판 위 코인» 합계를 올린다.
+   * `coinTotal`은 진입 판 금액 합(진입 감기 전)이고 `empty`는 비어 있는 칸 수다.
+   */
+  | { type: 'respinStart'; respins: number; coinTotal: number; empty: number; treasures: readonly TreasureTier[] }
+  /**
+   * 리스핀 1회. `start`는 빈 칸이 돌기 시작한 순간, `land`는 칸이 다 선 순간, `pin`은 새 코인이 붙어 고정된 순간
+   * (새 코인이 있을 때만), `end`는 리스핀이 끝난 순간이다. STOP으로 압축해도 `start`와 `end`는 한 쌍으로 나온다.
+   * `left`·`coinTotal`·`empty`·`treasures`는 이 리스핀이 끝난 뒤의 값이다(`pin` 전에는 아직 화면에 반영하지 않는다).
+   */
+  | {
+      type: 'respinStep'
+      index: number
+      total: number
+      phase: 'start' | 'land' | 'pin' | 'end'
+      /** 이 리스핀을 시작할 때 «1회 남음»이었나. 허브가 «마지막!»을 띄우고 박동 소리를 낸다. */
+      last: boolean
+      left: number
+      empty: number
+      newCoins: readonly CoinCell[]
+      coinTotal: number
+      treasures: readonly TreasureTier[]
+    }
+  /**
+   * 촉수가 세로줄 하나를 감는다. `entry`는 진입 판에서 이미 다 찬 줄(클립이 걷힌 직후)이다.
+   * `before`·`after`는 행 0 → 2의 금액(코인)이다. `end`가 오면 그 줄 숫자가 `after`로 바뀌어 있다.
+   */
+  | {
+      type: 'columnWrap'
+      reel: number
+      phase: 'start' | 'end'
+      entry: boolean
+      before: readonly number[]
+      after: readonly number[]
+    }
+  /** 정산 중 코인 1개가 합계로 날아간다(`index`는 0부터). `running`은 이 코인까지 센 누적(상한을 넘지 않는다). */
+  | { type: 'respinCollect'; index: number; total: number; cell: CoinCell; running: number }
+  /** 15칸을 채워 «최고 보물»이 지급된다. */
+  | { type: 'respinTop'; amount: number; phase: 'start' | 'end' }
+  /** 리스핀 라운드가 끝났다(정산까지). 화면은 아직 동굴이고, 기본 화면으로 돌아가는 것은 `endRespin()`이다. */
+  | { type: 'respinEnd'; coinWin: number; topWin: number; full: boolean }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -208,6 +261,11 @@ export interface RendererOptions {
   fit?: RendererFit
   /** 당첨 라인 표시 방식. 기본 `'effect'`. */
   paylineStyle?: PaylineStyle
+  /**
+   * 코인 금액 얼굴에 찍을 글자. 언어별 압축 표기(ko `2만`, en `20K`)를 허브가 정해 넘긴다.
+   * 5글자 안팎으로 줄여야 390px에서 코인 폭의 80% 안에 든다. 없으면 천 단위 쉼표 표기다.
+   */
+  formatCoin?: (amount: number) => string
   /**
    * `fit: 'window'`에서 프레임이 컨테이너 폭을 넘어도 되는 **상한**. 기본 0.
    *
@@ -247,6 +305,16 @@ export interface SpinToOptions {
   cascades?: readonly CascadeStep[]
   /** 연쇄가 끝난 판(`SpinResult.finalGrid`). 계획이 접은 결과와 다르면 이 값이 이긴다. */
   finalGrid?: readonly (readonly SymbolId[])[]
+  /**
+   * 기본 판에 뜬 코인(`coinBoard` 피처의 `cells`). 릴이 서는 순간 금액 얼굴을 단다.
+   * 서버가 정한 금액을 그대로 그린다 — 렌더러는 금액을 만들지 않는다.
+   */
+  coins?: readonly CoinCell[]
+  /**
+   * 코인 리스핀 라운드(`coinRespin` 피처). 착지 뒤에 재생하고, 결과는 이미 서버가 정했다.
+   * 재생이 끝나도 화면은 동굴에 머문다 — 기본 화면으로 돌아가는 것은 `endRespin()`이다.
+   */
+  respin?: RespinInput
 }
 
 export interface ShowWinsOptions {
@@ -343,6 +411,12 @@ export interface SlotRenderer {
   skipWins(): void
   /** 진행 중인 승리 연출을 멈추고 화면에서 걷어낸다. 순환도 여기서 끝난다. */
   clearWins(): void
+  /**
+   * 코인 리스핀이 끝난 동굴에서 기본 화면으로 돌아온다(복귀 전환 클립). 동굴에 있지 않으면 곧장 resolve한다.
+   * 빅윈 연출이 동굴 배경 위에서 먼저 끝나야 하므로 `spinTo`가 resolve해도 자동으로 나가지 않는다.
+   * 다음 `spinTo`·`destroy`가 끼어들면 전환 없이 기본 화면으로 곧장 돌아온다.
+   */
+  endRespin(): Promise<void>
   /**
    * 이후 모든 스핀의 속도 프로파일. 기본 `'normal'`.
    *
