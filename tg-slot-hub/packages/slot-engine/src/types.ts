@@ -151,6 +151,80 @@ export interface WinCappedTrigger {
   cap: number
 }
 
+/** 보물 코인 단계. 최고 보물(`top`)은 코인으로 나오지 않고 판을 다 채울 때만 지급한다. */
+export type TreasureTier = 'small' | 'medium' | 'large'
+
+/**
+ * 판 위 코인 1개. 금액은 서버(엔진)가 뜰 때 정한다.
+ * `value`는 **총 베팅액 배수**, `amount`는 `round(value x totalBet)` 코인이다.
+ */
+export interface CoinCell {
+  /** [reel, row] */
+  pos: GridPosition
+  /** `bet`은 숫자 코인(촉수 감기 대상), `treasure`는 보물 코인(금액 고정). */
+  kind: 'bet' | 'treasure'
+  /** 총 베팅액 배수. 촉수 감기가 반영된 뒤의 값이다(그 시점 기준). */
+  value: number
+  /** `kind === 'treasure'`일 때만. */
+  tier?: TreasureTier
+  amount: number
+}
+
+/** 촉수 감기 1회. 세로줄(릴) 하나의 코인 금액을 행 0→2 순서로 감기 전·후로 싣는다(코인). */
+export interface ColumnWrap {
+  reel: number
+  before: number[]
+  after: number[]
+}
+
+/** 코인 리스핀 1회. */
+export interface RespinStep {
+  /** 0부터. */
+  index: number
+  /** 이 리스핀이 멈춘 판 `grid[row][reel]`. 고정된 칸은 코인 심볼이다. */
+  grid: SymbolId[][]
+  /** 이번에 새로 붙은 코인. 금액은 **이 리스핀의 촉수 감기 전** 값이다. 릴 → 행 순서. */
+  newCoins: CoinCell[]
+  /** 이번 리스핀 뒤에 감긴 줄. 왼쪽 줄부터. */
+  wraps: ColumnWrap[]
+  /** 이 리스핀 뒤 남은 리스핀 횟수. */
+  left: number
+}
+
+/** 코인 리스핀 라운드 전체 결과. 트리거 스핀 하나가 전부 싣는다. */
+export interface RespinOutcome {
+  /** 진입 판 코인(진입 감기 반영 **전**). 릴 → 행 순서. */
+  entry: CoinCell[]
+  /** 진입 판에서 이미 다 찬 줄의 감기. 왼쪽 줄부터. */
+  entryWraps: ColumnWrap[]
+  steps: RespinStep[]
+  /** 끝난 판의 코인 전부(감기 반영 후). 릴 → 행 순서. */
+  final: CoinCell[]
+  /** 판 전체가 코인으로 찼는가. 그러면 최고 보물을 더 준다. */
+  full: boolean
+  /** 숫자 + 보물 코인 지급 코인(캡 적용 후). */
+  coinWin: number
+  /** 최고 보물 지급 코인(캡 적용 후). 판을 다 채웠을 때만 0보다 크다. */
+  topWin: number
+  /** 리스핀 지급 합계 코인 = `coinWin + topWin`. */
+  win: number
+  /** 지급 상한에 걸려 잘렸는가. */
+  capped: boolean
+  /** 하드캡(`coinRespin.hardCap`)에 닿아 멈췄는가. 구조상 0이어야 한다. */
+  hitHardCap: boolean
+}
+
+/** 기본 판에 코인이 1개 이상 떴다. 금액 얼굴을 그리는 데 쓴다. 릴 → 행 순서. */
+export interface CoinBoardTrigger {
+  type: 'coinBoard'
+  cells: CoinCell[]
+}
+
+/** 코인 리스핀 진입. 라운드 전체를 싣는다. */
+export interface CoinRespinTrigger extends RespinOutcome {
+  type: 'coinRespin'
+}
+
 export type FeatureTrigger =
   | FreeSpinsTrigger
   | ScatterWinTrigger
@@ -158,6 +232,8 @@ export type FeatureTrigger =
   | OrderRoundTrigger
   | OrderCompleteTrigger
   | WinCappedTrigger
+  | CoinBoardTrigger
+  | CoinRespinTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {
@@ -202,6 +278,8 @@ export interface SpinResult {
   finalGrid?: SymbolId[][]
   /** 주문 카드 상품 합계 코인. `totalWin`에 이미 들어 있다. 주문 라운드 스핀만. */
   orderWin?: number
+  /** 코인 리스핀 지급 합계 코인. `totalWin`에 이미 들어 있다. 리스핀 진입 스핀만. */
+  respinWin?: number
 }
 
 /**

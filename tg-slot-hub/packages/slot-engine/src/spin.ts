@@ -1,6 +1,7 @@
 import type { GameMath } from './schema.js'
 import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './evaluate.js'
 import { runCascades } from './cascade.js'
+import { resolveCoinRespinSpin } from './coinRespin.js'
 import { applyMutations } from './mutations.js'
 import { drawOrderCards, tallyOrders } from './orders.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
@@ -108,6 +109,10 @@ export function resolveSpin(
 ): SpinResult {
   if (math.cascade !== undefined) {
     return resolveCascadeSpin(math, grid, stops, totalBet, state, gridBefore, mutations, rng)
+  }
+  // 코인 리스핀 팩만. 없으면 아래 기존 경로가 한 글자도 다르지 않게 돈다(골든 게이트).
+  if (math.coinRespin !== undefined) {
+    return resolveCoinRespinSpin(math, grid, stops, totalBet, betUnit, gridBefore, mutations, rng)
   }
   const { wins, totalWin: lineWin } =
     math.payModel === 'ways' ? evaluateWays(grid, math, betUnit) : evaluate(grid, math, betUnit)
