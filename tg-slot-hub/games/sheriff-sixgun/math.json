@@ -14,8 +14,8 @@
     {
       "id": "scatter",
       "name": {
-        "en": "Wanted Poster",
-        "ko": "수배 전단"
+        "en": "Bounty Medal",
+        "ko": "현상금 메달"
       },
       "scatter": true
     },

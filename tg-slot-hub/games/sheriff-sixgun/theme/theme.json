@@ -16,10 +16,10 @@
   "backgroundFreeSpins": "bg-freespins.webp",
   "frameLayout": {
     "window": {
-      "x": 0.0446875,
-      "y": 0.28296875,
-      "w": 0.910625,
-      "h": 0.46921875
+      "x": 0.0361328125,
+      "y": 0.2744140625,
+      "w": 0.927734375,
+      "h": 0.544921875
     }
   },
   "version": "1.0.0",
@@ -194,16 +194,62 @@
     }
   },
   "celebration": {
-    "palette": { "core": "#ffd58a", "edge": "#b5652a", "glow": "#e2683a73" },
-    "particles": { "shapes": ["badge", "badge", "casing"], "colors": ["#e8b04a", "#d9d2c0", "#c9884a"], "motion": "tumble", "size": 1.7 },
-    "rays": { "style": "sunburst" },
-    "waves": { "style": "dashed" },
-    "title": { "font": "slab", "weight": 900, "stroke": 2, "strokeColor": "#2a1406d9", "tracking": 0.01 },
+    "palette": {
+      "core": "#ffd58a",
+      "edge": "#b5652a",
+      "glow": "#e2683a73"
+    },
+    "particles": {
+      "shapes": [
+        "badge",
+        "badge",
+        "casing"
+      ],
+      "colors": [
+        "#e8b04a",
+        "#d9d2c0",
+        "#c9884a"
+      ],
+      "motion": "tumble",
+      "size": 1.7
+    },
+    "rays": {
+      "style": "sunburst"
+    },
+    "waves": {
+      "style": "dashed"
+    },
+    "title": {
+      "font": "slab",
+      "weight": 900,
+      "stroke": 2,
+      "strokeColor": "#2a1406d9",
+      "tracking": 0.01
+    },
+    "labels": {
+      "surge": { "ko": "명중", "en": "BULLSEYE" },
+      "blast": { "ko": "백발백중", "en": "DEAD SHOT" },
+      "storm": { "ko": "현상금 사냥", "en": "BOUNTY HUNT" },
+      "cataclysm": { "ko": "전설의 총잡이", "en": "LEGENDARY GUNSLINGER" }
+    },
     "tiers": {
-      "surge": { "density": 1.3 },
-      "blast": { "density": 1.3 },
-      "storm": { "core": "#ffcf6b", "edge": "#e2683a", "glow": "#e2683a80" },
-      "cataclysm": { "core": "#fff1d0", "edge": "#c8352b", "glow": "#e2683a9e", "density": 1.3 }
+      "surge": {
+        "density": 1.3
+      },
+      "blast": {
+        "density": 1.3
+      },
+      "storm": {
+        "core": "#ffcf6b",
+        "edge": "#e2683a",
+        "glow": "#e2683a80"
+      },
+      "cataclysm": {
+        "core": "#fff1d0",
+        "edge": "#c8352b",
+        "glow": "#e2683a9e",
+        "density": 1.3
+      }
     }
   },
   "sound": {
