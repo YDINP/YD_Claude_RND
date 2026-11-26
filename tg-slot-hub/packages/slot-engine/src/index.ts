@@ -20,6 +20,15 @@ export { evaluateClusters } from './cluster.js'
 export { drawOrderCards, tallyOrders } from './orders.js'
 export { evaluateWays, getBetPerWay } from './ways.js'
 export {
+  countCheer,
+  litSegments,
+  maxRouletteSteps,
+  playStageRoulette,
+  resolveRouletteSpin,
+  startRingFor,
+  type RoulettePlay,
+} from './stageRoulette.js'
+export {
   computeAnalyticRtp,
   expectedFreeSpinsPerTrigger,
   expectedLineMultiplier,

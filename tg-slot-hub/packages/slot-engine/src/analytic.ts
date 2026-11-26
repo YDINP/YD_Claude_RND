@@ -387,6 +387,8 @@ export function mysteryRevealCases(math: GameMath): RevealCase[] {
 export function isAnalytic(math: GameMath): boolean {
   // 연쇄·클러스터·주문 라운드는 닫힌 식이 없다. 몬테카를로로만 잰다.
   if (math.payModel === 'cluster' || math.cascade !== undefined || math.orderRound !== undefined) return false
+  // 무대 룰렛은 ways 닫힌 식 밖이다. 막지 않으면 룰렛을 뺀 RTP가 «정확값»으로 나온다.
+  if (math.stageRoulette !== undefined) return false
   const mutations = math.mutations ?? []
   if (mutations.length === 0) return true
   // 미스터리만 있으면 공개 조건부화로 닫힌 식이 된다. ways와 섞이면 창 분포까지 바뀌어 어렵다.

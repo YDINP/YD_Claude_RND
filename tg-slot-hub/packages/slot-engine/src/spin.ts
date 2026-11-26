@@ -3,6 +3,7 @@ import { evaluate, evaluateScatter, getBetPerLine, triggersFreeSpins } from './e
 import { runCascades } from './cascade.js'
 import { applyMutations } from './mutations.js'
 import { drawOrderCards, tallyOrders } from './orders.js'
+import { resolveRouletteSpin } from './stageRoulette.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import type {
@@ -94,6 +95,7 @@ export function spinUnchecked(
  * 그리드가 정해진 뒤의 정산. 라인·스캐터·프리스핀을 한자리에서 처리한다.
  * 연쇄 팩이 아니면 RNG를 쓰지 않으므로 전수 조사와 재현 검증이 같은 코드를 공유한다.
  * 주문 카드 라운드 팩만 카드 추첨에 `rng`가 필요하다(없으면 던진다). 이 추첨이 스핀의 마지막 RNG 소비다.
+ * 무대 룰렛 팩도 트리거 스핀의 회전 추첨에 `rng`가 필요하다(없으면 던진다).
  */
 export function resolveSpin(
   math: GameMath,
@@ -106,6 +108,9 @@ export function resolveSpin(
   mutations: MutationEvent[] = [],
   rng?: Rng,
 ): SpinResult {
+  if (math.stageRoulette !== undefined) {
+    return resolveRouletteSpin(math, grid, stops, totalBet, betUnit, gridBefore, mutations, rng, state === undefined)
+  }
   if (math.cascade !== undefined) {
     return resolveCascadeSpin(math, grid, stops, totalBet, state, gridBefore, mutations, rng)
   }
