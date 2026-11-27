@@ -1,3 +1,5 @@
+import type { GardenCarry, GardenTopUpTrigger, GardenTrigger } from './gardenTypes.js'
+
 /** 심볼 식별자. math.json의 `symbols[].id`와 `strips` 항목이 이 값을 공유한다. */
 export type SymbolId = string
 
@@ -37,6 +39,8 @@ export interface WinLine {
   cascade?: number
   /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만. */
   ladder?: number
+  /** 자라는 정원(growBoard) 팩만. 이 클러스터에 곱해진 씨앗 배율(씨앗 값의 합). 씨앗이 없으면 키가 없다. */
+  seed?: number
 }
 
 /** 주문 카드 종류. popSymbol은 스핀 사이 누적, 나머지 둘은 한 스핀 안에서 판정한다. */
@@ -74,6 +78,8 @@ export interface OrderRoundCarry {
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다. 없으면 이월할 것이 없다. */
 export interface RoundCarry {
   orders?: OrderRoundCarry
+  /** 자라는 정원 프리스핀만. 판 크기·성장 막대·씨앗을 스핀 사이에 이어 간다. */
+  garden?: GardenCarry
 }
 
 /**
@@ -324,6 +330,8 @@ export type FeatureTrigger =
   | CoinRespinTrigger
   | BoardBonusTrigger
   | StageRouletteTrigger
+  | GardenTrigger
+  | GardenTopUpTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {

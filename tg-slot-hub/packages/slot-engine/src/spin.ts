@@ -6,6 +6,7 @@ import { applyMutations } from './mutations.js'
 import { drawOrderCards, tallyOrders } from './orders.js'
 import { applyBoardBonus } from './board.js'
 import { resolveRouletteSpin } from './stageRoulette.js'
+import { resolveGardenSpin } from './garden.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import type {
@@ -110,6 +111,8 @@ export function resolveSpin(
   mutations: MutationEvent[] = [],
   rng?: Rng,
 ): SpinResult {
+  // 자라는 정원 팩만. 없으면 아래 기존 경로가 한 글자도 다르지 않게 돈다(골든 게이트).
+  if (math.growBoard !== undefined) return resolveGardenSpin(math, stops, totalBet, state, rng)
   if (math.stageRoulette !== undefined) {
     return resolveRouletteSpin(math, grid, stops, totalBet, betUnit, gridBefore, mutations, rng, state === undefined)
   }
