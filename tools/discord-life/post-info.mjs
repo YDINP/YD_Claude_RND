@@ -1,5 +1,5 @@
 // info.json 의 항목을 순서대로 #유용정보 에 한 글에 하나씩 올리고, 맨 위 고정 목차를 갱신한다.
-// 사용: node post-info.mjs [--n 5] [--dry-run] [--remind]
+// 사용: node post-info.mjs [--n 5] [--dry-run] [--remind] [--index]
 //   --remind : deadlineDate 3일 전인 항목을 한 번만 다시 알린다.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -72,16 +72,31 @@ async function refreshIndex() {
   }
   const embeds = parts.map((d, k) => ({ ...(k === 0 ? { title: '📌 유용정보 목차' } : {}), description: d.trim(), color: 0x3b82f6 }));
   embeds[embeds.length - 1].footer = { text: `${done.length}개 · 새 글이 올라오면 여기도 갱신됩니다` };
-  const total = embeds.reduce((n, e) => n + e.description.length + (e.title || '').length, 0);
-  if (total > 5900) throw new Error(`목차가 ${total}자로 메시지 한도(6000)를 넘음 — 목차를 두 메시지로 나누도록 고쳐야 함`);
-  const embed = embeds;
-  if (state.indexMsg) {
-    await api('PATCH', `/channels/${ch}/messages/${state.indexMsg}`, { embeds: embed });
-  } else {
-    const m = await api('POST', `/channels/${ch}/messages`, { embeds: embed });
-    await api('PUT', `/channels/${ch}/pins/${m.id}`);
-    state.indexMsg = m.id;
+  // 메시지 한 개는 embed 합계 6000자 한도 → 넘치면 목차를 여러 메시지(각각 고정)로 나눈다
+  const size = (e) => e.description.length + (e.title || '').length + (e.footer?.text.length || 0);
+  const msgs = [[]];
+  for (const e of embeds) {
+    const cur = msgs[msgs.length - 1];
+    if (cur.length && cur.reduce((n, x) => n + size(x), 0) + size(e) > 5800) msgs.push([e]);
+    else cur.push(e);
   }
+  const ids = state.indexMsgs ?? (state.indexMsg ? [state.indexMsg] : []);
+  for (let k = 0; k < msgs.length; k++) {
+    if (ids[k]) {
+      await api('PATCH', `/channels/${ch}/messages/${ids[k]}`, { embeds: msgs[k] });
+    } else {
+      const m = await api('POST', `/channels/${ch}/messages`, { embeds: msgs[k] });
+      await api('PUT', `/channels/${ch}/pins/${m.id}`);
+      ids[k] = m.id;
+    }
+  }
+  state.indexMsgs = ids;
+  state.indexMsg = ids[0];
+}
+
+if (args.includes('--index')) {   // 목차만 다시 그림
+  if (!dry) { await refreshIndex(); saveState(state); }
+  process.exit(0);
 }
 
 if (args.includes('--remind')) {
