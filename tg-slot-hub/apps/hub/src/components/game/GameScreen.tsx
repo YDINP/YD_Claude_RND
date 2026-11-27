@@ -19,6 +19,7 @@ import {
   useGameStore,
   toRendererFreeSpinsMode,
   hasCascadeSteps,
+  hasGardenSteps,
   winsForDisplay,
   freeSpinMultiplierOf,
   AUTO_SPIN_COUNTS,
@@ -95,6 +96,17 @@ import { readRespinReplay, respinFeaturesMatch } from '../../lib/respinReplay'
 import { BoardHelp } from './board/BoardHelp'
 import { StageRoulette, type StageRouletteHandle } from './StageRoulette'
 import { RouletteHelp } from './RouletteHelp'
+import { GardenHud } from './GardenMeter'
+import { GardenHelp } from './GardenHelp'
+import {
+  gardenBaseView,
+  gardenBoundsOfStage,
+  gardenViewFromCarry,
+  gardenViewFromResult,
+  isGardenEvent,
+  useGardenStore,
+} from '../../store/garden'
+import { playGardenEventSound } from '../../lib/gardenSfx'
 import { playRouletteCue } from '../../lib/rouletteCues'
 import './GameScreen.css'
 
@@ -200,8 +212,14 @@ type LineLabelSource =
       /** 연쇄 단계(0부터)와 그 단계의 사다리 배수. */
       cascade?: number
       ladder?: number
+      /** 자라는 정원: 이 꽃 무리에 곱해진 씨앗 배율. */
+      seed?: number
       key: number
     }
+  /** 정원이 한 겹 자랐다(«정원 5×5»). */
+  | { kind: 'gardenGrow'; size: number; key: number }
+  /** 프리스핀 햇살. */
+  | { kind: 'gardenSun'; key: number }
   | { kind: 'cycle'; totalWin: number; key: number }
   | { kind: 'chain'; n: number; multiplier: number; stepWin: number; key: number }
   | { kind: 'order'; order: CompletedOrder; key: number }
@@ -304,7 +322,12 @@ function buildWinLineIcons(
     return {
       srcs: [src],
       ariaLabel: `${name} ×${source.count}`,
-      suffix: [`×${source.count}`, ...(source.ladder !== undefined ? [`×${source.ladder}`] : []), source.win.toLocaleString('en-US')].join(' · '),
+      suffix: [
+        `×${source.count}`,
+        ...(source.ladder !== undefined ? [`×${source.ladder}`] : []),
+        ...(source.seed !== undefined ? [translate(locale, 'gardenWinSeed', { n: source.seed })] : []),
+        source.win.toLocaleString('en-US'),
+      ].join(' · '),
     }
   }
   const symbols = winIconSymbols(source, grid)
@@ -745,7 +768,45 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     chainRafRef.current = requestAnimationFrame(step)
   }
 
+  /** 자라는 정원 이벤트: 성장 막대·효과음·WinStrip 줄. 화면(카메라·덮개·씨앗)은 렌더러가 이미 그린다. */
+  function handleGardenEvent(event: RendererEvent): void {
+    useGardenStore.getState().apply(event)
+    playGardenEventSound(event)
+    if (event.type === 'gardenStep') {
+      if (event.phase !== 'start' || event.stepWin <= 0) return
+      tickWinTo(event.cumulativeWin, 250)
+      const best = [...event.wins].sort((a, b) => b.win - a.win)[0]
+      if (best === undefined) return
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({
+        kind: 'line',
+        symbol: best.symbol,
+        count: best.count,
+        win: best.win,
+        payKind: 'cluster',
+        ...(best.seed !== undefined && best.seed > 1 ? { seed: best.seed } : {}),
+        key: lineLabelKeyRef.current,
+      })
+      return
+    }
+    if (event.type === 'gardenGrow' && event.phase === 'start') {
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({ kind: 'gardenGrow', size: event.size, key: lineLabelKeyRef.current })
+      haptic('light')
+      return
+    }
+    if (event.type === 'gardenSun' && event.phase === 'start') {
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({ kind: 'gardenSun', key: lineLabelKeyRef.current })
+      haptic('light')
+    }
+  }
+
   function handleRendererEvent(event: RendererEvent): void {
+    if (isGardenEvent(event)) {
+      handleGardenEvent(event)
+      return
+    }
     // 코인 리스핀: 표시용 진행(HUD·보물 띠)과 효과음. 전환 이벤트는 아래 공용 처리도 그대로 탄다.
     useCoinRespinStore.getState().apply(event)
     playRespinEventSound(event)
@@ -1017,6 +1078,47 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     resumeTriedRef.current = true
     void resumeRouletteAction()
   }, [rendererInstance, math, phase, resumeRouletteAction])
+
+  // ---- 자라는 정원: 성장 막대와 판 크기·씨앗을 서버 상태에 맞춘다 ----
+  const gardenView = useGardenStore((s) => s.view)
+  /** 렌더러에 판 크기를 한 번이라도 맞췄는가. 첫 맞춤(새로고침 복원)은 트윈 없이, 이후 라운드 전환은 카메라가 자란다. */
+  const gardenSyncedRef = useRef(false)
+  // 새 스핀이 시작되면(라운드 밖이면) 막대를 4×4·0으로 되돌린다. 라운드 안에서는 서버 이월 값이 이미 맞다.
+  useEffect(() => {
+    if (!math?.growBoard || phase !== 'spinning' || freeSpins !== null) return
+    const store = useGardenStore.getState()
+    store.set(gardenBaseView(math, store.view))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 스핀이 시작되는 순간만.
+  }, [phase])
+  // 연출이 끝나 쉬고 있을 때: 라운드 중이면 이월 상태, 아니면 방금 끝난 스핀의 결과로 막대를 맞춘다.
+  useEffect(() => {
+    if (!math?.growBoard || phase === 'spinning' || phase === 'showingWin' || phase === 'loading') return
+    const store = useGardenStore.getState()
+    const carry = freeSpins?.carry?.garden
+    const fromCarry = gardenViewFromCarry(math, freeSpins, store.view)
+    if (carry !== undefined && fromCarry !== null) {
+      store.set(fromCarry)
+      slotRendererRef.current?.setGardenView?.(
+        { bounds: gardenBoundsOfStage(carry.stage), seeds: carry.seeds },
+        !gardenSyncedRef.current,
+      )
+      gardenSyncedRef.current = true
+      return
+    }
+    gardenSyncedRef.current = true
+    // 라운드가 막 끝났다: 종료 팝업·복귀 커튼이 도는 동안은 판(8×8)과 막대를 함께 두고, 커튼이 걷힌 뒤 4×4로 돌린다.
+    if (roundBusy && lastResult?.isFreeSpin === true) return
+    const fromResult = lastResult !== null && !lastResult.isFreeSpin ? gardenViewFromResult(math, lastResult, store.view) : null
+    store.set(fromResult ?? gardenBaseView(math, store.view))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 서버 상태·단계가 바뀔 때만.
+  }, [math, freeSpins, phase, lastResult, rendererInstance, roundBusy])
+  // 게임을 나가면 막대 상태를 비운다(다른 게임이 이어받지 않게).
+  useEffect(
+    () => () => {
+      useGardenStore.getState().reset()
+    },
+    [gameId],
+  )
 
   // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
@@ -1435,7 +1537,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         text:
           lineLabelSource.kind === 'cycle'
             ? t('winStripCycleTotal', { amount: lineLabelSource.totalWin.toLocaleString('en-US') })
-            : lineLabelSource.kind === 'chain'
+            : lineLabelSource.kind === 'gardenGrow'
+              ? t('gardenWinGrow', { size: lineLabelSource.size })
+              : lineLabelSource.kind === 'gardenSun'
+                ? t('gardenWinSun')
+                : lineLabelSource.kind === 'chain'
               ? [
                   t('chainLabel', { n: lineLabelSource.n }),
                   `×${lineLabelSource.multiplier}`,
@@ -1450,6 +1556,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       `${winLineLabel(math, lineLabelSource, locale)} ×${lineLabelSource.count}`,
                       ...(lineLabelSource.ways ? [waysText(math, locale, lineLabelSource.ways)] : []),
                       ...(lineLabelSource.ladder !== undefined ? [`×${lineLabelSource.ladder}`] : []),
+                      ...(lineLabelSource.seed !== undefined ? [t('gardenWinSeed', { n: lineLabelSource.seed })] : []),
                       lineLabelSource.win.toLocaleString('en-US'),
                     ].join(' · ')
                   : '',
@@ -1671,7 +1778,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     void rendererInstance.showWins(shown.wins, {
       totalBet: lastResult.totalBet,
       features: shown.features,
-      ...(hasCascadeSteps(lastResult) ? { mode: 'cascade' as const } : {}),
+      ...(hasCascadeSteps(lastResult) || hasGardenSteps(lastResult) ? { mode: 'cascade' as const } : {}),
     })
   }
 
@@ -1878,6 +1985,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
       {math?.coinRespin && (
         <CoinRespinLayer math={math} bet={currentBet} props={theme?.props} locale={locale} />
+      )}
+
+      {math?.growBoard && (
+        <GardenHud math={math} view={gardenView} symbols={theme?.symbols} hideGoal={freeSpins !== null} />
       )}
 
       {isCascade && math?.cascade && (
@@ -2345,7 +2456,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
+                {math.growBoard ? t('gardenHelpTab') : isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
               </button>
               {hasRespinPage && (
                 <button
@@ -2514,8 +2625,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 </div>
               )}
 
-              {helpPage === 'paylines' && isCluster && (
+              {helpPage === 'paylines' && isCluster && !math.growBoard && (
                 <ClusterHelp math={math} symbols={theme?.symbols} locale={locale} />
+              )}
+
+              {helpPage === 'paylines' && math.growBoard && (
+                <GardenHelp math={math} symbols={theme?.symbols} props={theme?.props} locale={locale} />
               )}
 
               {helpPage === 'paylines' && !isWays && !isCluster && (

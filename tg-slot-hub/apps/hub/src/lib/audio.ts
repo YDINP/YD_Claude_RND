@@ -10,6 +10,7 @@ import type { WinTier } from '@tgslot/renderer'
 import { BGM_STYLES, BgmSequencer, type AudioPreset, type BgmVariant } from './bgm'
 import { createBgmVoices, type BgmVoices } from './bgmVoices'
 import { createDeepseaAudio, type TreasureSize } from './audioDeepsea'
+import { createGardenAudio, type BloomTier } from './audioGarden'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
 
@@ -860,6 +861,9 @@ const CANDY_RECIPE: Recipe = {
 
 /** kraken-cove: 물방울·소나·금화·종. 합성 재료만 넘기고 레시피와 리스핀 전용 소리는 `audioDeepsea.ts`에 있다. */
 const deepsea = createDeepseaAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+
+/** greenhouse-garden: 나무 칼림바·대나무 윈드차임·하프·잎 바스락. 레시피와 정원 전용 소리는 `audioGarden.ts`에 있다. */
+const garden = createGardenAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
 // ── 한복 야시장 (hanbok-night-market) ─────────────────────
 // 평조 오음(G A B D E) 한 옥타브 반. 가야금(명주실 줄)·해금(활)·대금(숨)·장구·꽹과리·징으로 만든다.
 // shrine 의 고토는 미야코부시 음계의 날카로운 뜯는 현이었다 — 여기는 장조 오음의 부드러운 현이고,
@@ -1729,6 +1733,7 @@ const RECIPES: Record<AudioPreset, Recipe> = {
   candy: CANDY_RECIPE,
   royal: ROYAL_RECIPE,
   deepsea: deepsea.recipe,
+  garden: garden.recipe,
   hanbok: HANBOK_RECIPE,
   idol: IDOL_RECIPE,
 }
@@ -1995,6 +2000,47 @@ export function playSettleTick(progress: number): void {
 export function playTopTreasure(): void {
   const c = live()
   if (c) deepsea.cues.topTreasure(c)
+}
+
+// ── 자라는 정원 (greenhouse-garden) ────────────────────────
+// 음색은 `audioGarden.ts`의 garden 프리셋이다. 이 소리들은 정원 게임에서만 불린다.
+
+/** 클러스터 팝. `step`이 오를수록 음계가 한 칸 위로 간다(0부터). */
+export function playGardenPop(step: number): void {
+  const c = live()
+  if (c) garden.cues.pop(c, step)
+}
+
+/** 위 칸이 흙 위로 떨어진다. */
+export function playGardenDrop(): void {
+  const c = live()
+  if (c) garden.cues.drop(c)
+}
+
+/** 판이 한 겹 자란다. `size`는 새 한 변, `newCells`는 새로 열린 칸 수. */
+export function playGardenGrow(size: number, newCells: number): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(0.5)
+  garden.cues.grow(c, size, newCells)
+}
+
+/** 씨앗이 피며 배율이 곱해진다. */
+export function playSeedBloom(tier: BloomTier): void {
+  const c = live()
+  if (c) garden.cues.bloom(c, tier)
+}
+
+/** 프리스핀 햇살. `grown`은 한 등급 오른 씨앗 수. */
+export function playGardenSun(grown: number): void {
+  const c = live()
+  if (c) garden.cues.sun(c, grown)
+}
+
+/** 물방울 «퐁». */
+export function playGardenWaterDrop(): void {
+  const c = live()
+  if (c) garden.cues.waterDrop(c)
 }
 
 // ── 무대 룰렛 (idol-stage-live) ────────────────────────────

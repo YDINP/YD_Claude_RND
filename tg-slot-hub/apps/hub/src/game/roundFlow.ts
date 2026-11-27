@@ -41,6 +41,15 @@ export type RoundPopup =
         /** 서버가 센 완료 장수. 새로고침으로 화면 기록(`items`)이 비어도 이 값은 남는다. */
         readonly completed: number
       }
+      /** 자라는 정원 프리스핀 종료 요약(서버 `freeSpinsSummary.garden` 값 그대로 + 총액의 베팅 배수). */
+      readonly garden?: {
+        readonly maxSize: number
+        readonly bestSeed: number
+        readonly bestSpinWin: number
+        readonly topUp: number
+        /** 라운드 총액 ÷ 베팅(소수 첫째 자리). 베팅을 모르면 0. */
+        readonly betMultiple: number
+      }
     }
 
 export type RoundFlowState =
@@ -243,6 +252,22 @@ export function withOrderPopup(
   const prizeTotal = result.freeSpinsSummary?.orderPrizeTotal ?? log.reduce((sum, item) => sum + item.prize, 0)
   const completed = Math.max(log.length, result.freeSpinsSummary?.ordersCompleted ?? 0)
   return { ...ceremony, popup: { ...popup, orders: { items: log, prizeTotal, completed } } }
+}
+
+/**
+ * 자라는 정원 프리스핀 종료 팝업에 요약을 얹는다. 값은 서버 `freeSpinsSummary.garden`이 유일한 근거이고,
+ * 정원이 아니거나 종료 팝업이 아니면 그대로 돌려준다. `bet`은 라운드 진입 때 고정된 총 베팅액이다.
+ */
+export function withGardenPopup(
+  ceremony: { popup: RoundPopup; to: CurtainTarget },
+  result: Partial<Pick<SpinResponse, 'freeSpinsSummary'>>,
+  bet: number,
+): { popup: RoundPopup; to: CurtainTarget } {
+  const garden = result.freeSpinsSummary?.garden
+  const { popup } = ceremony
+  if (garden === undefined || popup.kind !== 'freeSpinsExit') return ceremony
+  const betMultiple = bet > 0 ? Math.round((popup.totalWin / bet) * 10) / 10 : 0
+  return { ...ceremony, popup: { ...popup, garden: { ...garden, betMultiple } } }
 }
 
 // ---- 승리 연출 분량 결정 (순수) ----

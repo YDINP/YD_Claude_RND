@@ -39,6 +39,7 @@ import {
   ceremonyFor,
   roundFlowReducer,
   withOrderPopup,
+  withGardenPopup,
   winHoldMs,
   winPresentationMode,
   type RoundFlowEvent,
@@ -216,6 +217,8 @@ export interface SpinToOptionsLike {
   coins?: Extract<FeatureTrigger, { type: 'coinBoard' }>['cells']
   /** 코인 리스핀 라운드(`coinRespin` 피처). 착지 뒤 재생한다. 결과는 이미 서버가 정했다. */
   respin?: Extract<FeatureTrigger, { type: 'coinRespin' }>
+  /** 자라는 정원 스핀(`garden` 피처). 착지 뒤 단계(팝 → 낙하 → 성장)와 햇살을 재생한다. 결과는 이미 서버가 정했다. */
+  garden?: Extract<FeatureTrigger, { type: 'garden' }>
 }
 
 export interface SpinRenderer {
@@ -320,7 +323,16 @@ export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | un
   const hasCascades = hasCascadeSteps(result)
   const coinBoard = result.features.find((feature) => feature.type === 'coinBoard')
   const coinRespin = result.features.find((feature) => feature.type === 'coinRespin')
-  if (!result.isFreeSpin && !hasGridBefore && !hasMutations && !hasCascades && coinBoard === undefined && coinRespin === undefined) {
+  const garden = result.features.find((feature) => feature.type === 'garden')
+  if (
+    !result.isFreeSpin &&
+    !hasGridBefore &&
+    !hasMutations &&
+    !hasCascades &&
+    coinBoard === undefined &&
+    coinRespin === undefined &&
+    garden === undefined
+  ) {
     return undefined
   }
 
@@ -335,7 +347,18 @@ export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | un
   // 코인 리스핀 팩: 서버가 정한 코인 금액과 리스핀 라운드를 그대로 넘긴다(화면은 재생만 한다).
   if (coinBoard?.type === 'coinBoard') options.coins = coinBoard.cells
   if (coinRespin?.type === 'coinRespin') options.respin = coinRespin
+  // 자라는 정원: 서버가 정한 단계 목록을 그대로 넘긴다. 시작 판은 응답의 8×8 착지 창(`grid`)이다 —
+  // 프리스핀은 전용 스트립에서 착지하므로 렌더러가 스트립에서 되짚는 것보다 응답 값이 정확하다.
+  if (garden?.type === 'garden') {
+    options.garden = garden
+    options.gridBefore = result.grid
+  }
   return options
+}
+
+/** 이번 응답이 자라는 정원 단계를 담고 있는가. 정원은 연쇄처럼 중간 판을 재생하므로 승리 연출도 «연쇄 모드»(A단계만)다. */
+export function hasGardenSteps(result: Pick<SpinResponse, 'features'>): boolean {
+  return result.features.some((feature) => feature.type === 'garden')
 }
 
 /** 이번 응답이 연쇄 단계를 담고 있는가(연쇄 팩이 아니면 `cascades`가 없다). */
@@ -1118,7 +1141,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 무대 룰렛 진입 스핀이면 보이는 것(잔액·lastResult·더블업·빅윈)을 룰렛이 끝난 뒤에 공개한다.
     const rouletteFeature = math.stageRoulette === undefined ? null : findRouletteFeature(result.features)
     const baseCeremony = ceremonyFor(freeSpins, result)
-    const ceremony = baseCeremony ? withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined) : null
+    const orderCeremony = baseCeremony
+      ? withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined)
+      : null
+    const ceremony = orderCeremony ? withGardenPopup(orderCeremony, result, freeSpins?.totalBet ?? result.totalBet) : null
 
     try {
       let reelStopAt: number | null = null
@@ -1223,7 +1249,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           await renderer.showWins(shown.wins, {
             totalBet: result.totalBet,
             features: shown.features,
-            ...(hasCascadeSteps(result) ? { mode: 'cascade' as const } : {}),
+            ...(hasCascadeSteps(result) || hasGardenSteps(result) ? { mode: 'cascade' as const } : {}),
             // brief는 자기만의 짧은 홀드를 쓴다 — 여기서 늘리면 짧게 스쳐 지나간다는 약속이 깨진다.
             ...(presentation === 'brief'
               ? { presentation: 'brief' as const }

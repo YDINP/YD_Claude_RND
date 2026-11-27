@@ -379,7 +379,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol'>, Kit> = {
+const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol' | 'garden'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -1093,7 +1093,91 @@ const IDOL_KIT: Kit = {
   },
 }
 
-const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT }
+/** 정원 칼림바: 몸통이 나무라 기음이 짧고 동그랗고, 금속 혀 배음(x5.4)이 톡 튄다. 바닷속 칼림바보다 어둡고 짧다. */
+
+const GARDEN_KALIMBA: readonly Partial3[] = [[1, 1, 0.26], [2.003, 0.2, 0.08], [5.4, 0.07, 0.03]]
+
+/** 대나무 윈드차임: 기음 하나가 가늘게 길게 울고 세 배음이 살짝 어긋난다. */
+
+const BAMBOO_CHIME: readonly Partial3[] = [[1, 1, 0.22], [2.99, 0.14, 0.07]]
+
+/** 나무 몸통 잔울림 없는 부드러운 건반(셀레스타보다 어둡다). */
+
+const SOFT_WOOD: readonly Partial3[] = [[1, 1, 0.5], [2, 0.14, 0.18]]
+
+/** 손으로 뜯는 낮은 줄: 어둡고 짧다(업라이트 피치카토 결). */
+
+const GARDEN_BASS: PluckSpec = { bright: 0.1, decay: 0.988, pick: 0.32, seconds: 0.8 }
+
+
+
+function gardenKalimba(k: Tools, t: number, m: number, v: number, out: AudioNode): void {
+
+  partials(k, t, mtof(m), v, out, GARDEN_KALIMBA, 0.002)
+
+  hiss(k, t, v * 0.14, out, { type: 'bandpass', freq: 1300, q: 1.4, attack: 0.0008, tau: 0.005 })
+
+}
+
+
+
+/** 온실: 칼림바 아르페지오 + 부드러운 피리 선율 + 브러시 셰이커. 정원 프리스핀의 대선율은 대나무 윈드차임. */
+
+const GARDEN_KIT: Kit = {
+
+  gain: 1.15,
+
+  mix: {
+
+    pad: [0.03, 0.3],
+
+    keys: [0.12, 0.2],
+
+    arp: [0.2, 0.25],
+
+    lead: [0.3, 0.35],
+
+    counter: [0.26, 0.45],
+
+    bass: [0.26, 0.02],
+
+    kick: [0.26, 0.02],
+
+    wood: [0.26, 0.12],
+
+    shaker: [0.2, 0.1],
+
+  },
+
+  padCutoff: [800, 2000],
+
+  voices: {
+
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sine', 'triangle'], detune: 5, attack: 1, release: 1.6 }),
+
+    keys: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, SOFT_WOOD, 0.01),
+
+    arp: (k, t, m, v, _d, out) => gardenKalimba(k, t, m, v, out),
+
+    lead: (k, t, m, v, d, out) => breathy(k, t, mtof(m), v, d, out, 0.26, 4.8, 0.07),
+
+    counter: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, BAMBOO_CHIME, 0.002),
+
+    bass: (k, t, m, v, d, out) => pluck(k, t, m, v, d, out, GARDEN_BASS),
+
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 95, 60, v, out, 0.07),
+
+    wood: (k, t, _m, v, _d, out) => drum(k, t, 900, 520, v, out, 0.012, 'triangle'),
+
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'bandpass', freq: 5400, q: 0.9, attack: 0.02, tau: 0.04 }),
+
+  },
+
+}
+
+
+
+const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT, garden: GARDEN_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 

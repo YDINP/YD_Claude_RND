@@ -240,6 +240,30 @@ export function RoundPopupView({
             </span>
           )}
 
+          {popup.kind === 'freeSpinsExit' && popup.garden !== undefined && (
+            <span className="hub-round-popup__orders">
+              {popup.garden.betMultiple > 0 && (
+                <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
+                  {t('gardenRoundMultiple', { n: popup.garden.betMultiple.toLocaleString('en-US') })}
+                </span>
+              )}
+              <span className="hub-round-popup__orders-row">
+                {t('gardenRoundMax', { size: popup.garden.maxSize })}
+              </span>
+              {popup.garden.bestSeed > 0 && (
+                <span className="hub-round-popup__orders-row">{t('gardenRoundBestSeed', { n: popup.garden.bestSeed })}</span>
+              )}
+              <span className="hub-round-popup__orders-row">
+                {t('gardenRoundBestSpin', { amount: popup.garden.bestSpinWin.toLocaleString('en-US') })}
+              </span>
+              {popup.garden.topUp > 0 && (
+                <span className="hub-round-popup__orders-row">
+                  {t('gardenRoundTopUp', { amount: popup.garden.topUp.toLocaleString('en-US') })}
+                </span>
+              )}
+            </span>
+          )}
+
           {/* 탭의 뜻이 단계마다 다르니 힌트도 그대로 따라간다 — 굴러가는 중에 "닫혀요"라고
               써 두면 탭했는데 안 닫히는 화면이 된다. */}
           <span className="hub-win__hint">

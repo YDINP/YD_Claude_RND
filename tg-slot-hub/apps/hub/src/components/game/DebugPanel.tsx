@@ -44,6 +44,12 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   roulette4: 'stageRouletteDebugStart4',
   rouletteGrand: 'stageRouletteDebugGrand',
   rouletteBig: 'stageRouletteDebugBig',
+  gardenGrow: 'gardenDebugGrow',
+  gardenGrow8: 'gardenDebugGrow8',
+  seedBloom: 'gardenDebugSeedBloom',
+  gardenSun: 'gardenDebugSun',
+  gardenBig: 'gardenDebugBig',
+  gardenTopUp: 'gardenDebugTopUp',
 }
 
 interface DebugPanelProps {
@@ -211,6 +217,11 @@ export function DebugPanel({
             )
           })}
           <p className="hub-debug-panel__state-line">{`sheetSpriteKeys: ${diagnostics.sheetSpriteKeys}`}</p>
+          {diagnostics.garden && (
+            <p className="hub-debug-panel__state-line">
+              {`garden: covers ${diagnostics.garden.covers} · badges ${diagnostics.garden.badges} · glows ${diagnostics.garden.glows} · tweens ${diagnostics.garden.liveTweens} · seeds ${diagnostics.garden.seeds}`}
+            </p>
+          )}
         </section>
       )}
 

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSfxVolume, getSoundPreset, isAudioMuted, setAudioMuted, setSfxVolume, setSoundPreset } from './audio'
 
-const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea', 'hanbok', 'idol'] as const
+const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea', 'hanbok', 'idol', 'garden'] as const
 
 describe('audio mute flag', () => {
   it('defaults to unmuted and reflects setAudioMuted()', () => {
