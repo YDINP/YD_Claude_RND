@@ -75,7 +75,7 @@ describe('ThemeFileSchema', () => {
   it('sound.preset은 알려진 프리셋만 받고 없어도 된다', () => {
     const base = { version: '1.0.0', symbols: {}, palette }
     expect(ThemeFileSchema.parse(base).sound).toBeUndefined()
-    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'deepsea', 'hanbok', 'idol']) {
+    for (const preset of ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'deepsea', 'hanbok', 'idol', 'garden']) {
       expect(ThemeFileSchema.parse({ ...base, sound: { preset } }).sound?.preset).toBe(preset)
     }
     expect(ThemeFileSchema.safeParse({ ...base, sound: { preset: 'disco' } }).success).toBe(false)

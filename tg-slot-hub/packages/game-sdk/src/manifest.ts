@@ -64,5 +64,6 @@ export function toGameSummary(manifest: GameManifest): GameSummary {
     minBet,
     maxBet,
     sort: manifest.sort,
+    ...(manifest.features.includes('growBoard') ? { growBoard: true } : {}),
   }
 }

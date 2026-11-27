@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { SUPPORTED_LOCALES } from './constants.js'
 import { BoardBonusFeatureSchema } from './board.js'
+import { GardenCarrySchema, GardenFeatureSchema, GardenSummarySchema, GardenTopUpFeatureSchema } from './garden.js'
 
 export const LocaleSchema = z.enum(SUPPORTED_LOCALES)
 
@@ -74,6 +75,8 @@ export const GameSummarySchema = z.object({
   minBet: z.number().int().min(1),
   maxBet: z.number().int().min(1),
   sort: z.number().int().default(0),
+  /** 자라는 정원(growBoard) 팩이면 true. 로비 카드가 «8×8» 대신 «자라는 정원» 문구를 쓴다. 다른 팩은 키가 없다 */
+  growBoard: z.boolean().optional(),
 })
 export type GameSummary = z.infer<typeof GameSummarySchema>
 
@@ -146,6 +149,14 @@ export const SpinDebugPresetSchema = z.enum([
   'roulette4',
   'rouletteGrand',
   'rouletteBig',
+  // 자라는 정원 전용(greenhouse-garden): 성장 1회 이상 / 8×8 도달 / 씨앗 개화 / 햇살(프리스핀 중) /
+  // 총 베팅 50배 이상 / 최저 보장(마지막 프리스핀). 드문 셋(gardenGrow8·gardenSun·gardenBig)은 서버가 탐색 상한을 올린다
+  'gardenGrow',
+  'gardenGrow8',
+  'seedBloom',
+  'gardenSun',
+  'gardenBig',
+  'gardenTopUp',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -198,6 +209,8 @@ const WinLineObjectSchema = z
     cascade: z.number().int().min(0).optional(),
     /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만 */
     ladder: z.number().int().min(1).optional(),
+    /** 자라는 정원만. 이 클러스터에 곱해진 씨앗 배율(씨앗 값의 합). 씨앗이 없으면 키가 없다 */
+    seed: z.number().int().min(1).optional(),
   })
   .refine((v) => (v.line === -1) === (v.payKind !== 'line'), {
     message: 'line이 -1이면 ways·클러스터 당첨이고, 라인 당첨이면 line은 0 이상이어야 한다',
@@ -251,6 +264,8 @@ export type OrderRoundCarry = z.infer<typeof OrderRoundCarrySchema>
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다 */
 export const RoundCarrySchema = z.object({
   orders: OrderRoundCarrySchema.optional(),
+  /** 자라는 정원 프리스핀만. 판 크기·성장 막대·씨앗 */
+  garden: GardenCarrySchema.optional(),
 })
 export type RoundCarry = z.infer<typeof RoundCarrySchema>
 
@@ -346,6 +361,8 @@ export const SpinResponseSchema = z.object({
       ordersCompleted: z.number().int().min(0).optional(),
       /** 주문 카드 라운드만. 상품 합계 코인 */
       orderPrizeTotal: z.number().int().min(0).optional(),
+      /** 자라는 정원 프리스핀만. 최대 정원 크기·가장 큰 씨앗·최고 한 판·최저 보장 코인 */
+      garden: GardenSummarySchema.optional(),
     })
     .optional(),
   /**
@@ -574,6 +591,8 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   /** 말판 보너스 전체(던지기 기록·종료 사유·지급). 트리거 스핀에만 실린다 */
   BoardBonusFeatureSchema,
   StageRouletteFeatureSchema,
+  GardenFeatureSchema,
+  GardenTopUpFeatureSchema,
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 
