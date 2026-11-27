@@ -1,6 +1,7 @@
 import { createRoundSeed } from '../spin/provablyFair.js'
 import { spinWithState } from './engineSpin.js'
-import type { GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
+import { VOID_CELL } from '@tgslot/slot-engine'
+import type { FrostChainTrigger, GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
 import type { SpinDebugPreset } from '@tgslot/shared'
 
 /** 요청에 `maxTries`가 없을 때 쓰는 기본값. `SpinDebugRequestSchema`의 기본값과 같다. */
@@ -22,6 +23,27 @@ const BIG_WIN_MULTIPLIER = 10
 export const BOARD_BIG_PAYOUT = 100
 /** 룰렛 합계가 총 베팅의 몇 배부터 `rouletteBig`으로 치는지. */
 const BIG_ROULETTE_MULTIPLIER = 100
+
+/** 얼음 보너스가 총 베팅의 몇 배부터 `frostBig`으로 치는지. */
+export const FROST_BIG_MULTIPLIER = 25
+
+/** 이 프리셋은 얼려 두기 프리스핀(`frostRespin`)이 있는 팩에서만 만족될 수 있다. */
+export function isFrostPreset(preset: SpinDebugPreset): boolean {
+  return (
+    preset === 'frostRound' ||
+    preset === 'frostChain12' ||
+    preset === 'auroraUp' ||
+    preset === 'frostFull' ||
+    preset === 'frostBig' ||
+    preset === 'frostTease'
+  )
+}
+
+/** 스핀 결과의 얼림 피처. 없으면 undefined. */
+function frostOf(result: SpinResult): FrostChainTrigger | undefined {
+  for (const feature of result.features) if (feature.type === 'frostChain') return feature
+  return undefined
+}
 
 /** 이 프리셋은 무대 룰렛이 있는 팩에서만 만족될 수 있다. */
 export function isRoulettePreset(preset: SpinDebugPreset): boolean {
@@ -116,6 +138,31 @@ export function matchesDebugPreset(
       if (preset === 'rouletteGrand') return roulette.steps.some((step) => step.kind === 'grand')
       if (preset === 'rouletteBig') return roulette.total >= BIG_ROULETTE_MULTIPLIER * totalBet
       return true
+    }
+    case 'frostRound':
+      return !isFreeSpin && result.features.some((feature) => feature.type === 'freeSpins' && !feature.retrigger)
+    case 'frostChain12':
+      return (frostOf(result)?.count ?? 0) >= 12
+    case 'auroraUp': {
+      const chain = frostOf(result)
+      return chain !== undefined && chain.auroraAfter > chain.auroraBefore
+    }
+    case 'frostFull': {
+      const chain = frostOf(result)
+      return chain !== undefined && chain.count === chain.finalGrid.flat().filter((cell) => cell !== VOID_CELL).length
+    }
+    case 'frostBig':
+      return (frostOf(result)?.bonus ?? 0) >= FROST_BIG_MULTIPLIER * totalBet
+    case 'frostTease': {
+      // 바깥 두 릴을 뺀 칸(먼저 서는 가운데·안쪽 릴)에 구슬이 진입 개수 −1개, 진입은 없음 → 바깥 릴에 기대감이 걸린다.
+      const scatter = math?.scatter?.symbol
+      const trigger = math?.frostRespin?.freeSpins.trigger
+      if (isFreeSpin || scatter === undefined || trigger === undefined) return false
+      if (result.features.some((feature) => feature.type === 'freeSpins')) return false
+      const last = (result.grid[0]?.length ?? 0) - 1
+      let inner = 0
+      for (const row of result.grid) row.forEach((cell, reel) => { if (reel > 0 && reel < last && cell === scatter) inner += 1 })
+      return inner === trigger - 1
     }
     default: {
       const exhaustive: never = preset

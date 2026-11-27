@@ -27,6 +27,17 @@ export function toSharedCarry(carry: RoundCarry): SharedRoundCarry {
           },
         }
       : {}),
+    // 얼려 두기 프리스핀(aurora-ice-palace)만. 키 순서 고정(jsonb 왕복 뒤에도 같은 바이트).
+    ...(carry.frost
+      ? {
+          frost: {
+            level: carry.frost.level,
+            paid: carry.frost.paid,
+            bestCount: carry.frost.bestCount,
+            bonusTotal: carry.frost.bonusTotal,
+          },
+        }
+      : {}),
   }
 }
 
@@ -97,9 +108,32 @@ export function wrapFreeSpinsState(previous: FreeSpinsState | null, input: FreeS
 export function freeSpinsSummary(
   previous: FreeSpinsState | null,
   input: { isFreeSpin: boolean; win: number; ended: boolean; features?: readonly FeatureTrigger[] }
-): { total: number; spins: number; ordersCompleted?: number; orderPrizeTotal?: number } | undefined {
+):
+  | {
+      total: number
+      spins: number
+      ordersCompleted?: number
+      orderPrizeTotal?: number
+      frost?: { bestCount: number; auroraLevel: number; bonusTotal: number }
+    }
+  | undefined {
   if (!input.ended || !input.isFreeSpin || !previous) return undefined
   const base = { total: previous.accumulatedWin + input.win, spins: previous.total }
+  const frost = previous.carry?.frost
+  if (frost) {
+    // 마지막 스핀은 nextState가 없어 carry가 사라졌다. 이전 carry에 이 스핀의 얼림을 더해 맞춘다.
+    const chain = (input.features ?? []).find(
+      (feature): feature is Extract<FeatureTrigger, { type: 'frostChain' }> => feature.type === 'frostChain'
+    )
+    return {
+      ...base,
+      frost: {
+        bestCount: Math.max(frost.bestCount, chain?.count ?? 0),
+        auroraLevel: chain?.auroraAfter ?? frost.level,
+        bonusTotal: frost.bonusTotal + (chain?.bonus ?? 0),
+      },
+    }
+  }
   const orders = previous.carry?.orders
   if (!orders) return base
   // 마지막 스핀은 nextState가 없어 carry가 이미 사라졌다. 이전 carry에 이 스핀의 완료를 더해 맞춘다.

@@ -70,6 +70,8 @@ export interface FreeSpinsSummaryRecord {
   spins: number
   ordersCompleted?: number
   orderPrizeTotal?: number
+  /** 얼려 두기 프리스핀만. */
+  frost?: { bestCount: number; auroraLevel: number; bonusTotal: number }
 }
 
 /** 저장된 스핀 1회. `grid`는 math.json + stops로 재구성하므로 저장하지 않는다. */
