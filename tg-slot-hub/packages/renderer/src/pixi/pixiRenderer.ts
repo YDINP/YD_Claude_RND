@@ -1368,7 +1368,8 @@ class PixiRenderer implements RendererCore {
    */
   private applyReelsHidden(): void {
     const hidden = this.mode.hideReels === true
-    this.setReelsVisible(!hidden)
+    // 동굴 판(리스핀 중이거나 끝나고 세워 둔 판)이 덮고 있으면 릴을 켜지 않는다. 켜면 같은 칸에 심볼이 두 개 겹친다.
+    this.setReelsVisible(!hidden && !this.caveActive && !this.boardHeld)
     this.backdropGraphics.visible = !hidden
   }
 
