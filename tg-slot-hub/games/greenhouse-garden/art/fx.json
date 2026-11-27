@@ -1,0 +1,41 @@
+{
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 16,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#cdeee0",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#8fd8f2",
+          "durationMs": 800
+        },
+        {
+          "type": "pulse",
+          "scale": 1.14,
+          "durationMs": 600
+        }
+      ]
+    }
+  }
+}

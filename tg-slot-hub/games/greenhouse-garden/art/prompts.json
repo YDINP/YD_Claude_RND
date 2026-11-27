@@ -1,0 +1,209 @@
+{
+  "game": "greenhouse-garden",
+  "concept": "Glass greenhouse sticker-style botanical 3D: matte porcelain-smooth petals, thick cream sticker outline, fresh greens with pastel flowers. Square 4x4 to 8x8 growing garden bed, thin cream-iron frame. Symbols told apart by silhouette and hue: round ball (hydrangea blue), pompom (marigold orange), tall sprigs (lavender), flat petals (daisy white), spiral bloom (rose pink), big disc (sunflower yellow), leaf (clover green).",
+  "stylePrefix": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality",
+  "negative": "photorealistic photography, text, letters, numbers, logo, watermark, people, faces, hands, harsh black outlines, cluttered background, diagonal light streaks, cropped edges, glossy wet shine, baked-in drop shadow",
+  "assets": [
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Front-on elevation view (not 3/4 top-down), full-bleed SQUARE 1:1 artwork — a richly rendered soft stylized 3D botanical illustration (matte porcelain-smooth, NOT flat vector, NOT glossy) of a very thin square greenhouse flower-bed frame made of cream-painted iron (#fbf7ee) with small rivets, tiny green ivy leaves at the four corners only, soft top-left window light, subtle ambient occlusion. EXACT LAYOUT: the frame band is VERY THIN on all four sides, only 2% of the canvas on each side, so the square planting window spans x 2% to 98% and y 2% to 98% of the canvas (96% by 96%, a perfect square). The window interior is filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel, NO gradient, NO ornament inside it, bordered by only a hairline cream rim just outside the green. Window interior must be pure flat #00FF00, nothing painted inside — no white, no glass, no reflection, no grid lines, no plants, no soil. Top band and bottom band are equally thin as the side bands, no marquee, no base, no legend, no text. Symmetrical, no characters. CRITICAL PROPORTION: the green window must NOT shrink into a small inner rectangle surrounded by thick iron; all four borders are hairline-thin strips."
+    },
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a front-facing butterfly with four symmetrical wings in sky blue to mint gradient, small cream dots on the wings, the largest and most ornate symbol, slim dark-teal body, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a silver-mint watering can in side view with a long spout and three round water droplets falling from the spout, cream sticker outline, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "sunflower",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a single sunflower head seen from the front, bright yellow petals around a dark brown seed center, no stem, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/sunflower.webp",
+      "outSize": 512
+    },
+    {
+      "id": "rose",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a single deep pink rose bloom seen from above with a tight spiral center and two small green leaves, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/rose.webp",
+      "outSize": 512
+    },
+    {
+      "id": "hydrangea",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a perfectly round ball of tiny blue hydrangea florets with a couple of small green leaves at the bottom, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/hydrangea.webp",
+      "outSize": 512
+    },
+    {
+      "id": "marigold",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a fluffy orange marigold pompom bloom with layered ruffled petals and no visible center, round ruffled silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/marigold.webp",
+      "outSize": 512
+    },
+    {
+      "id": "lavender",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — three upright purple lavender sprigs tied together with a small cream ribbon, tall vertical silhouette, the only tall thin symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/lavender.webp",
+      "outSize": 512
+    },
+    {
+      "id": "daisy",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a small white daisy with thin long petals and a round yellow center, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/daisy.webp",
+      "outSize": 512
+    },
+    {
+      "id": "clover",
+      "kind": "symbol",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a light green clover with three heart-shaped leaves joined at the center, simple flat leaf silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/clover.webp",
+      "outSize": 512
+    },
+    {
+      "id": "pot",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a top-down view of a round terracotta flower pot rim filled with a smooth dome of dark soil, square-friendly composition, nothing growing in it, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/pot.webp",
+      "outSize": 256
+    },
+    {
+      "id": "seed-0",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a tiny green sprout with two round leaves, no pot, no number, no text, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/seed-0.webp",
+      "outSize": 128
+    },
+    {
+      "id": "seed-1",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a closed pink flower bud on a short stem, no pot, no number, no text, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/seed-1.webp",
+      "outSize": 128
+    },
+    {
+      "id": "seed-2",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a half-open pastel pink flower, no pot, no number, no text, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/seed-2.webp",
+      "outSize": 128
+    },
+    {
+      "id": "seed-3",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a fully open large pastel pink flower, no pot, no number, no text, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/seed-3.webp",
+      "outSize": 128
+    },
+    {
+      "id": "seed-4",
+      "kind": "thumb",
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a fully open golden flower with warm soft glow, no pot, no number, no text, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/seed-4.webp",
+      "outSize": 128
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the inside of a calm glass greenhouse in soft stylized 3D: a white cream-iron arched glass roof at the top with soft diffuse daylight (no diagonal light rays), mint glass walls with out-of-focus leafy plants on the sides, a wooden planting bed across the lower part, and in the middle a large plain flat square area of dark soil-brown planting bed left empty for the game board. Desaturated and soft, mid-to-low contrast, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, calm uncluttered composition, no characters, no readable text, no flowers resembling the playable symbols."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the same cream-iron arched glass greenhouse now in full bloom, but the blooms are soft and out of focus in the background: blurry pastel flowers and vines on the far walls and roof beams, no sticker outlines anywhere, no white outline around the picture, no vignette frame or border, the scene fills the whole canvas edge to edge, soft warm golden light filtering through the roof glass as a gentle even glow (absolutely no diagonal light streaks or rays), a few floating petals, a wooden planting bed across the lower part with a plain flat square area of dark soil left empty in the middle for the game board. Slightly warmer and more festive than a calm greenhouse, mid-to-low contrast with a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, no characters, no readable text."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality. Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a square garden bed made of terracotta pots seen from slightly above that is growing outward: an outer ring of terracotta pots is just opening with soil bursting up, and in the middle one big fully open golden flower blooms with a warm glow, surrounded by pink roses, sunflowers, a blue hydrangea ball and a blue butterfly, flower petals floating in the air; fresh mint glass greenhouse background, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no numbers, no clutter, no diagonal light streaks."
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768,
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a front-facing butterfly with four symmetrical wings in sky blue to mint gradient, small cream dots on the wings, the largest and most ornate symbol, slim dark-teal body, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill) Win-celebration animation timeline across the sequence: the butterfly body and antennae are deep navy-indigo (#2a2f6b) with no green or teal tint anywhere on the body. Frames 1-3 the butterfly wings open wide from half-closed with a soft mint glow; frames 4-6 the wings flap fastest at peak spread with sparkling pollen around, body slightly lifted; frames 7-9 the wings slow and settle back to the resting pose, ending close to frame 1 for a seamless loop. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described wing, water, glow, sparkle and pose motion, no diagonal light sweeps."
+    },
+    {
+      "id": "scatter-win",
+      "kind": "sheet",
+      "symbol": "scatter",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/scatter-win.webp",
+      "outSize": 768,
+      "prompt": "Soft stylized 3D botanical game art, porcelain-smooth matte petals and leaves with a gentle inner glow, thick clean cream sticker outline around the whole object, soft top-left window light, fresh greenhouse greens with pastel flower colors, leaf green #6cc08b, mint glass #cdeee0, cream iron #fbf7ee, petal pink #f6a6c1, lavender #b9a3e3, butter yellow #ffd66b, terracotta #d98a5f, not glossy, not glass-like, bold simple silhouette that reads at 45px, premium mobile slot game asset quality — a silver-mint watering can in side view with a long spout and three round water droplets falling from the spout, cream sticker outline, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill) Win-celebration animation timeline across the sequence: frames 1-3 the watering can tilts forward slowly and the three droplets grow; frames 4-6 the can is tilted most and a clear stream of many water droplets pours with sparkles; frames 7-9 the can tilts back upright and the droplets fade, ending close to frame 1 for a seamless loop. All nine frames must show the exact same object at the exact same position and size in every cell, drawn on a 3 by 3 grid of equal square cells with no cell borders, no labels and no numbers, each cell isolated on the same flat solid #00FF00 chroma-key green background, changes between cells limited to the described wing, water, glow, sparkle and pose motion, no diagonal light sweeps."
+    }
+  ]
+}
