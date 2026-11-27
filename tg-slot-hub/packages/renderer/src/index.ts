@@ -162,9 +162,11 @@ export {
   type RouletteHighlightStage,
   type RouletteHighlightStep,
 } from './rouletteFeature.js'
+export * from './winBands.js'
 export {
   buildPresentation,
   defaultLineLabel,
+  firstPassStepCount,
   lineStepCount,
   phaseAllDurationMs,
   presentationCycleMs,

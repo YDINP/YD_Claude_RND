@@ -101,6 +101,7 @@ import { resolveFxEffect, resolveSymbolFx, BUILTIN_FX } from '../fx.js'
 import { isSheetOnly, planSheetFx } from '../sheet.js'
 import {
   buildPresentation,
+  firstPassStepCount,
   presentationOptionsFor,
   runPresentation,
   shouldLoopPresentation,
@@ -137,6 +138,7 @@ import type { ResolvedFxEffect } from '../fx.js'
 import { TextureRegistry } from '../textureRegistry.js'
 import type { CellRect, RendererEvent, ShowWinsOptions, SpinHandle, SpinToOptions } from '../types.js'
 import { DEFAULT_SPIN_SPEED, MAX_COIN_PARTICLES } from '../constants.js'
+import { WIN_BAND_COIN_COUNT } from '../winBands.js'
 import { createSparkleTexture, startSparkles, type AmbientEffect } from './ambient.js'
 import { burstCelebration, burstCoins, burstConfetti, coinCountForTier, burstScatters } from './coins.js'
 import {
@@ -1417,6 +1419,23 @@ class PixiRenderer implements RendererCore {
 
     const first = steps[0]
     const tier = first !== undefined && first.phase === 'all' ? first.tier : 'none'
+    const firstAll = first !== undefined && first.phase === 'all' ? first : null
+    // 멋진 당첨(5~10배): 코인 8개를 짧게. 스킨이 있으면 스킨 파티클로 같은 수를 낸다.
+    if (!this.options.reducedMotion && tier === 'none' && firstAll !== null && firstAll.band === 'great') {
+      const skin = this.celebration
+      if (skin.custom) {
+        const count = celebrationParticleCount(skin, 'none', WIN_BAND_COIN_COUNT, MAX_COIN_PARTICLES)
+        const particles = planCelebrationParticles(skin, 'none', count).map((look) => ({
+          texture: this.celebrationTexture(look),
+        }))
+        this.stopCoins = burstCelebration(this.particlePool, this.layout, particles, {
+          motion: skin.particles.motion,
+          size: skin.particles.size,
+        })
+      } else {
+        this.stopCoins = burstCoins(this.particlePool, this.coinTexture, this.layout, WIN_BAND_COIN_COUNT)
+      }
+    }
     if (!this.options.reducedMotion && tier !== 'none') {
       const skin = this.celebration
       const level = celebrationLevelForWinTier(tier)
@@ -1443,7 +1462,9 @@ class PixiRenderer implements RendererCore {
       render: (step, context) => this.renderStep(step, context),
       wait: (ms) => this.wait(ms),
       cancelled: () => token !== this.winToken || this.destroyed,
-      loop: shouldLoopPresentation(opts),
+      // 베팅 미만(quiet)은 순환 없이 테두리만 남기고 멈춘다.
+      loop: shouldLoopPresentation(opts) && firstAll?.quiet !== true,
+      firstPassAfter: firstPassStepCount(steps),
     })
     this.winSkip = handle.skip
     return handle.firstPass
@@ -1464,6 +1485,21 @@ class PixiRenderer implements RendererCore {
   private renderStep(step: PresentationStep, context: PresentationStepContext): void {
     this.stopSymbolFx()
     this.winGraphics.clear()
+    this.winGraphics.alpha = 1
+
+    if (step.phase === 'all' && step.quiet === true) {
+      // 베팅 미만: 딤·심볼 연출·파티클 없이 이긴 칸에 얇은 테두리만(알파 0.5). 숫자는 허브가 굴리지 않고 곧장 보인다.
+      // 연쇄 판은 이긴 칸이 이미 터지고 새 심볼로 채워졌으므로 테두리를 그리지 않는다(엉뚱한 칸을 짚게 된다).
+      this.undim()
+      if (step.cascade !== true) {
+        this.drawWinGlow(dedupePositions(step.wins.flatMap((win) => win.positions)))
+        this.winGraphics.alpha = 0.5
+      }
+      this.showScatters(step.scatters)
+      this.emit({ type: 'winCycle', cycle: context.cycle, totalWin: step.totalWin })
+      this.emit({ type: 'winTotal', totalWin: step.totalWin, tier: step.tier, band: step.band, durationMs: 0 })
+      return
+    }
 
     if (step.phase === 'all' && step.cascade === true) {
       // 연쇄 모드: 이긴 칸은 연쇄 중에 이미 터져 끝난 판에 없다. 그 자리를 다시 짚으면
@@ -1477,6 +1513,7 @@ class PixiRenderer implements RendererCore {
         type: 'winTotal',
         totalWin: step.totalWin,
         tier: step.tier,
+        band: step.band,
         durationMs: step.rollupMs,
         ...(step.fromAmount === undefined ? {} : { fromAmount: step.fromAmount }),
       })
@@ -1502,6 +1539,7 @@ class PixiRenderer implements RendererCore {
         type: 'winTotal',
         totalWin: step.totalWin,
         tier: step.tier,
+        band: step.band,
         durationMs: step.rollupMs,
         // 코인 리스핀 스핀: 롤업이 0이 아니라 이미 센 리스핀 합계에서 이어진다.
         ...(step.fromAmount === undefined ? {} : { fromAmount: step.fromAmount }),

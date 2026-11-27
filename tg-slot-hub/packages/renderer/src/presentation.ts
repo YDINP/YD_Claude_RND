@@ -22,6 +22,16 @@ import { totalWinOf, winTier, winTierForMultiple, type WinTier } from './wins.js
 import { defaultWaysLabel, isWaysGame, isWaysWin, sortWaysWins } from './ways.js'
 import type { RendererEvent } from './types.js'
 import { spinSpeedProfile, type SpinSpeed } from './timing.js'
+import { bandHoldMs, bandRollupMs, isTimedWinBand, winBandFor, type WinBand } from './winBands.js'
+
+/**
+ * 연출 단계. 10배 이상(`tier`가 있음)은 `big`으로 넘겨 기존 계산이 이어받고,
+ * 그 아래는 총 당첨 ÷ 총 베팅으로 단계를 정한다.
+ */
+function bandOfTotal(tier: WinTier, totalWin: number, totalBet: number | undefined, paid: boolean | undefined): WinBand {
+  if (tier !== 'none') return 'big'
+  return winBandFor(totalWin, totalBet, paid === undefined ? {} : { paid })
+}
 
 /** 등급에 맞는 A단계 길이(ms). 등급이 높을수록 오래 머문다. */
 export function phaseAllDurationMs(tier: WinTier): number {
@@ -51,6 +61,10 @@ export type PresentationStep =
       wins: WinLine[]
       totalWin: number
       tier: WinTier
+      /** 배수 단계. `under`~`great`는 짧은 연출, `big`은 기존 연출, `none`은 당첨 0(스캐터만). */
+      band: WinBand
+      /** `under`일 때만 true. 얇은 테두리만 두르고 딤·심볼 연출·파티클·순환을 모두 끈다. */
+      quiet?: true
       scatters: GridPosition[]
       durationMs: number
       /** 총합 롤업 길이. 당첨이 여럿이면 `durationMs`보다 짧아 최종값이 머무는 시간이 생긴다. */
@@ -82,6 +96,8 @@ export type PresentationStep =
 
 export interface PresentationOptions {
   totalBet?: number
+  /** 베팅을 내고 얻은 판인지. 기본 true. 프리스핀 판은 false라 `under`가 `small`로 올라간다. */
+  paid?: boolean
   reducedMotion?: boolean
   /** 서버가 준 피처 트리거. 스캐터 좌표와 프리스핀 진입이 여기서 온다. */
   features?: readonly FeatureTrigger[]
@@ -154,9 +170,14 @@ function buildCascadePresentation(
   const cap = (ms: number): number => (reduced ? Math.min(ms, REDUCED_WIN_CYCLE_MS) : ms)
   const brief = options.presentation === 'brief'
   const tier = tierOfTotal(totalWin, wins, math, options.totalBet)
+  const band = bandOfTotal(tier, totalWin, options.totalBet, options.paid)
+  const timed = isTimedWinBand(band)
   const holdBase = brief ? PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE : phaseAllDurationMs(tier)
-  const hold = Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
-  const dwell = !brief && cascadeStepCountOf(wins) >= 2 ? PHASE_ALL_MULTI_DWELL_MS : 0
+  const hold = timed
+    ? bandHoldMs(band, bandInput(options))
+    : Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
+  // 단계 연출(under~great)은 머무름을 붙이지 않는다. 연쇄 «히트→딜레이→팝»은 이미 끝난 뒤다.
+  const dwell = !timed && !brief && cascadeStepCountOf(wins) >= 2 ? PHASE_ALL_MULTI_DWELL_MS : 0
   const ordered = sortWaysWins(wins)
 
   const steps: PresentationStep[] = [
@@ -165,9 +186,11 @@ function buildCascadePresentation(
       wins: ordered,
       totalWin,
       tier,
+      band,
+      ...(band === 'under' ? { quiet: true as const } : {}),
       scatters,
-      durationMs: cap(hold + dwell),
-      rollupMs: cap(hold),
+      durationMs: timed ? hold : cap(hold + dwell),
+      rollupMs: timed ? bandRollupMs(band, bandInput(options)) : cap(hold),
       fromAmount: cascadeWin,
       cascade: true,
     },
@@ -176,6 +199,18 @@ function buildCascadePresentation(
     steps.push({ phase: 'feature', feature: freeSpins, scatters, durationMs: cap(PHASE_FEATURE_MS) })
   }
   return steps
+}
+
+function bandInput(options: PresentationOptions): {
+  speed?: SpinSpeed
+  brief: boolean
+  reducedMotion: boolean
+} {
+  return {
+    ...(options.speed === undefined ? {} : { speed: options.speed }),
+    brief: options.presentation === 'brief',
+    reducedMotion: options.reducedMotion === true,
+  }
 }
 
 function tierOfTotal(totalWin: number, wins: readonly WinLine[], math: GameMath, totalBet?: number): WinTier {
@@ -214,14 +249,21 @@ export function buildPresentation(
   // 홀드만 속도를 탄다. 라인 스텝은 읽는 시간이라 속도와 무관하게 같은 길이를 지킨다.
   // brief는 등급을 홀드에 반영하지 않는다 — 빅윈에서도 같은 길이로 스쳐 지나가야 짧다.
   // (등급 자체는 살아 있다: 스텝의 `tier`와 그에 딸린 코인/색종이 연출은 그대로 간다.)
-  const holdBase = brief ? PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE : phaseAllDurationMs(tier)
-  const hold = Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
   // ways 게임에는 라인 인덱스가 없다(-1 고정). 배당 큰 심볼부터 보여준다.
   const ordered = isWaysGame(math) ? sortWaysWins(wins) : [...wins].sort((a, b) => a.line - b.line)
-  const dwell = !brief && ordered.length > 1 ? PHASE_ALL_MULTI_DWELL_MS : 0
   // 코인 리스핀을 한 스핀이면 총합에 리스핀 지급이 얹히고, 롤업은 이미 센 리스핀 합계에서 이어진다.
   const respinWin = respinPayoutOf(features)
   const lineWin = totalWinOf(ordered)
+  const grandTotal = lineWin + featurePayout(features) + respinWin
+  const allTier = respinWin > 0 ? tierOfTotal(grandTotal, wins, math, options.totalBet) : tier
+  const band = bandOfTotal(allTier, grandTotal, options.totalBet, options.paid)
+  const timed = isTimedWinBand(band)
+  const holdBase = brief ? PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE : phaseAllDurationMs(allTier)
+  const hold = timed
+    ? bandHoldMs(band, bandInput(options))
+    : Math.round(holdBase * spinSpeedProfile(options.speed).winHoldScale)
+  // 단계 연출(under~great)은 머무름 없이 A단계만 첫 바퀴에 들어간다. 라인별 B단계는 배경 순환이다.
+  const dwell = !timed && !brief && ordered.length > 1 ? PHASE_ALL_MULTI_DWELL_MS : 0
 
   const steps: PresentationStep[] = []
   // 무대 룰렛만 걸린 스핀(기본 지급 없음)은 보여 줄 «전체 당첨»이 없다 — 0원 A단계를 거치지 않고 곧장 초대권 강조로 간다.
@@ -231,11 +273,13 @@ export function buildPresentation(
       phase: 'all',
       wins: ordered,
       // 스캐터 배당·코인 리스핀 지급도 이 스핀의 당첨이다 — 빼면 지갑엔 들어갔는데 카운터는 0으로 남는다.
-      totalWin: lineWin + featurePayout(features) + respinWin,
-      tier: respinWin > 0 ? tierOfTotal(lineWin + featurePayout(features) + respinWin, wins, math, options.totalBet) : tier,
+      totalWin: grandTotal,
+      tier: allTier,
+      band,
+      ...(band === 'under' ? { quiet: true as const } : {}),
       scatters,
-      durationMs: cap(dwell > 0 ? hold + dwell : hold),
-      rollupMs: cap(hold),
+      durationMs: timed ? hold : cap(dwell > 0 ? hold + dwell : hold),
+      rollupMs: timed ? bandRollupMs(band, bandInput(options)) : cap(hold),
       ...(respinWin > 0 ? { fromAmount: respinWin } : {}),
     })
   }
@@ -262,6 +306,8 @@ export function buildPresentation(
   // 피처 스텝은 남긴다: 그걸 빼면 `featureTriggered`가 나가지 않아 허브의 프리스핀 인트로
   // 배너와 진입 게이트가 조용히 끊긴다(연출 단축보다 계약이 우선이다).
   if (brief) return steps
+  // 베팅 미만(under)은 순환 없이 A단계 하나로 끝난다 — 라인별 B단계를 만들지 않는다.
+  if (band === 'under') return steps
   for (const win of ordered) {
     steps.push({ phase: 'line', win, scatters, durationMs: cap(PHASE_LINE_MS) })
   }
@@ -275,6 +321,16 @@ function copyPositions(positions: readonly (readonly [number, number])[]): GridP
 /** 한 바퀴 전체 길이(ms). */
 export function presentationCycleMs(steps: readonly PresentationStep[]): number {
   return steps.reduce((sum, step) => sum + step.durationMs, 0)
+}
+
+/**
+ * 허브가 «첫 바퀴가 끝났다»고 볼 스텝 수. 10배 이상(`big`)은 기존대로 전부(라인 B단계 포함),
+ * 그 아래 단계는 라인이 아닌 스텝(A·피처·룰렛)까지만이다 — 라인 B단계는 배경 순환으로 넘어간다.
+ */
+export function firstPassStepCount(steps: readonly PresentationStep[]): number {
+  const first = steps[0]
+  if (first !== undefined && first.phase === 'all' && first.band === 'big') return steps.length
+  return steps.reduce((count, step) => (step.phase === 'line' ? count : count + 1), 0)
 }
 
 /** 한 바퀴에서 라인 스텝이 몇 개인지. `winLine` 이벤트의 `total`이 이 값이다. */
@@ -334,6 +390,11 @@ export interface PresentationRunnerDeps {
   cancelled: () => boolean
   /** 기본 true. false면 한 바퀴만 돌고 끝낸다. */
   loop?: boolean
+  /**
+   * 이 수만큼 스텝을 그린 뒤(마지막 스텝의 유지 시간까지 기다린 뒤) `firstPass`를 resolve한다.
+   * 같은 바퀴의 나머지 스텝은 그 뒤에도 배경에서 계속 그린다. 기본값은 `steps.length`(바퀴 끝).
+   */
+  firstPassAfter?: number
 }
 
 export interface PresentationHandle {
@@ -364,6 +425,7 @@ export function runPresentation(
   deps: PresentationRunnerDeps,
 ): PresentationHandle {
   const total = lineStepCount(steps)
+  const firstPassAfter = Math.max(1, Math.min(deps.firstPassAfter ?? steps.length, steps.length))
   /** 스킵마다 늘어난다. 돌고 있던 바퀴는 자기 토큰이 밀리면 그 자리에서 접는다. */
   let skipToken = 0
   /** 지금 기다리는 중인 스텝을 깨우는 함수. 기다리는 중이 아니면 null이다. */
@@ -390,6 +452,7 @@ export function runPresentation(
   const runPass = async (cycle: number): Promise<void> => {
     const token = skipToken
     let index = 0
+    let drawn = 0
     for (const step of steps) {
       if (deps.cancelled() || token !== skipToken) return
       deps.render(step, { cycle, index, total })
@@ -397,6 +460,8 @@ export function runPresentation(
       await waitStep(step.durationMs)
       // 스킵으로 깨어났다면 남은 스텝은 그리지도 알리지도 않는다.
       if (token !== skipToken) return
+      drawn += 1
+      if (cycle === 0 && drawn === firstPassAfter && drawn < steps.length) settleFirstPass?.()
     }
   }
 
@@ -455,6 +520,7 @@ export function presentationOptionsFor(
   opts:
     | {
         totalBet?: number
+        paid?: boolean
         features?: readonly FeatureTrigger[]
         presentation?: 'full' | 'brief'
         mode?: 'standard' | 'cascade'
@@ -465,6 +531,7 @@ export function presentationOptionsFor(
 ): PresentationOptions {
   const options: PresentationOptions = { reducedMotion }
   if (opts?.totalBet !== undefined) options.totalBet = opts.totalBet
+  if (opts?.paid !== undefined) options.paid = opts.paid
   if (opts?.features !== undefined) options.features = opts.features
   if (opts?.presentation !== undefined) options.presentation = opts.presentation
   if (opts?.mode !== undefined) options.mode = opts.mode

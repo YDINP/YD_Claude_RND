@@ -961,3 +961,47 @@ describe('연쇄 배선', () => {
     expect(source).toContain('export function applyCascadeStepToGrid(')
   })
 })
+
+describe('당첨 단계 연출 배선 (renderStep)', () => {
+  const renderer = (): string => readText(join(srcDir, 'pixi', 'pixiRenderer.ts'), 'utf8')
+  const quietBranch = (): string => {
+    const source = stripComments(renderer())
+    const at = source.indexOf("if (step.phase === 'all' && step.quiet === true) {")
+    const end = source.indexOf("if (step.phase === 'all' && step.cascade === true) {")
+    expect(at).toBeGreaterThan(-1)
+    expect(end).toBeGreaterThan(at)
+    return source.slice(at, end)
+  }
+
+  it('베팅 미만(quiet) 분기는 연쇄 분기보다 먼저 검사된다', () => {
+    quietBranch()
+  })
+
+  it('연쇄 판의 베팅 미만 당첨은 이미 터지고 새로 채워진 칸에 테두리를 그리지 않는다', () => {
+    // 연쇄 모드에서 이긴 칸은 끝난 판에 없다. 그 자리를 짚으면 엉뚱한 심볼이 이긴 것처럼 보인다.
+    const body = quietBranch()
+    const guardAt = body.indexOf('if (step.cascade !== true) {')
+    const glowAt = body.indexOf('this.drawWinGlow(')
+    expect(guardAt).toBeGreaterThan(-1)
+    expect(glowAt).toBeGreaterThan(guardAt)
+    expect(body.split('this.drawWinGlow(').length).toBe(2)
+  })
+
+  it('베팅 미만 분기는 딤·심볼 연출·파티클 없이 숫자를 곧장 보인다', () => {
+    const body = quietBranch()
+    expect(body).toContain('this.undim()')
+    expect(body).not.toContain('this.dimExcept(')
+    expect(body).not.toContain('this.playFxAt(')
+    expect(body).not.toContain('burstCoins(')
+    expect(body).toContain('durationMs: 0')
+  })
+
+  it('멋진 당첨(great)은 큰 당첨 등급이 아닐 때만 코인 8개를 낸다', () => {
+    const source = stripComments(renderer())
+    expect(source).toContain(
+      "if (!this.options.reducedMotion && tier === 'none' && firstAll !== null && firstAll.band === 'great') {",
+    )
+    expect(source).toContain('burstCoins(this.particlePool, this.coinTexture, this.layout, WIN_BAND_COIN_COUNT)')
+    expect(readText(join(srcDir, 'winBands.ts'), 'utf8')).toMatch(/export const WIN_BAND_COIN_COUNT = 8\b/)
+  })
+})

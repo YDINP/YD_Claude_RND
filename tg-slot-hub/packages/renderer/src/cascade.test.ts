@@ -372,15 +372,24 @@ describe('연쇄 모드 showWins 계획', () => {
   })
 
   it('다중 당첨 머무름은 연쇄 2단계 이상일 때만', () => {
-    const two = buildPresentation(wins, candy, { mode: 'cascade', totalBet: 1000 })[0]
+    // 머무름은 10배 이상(big)의 기존 연출에만 붙는다. 베팅을 작게 잡아 big으로 만든다.
+    const two = buildPresentation(wins, candy, { mode: 'cascade', totalBet: 10 })[0]
     const oneStepTwoWins = buildPresentation(
       [clusterWin('a', [[0, 0]], 0, 1, 200), clusterWin('b', [[1, 0]], 0, 1, 300)],
       candy,
-      { mode: 'cascade', totalBet: 1000 },
+      { mode: 'cascade', totalBet: 10 },
     )[0]
     expect(cascadeStepCountOf(wins)).toBe(2)
-    expect(two?.durationMs).toBe(PHASE_ALL_MS + PHASE_ALL_MULTI_DWELL_MS)
-    expect(oneStepTwoWins?.durationMs).toBe(PHASE_ALL_MS)
+    expect(two).toMatchObject({ band: 'big' })
+    expect(two!.durationMs - (two as { rollupMs: number }).rollupMs).toBe(PHASE_ALL_MULTI_DWELL_MS)
+    expect(oneStepTwoWins!.durationMs).toBe((oneStepTwoWins as { rollupMs: number }).rollupMs)
+  })
+
+  it('10배 미만 연쇄는 머무름 없이 단계 시간만 쓴다', () => {
+    const small = buildPresentation(wins, candy, { mode: 'cascade', totalBet: 200 })[0]
+    expect(small).toMatchObject({ band: 'good', durationMs: 1500 })
+    const under = buildPresentation(wins, candy, { mode: 'cascade', totalBet: 5000 })[0]
+    expect(under).toMatchObject({ band: 'under', quiet: true, rollupMs: 0, durationMs: 600 })
   })
 
   it('지급이 전혀 없으면 빈 목록이다', () => {

@@ -4,6 +4,7 @@ import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
 import type { CelebrationSkin, FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
 import type { WinTier } from './wins.js'
+import type { WinBand } from './winBands.js'
 import type { FeatureTrigger, RendererMode } from './features.js'
 import type { ModeTarget } from './transition.js'
 import type { SpinSpeed } from './timing.js'
@@ -118,6 +119,11 @@ export type RendererEvent =
       type: 'winTotal'
       totalWin: number
       tier: WinTier
+      /**
+       * 배수 단계(베팅 대비). 허브가 소리·라벨을 고른다. `big`이면 `tier`가 이어받는다.
+       * 렌더러는 늘 채우지만 선택 필드로 둔다 — 없으면 허브는 단계 없는 평소 당첨으로 다룬다.
+       */
+      band?: WinBand
       durationMs: number
       /**
        * 연쇄 게임에서 카운터를 굴리기 시작할 금액. 연쇄 재생 중에 이미 `cumulativeWin`까지 올렸으므로
@@ -361,6 +367,8 @@ export interface ShowWinsOptions {
    * 없으면 `sum(multiplier) / paylines.length`로 배수를 추정한다.
    */
   totalBet?: number
+  /** 베팅을 내고 얻은 판인지. 기본 true. 프리스핀 판은 false라 베팅 미만 당첨(`under`)을 `small`로 올린다. */
+  paid?: boolean
 }
 
 /**

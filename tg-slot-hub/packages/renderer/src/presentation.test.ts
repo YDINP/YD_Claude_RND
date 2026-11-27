@@ -16,6 +16,7 @@ import {
 import {
   buildPresentation,
   defaultLineLabel,
+  firstPassStepCount,
   lineStepCount,
   phaseAllDurationMs,
   presentationCycleMs,
@@ -57,13 +58,13 @@ describe('buildPresentation', () => {
   })
 
   it('A단계 다음에 라인이 하나씩 이어진다', () => {
-    const steps = buildPresentation([makeWin(0, 20, 10), makeWin(2, 10, 5)], math, { totalBet: 100 })
+    const steps = buildPresentation([makeWin(0, 20, 10), makeWin(2, 10, 5)], math, { totalBet: 10 })
     expect(steps.map((step) => step.phase)).toEqual(['all', 'line', 'line'])
   })
 
   it('라인은 인덱스 순서로 정렬된다', () => {
     const steps = buildPresentation([makeWin(4, 10, 5), makeWin(1, 10, 5), makeWin(2, 10, 5)], math, {
-      totalBet: 500,
+      totalBet: 10,
     })
     const lines = steps.flatMap((step) => (step.phase === 'line' ? [step.win.line] : []))
     expect(lines).toEqual([1, 2, 4])
@@ -71,19 +72,19 @@ describe('buildPresentation', () => {
 
   it('입력 배열을 건드리지 않는다', () => {
     const wins = [makeWin(4, 10, 5), makeWin(1, 10, 5)]
-    buildPresentation(wins, math, { totalBet: 500 })
+    buildPresentation(wins, math, { totalBet: 10 })
     expect(wins.map((win) => win.line)).toEqual([4, 1])
   })
 
   it('승리가 하나면 A단계와 그 라인만 돈다', () => {
-    const steps = buildPresentation([makeWin(3, 10, 5)], math, { totalBet: 500 })
+    const steps = buildPresentation([makeWin(3, 10, 5)], math, { totalBet: 10 })
     expect(steps).toHaveLength(2)
     expect(steps[0]?.phase).toBe('all')
     expect(steps[1]).toMatchObject({ phase: 'line', durationMs: PHASE_LINE_MS })
   })
 
   it('A단계는 총배당을 합쳐서 들고 있다', () => {
-    const steps = buildPresentation([makeWin(0, 20, 10), makeWin(2, 30, 15)], math, { totalBet: 500 })
+    const steps = buildPresentation([makeWin(0, 20, 10), makeWin(2, 30, 15)], math, { totalBet: 10 })
     const first = steps[0]
     expect(first?.phase).toBe('all')
     if (first?.phase === 'all') {
@@ -92,9 +93,9 @@ describe('buildPresentation', () => {
     }
   })
 
-  it('보통 승리의 A단계 길이는 900ms다', () => {
-    const steps = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500 })
-    expect(steps[0]?.durationMs).toBe(PHASE_ALL_MS)
+  it('10배 미만 승리의 A단계 길이는 배수 단계표를 따른다(1배 이상 2배 미만 900ms)', () => {
+    const steps = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 10 })
+    expect(steps[0]).toMatchObject({ band: 'small', durationMs: 900 })
   })
 
   it('BIG 등급이면 A단계가 길어진다', () => {
@@ -122,19 +123,21 @@ describe('buildPresentation', () => {
   })
 
   it('한 바퀴 길이는 각 단계의 합이다', () => {
-    const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
-    expect(presentationCycleMs(steps)).toBe(PHASE_ALL_MS + PHASE_ALL_MULTI_DWELL_MS + PHASE_LINE_MS * 2)
+    const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 10 })
+    // 단계 연출(2배 이상 5배 미만)은 머무름이 없다.
+    expect(presentationCycleMs(steps)).toBe(1500 + PHASE_LINE_MS * 2)
   })
 
   it('당첨이 여럿이면 총합이 다 굴러간 뒤 머무는 시간을 둔다', () => {
-    const [all] = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
-    expect(all).toMatchObject({ phase: 'all', rollupMs: PHASE_ALL_MS, durationMs: PHASE_ALL_MS + PHASE_ALL_MULTI_DWELL_MS })
+    const [all] = buildPresentation([makeWin(0, 50, 5), makeWin(1, 50, 5)], math, { totalBet: 10 })
+    // 10배 이상(big)은 기존 연출 그대로 머무름이 붙는다.
+    expect(all).toMatchObject({ phase: 'all', band: 'big', rollupMs: PHASE_ALL_BIGWIN_MS, durationMs: PHASE_ALL_BIGWIN_MS + PHASE_ALL_MULTI_DWELL_MS })
   })
 
   it('당첨이 하나거나 brief면 머무는 시간이 없다', () => {
-    const [single] = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500 })
-    expect(single).toMatchObject({ rollupMs: PHASE_ALL_MS, durationMs: PHASE_ALL_MS })
-    const [brief] = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500, presentation: 'brief' })
+    const [single] = buildPresentation([makeWin(0, 100, 5)], math, { totalBet: 10 })
+    expect(single).toMatchObject({ rollupMs: PHASE_ALL_BIGWIN_MS, durationMs: PHASE_ALL_BIGWIN_MS })
+    const [brief] = buildPresentation([makeWin(0, 50, 5), makeWin(1, 50, 5)], math, { totalBet: 10, presentation: 'brief' })
     expect(brief!.durationMs).toBe(Math.round(PHASE_ALL_MS * BRIEF_PHASE_ALL_SCALE))
   })
 })
@@ -142,7 +145,7 @@ describe('buildPresentation', () => {
 
 describe('lineStepCount', () => {
   it('라인 스텝만 센다', () => {
-    const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
+    const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 10 })
     expect(steps).toHaveLength(3)
     expect(lineStepCount(steps)).toBe(2)
   })
@@ -243,7 +246,7 @@ async function drain(times = 200): Promise<void> {
 
 describe('runPresentation', () => {
   const twoWins = (): PresentationStep[] =>
-    buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
+    buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 10 })
 
   it('한 바퀴는 A단계 다음에 라인이 이어진다', async () => {
     const run = runHarness(twoWins(), { loop: false })
@@ -286,7 +289,7 @@ describe('runPresentation', () => {
   })
 
   it('승리가 하나여도 매 바퀴 그 라인을 다시 짚는다', async () => {
-    const steps = buildPresentation([makeWin(3, 10, 5)], math, { totalBet: 500 })
+    const steps = buildPresentation([makeWin(3, 10, 5)], math, { totalBet: 10 })
     const run = runHarness(steps, { stopAfter: 6 })
     await run.firstPass
     await drain()
@@ -327,7 +330,7 @@ describe('runPresentation', () => {
 
   it('피처 단계도 매 바퀴 함께 돈다', async () => {
     const freeSpins: FeatureTrigger = { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }
-    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 500, features: [freeSpins] })
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10, features: [freeSpins] })
     const run = runHarness(steps, { stopAfter: 6 })
     await run.firstPass
     await drain()
@@ -344,7 +347,7 @@ describe('runPresentation', () => {
 
 describe('runPresentation 스킵', () => {
   const twoWins = (): PresentationStep[] =>
-    buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 500 })
+    buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, { totalBet: 10 })
 
   /**
    * 한 스텝씩 손으로 넘긴다. 스킵이 남은 시간을 버리는지 보려면 기다림을 붙잡고 있어야 한다.
@@ -447,7 +450,7 @@ describe('buildPresentation 모션 축소', () => {
 
   it('단계 순서는 그대로다', () => {
     const steps = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, {
-      totalBet: 500,
+      totalBet: 10,
       reducedMotion: true,
     })
     expect(steps.map((step) => step.phase)).toEqual(['all', 'line', 'line'])
@@ -456,22 +459,22 @@ describe('buildPresentation 모션 축소', () => {
 
 describe('스핀 속도와 승리 연출', () => {
   it('터보는 A단계 홀드를 줄인다', () => {
-    const normal = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500 })
-    const turbo = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500, speed: 'turbo' })
+    const normal = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 10 })
+    const turbo = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 10, speed: 'turbo' })
     expect(turbo[0]?.durationMs ?? 0).toBeLessThan(normal[0]?.durationMs ?? 0)
-    expect(turbo[0]?.durationMs).toBe(Math.round(PHASE_ALL_MS * SPIN_SPEED_PROFILES.turbo.winHoldScale))
+    expect(turbo[0]?.durationMs).toBe(Math.round(900 * SPIN_SPEED_PROFILES.turbo.winHoldScale))
   })
 
   it('quick은 홀드를 건드리지 않는다', () => {
-    const normal = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500 })
-    const quick = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 500, speed: 'quick' })
+    const normal = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 10 })
+    const quick = buildPresentation([makeWin(0, 10, 5)], math, { totalBet: 10, speed: 'quick' })
     expect(quick[0]?.durationMs).toBe(normal[0]?.durationMs)
   })
 
   it('라인 스텝은 속도와 무관하게 같은 길이다', () => {
     // B단계는 읽는 시간이다. 여기까지 줄이면 무엇으로 이겼는지 읽을 수 없다.
     const turbo = buildPresentation([makeWin(0, 10, 5), makeWin(1, 10, 5)], math, {
-      totalBet: 500,
+      totalBet: 10,
       speed: 'turbo',
     })
     for (const step of turbo) {
@@ -511,14 +514,14 @@ describe("buildPresentation — presentation: 'brief' (오토스핀용 단축 �
   ]
 
   it('라인 스텝(B단계)을 아예 만들지 않는다 — A단계 하나뿐이다', () => {
-    const steps = buildPresentation(fiveWins, math, { totalBet: 500, presentation: 'brief' })
+    const steps = buildPresentation(fiveWins, math, { totalBet: 10, presentation: 'brief' })
     expect(steps.map((step) => step.phase)).toEqual(['all'])
     expect(lineStepCount(steps)).toBe(0)
   })
 
   it("기본값('full')과 명시적 'full'은 예전 그대로 라인별 순차를 만든다", () => {
-    const implicit = buildPresentation(fiveWins, math, { totalBet: 500 })
-    const explicit = buildPresentation(fiveWins, math, { totalBet: 500, presentation: 'full' })
+    const implicit = buildPresentation(fiveWins, math, { totalBet: 10 })
+    const explicit = buildPresentation(fiveWins, math, { totalBet: 10, presentation: 'full' })
     expect(implicit).toEqual(explicit)
     expect(lineStepCount(implicit)).toBe(5)
   })
@@ -530,7 +533,7 @@ describe("buildPresentation — presentation: 'brief' (오토스핀용 단축 �
       PHASE_ALL_MEGA_MS,
     )
 
-    for (const totalBet of [10, 100, 500]) {
+    for (const totalBet of [10, 5, 1]) {
       const steps = buildPresentation([makeWin(0, 200, 100)], math, {
         totalBet,
         presentation: 'brief',
@@ -545,7 +548,7 @@ describe("buildPresentation — presentation: 'brief' (오토스핀용 단축 �
 
   it('속도 프로파일 배율은 그대로 얹힌다', () => {
     const turbo = buildPresentation(fiveWins, math, {
-      totalBet: 500,
+      totalBet: 10,
       presentation: 'brief',
       speed: 'turbo',
     })
@@ -578,7 +581,7 @@ describe("buildPresentation — presentation: 'brief' (오토스핀용 단축 �
   it('프리스핀 피처 스텝은 남는다 — featureTriggered가 끊기면 허브 인트로/진입 게이트가 죽는다', () => {
     const freeSpins: FeatureTrigger = { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }
     const steps = buildPresentation(fiveWins, math, {
-      totalBet: 500,
+      totalBet: 10,
       presentation: 'brief',
       features: [freeSpins],
     })
@@ -677,28 +680,28 @@ describe('피처가 있는 연출', () => {
 
   it('프리스핀에 걸리면 A단계 바로 뒤에 피처 단계가 낀다', () => {
     const steps = buildPresentation([makeWin(0, 20, 10)], math, {
-      totalBet: 500,
+      totalBet: 10,
       features: [scatterWin, freeSpins],
     })
     expect(steps.map((step) => step.phase)).toEqual(['all', 'feature', 'line'])
   })
 
   it('피처 단계는 프리스핀 트리거를 그대로 들고 있다', () => {
-    const steps = buildPresentation([], math, { totalBet: 500, features: [scatterWin, freeSpins] })
+    const steps = buildPresentation([], math, { totalBet: 10, features: [scatterWin, freeSpins] })
     const feature = steps.find((step) => step.phase === 'feature')
     expect(feature?.phase).toBe('feature')
     if (feature?.phase === 'feature') expect(feature.feature).toEqual(freeSpins)
   })
 
   it('피처 단계 길이는 900ms다', () => {
-    const steps = buildPresentation([], math, { totalBet: 500, features: [freeSpins] })
+    const steps = buildPresentation([], math, { totalBet: 10, features: [freeSpins] })
     const feature = steps.find((step) => step.phase === 'feature')
     expect(feature?.durationMs).toBe(PHASE_FEATURE_MS)
   })
 
   it('프리스핀이 없으면 피처 단계도 없다', () => {
     const steps = buildPresentation([makeWin(0, 20, 10)], math, {
-      totalBet: 500,
+      totalBet: 10,
       features: [scatterWin],
     })
     expect(steps.map((step) => step.phase)).toEqual(['all', 'line'])
@@ -706,7 +709,7 @@ describe('피처가 있는 연출', () => {
 
   it('모든 스텝이 스캐터 좌표를 함께 들고 다닌다', () => {
     const steps = buildPresentation([makeWin(0, 20, 10), makeWin(1, 20, 10)], math, {
-      totalBet: 500,
+      totalBet: 10,
       features: [scatterWin, freeSpins],
     })
     expect(steps).toHaveLength(4)
@@ -716,31 +719,31 @@ describe('피처가 있는 연출', () => {
   })
 
   it('A단계 합계에 스캐터 배당이 들어간다(지갑과 카운터가 맞는다)', () => {
-    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 500, features: [scatterWin] })
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10, features: [scatterWin] })
     expect(steps[0]?.phase).toBe('all')
     if (steps[0]?.phase === 'all') expect(steps[0].totalWin).toBe(20 + 200)
-    const only = buildPresentation([], math, { totalBet: 500, features: [scatterWin, freeSpins] })
+    const only = buildPresentation([], math, { totalBet: 10, features: [scatterWin, freeSpins] })
     if (only[0]?.phase === 'all') expect(only[0].totalWin).toBe(200)
   })
 
   it('라인 승리가 없어도 스캐터만으로 연출이 생긴다', () => {
-    const steps = buildPresentation([], math, { totalBet: 500, features: [scatterWin] })
+    const steps = buildPresentation([], math, { totalBet: 10, features: [scatterWin] })
     expect(steps.map((step) => step.phase)).toEqual(['all'])
     expect(steps[0]?.scatters).toHaveLength(3)
   })
 
   it('라인도 피처도 없으면 아무것도 하지 않는다', () => {
-    expect(buildPresentation([], math, { totalBet: 500, features: [] })).toEqual([])
+    expect(buildPresentation([], math, { totalBet: 10, features: [] })).toEqual([])
   })
 
   it('스캐터가 없으면 좌표 목록이 비어 있다', () => {
-    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 500 })
+    const steps = buildPresentation([makeWin(0, 20, 10)], math, { totalBet: 10 })
     expect(steps[0]?.scatters).toEqual([])
   })
 
   it('모션 축소에서도 피처 단계는 살아 있고 길이만 줄어든다', () => {
     const steps = buildPresentation([], math, {
-      totalBet: 500,
+      totalBet: 10,
       features: [scatterWin, freeSpins],
       reducedMotion: true,
     })
@@ -785,7 +788,7 @@ describe('showWins 옵션 전달', () => {
     const steps = buildPresentation(
       [],
       math,
-      presentationOptionsFor({ totalBet: 500, features: [scatterWin, freeSpins] }, false),
+      presentationOptionsFor({ totalBet: 10, features: [scatterWin, freeSpins] }, false),
     )
     expect(steps.map((step) => step.phase)).toEqual(['all', 'feature'])
     expect(steps[0]?.scatters).toEqual([[0, 0]])
@@ -849,5 +852,110 @@ describe('코인 리스핀 지급과 총합 롤업', () => {
 
   it('라인 승리 없이 리스핀만이면 A단계를 만들지 않는다 — 합계는 동굴에서 이미 셌다', () => {
     expect(buildPresentation([], math, { totalBet: 10, features: [coinRespin(300)] })).toEqual([])
+  })
+})
+
+describe('당첨 연출 배수 단계', () => {
+  const freeSpins: FeatureTrigger = { type: 'freeSpins', spins: 10, multiplier: 2, retrigger: false }
+  const twoWins = (win: number): WinLine[] => [makeWin(0, win, 5), makeWin(1, win, 5)]
+
+  it('베팅 미만(under)은 A단계 하나, quiet, 롤업 0, 순환 없음', () => {
+    const steps = buildPresentation(twoWins(5), math, { totalBet: 100 })
+    expect(steps).toHaveLength(1)
+    expect(steps[0]).toMatchObject({ phase: 'all', band: 'under', quiet: true, rollupMs: 0, durationMs: 600 })
+    expect(lineStepCount(steps)).toBe(0)
+  })
+
+  it('small~great는 머무름 없이 A단계 시간만 쓰고 라인 스텝은 그대로 만든다', () => {
+    const bands = [
+      [10, 'small', 900],
+      [30, 'good', 1500],
+      [70, 'great', 2200],
+    ] as const
+    for (const [win, band, hold] of bands) {
+      const steps = buildPresentation(twoWins(win), math, { totalBet: 20 })
+      expect(steps[0]).toMatchObject({ band, durationMs: hold })
+      expect(steps.map((step) => step.phase)).toEqual(['all', 'line', 'line'])
+      expect('quiet' in steps[0]!).toBe(false)
+    }
+  })
+
+  it('10배 이상은 big이라 기존 계산을 그대로 쓴다', () => {
+    const [all] = buildPresentation([makeWin(0, 100, 50)], math, { totalBet: 10 })
+    expect(all).toMatchObject({ band: 'big', tier: 'big', durationMs: PHASE_ALL_BIGWIN_MS })
+  })
+
+  it('프리스핀 판(paid:false)의 소액 당첨은 under가 아니라 small이다', () => {
+    const [all] = buildPresentation([makeWin(0, 5, 5)], math, { totalBet: 20, paid: false })
+    expect(all).toMatchObject({ band: 'small' })
+    expect(buildPresentation([makeWin(0, 5, 5)], math, { totalBet: 20 })[0]).toMatchObject({ band: 'under' })
+  })
+
+  it('총 베팅을 모르면 small이다', () => {
+    expect(buildPresentation([makeWin(0, 5, 5)], math)[0]).toMatchObject({ band: 'small' })
+  })
+
+  it('속도·오토·모션 줄이기가 단계 시간에 반영된다', () => {
+    const win = [makeWin(0, 30, 5)]
+    expect(buildPresentation(win, math, { totalBet: 10, speed: 'turbo' })[0]?.durationMs).toBe(825)
+    expect(buildPresentation(win, math, { totalBet: 10, presentation: 'brief' })[0]?.durationMs).toBe(900)
+    expect(buildPresentation(win, math, { totalBet: 10, reducedMotion: true })[0]?.durationMs).toBe(450)
+  })
+
+  it('피처 걸린 small: 첫 바퀴에 A와 피처 스텝이 들어가고 라인은 뒤에 온다', () => {
+    const steps = buildPresentation([makeWin(0, 20, 5)], math, { totalBet: 20, features: [freeSpins] })
+    expect(steps.map((step) => step.phase)).toEqual(['all', 'feature', 'line'])
+    expect(firstPassStepCount(steps)).toBe(2)
+  })
+
+  it('firstPassStepCount: big이면 전부, 그 아래는 라인을 뺀 수', () => {
+    expect(firstPassStepCount(buildPresentation(twoWins(30), math, { totalBet: 20 }))).toBe(1)
+    expect(firstPassStepCount(buildPresentation(twoWins(100), math, { totalBet: 20 }))).toBe(3)
+    expect(firstPassStepCount([])).toBe(0)
+  })
+
+  it('under에 피처가 있어도 순환 대상 라인은 없다', () => {
+    const steps = buildPresentation([makeWin(0, 5, 5)], math, { totalBet: 20, features: [freeSpins] })
+    expect(steps.map((step) => step.phase)).toEqual(['all', 'feature'])
+  })
+})
+
+describe('runPresentation firstPassAfter', () => {
+  const steps = (): PresentationStep[] =>
+    buildPresentation([makeWin(0, 30, 5), makeWin(1, 30, 5)], math, { totalBet: 20 })
+
+  it('A단계 뒤에 첫 바퀴를 끝내고 라인 스텝은 배경에서 계속 그린다', async () => {
+    const rendered: string[] = []
+    // 첫 스텝(A)만 즉시 지나가고, 라인 스텝은 영원히 기다리게 해 «첫 바퀴가 라인을 기다리지 않음»을 본다.
+    const handle = runPresentation(steps(), {
+      render: (step) => {
+        rendered.push(step.phase)
+      },
+      wait: () => (rendered.length <= 1 ? Promise.resolve() : new Promise<void>(() => undefined)),
+      cancelled: () => false,
+      loop: false,
+      firstPassAfter: firstPassStepCount(steps()),
+    })
+    await handle.firstPass
+    await drain()
+    expect(rendered).toEqual(['all', 'line'])
+  })
+
+  it('취소하면 남은 스텝은 그리지 않는다', async () => {
+    const rendered: string[] = []
+    let cancelled = false
+    const handle = runPresentation(steps(), {
+      render: (step) => {
+        rendered.push(step.phase)
+      },
+      wait: () => Promise.resolve(),
+      cancelled: () => cancelled,
+      loop: false,
+      firstPassAfter: 1,
+    })
+    cancelled = true
+    await handle.firstPass
+    await drain()
+    expect(rendered.length).toBeLessThanOrEqual(1)
   })
 })
