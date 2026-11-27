@@ -48,6 +48,15 @@ export type RoundPopup =
         readonly bestSpin: number
         readonly betMultiple: number
       }
+      /** 자라는 정원 프리스핀 종료 요약(서버 `freeSpinsSummary.garden` 값 그대로 + 총액의 베팅 배수). */
+      readonly garden?: {
+        readonly maxSize: number
+        readonly bestSeed: number
+        readonly bestSpinWin: number
+        readonly topUp: number
+        /** 라운드 총액 ÷ 베팅(소수 첫째 자리). 베팅을 모르면 0. */
+        readonly betMultiple: number
+      }
     }
 
 export type RoundFlowState =
@@ -271,6 +280,22 @@ export function withForgePopup(
       forge: { heat: summary.forgeHeat, fulls: summary.forgeFulls ?? 0, bestSpin: summary.bestSpin ?? 0, betMultiple },
     },
   }
+}
+
+/**
+ * 자라는 정원 프리스핀 종료 팝업에 요약을 얹는다. 값은 서버 `freeSpinsSummary.garden`이 유일한 근거이고,
+ * 정원이 아니거나 종료 팝업이 아니면 그대로 돌려준다. `bet`은 라운드 진입 때 고정된 총 베팅액이다.
+ */
+export function withGardenPopup(
+  ceremony: { popup: RoundPopup; to: CurtainTarget },
+  result: Partial<Pick<SpinResponse, 'freeSpinsSummary'>>,
+  bet: number,
+): { popup: RoundPopup; to: CurtainTarget } {
+  const garden = result.freeSpinsSummary?.garden
+  const { popup } = ceremony
+  if (garden === undefined || popup.kind !== 'freeSpinsExit') return ceremony
+  const betMultiple = bet > 0 ? Math.round((popup.totalWin / bet) * 10) / 10 : 0
+  return { ...ceremony, popup: { ...popup, garden: { ...garden, betMultiple } } }
 }
 
 // ---- 승리 연출 분량 결정 (순수) ----

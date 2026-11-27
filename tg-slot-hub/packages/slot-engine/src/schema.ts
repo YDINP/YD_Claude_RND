@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { CoinRespinSchema, checkCoinRespin } from './coinRespinSchema.js'
+import { GrowBoardSchema, checkGrowBoard } from './gardenSchema.js'
 import { BoardBonusConfigSchema, checkBoardConfig } from './boardSchema.js'
 import { AnywhereConfigSchema, ForgeRailConfigSchema, checkAnywhere, checkForgeRail } from './forgeSchema.js'
 
@@ -271,6 +272,8 @@ const BaseGameMathSchema = z.object({
   anywhere: AnywhereConfigSchema.optional(),
   /** 화로 배율 줄(volcano-forge). 연쇄 리필 칸의 불씨가 판 밖 합계를 키운다. */
   forgeRail: ForgeRailConfigSchema.optional(),
+  /** 자라는 정원(4×4 → 8×8 성장 판 + 씨앗 배율 + 정원 프리스핀). `cascade` 대신 쓴다. */
+  growBoard: GrowBoardSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -392,7 +395,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     }
   } else if (math.payModel === 'cluster') {
     if (math.cluster === undefined) issue("payModel이 'cluster'면 cluster 설정이 필요하다", ['cluster'])
-    if (math.cascade === undefined) issue("payModel이 'cluster'면 cascade 설정이 필요하다", ['cascade'])
+    if (math.cascade === undefined && math.growBoard === undefined) issue("payModel이 'cluster'면 cascade 설정이 필요하다", ['cascade'])
     if (math.paylines.length > 0) issue('클러스터 게임은 paylines를 두지 않는다', ['paylines'])
     if (math.ways !== undefined) issue('클러스터 게임은 ways를 두지 않는다', ['ways'])
   } else if (math.payModel === 'anywhere') {
@@ -704,6 +707,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
   }
 
   checkCoinRespin(math, issue)
+  checkGrowBoard(math, issue)
   checkBoardConfig(math, issue)
   checkForgeRail(math, issue)
   const roulette = math.stageRoulette

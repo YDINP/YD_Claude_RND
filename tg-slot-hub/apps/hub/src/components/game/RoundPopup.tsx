@@ -220,8 +220,8 @@ export function RoundPopupView({
             </span>
           )}
 
-          {/* 화로 요약은 맨 윗줄에 «베팅의 ×N»을 이미 보인다 — 같은 줄을 두 번 쓰지 않는다. */}
-          {!entry && showMultiple && !(popup.kind === 'freeSpinsExit' && popup.forge !== undefined) && (
+          {/* 화로·정원 요약은 자기 «베팅의 ×N» 줄을 이미 보인다 — 같은 줄을 두 번 쓰지 않는다. */}
+          {!entry && showMultiple && !(popup.kind === 'freeSpinsExit' && (popup.forge !== undefined || popup.garden !== undefined)) && (
             <span className="hub-round-popup__multiple">{t('winBandMultiple', { x: multipleText })}</span>
           )}
 
@@ -268,6 +268,30 @@ export function RoundPopupView({
               <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
                 {t('orderExitRoundTotal', { amount: popup.totalWin.toLocaleString('en-US') })}
               </span>
+            </span>
+          )}
+
+          {popup.kind === 'freeSpinsExit' && popup.garden !== undefined && (
+            <span className="hub-round-popup__orders">
+              {popup.garden.betMultiple > 0 && (
+                <span className="hub-round-popup__orders-row hub-round-popup__orders-row--sum">
+                  {t('gardenRoundMultiple', { n: popup.garden.betMultiple.toLocaleString('en-US') })}
+                </span>
+              )}
+              <span className="hub-round-popup__orders-row">
+                {t('gardenRoundMax', { size: popup.garden.maxSize })}
+              </span>
+              {popup.garden.bestSeed > 0 && (
+                <span className="hub-round-popup__orders-row">{t('gardenRoundBestSeed', { n: popup.garden.bestSeed })}</span>
+              )}
+              <span className="hub-round-popup__orders-row">
+                {t('gardenRoundBestSpin', { amount: popup.garden.bestSpinWin.toLocaleString('en-US') })}
+              </span>
+              {popup.garden.topUp > 0 && (
+                <span className="hub-round-popup__orders-row">
+                  {t('gardenRoundTopUp', { amount: popup.garden.topUp.toLocaleString('en-US') })}
+                </span>
+              )}
             </span>
           )}
 

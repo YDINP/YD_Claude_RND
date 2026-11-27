@@ -65,5 +65,6 @@ export function toGameSummary(manifest: GameManifest): GameSummary {
     maxBet,
     sort: manifest.sort,
     ...(manifest.payModel === 'anywhere' ? { payModel: 'anywhere' as const } : {}),
+    ...(manifest.features.includes('growBoard') ? { growBoard: true } : {}),
   }
 }

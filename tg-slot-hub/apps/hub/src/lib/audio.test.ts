@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getSfxVolume, getSoundPreset, isAudioMuted, setAudioMuted, setSfxVolume, setSoundPreset } from './audio'
 
-const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea', 'hanbok', 'idol'] as const
+const PRESETS = ['bell', 'fruit', 'western', 'shrine', 'clockwork', 'candy', 'royal', 'deepsea', 'hanbok', 'idol', 'garden', 'forge'] as const
 
 describe('audio mute flag', () => {
   it('defaults to unmuted and reflects setAudioMuted()', () => {
@@ -45,28 +45,30 @@ describe('sound preset', () => {
 
 /** 어느 노드든 호출을 삼키는 가짜 Web Audio. 레시피가 던지지 않는지만 본다. */
 const targets: number[] = []
+const noop = (): void => undefined
 
 function fakeParam(): Record<string, unknown> {
   const p: Record<string, unknown> = { value: 0 }
+  // vi.fn()은 호출 기록을 테스트 파일 끝까지 쥐고 있어 노드가 수만 개면 힙이 4GB를 넘는다. 호출을 보지 않으므로 빈 함수를 쓴다.
   for (const fn of ['setValueAtTime', 'exponentialRampToValueAtTime', 'linearRampToValueAtTime', 'cancelScheduledValues']) {
-    p[fn] = vi.fn()
+    p[fn] = noop
   }
-  p.setTargetAtTime = vi.fn((v: number) => targets.push(v))
+  p.setTargetAtTime = (v: number) => targets.push(v)
   return p
 }
 
 function fakeNode(extra: Record<string, unknown> = {}): Record<string, unknown> {
   const node: Record<string, unknown> = {
-    connect: vi.fn((to: unknown) => to),
-    start: vi.fn(),
-    stop: vi.fn(),
+    connect: (to: unknown) => to,
+    start: noop,
+    stop: noop,
     gain: fakeParam(),
     frequency: fakeParam(),
     Q: fakeParam(),
     detune: fakeParam(),
     playbackRate: fakeParam(),
     pan: fakeParam(),
-    disconnect: vi.fn(),
+    disconnect: noop,
     threshold: fakeParam(),
     ratio: fakeParam(),
     ...extra,

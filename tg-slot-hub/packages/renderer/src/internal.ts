@@ -7,7 +7,7 @@ import type {
   SpinHandle,
   SpinToOptions,
 } from './types.js'
-import type { WinLine } from '@tgslot/slot-engine'
+import type { GardenBounds, GardenSeed, WinLine } from '@tgslot/slot-engine'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { RendererMode } from './features.js'
 import type { SpinSpeed } from './timing.js'
@@ -36,4 +36,5 @@ export interface RendererCore {
   destroy(): void
   diagnostics(): RendererDiagnostics
   getCellRect(reel: number, row: number): CellRect
+  setGardenView(view: { bounds: GardenBounds; seeds: readonly GardenSeed[] } | null, immediate?: boolean): void
 }

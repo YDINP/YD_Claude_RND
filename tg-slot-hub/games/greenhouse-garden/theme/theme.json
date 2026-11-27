@@ -1,0 +1,164 @@
+{
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.043859649122807015,
+      "y": 0.045454545454545456,
+      "w": 0.9130781499202552,
+      "h": 0.9098883572567783
+    }
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#fbf7ee",
+    "reelBg": "#4a2f20",
+    "winLine": [
+      "#f6a6c1",
+      "#ffd66b",
+      "#6cc08b",
+      "#b9a3e3",
+      "#fbf7ee"
+    ],
+    "text": "#fbf7ee"
+  },
+  "symbols": {
+    "wild": "symbols/wild.webp",
+    "scatter": "symbols/scatter.webp",
+    "sunflower": "symbols/sunflower.webp",
+    "rose": "symbols/rose.webp",
+    "hydrangea": "symbols/hydrangea.webp",
+    "marigold": "symbols/marigold.webp",
+    "lavender": "symbols/lavender.webp",
+    "daisy": "symbols/daisy.webp",
+    "clover": "symbols/clover.webp"
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "sheets": {
+    "wild": {
+      "win": "sheets/wild-win.json"
+    },
+    "scatter": {
+      "win": "sheets/scatter-win.json"
+    }
+  },
+  "props": {
+    "pot": "props/pot.webp",
+    "seed-0": "props/seed-0.webp",
+    "seed-1": "props/seed-1.webp",
+    "seed-2": "props/seed-2.webp",
+    "seed-3": "props/seed-3.webp",
+    "seed-4": "props/seed-4.webp"
+  },
+  "reelBackdrop": {
+    "color": "#4a2f20",
+    "alpha": 0.82,
+    "radius": 0.04
+  },
+  "fx": {
+    "default": {
+      "win": [
+        {
+          "type": "pulse",
+          "scale": 1.1,
+          "durationMs": 500
+        }
+      ]
+    },
+    "wild": {
+      "win": [
+        {
+          "type": "burst",
+          "particles": 16,
+          "durationMs": 900
+        },
+        {
+          "type": "glow",
+          "color": "#cdeee0",
+          "durationMs": 900
+        }
+      ]
+    },
+    "scatter": {
+      "win": [
+        {
+          "type": "glow",
+          "color": "#8fd8f2",
+          "durationMs": 800
+        },
+        {
+          "type": "pulse",
+          "scale": 1.14,
+          "durationMs": 600
+        }
+      ]
+    }
+  },
+  "celebration": {
+    "palette": {
+      "core": "#fbf7ee",
+      "edge": "#f6a6c1",
+      "glow": "#cdeee080"
+    },
+    "particles": {
+      "shapes": [
+        "petal",
+        "spark",
+        "confetti",
+        "star"
+      ],
+      "colors": [
+        "#fbf7ee",
+        "#f6a6c1",
+        "#ffd66b",
+        "#6cc08b",
+        "#b9a3e3"
+      ],
+      "motion": "flutter",
+      "size": 1.3
+    },
+    "rays": {
+      "style": "halo"
+    },
+    "waves": {
+      "style": "ring"
+    },
+    "title": {
+      "font": "rounded",
+      "weight": 850,
+      "stroke": 2,
+      "strokeColor": "#3d6b4acc",
+      "tracking": 0.02
+    },
+    "tiers": {
+      "surge": {
+        "density": 1.2
+      },
+      "storm": {
+        "glow": "#f6a6c180",
+        "edge": "#f6a6c1"
+      },
+      "cataclysm": {
+        "core": "#ffffff",
+        "edge": "#ffd66b",
+        "glow": "#fbf7ee8a",
+        "density": 1.4
+      }
+    }
+  },
+  "sound": {
+    "preset": "garden"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2100,
+      "durationMs": 2999
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 2999
+    }
+  }
+}

@@ -903,3 +903,69 @@ z 는 의도 문구 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거가 약하다
 - 배경음 `wav/bgm_forge_base.wav`, `wav/bgm_forge_free.wav`
 - 믹스 `wav/mix_forge_mix.wav`, 화로 줄 장면 `wav/rmix_forge_mix.wav`
 - 위치: `D:/park/tgslot-wt/_qa/new-a-sound/wav/` (저장소 밖)
+
+## greenhouse-garden 사운드 (`garden` 프리셋) — 2026-11-28
+
+`garden` 프리셋의 기본 레시피 9종, 정원 전용 소리 6종, 전용 BGM(base·free)을 earshot 으로 잰 기록. **수치는 참고값이고 최종 귀 판정은 사용자 몫이다.**
+코드는 `apps/hub/src/lib/audioGarden.ts`(레시피·정원 전용 소리), `bgmGarden.ts`(악보), `bgmVoices.ts`의 `GARDEN_KIT`(악기), `gardenSfx.ts`(이벤트 → 소리 표)다. `audio.ts`는 import 한 줄·`garden` 생성 한 줄·`RECIPES.garden` 한 줄·위임 export 6개만 더했고, `game-sdk`의 `SOUND_PRESETS`·renderer `SoundPreset`에 `'garden'`을 추가했다.
+방법은 앞 절들과 같다(실제 `audio.ts`를 헤드리스 Chrome OfflineAudioContext + 가상 시계로 렌더, 스템별 `measure`·CLAP 코사인, 30초 장면 믹스는 BGM 40% 기본 음량). 비교 대상은 앞 절 렌더(bell·fruit·western·shrine·clockwork·candy·hanbok)와 kraken-cove(deepsea)·idol-stage-live(idol) 스템이다.
+
+### 소리 설계 (유리 온실의 흙·잎·물: 나무 칼림바·대나무 윈드차임·하프 글리산도·잎 바스락)
+
+| 이벤트 | 소리 | 다른 프리셋과 다른 점 |
+|---|---|---|
+| 팝(`pop`) | 칼림바 한 음 + 잎 바스락. 단계마다 F 장조 펜타토닉(F4~C6) 한 칸 위, 9단계 상한 | 종·마림바가 아니라 나무 혀 + 금속 혀 배음(x5.4) |
+| 낙하(`drop`) | 흙 «톡» 90→54 Hz | 아주 작게(-41 LUFS) |
+| 성장(`grow`) | 대나무 윈드차임 4음 상행(새 한 변이 클수록 시작음이 위) + 흙 터짐 저역 + 덮개 나무 톡(최대 6번으로 묶음) | |
+| 씨앗 개화(`bloom`) | 하프 글리산도 + 맑은 한 음. 배율 1~3 / 4~9 / 10 이상 = 새싹·봉오리·꽃, 꽃이면 피리 두 음과 배경음 덕킹 0.9초 | 배율이 클수록 높고 길다 |
+| 햇살(`sun`) | 따뜻한 패드 스웰(F·A·C) + 높은 칼림바 트릴. 씨앗이 한 등급 올랐으면 칼림바 두 음이 먼저 | 덕킹 1.2초 |
+| 물방울(`waterDrop`) | 퐁 두 겹(피치 하강). 지금 화면 이벤트에는 연결하지 않았다 | |
+| 스핀 시작 | 잎 바스락 + 대나무 4음 | 팝·딸깍 대신 |
+| 릴 정지 | 낮은 톡(180→100 Hz) + 작은 나무 소리 | |
+| 작은 당첨 | 칼림바 3음 + 잎 + 낱알 흩뿌림 | |
+| 큰 당첨 | 레인스틱 → 하프 글리산도(등급이 오를수록 길다) → 피리 화음 → 낱알 | |
+| 피처 | 레인스틱 + 흙 부풀음 + 대나무 6음 상행 + 하프 | |
+| 기대감 | 칼림바 낱알이 점점 빨라지며 음계를 오름 + 아래서 부푸는 사인(98→247 Hz). 공용 사이렌형 스윕 대신 `anticipate` 사용 | 기존 8종과 가장 멀다(코사인 0.39~0.57) |
+
+### 기본 레시피 (같은 이벤트끼리 CLAP 코사인, 높을수록 비슷)
+
+| 이벤트 | 최대(상대) | 비고 |
+|---|---|---|
+| spin | 0.81 (shrine·hanbok) | |
+| reelstop / reelstops | 0.86 / 0.89 (deepsea / fruit) | 짧은 원샷은 어느 프리셋끼리나 비슷하다 |
+| winsmall | 0.88 (clockwork) | |
+| winbig | 0.91 (deepsea) | **0.90 목표 초과** |
+| feature | 0.91 (deepsea) | **초과** |
+| mutation | 0.92 (hanbok) | 이 게임은 쓰지 않는다. hanbok 쪽 mutation 이 -33 LUFS 의 거의 무음이다 |
+| riser | 0.57 (idol) | |
+| rollup | 0.89 (deepsea) | |
+
+- 기존 9개 프리셋끼리의 최대 쌍은 이벤트별 0.89~0.99다(spin 0.96, riser 0.99). garden 의 전체 최대 0.917 은 그 분포 안이고, 기획의 «≤0.90»은 winbig·feature 의 deepsea 쌍(0.91)과 mutation(사용 안 함)에서 못 맞췄다. deepsea 도 «물방울 → 파도 → 큰 화음» 구조라 겹치는 것으로 본다. 더 내리려면 큰 당첨 구조 자체를 바꿔야 해서 멈췄다.
+- 레벨(LUFS): spin -31.4 · reelstop -31.6 · winsmall -20.6 · winbig -22.6 · feature -21.4 · mutation -25.5 · riser -29.1 · rollup -26.8. 처음 만든 소리는 winbig -29.4 로 다른 프리셋(-19~-24)보다 8dB 작아서 볼륨을 올렸다. true peak 는 전부 -7.5 dBTP 이하, 클리핑 0, 마지막 소리 끝(10ms) 무음.
+- 정원 전용 소리(LUFS / dBTP): pop0 -25.5/-11.0 → pop8 -22.4/-10.9(단계가 오를수록 커지고 밝아짐) · drop -41.4 · grow5~7 -28.2~-27.4/-12.0 · bloom0 -24.4 · bloom1 -22.7 · bloom2 -22.6/-11.1(길이 0.72→1.26 s) · sun0 -25.0 · sun2 -25.7 · water -33.9.
+
+### 배경음 (92 bpm, F 장조, 셔플 8분, 칼림바 아르페지오 + 부드러운 피리 선율 + 브러시 셰이커 + 손으로 뜯는 낮은 베이스, 기본 꺼짐)
+
+- free(정원 프리스핀): +2반음(G), 1.04배 빠르게, 대나무 윈드차임 대선율, 16분 셰이커. 악보 데이터만 `bgmGarden.ts`에 있고 `bgm.test.ts`의 구조 검사(정렬·마디 안·음역 24~100)를 통과한다.
+- LUFS(20~50초): base -32.4 / free -30.0, true peak -18.9 / -18.7. 밝기(중심주파수 Hz): base 505 / free 739.
+- 코사인(20~50초, base): bell 0.71 · hanbok 0.85 · idol 0.73 / candy 0.90 · clockwork 0.88 · shrine 0.92 · fruit 0.92 · deepsea 0.92 · **western 0.95**. base ↔ free 0.926.
+- **«≤0.90» 목표는 못 맞췄다.** CLAP 이 뜯는 현악·칼림바 배경음을 한 군으로 묶기 때문이다(앞 절의 western – shrine 0.958 → 0.910 이 같은 현상, 기존 7곡 최대 쌍도 0.91). 믹스 비중을 타악·피리·대선율 쪽으로 옮겨 western 0.945 → 0.953 으로 오히려 조금 올랐다 — 음색보다 «뜯는 현 + 느슨한 박» 구조가 지배한다. 더 내리려면 편성을 크게 바꿔야 해서 귀 판정으로 넘긴다.
+
+### 믹스 (30초 장면, BGM 40%)
+
+- 합본 -26.3 LUFS, true peak -7.5 dBTP, 클리핑 0.
+- 효과음 − 배경음(dB): 릴 정지 +7.6 · 작은 당첨 +12.8 · 기대감 +13.9 · 큰 당첨 +20.2 · 피처 +28.5. 덕킹: 기대감 −5.6 · 큰 당첨 −5.0 · 피처 −12.9 dB.
+
+### 귀로 확인할 것 (earshot 이 못 가르는 것)
+
+- 칼림바 팝이 9단계까지 올라가며 «꽃이 하나씩 터지는» 진행감으로 들리는지, 연쇄 중 마지막 단계가 귀를 찌르지 않는지(8단계 -22.4 LUFS).
+- 성장 소리(윈드차임 + 흙 쿵 + 덮개 톡)가 판이 넓어지는 느낌과 맞는지, 빠름·터보에서 겹쳐 시끄럽지 않은지.
+- 씨앗 개화의 새싹·봉오리·꽃 세 등급이 귀로 구별되는지.
+- 큰 당첨이 deepsea(0.91)와 같은 소리로 들리지 않는지, 기대감 낱알이 «곧 터진다» 긴장으로 들리는지.
+- BGM 이 western·shrine 과 같은 곡처럼 들리지 않는지(0.92~0.95).
+- 최종 귀 판정은 사용자 몫이다.
+
+### 파일 (저장소 밖)
+
+- 하네스·분석: `D:/park/tgslot-wt/_qa/new-b-sound/garden/{setup.js,entry.ts,build.mjs,run.mjs,analyze.py,mixcheck.py}`, 측정 로그 `final_sfx.txt`·`final_bgm.txt`·`final_mix.txt`.
+- 스템·믹스: `.../garden/wav/garden_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 정원 전용 `cue_<pop0|pop3|pop6|pop8|drop|grow5|grow6|grow7|bloom0|bloom1|bloom2|sun0|sun2|water>.wav`, BGM `bgm_garden_{base,free}.wav`(50초), 믹스 `mix_garden_{mix,sfx,duck}.wav`.

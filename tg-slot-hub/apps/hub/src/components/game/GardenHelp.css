@@ -1,0 +1,215 @@
+.hub-garden-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+}
+
+.hub-garden-help__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hub-garden-help__tab {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--hub-radius-sm);
+  border: 1px solid var(--hub-border);
+  background: var(--hub-secondary-bg);
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hub-garden-help__tab--active {
+  color: #1c3a25;
+  background: linear-gradient(180deg, #a9e3bd, #6cc08b);
+  border-color: #cdeee0;
+}
+
+.hub-garden-help__page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+}
+
+.hub-garden-help__row,
+.hub-garden-help__grow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--hub-space-sm);
+  flex-wrap: wrap;
+}
+
+.hub-garden-help__grow {
+  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.hub-garden-help__arrow {
+  align-self: center;
+  color: var(--hub-text-sub);
+  font-weight: 800;
+}
+
+.hub-garden-help__figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-align: center;
+  white-space: pre-line;
+}
+
+/* 정사각 칸: 가로·세로가 같은 px라 판이 찌그러질 수 없다. */
+.hub-garden-help__board {
+  display: grid;
+  grid-template-columns: repeat(var(--hub-garden-help-size), var(--hub-garden-help-cell));
+  grid-auto-rows: var(--hub-garden-help-cell);
+  gap: 1px;
+  padding: 2px;
+  border-radius: 6px;
+  background: color-mix(in srgb, #7a5236 55%, var(--hub-secondary-bg));
+  border: 1px solid var(--hub-border);
+}
+
+.hub-garden-help__cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: rgba(251, 247, 238, 0.18);
+  overflow: hidden;
+}
+
+.hub-garden-help__cell img {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+}
+
+.hub-garden-help__cell-text {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--hub-text);
+}
+
+.hub-garden-help__cell[data-mark='hit'] {
+  outline: 2px solid var(--hub-gold-light);
+  outline-offset: -2px;
+  background: rgba(244, 217, 138, 0.38);
+}
+
+.hub-garden-help__cell[data-mark='new'] {
+  outline: 2px solid #8fd7a6;
+  outline-offset: -2px;
+  background: rgba(143, 215, 166, 0.3);
+}
+
+.hub-garden-help__seed-dot {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 38%;
+  height: 38%;
+  border-radius: 50%;
+  border: 1px solid #fbf7ee;
+}
+
+.hub-garden-help__seed-dot--big {
+  position: static;
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+
+.hub-garden-help__seed-dot[data-tier='0'] {
+  background: #7fcf8e;
+}
+.hub-garden-help__seed-dot[data-tier='1'] {
+  background: #f6a6c1;
+}
+.hub-garden-help__seed-dot[data-tier='2'] {
+  background: #ff8fa3;
+}
+.hub-garden-help__seed-dot[data-tier='3'] {
+  background: #ffb347;
+}
+.hub-garden-help__seed-dot[data-tier='4'] {
+  background: #ffd23f;
+}
+
+.hub-garden-help__tiers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-garden-help__tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+  min-width: 0;
+}
+
+.hub-garden-help__tier-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.hub-garden-help__tier-value {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  color: var(--hub-gold-light);
+}
+
+.hub-garden-help__tier-name {
+  font-size: 10px;
+  color: var(--hub-text-sub);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.hub-garden-help__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text);
+}
+
+.hub-garden-help__list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-garden-help__list-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}

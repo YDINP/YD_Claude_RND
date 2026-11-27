@@ -1,6 +1,7 @@
 import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import { rouletteSections } from './rouletteStats.js'
 import { forgeSections } from './forgeStats.js'
+import { gardenSections } from './gardenStats.js'
 import type {
   AuditResult,
   BoardReport,
@@ -714,6 +715,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
   }
   if (dist.roulette !== undefined) sections.push(...rouletteSections(dist.roulette))
   if (dist.forge !== undefined) sections.push(...forgeSections(dist.forge))
+  if (dist.garden !== undefined) sections.push(...gardenSections(dist.garden))
 
   if (dist.precision !== null) {
     const sigma = dist.precision.stdErr * Math.sqrt(dist.precision.spins)

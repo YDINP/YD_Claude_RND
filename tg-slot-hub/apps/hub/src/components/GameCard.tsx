@@ -21,6 +21,8 @@ export function specLabel(
   game: GameSummary & { payModel?: 'lines' | 'ways' | 'cluster' | 'anywhere'; minCluster?: number },
   locale: Locale = 'en',
 ): string {
+  // 자라는 정원은 판이 4×4에서 8×8까지 자란다 — 물리 격자 «8×8»을 사양으로 내세우지 않는다.
+  if (game.growBoard === true) return t(locale, 'gardenCardTagline')
   const grid = `${game.reels}×${game.rows}`
   const model = game.payModel ?? (game.lines === 0 ? 'cluster' : game.lines >= 100 ? 'ways' : 'lines')
   if (model === 'anywhere') return `${grid} · ${t(locale, 'specAnywhere', { n: game.minCluster ?? 8 })}`

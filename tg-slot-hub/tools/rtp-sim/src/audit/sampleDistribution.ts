@@ -10,6 +10,8 @@ import { RouletteAccumulator, buildRouletteReport } from './rouletteStats.js'
 import type { RouletteAccumulatorData } from './rouletteStats.js'
 import { ForgeAccumulator, buildForgeReport } from './forgeStats.js'
 import type { ForgeAccumulatorData } from './forgeStats.js'
+import { GardenAccumulator, buildGardenReport } from './gardenStats.js'
+import type { GardenAccumulatorData } from './gardenStats.js'
 import {
   Accumulators,
   comboCount,
@@ -85,6 +87,8 @@ export interface SampleState {
   roulette?: RouletteAccumulatorData | null
   /** 화로 배율 줄 팩만. 없던 시절 상태와 섞여도 되게 선택 필드다. */
   forge?: ForgeAccumulatorData | null
+  /** 자라는 정원 팩만. 없던 시절 상태와 섞여도 되게 선택 필드다. */
+  garden?: GardenAccumulatorData | null
   bucketCounts: number[]
   bucketMultiplier: number[]
   hits: number
@@ -142,6 +146,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
   const board = math.boardBonus === undefined ? null : new BoardAccumulator(math)
   const roulette = math.stageRoulette === undefined ? null : new RouletteAccumulator(math)
   const forge = math.forgeRail === undefined ? null : new ForgeAccumulator(math)
+  const garden = math.growBoard === undefined ? null : new GardenAccumulator(math)
   const bucketCounts = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
   const bucketMultiplier = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
 
@@ -185,6 +190,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     board?.observe(round, math.boardBonus?.minPayout ?? 0)
     roulette?.observe(round, totalBet)
     forge?.observe(round, totalBet)
+    garden?.observe(round, totalBet, math)
     if (round.length > 1) triggers += 1
 
     if (roundWin > 0) {
@@ -213,6 +219,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     board,
     roulette,
     forge,
+    garden,
     bucketCounts,
     bucketMultiplier,
     hits,
@@ -270,6 +277,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
   const board = math.boardBonus === undefined ? null : new BoardAccumulator(math)
   const roulette = math.stageRoulette === undefined ? null : new RouletteAccumulator(math)
   const forge = math.forgeRail === undefined ? null : new ForgeAccumulator(math)
+  const garden = math.growBoard === undefined ? null : new GardenAccumulator(math)
   const merged: SampleState = {
     totalBet: first.totalBet,
     spins: 0,
@@ -281,6 +289,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     board,
     roulette,
     forge,
+    garden,
     bucketCounts: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     bucketMultiplier: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     hits: 0,
@@ -301,6 +310,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     if (part.board != null) board?.absorb(part.board)
     if (part.roulette !== null && part.roulette !== undefined) roulette?.absorb(part.roulette)
     if (part.forge != null) forge?.absorb(part.forge)
+    if (part.garden != null) garden?.absorb(part.garden)
     part.bucketCounts.forEach((count, index) => {
       merged.bucketCounts[index] = (merged.bucketCounts[index] ?? 0) + count
     })
@@ -386,6 +396,7 @@ export function finishSample(math: GameMath, state: SampleState): DistributionRe
     report.coinRespin = buildCoinRespinReport(math, state.coinRespin, totalBet)
   }
   if (state.board != null) report.board = buildBoardReport(math, state.board, totalBet)
+  if (state.garden != null) report.garden = buildGardenReport(math, state.garden, totalBet)
   if (state.roulette !== null && state.roulette !== undefined) {
     report.roulette = buildRouletteReport(math, state.roulette, totalBet, state.multiplierSum / Math.max(1, spins))
   }

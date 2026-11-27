@@ -9,6 +9,7 @@
 import type { SoundPreset } from '@tgslot/renderer'
 import { DEEPSEA } from './bgmDeepsea'
 import { FORGE } from './bgmForge'
+import { GARDEN } from './bgmGarden'
 
 /**
  * 허브 오디오가 아는 소리 세트. 공용 `SoundPreset`에 `royal`이 들어오면 이 유니언은 그대로 `SoundPreset`과 같아진다.
@@ -1017,4 +1018,5 @@ export const BGM_STYLES: Record<AudioPreset, BgmStyle> = {
   hanbok: HANBOK,
   idol: IDOL,
   forge: FORGE,
+  garden: GARDEN,
 }

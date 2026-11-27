@@ -36,6 +36,8 @@ export interface RendererDiagnostics {
    * 코인 리스핀 무대의 지금 상태. 코인 리스핀이 없는 팩에는 없다.
    * 라운드를 여러 번 돌려도 `coinFaces`는 상한(64) 아래에, `tentaclesCreated`는 5 이하에 머물고 `liveTweens`는 0으로 돌아와야 한다.
    */
+  /** 정원 장면의 지금 상태. 정원 팩만 있다. 스핀이 끝나면 `covers`·`glows`·`liveTweens`는 0으로 돌아와야 한다. */
+  garden?: { covers: number; badges: number; glows: number; liveTweens: number; seeds: number }
   respin?: {
     /** 지금 캐시에 든 코인 얼굴 장수. */
     coinFaces: number

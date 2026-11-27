@@ -15,7 +15,7 @@ import {
   toSharedFeatures,
   toSharedWinLine,
 } from '../games/engineSpin.js'
-import { DebugNoMatchError, findDebugSeed, isForgePreset, isRoulettePreset } from '../games/debugSpin.js'
+import { DebugNoMatchError, findDebugSeed, isForgePreset, isGardenPreset, isRoulettePreset } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -113,7 +113,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       return c.json({ error: 'This game has no gamble feature, so no gamble outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
     // 연쇄·주문 프리셋도 같다. 그 피처가 없는 팩은 어떤 시드로도 만족될 수 없으니 탐색 없이 거절한다.
-    if (debug?.preset === 'cascade3' && !pack.math.cascade) {
+    if (debug?.preset === 'cascade3' && !pack.math.cascade && !pack.math.growBoard) {
       return c.json({ error: 'This game has no cascade feature, so no cascade outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
     if ((debug?.preset === 'orderRound' || debug?.preset === 'orderComplete') && !pack.math.orderRound) {
@@ -131,6 +131,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     }
     if (debug !== undefined && isForgePreset(debug.preset) && !pack.math.forgeRail) {
       return c.json({ error: 'This game has no forge rail, so no forge outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
+    if (debug !== undefined && isGardenPreset(debug.preset) && !pack.math.growBoard) {
+      return c.json({ error: 'This game has no growing garden, so no garden outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
 
     // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,

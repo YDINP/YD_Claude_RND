@@ -5,6 +5,7 @@
 import type { GameMath, GridPosition, RtpBreakdown, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { RouletteReport } from './rouletteStats.js'
 import type { ForgeReport } from './forgeStats.js'
+import type { GardenReport } from './gardenStats.js'
 
 /** 심볼 또는 그룹 하나가 RTP에 기여하는 몫. */
 export interface ContributionRow {
@@ -185,6 +186,8 @@ export interface DistributionReport {
   roulette?: RouletteReport
   /** 화로 배율 줄 팩의 불씨·화로 가득·프리스핀 통계. 없으면 없다. */
   forge?: ForgeReport
+  /** 자라는 정원 팩의 성장·씨앗·정원 프리스핀 통계. 정원이 없으면 없다. */
+  garden?: GardenReport
 }
 
 /** 코인 리스핀 통계(표본). 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. */

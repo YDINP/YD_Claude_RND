@@ -113,3 +113,32 @@ export {
 } from './rtp.js'
 export { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 export { createSeededRng } from './rng/seeded.js'
+export * from './gardenTypes.js'
+export {
+  GARDEN_MAX_STAGE,
+  applyGardenStep,
+  applyGardenSun,
+  buildGardenGrid,
+  foldGarden,
+  gardenBonusThresholds,
+  gardenBoundsFor,
+  gardenNewCells,
+  gardenScatterPositions,
+  gardenSpinsFor,
+  gardenStageForSize,
+  inGardenBounds,
+  resolveGardenSpin,
+  runGarden,
+  type GardenFold,
+  type GardenRunOutcome,
+  type GardenRunStart,
+} from './garden.js'
+export {
+  GardenSeedEntrySchema,
+  GrowBoardSchema,
+  checkGrowBoard,
+  gardenMaxSpins,
+  gardenMinStripLength,
+  type GardenSeedEntry,
+  type GrowBoardConfig,
+} from './gardenSchema.js'
