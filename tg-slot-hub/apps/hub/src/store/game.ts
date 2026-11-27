@@ -78,8 +78,8 @@ const AUTO_SPIN_DELAY_MS = 1200
  */
 const AUTO_SPIN_INTERVAL_MS = 600
 
-/** 오토스핀이 고를 수 있는 회수 — UI(GameScreen)와 공유한다. 무제한은 제공하지 않는다. */
-export const AUTO_SPIN_COUNTS = [10, 25, 50, 100] as const
+/** 오토스핀이 고를 수 있는 회수 — UI(GameScreen)와 공유한다. Infinity는 무제한(중지·프리스핀·잔액 부족 때만 멈춘다). */
+export const AUTO_SPIN_COUNTS = [10, 25, 50, 100, Infinity] as const
 export type AutoSpinCount = (typeof AUTO_SPIN_COUNTS)[number]
 
 // 세리머니 팝업의 자동 닫힘 시간은 순수 모듈(roundFlow)이 소유한다 — 빅윈 오버레이의 결과
@@ -1420,7 +1420,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startAutoSpin(count) {
-    if (!Number.isFinite(count) || count <= 0) return
+    if (Number.isNaN(count) || count <= 0) return
     const { phase, freeSpins } = get()
     if (phase === 'loading' || phase === 'error') return
 

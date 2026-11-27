@@ -81,11 +81,12 @@ const en = {
   spinSpeedNormal: 'Normal',
   spinSpeedQuick: 'Quick',
   spinSpeedTurbo: 'Turbo',
-  // autospin (10/25/50/100 — no unlimited)
+  // autospin (10/25/50/100/unlimited)
   autoSpin: 'Auto',
   autoSpinTitle: 'Autospin',
   autoSpinHint: 'Stops on free spins, on low coins, or when the count runs out.',
   autoSpinCount: '{n} spins',
+  autoSpinInfinite: 'Unlimited',
   autoSpinStop: 'Stop ({n})',
   // free spins
   freeSpinButton: 'FREE SPIN ({n})',

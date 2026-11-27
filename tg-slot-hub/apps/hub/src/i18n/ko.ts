@@ -82,11 +82,12 @@ const ko: Record<TranslationKey, string> = {
   spinSpeedNormal: '보통',
   spinSpeedQuick: '빠름',
   spinSpeedTurbo: '터보',
-  // autospin (10/25/50/100 — 무제한 없음)
+  // autospin (10/25/50/100/무제한)
   autoSpin: '자동',
   autoSpinTitle: '오토스핀',
   autoSpinHint: '프리스핀에 들어가거나, 코인이 부족하거나, 횟수가 끝나면 자동으로 멈춰요.',
   autoSpinCount: '{n}회',
+  autoSpinInfinite: '무제한',
   autoSpinStop: '중지 ({n})',
   // free spins
   freeSpinButton: '프리스핀 ({n})',

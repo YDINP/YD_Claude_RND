@@ -580,6 +580,10 @@
   gap: var(--hub-space-sm);
 }
 
+.hub-autospin__count:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .hub-autospin__count {
   min-height: var(--hub-touch-min);
   border-radius: var(--hub-radius-sm);
@@ -872,9 +876,8 @@
 }
 
 .hub-paylines__mini-grid {
+  --hub-payline-cell: 9px;
   display: grid;
-  width: 42px;
-  height: 42px;
   gap: 2px;
   padding: 2px;
   background: var(--hub-card-bg);

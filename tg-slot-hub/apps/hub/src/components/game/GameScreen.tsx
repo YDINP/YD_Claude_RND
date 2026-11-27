@@ -2176,7 +2176,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             aria-disabled={curtainUp && phase !== 'spinning' && !autoSpinning ? true : undefined}
           >
             {autoSpinning
-              ? t('autoSpinStop', { n: autoSpin.remaining })
+              ? t('autoSpinStop', { n: Number.isFinite(autoSpin.remaining) ? autoSpin.remaining : '∞' })
               : phase === 'spinning'
                 ? t('stop')
                 : freeSpins
@@ -2223,7 +2223,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 className="hub-autospin__count"
                 onClick={() => handleAutoSpinPick(count)}
               >
-                {t('autoSpinCount', { n: count })}
+                {Number.isFinite(count) ? t('autoSpinCount', { n: count }) : t('autoSpinInfinite')}
               </button>
             ))}
           </div>
@@ -2525,8 +2525,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       <div
                         className="hub-paylines__mini-grid"
                         style={{
-                          gridTemplateColumns: `repeat(${math.reels}, 1fr)`,
-                          gridTemplateRows: `repeat(${math.rows}, 1fr)`,
+                          gridTemplateColumns: `repeat(${math.reels}, var(--hub-payline-cell))`,
+                          gridTemplateRows: `repeat(${math.rows}, var(--hub-payline-cell))`,
                         }}
                       >
                         {Array.from({ length: math.rows * math.reels }, (_, cellIndex) => {

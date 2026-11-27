@@ -1545,6 +1545,23 @@ describe('game store', () => {
         }
       })
 
+      it('무제한 오토스핀(Infinity)은 판이 지나도 남은 횟수가 줄지 않고 계속 이어진다', async () => {
+        await loadGame()
+        mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'inf' }))
+
+        vi.useFakeTimers()
+        try {
+          useGameStore.getState().startAutoSpin(Infinity)
+          await vi.advanceTimersByTimeAsync(5000)
+          expect(mockedApiSpin.mock.calls.length).toBeGreaterThanOrEqual(3)
+          expect(useGameStore.getState().autoSpin).toEqual({ remaining: Infinity })
+          useGameStore.getState().stopAutoSpin()
+          expect(useGameStore.getState().autoSpin).toBeNull()
+        } finally {
+          vi.useRealTimers()
+        }
+      })
+
       it('닫혀 있을 때 dismissWinCelebration()을 불러도 안전한 무동작이다', () => {
         expect(() => useGameStore.getState().dismissWinCelebration()).not.toThrow()
         expect(useGameStore.getState().winCelebration).toBeNull()
