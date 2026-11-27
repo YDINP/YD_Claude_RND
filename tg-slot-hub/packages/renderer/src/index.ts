@@ -276,3 +276,37 @@ export {
   type ResolvedCelebrationSkin,
   type ResolvedCelebrationTitle,
 } from './celebration.js'
+export {
+  FROST_TIMING,
+  buildFrostPlan,
+  compressFrost,
+  compressFrostStepMs,
+  frostStepDurationMs,
+  frostStepDurations,
+  reachedThreshold,
+  type FrostChainInput,
+  type FrostPlan,
+  type FrostPlanEnd,
+  type FrostPlanStep,
+  type FrostPlayInput,
+  type FrostSpeed,
+  type FrostTiming,
+} from './frost.js'
+export {
+  VOID_SYMBOL,
+  heightOf,
+  inShape,
+  reelOffsetPx,
+  reelWindowRects,
+  shapeCellList,
+  shapeHeights,
+  voidVeilRects,
+  withReelOffsets,
+} from './shapeLayout.js'
+export {
+  anticipatedGroups,
+  buildOrderedSpinPlan,
+  centerStopOrder,
+  isValidStopOrder,
+  shapeScatterCounts,
+} from './stopOrder.js'

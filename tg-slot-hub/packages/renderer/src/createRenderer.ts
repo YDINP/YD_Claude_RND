@@ -9,6 +9,7 @@ import type {
 import type { RendererCore, ResolvedRendererOptions } from './internal.js'
 import type { SpinSpeed } from './timing.js'
 import type { WinLine } from '@tgslot/slot-engine'
+import type { FrostPlayInput } from './frost.js'
 import { DEFAULT_OVERFLOW_X } from './constants.js'
 import { coinFreeInitialStops } from './initialStops.js'
 import { emptyDiagnostics } from './diagnostics.js'
@@ -105,6 +106,10 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
       core?.clearWins()
     },
     endRespin: () => withCore((c) => c.endRespin(), undefined),
+    playFrost: (input: FrostPlayInput) => withCore((c) => c.playFrost(input), undefined),
+    skipFrost: () => {
+      core?.skipFrost()
+    },
     setSpinSpeed: (speed: SpinSpeed) => {
       // 초기화 전에 불러도 잃지 않도록 기억해 뒀다가 준비되면 적용한다.
       pendingSpeed = speed

@@ -1,6 +1,6 @@
 import { Application, Color, Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
-import type { CoinCell, GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { CoinCell, GameMath, GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
 import {
   ACCEL_DISTANCE_RATIO,
   ACCEL_TIME_RATIO,
@@ -63,7 +63,7 @@ import {
   type SpinPlan,
   type SpinSpeed,
 } from '../timing.js'
-import { anticipatedReels } from '../anticipation.js'
+import { anticipatedReels, featureTriggerCount } from '../anticipation.js'
 import { coinAnticipatedReels } from '../coinAnticipation.js'
 import {
   buildRespinPlan,
@@ -191,6 +191,18 @@ import {
 } from './mutationFx.js'
 import { CoinFaceCache, createBadgeTexture } from './coinFace.js'
 import { RespinScene, type RespinHandle } from './respinFx.js'
+import { buildFrostPlan, compressFrost, type FrostPlan, type FrostPlayInput, type FrostSpeed } from '../frost.js'
+import { VOID_SYMBOL, reelWindowRects, replaceVoidCells, shapeHeights, withReelOffsets } from '../shapeLayout.js'
+import {
+  anticipatedGroups,
+  buildOrderedSpinPlan,
+  centerStopOrder,
+  groupDone,
+  groupIndexOf,
+  shapeScatterCounts,
+} from '../stopOrder.js'
+import { drawDiamondBacking } from './diamondBacking.js'
+import { FrostScene } from './frostFx.js'
 
 /** 코인 리스핀 팩이 읽는 `theme.props` 키. 없는 키는 코드로 그린 대체 그림으로 동작한다. */
 const PROP_KEYS = ['coin-small', 'coin-medium', 'coin-large', 'treasure-top', 'tentacle'] as const
@@ -251,7 +263,27 @@ interface Geometry {
 }
 
 class PixiRenderer implements RendererCore {
-  private readonly options: ResolvedRendererOptions
+  /** 얼림 팩은 프리스핀에서 `options.math`의 스트립만 갈아 끼운다(`selectStrips`). 그래서 읽기 전용이 아니다. */
+  private options: ResolvedRendererOptions
+  /** 처음 받은 math. 프리스핀 스트립을 갈아 끼워도 이쪽은 그대로다. */
+  private readonly baseMath: GameMath
+  /** 프리스핀 스트립을 입힌 사본. 처음 쓸 때 한 번 만든다. */
+  private freeMathCache: GameMath | null = null
+  /** 릴별 높이가 다른 판(마름모)이면 높이 목록. 직사각 판은 null이고 아래 모양 코드는 전부 건너뛴다. */
+  private readonly shape: readonly number[] | null
+  /** 릴 정지 순서(묶음). 모양 판에서만 있고 가운데부터면 `[[2],[1,3],[0,4]]`. */
+  private readonly stopOrder: number[][] | null
+  private readonly shapeBacking = new Graphics()
+  private readonly shapeVeil = new Graphics()
+  /** 얼음 덮개 층(콘텐츠 좌표). 승리 오버레이 위, 파티클 아래. */
+  private readonly frostLayer = new Container()
+  /** 오로라 막대 층(캔버스 좌표, 프레임 위). */
+  private readonly frostTop = new Container()
+  private frostScene: FrostScene | null = null
+  private landedReels = new Set<number>()
+  private frostRun = 0
+  private frostSkipped = false
+  private frostActive = false
   private readonly app: Application
   private readonly textures: Map<SymbolId, Texture>
   private readonly coinTexture: Texture
@@ -453,6 +485,14 @@ class PixiRenderer implements RendererCore {
     props: PropTextures = {},
   ) {
     this.options = options
+    this.baseMath = options.math
+    this.shape = shapeHeights(options.math)
+    this.stopOrder =
+      this.shape === null
+        ? null
+        : options.math.ways?.from === 'center'
+          ? centerStopOrder(options.math.reels)
+          : Array.from({ length: options.math.reels }, (_, reel) => [reel])
     this.formatCoin = options.formatCoin ?? ((amount: number): string => amount.toLocaleString('en-US'))
     // 시트 스프라이트 상한은 격자에서 유도한다. 한 심볼이 동시에 점등될 수 있는 최대가
     // 곧 격자 칸 수다 — 4x5 팩 실측 최대 20이 정확히 이 값이었다(2백만 스핀).
@@ -498,6 +538,8 @@ class PixiRenderer implements RendererCore {
     this.contentLayer.addChild(
       // 패널이 맨 먼저다. 릴보다 뒤에 그려져야 심볼이 그 위에 뜬다.
       this.backdropGraphics,
+      this.shapeBacking,
+      this.shapeVeil,
       this.reelsLayer,
       this.maskGraphics,
       this.cascadeOutline,
@@ -505,6 +547,7 @@ class PixiRenderer implements RendererCore {
       this.featureGraphics,
       this.modeGraphics,
       this.winGraphics,
+      this.frostLayer,
       this.fxLayer,
     )
     this.root.addChild(this.backgroundLayer)
@@ -514,6 +557,8 @@ class PixiRenderer implements RendererCore {
     // 베젤 아트는 릴을 살짝 덮어야 안쪽 하이라이트가 살아난다. 릴 위에 둔다.
     // 베젤이 배경을 거의 다 가리므로 반짝임은 그 위로 올려야 보인다. 브라스가 반짝이는 것처럼 읽힌다.
     if (this.frameSprite !== null) this.root.addChild(this.frameSprite, this.sparkleLayer)
+    // 오로라 막대는 프레임 위, 커튼 아래다.
+    this.root.addChild(this.frostTop)
     // 커튼은 프레임·베젤까지 덮어야 전환이 화면 전체를 가리는 것처럼 보인다. 맨 위에 둔다.
     this.root.addChild(this.curtain)
     this.app.stage.addChild(this.root)
@@ -533,6 +578,7 @@ class PixiRenderer implements RendererCore {
       ownedTextures,
     )
     this.respinScene = this.buildRespinScene(props)
+    this.frostScene = this.buildFrostScene()
     this.applyLayout()
     this.observeResize()
     this.warmTransitionClips()
@@ -574,6 +620,12 @@ class PixiRenderer implements RendererCore {
   }
 
   private measureGeometry(): Geometry {
+    const raw = this.measureGeometryRaw()
+    // 릴 높이가 다른 판은 릴별 세로 오프셋을 레이아웃에 실어 셀 좌표 함수가 따라가게 한다. 직사각 판은 그대로다.
+    return this.shape === null ? raw : { ...raw, layout: withReelOffsets(raw.layout, this.shape) }
+  }
+
+  private measureGeometryRaw(): Geometry {
     const el = this.options.container
     const containerWidth = el.clientWidth > 0 ? el.clientWidth : FALLBACK_CONTAINER_WIDTH
     const containerHeight = el.clientHeight > 0 ? el.clientHeight : 0
@@ -668,12 +720,13 @@ class PixiRenderer implements RendererCore {
     this.drawMask()
     this.drawMode()
     this.respinScene?.layout()
+    this.frostScene?.layout()
 
     for (let reel = 0; reel < this.reels.length; reel += 1) {
       const view = this.reels[reel]
       if (view === undefined) continue
       view.root.x = reelLeft(this.layout, reel)
-      view.root.y = 0
+      view.root.y = this.layout.reelOffsets?.[reel] ?? 0
       for (const cell of view.cells) {
         cell.view.x = this.layout.symbolSize / 2
         // 심볼 크기가 바뀌었으니 다음 렌더에서 강제로 다시 적용시킨다.
@@ -703,6 +756,13 @@ class PixiRenderer implements RendererCore {
    * 모양이 매 프레임 같으므로 한 번 그린 그래픽을 그대로 재사용한다.
    */
   private drawBackdrop(): void {
+    if (this.shape !== null) {
+      // 마름모 판: 직사각 패널 대신 칸별 받침판과 서리 막을 그린다.
+      this.backdropGraphics.clear()
+      this.backdropGraphics.visible = false
+      drawDiamondBacking(this.shapeBacking, this.shapeVeil, this.layout, this.shape)
+      return
+    }
     const plan = planReelBackdrop(
       this.options.theme.reelBackdrop,
       this.layout.reelArea,
@@ -719,6 +779,14 @@ class PixiRenderer implements RendererCore {
   private drawMask(): void {
     const { reelArea, radius } = this.layout
     this.maskGraphics.clear()
+    if (this.shape !== null) {
+      // 릴마다 자기 높이만큼만 보인다(가운데 정렬로 내려앉은 창). 이웃 창과 이어 붙어 있다.
+      for (const rect of reelWindowRects(this.layout, this.shape)) {
+        this.maskGraphics.rect(rect.x, rect.y, rect.width, rect.height)
+      }
+      this.maskGraphics.fill({ color: 0xffffff })
+      return
+    }
     this.maskGraphics
       .roundRect(reelArea.x, reelArea.y, reelArea.width, reelArea.height, radius * 0.5)
       .fill({ color: 0xffffff })
@@ -874,6 +942,9 @@ class PixiRenderer implements RendererCore {
     }
     // 동굴이 열려 있으면(지난 리스핀 라운드) 전환 없이 곧장 기본 화면으로 돌아온다.
     this.abortRespin()
+    // 지난 얼림이 남아 있으면 덮개를 걷고 재생을 끊는다. 프리스핀이면 이번 정지 위치가 가리키는 스트립으로 갈아 끼운다.
+    this.abortFrost()
+    this.selectStrips(opts?.frost?.freeSpin)
     if (this.boardHeld) this.releaseHeldBoard()
     this.clearWins()
     this.setSpinningIdle(false)
@@ -884,17 +955,27 @@ class PixiRenderer implements RendererCore {
     this.fadeGridOverride()
     const token = (this.spinToken += 1)
 
-    const plan = buildSpinPlan({
+    const planInput = {
       reels: this.options.math.reels,
       ...(opts?.durationMs === undefined ? {} : { durationMs: opts.durationMs }),
       ...(opts?.stagger === undefined ? {} : { stagger: opts.stagger }),
       ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
       speed: opts?.speed ?? this.spinSpeed,
       reducedMotion: this.options.reducedMotion,
-      anticipation: this.options.math.coinRespin
-        ? coinAnticipatedReels(this.options.math, stops)
-        : anticipatedReels(this.options.math, stops),
-    })
+    }
+    this.landedReels = new Set()
+    const plan =
+      this.stopOrder === null
+        ? buildSpinPlan({
+            ...planInput,
+            anticipation: this.options.math.coinRespin
+              ? coinAnticipatedReels(this.options.math, stops)
+              : anticipatedReels(this.options.math, stops),
+          })
+        : buildOrderedSpinPlan(this.stopOrder, {
+            ...planInput,
+            anticipationGroups: this.shapeAnticipation(this.stopOrder, stops),
+          })
     this.anticipatedPlan = new Set(plan.reels.filter((r) => r.anticipationMs > 0).map((r) => r.reel))
 
     await Promise.all(
@@ -983,10 +1064,27 @@ class PixiRenderer implements RendererCore {
         if (token === this.spinToken && !this.destroyed) {
           this.endAnticipation()
           this.emit({ type: 'reelStop', reel: plan.reel })
-          const next = plan.reel + 1
-          if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) {
-            this.anticipatingReel = next
-            this.emit({ type: 'anticipation', phase: 'start', reel: next })
+          const order = this.stopOrder
+          if (order === null) {
+            const next = plan.reel + 1
+            if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) {
+              this.anticipatingReel = next
+              this.emit({ type: 'anticipation', phase: 'start', reel: next })
+            }
+          } else {
+            // 묶음으로 서는 판: 묶음의 릴이 전부 선 뒤에 다음 묶음의 기대감이 시작된다.
+            this.landedReels.add(plan.reel)
+            const group = groupIndexOf(order, plan.reel)
+            const first = order[group + 1]?.[0]
+            if (
+              first !== undefined &&
+              groupDone(order, group, this.landedReels) &&
+              this.anticipatedPlan.has(first) &&
+              this.skipRequestedToken !== token
+            ) {
+              this.anticipatingReel = first
+              this.emit({ type: 'anticipation', phase: 'start', reel: first })
+            }
           }
         }
         resolve()
@@ -1072,7 +1170,9 @@ class PixiRenderer implements RendererCore {
    * 화면 그리드를 갈아 끼운다. 스트립에 없는 심볼도 이 층을 통해 칸에 앉는다.
    * 다시 그릴 때마다 스트립으로 되돌아가는 것을 막는 유일한 장치다.
    */
-  private applyGridOverride(grid: readonly (readonly SymbolId[])[]): void {
+  private applyGridOverride(source: readonly (readonly SymbolId[])[]): void {
+    // 판 밖 칸(`__void__`)은 변형 층에 앉히지 않는다. 앉히면 다음 스핀에서 그 자리가 창 안으로 흘러 들어온다.
+    const grid = this.shape === null ? source : this.fillVoid(source)
     this.overlay = holdMutationOverlay(
       grid,
       this.reels.map((view) => view.position),
@@ -2275,6 +2375,216 @@ class PixiRenderer implements RendererCore {
     this.endRespinPromise = null
   }
 
+  // ------------------------------------------------------------------ 얼림 / 모양 판
+
+  private buildFrostScene(): FrostScene | null {
+    const config = this.baseMath.frostRespin
+    if (config === undefined) return null
+    const fillers = config.respinStrips.map((strip) => [...new Set(strip)])
+    return new FrostScene({
+      layer: this.frostLayer,
+      topLayer: this.frostTop,
+      cell: (reel, row) => {
+        const cell = this.reels[reel]?.cells[row + 1]
+        return cell === undefined ? null : { view: cell.view, sprite: cell.sprite }
+      },
+      setSymbol: (reel, row, symbol) => {
+        const cell = this.reels[reel]?.cells[row + 1]
+        if (cell !== undefined) this.setCellSymbol(cell, symbol)
+      },
+      getLayout: () => this.layout,
+      getCanvas: () => ({ width: this.geometry.canvasWidth, height: this.geometry.canvasHeight }),
+      fillers,
+      particles: this.particlePool,
+      registry: this.ownedTextures,
+      reducedMotion: this.options.reducedMotion,
+    })
+  }
+
+  /** 프리스핀 팩 math 사본(스트립만 `freeStrips`). */
+  private freeMath(): GameMath {
+    const config = this.baseMath.frostRespin
+    if (config === undefined) return this.baseMath
+    this.freeMathCache ??= { ...this.baseMath, strips: config.freeStrips }
+    return this.freeMathCache
+  }
+
+  /**
+   * 얼림 팩의 프리스핀 판은 정지 위치가 `freeStrips` 기준이다. 스핀을 시작할 때 릴이 읽는 스트립을 그쪽으로 갈아 끼운다.
+   * 바꾸는 순간 서 있던 판은 이미 지나간 결과라 곧 굴러 나간다. 얼림 팩이 아니거나 `freeSpin`이 없으면 아무 일도 없다.
+   */
+  private selectStrips(freeSpin: boolean | undefined): void {
+    if (freeSpin === undefined || this.baseMath.frostRespin === undefined) return
+    const next = freeSpin ? this.freeMath() : this.baseMath
+    if (this.options.math === next) return
+    this.options = { ...this.options, math: next }
+  }
+
+  /** 가운데부터 서는 판의 기대감 묶음. 구슬이 들 수 있는 릴에만 걸고 결과는 바꾸지 않는다. */
+  private shapeAnticipation(order: readonly (readonly number[])[], stops: readonly number[]): number[] {
+    const { math } = this.options
+    const scatter = math.scatter?.symbol
+    if (scatter === undefined) return []
+    const trigger = math.frostRespin?.freeSpins.trigger ?? featureTriggerCount(math)
+    const counts = shapeScatterCounts(math, stops, scatter)
+    return anticipatedGroups(order, counts, trigger, (reel) => math.strips[reel]?.includes(scatter) ?? false)
+  }
+
+  /** 판 밖 칸을 현재 릴 위치의 스트립 심볼로 채운 사본. */
+  private fillVoid(grid: readonly (readonly SymbolId[])[]): SymbolId[][] {
+    return replaceVoidCells(grid, (reel, row) => {
+      const strip = this.options.math.strips[reel]
+      const view = this.reels[reel]
+      if (strip === undefined || strip.length === 0 || view === undefined) return grid[0]?.[reel] ?? ''
+      return strip[wrapIndex(Math.round(view.position) + row, strip.length)] ?? ''
+    })
+  }
+
+  private frostSpeed(): FrostSpeed {
+    return this.options.reducedMotion ? 'reduced' : this.spinSpeed
+  }
+
+  /** 진행 중인 얼림을 끊고 덮개·밝기를 걷는다. 새 스핀·해제가 부른다. */
+  private abortFrost(): void {
+    if (this.frostScene === null) return
+    this.frostRun += 1
+    this.frostActive = false
+    this.frostScene.clear()
+    this.winGraphics.clear()
+  }
+
+  skipFrost(): void {
+    // 두 번째 탭은 무시한다(이미 압축 중이다).
+    if (!this.frostActive || this.frostSkipped) return
+    this.frostSkipped = true
+    this.frostScene?.compress()
+    // 기다리는 중인 연출 타이머도 끝낸다(압축 재생이 곧장 이어진다).
+    this.clearTimers()
+  }
+
+  /**
+   * 얼림을 재생한다: 대상이 «빛남 → 정적 → 얼음» → 얼지 않은 칸만 칸 단위로 다시 돌고 새로 언 칸이 «쩡» → 곱셈식 → 녹음.
+   * 서버가 정한 기록을 그리기만 한다. 끝나면 화면은 서버 `finalGrid`와 같다. 중간에 새 스핀이 끼면 곧장 끊긴다.
+   */
+  async playFrost(input: FrostPlayInput): Promise<void> {
+    const scene = this.frostScene
+    if (scene === null || this.destroyed) return
+    this.clearWins()
+    scene.clear()
+    const run = (this.frostRun += 1)
+    this.frostSkipped = false
+    this.frostActive = true
+    const alive = (): boolean => !this.destroyed && run === this.frostRun
+    let plan: FrostPlan = buildFrostPlan(input, this.frostSpeed())
+    const cells: GridPosition[] = []
+    plan.grid.forEach((line, row) => {
+      line.forEach((symbol, reel) => {
+        if (symbol !== VOID_SYMBOL) cells.push([reel, row])
+      })
+    })
+    const pause = async (ms: number): Promise<void> => {
+      if (this.frostSkipped || ms <= 0) return
+      await this.wait(ms)
+    }
+    const startNext = input.thresholds.find((t) => t > plan.startFrozen.length) ?? null
+
+    try {
+      // ---- 대상 «빛남 → 정적 → 얼음» ----
+      const startEvent = {
+        type: 'frostStart',
+        target: plan.target,
+        tier: plan.tier,
+        count: plan.startFrozen.length,
+        nextThreshold: startNext,
+        positions: plan.startFrozen,
+      } as const
+      this.emit({ ...startEvent, phase: 'start' })
+      this.applyGridOverride(plan.grid)
+      if (!this.frostSkipped && !this.options.reducedMotion) {
+        this.drawWinGlow(plan.startFrozen, '#bfefff')
+        await scene.glow(plan.startFrozen, plan.introGlowMs)
+        if (!alive()) return
+        this.winGraphics.clear()
+        await pause(plan.introHoldMs)
+        if (!alive()) return
+      } else if (this.options.reducedMotion) {
+        // 모션 축소: 움직임 없이 대상 칸만 보여 주고 잠깐 머문다.
+        await pause(plan.introHoldMs + plan.introGlowMs)
+        if (!alive()) return
+      }
+      const frozen = new Set<string>(plan.startFrozen.map(([reel, row]) => `${reel}:${row}`))
+      scene.dimExcept(cells, frozen)
+      // 숫자는 덮개가 앉는 순간부터 오른다(끝 이벤트를 얼기 전에 낸다).
+      this.emit({ ...startEvent, phase: 'end' })
+      await scene.freeze(plan.startFrozen, this.frostSkipped ? 0 : plan.introFreezeMs, 18)
+      if (!alive()) return
+
+      // ---- 다시 돌리기 ----
+      for (let index = 0; index < plan.steps.length; index += 1) {
+        if (this.frostSkipped) plan = compressFrost(plan, index)
+        const step = plan.steps[index]
+        if (step === undefined) continue
+        const duration = step.durationMs
+        const base = {
+          index,
+          total: plan.steps.length,
+          newlyFrozen: step.newlyFrozen,
+          nextThreshold: step.nextThreshold,
+        }
+        this.emit({ type: 'frostStep', phase: 'start', ...base, count: step.frozenBefore, crossed: [] })
+        // 칸 회전: 단계 길이의 약 60%. STOP이면 회전 없이 착지만 보인다.
+        const rolls = step.spinning.map(([reel, row], i) => ({ reel, row, symbol: step.symbols[i] ?? '' }))
+        await scene.roll(rolls, this.frostSkipped ? 0 : duration * 0.6)
+        if (!alive()) return
+        this.applyGridOverride(step.gridAfter)
+        for (const [reel, row] of step.newlyFrozen) frozen.add(`${reel}:${row}`)
+        this.emit({ type: 'frostStep', phase: 'land', ...base, count: step.frozenAfter, crossed: step.crossed })
+        // 새로 언 칸 «쩡»: 칸마다 최대 50ms 간격. 눌러 둔 밝기는 얼린 칸만 풀린다.
+        scene.dimExcept(cells, frozen)
+        const stagger = Math.min(50, Math.max(10, (duration * 0.3) / Math.max(1, step.newlyFrozen.length)))
+        await scene.freeze(step.newlyFrozen, this.frostSkipped ? 0 : Math.min(260, duration * 0.3), stagger)
+        if (!alive()) return
+        // STOP 뒤에는 압축된 단계 길이만큼 착지를 보여 준다(칸 회전은 없다). 평소에는 짧은 숨 고르기뿐이다.
+        await (this.frostSkipped ? this.wait(duration) : pause(this.options.reducedMotion ? duration : duration * 0.08))
+        if (!alive()) return
+        this.emit({ type: 'frostStep', phase: 'end', ...base, count: step.frozenAfter, crossed: step.crossed })
+      }
+
+      // ---- 끝: 곱셈식 · 오로라 · 궁전 완성 · 녹음 ----
+      const end = plan.end
+      const endEvent = {
+        type: 'frostEnd',
+        count: end.count,
+        bonusMultiple: end.bonusMultiple,
+        auroraMultiplier: end.auroraMultiplier,
+        auroraBefore: end.auroraBefore,
+        auroraAfter: end.auroraAfter,
+        auroraUp: end.auroraUp,
+        bonus: end.bonus,
+        palace: end.palace,
+        quiet: end.quiet,
+      } as const
+      this.emit({ ...endEvent, phase: 'start' })
+      const flourish = end.auroraUp && !this.frostSkipped ? scene.aurora(end.auroraMs) : Promise.resolve()
+      await (this.frostSkipped ? this.wait(Math.min(end.durationMs, 400)) : pause(end.durationMs))
+      if (!alive()) return
+      if (end.palace && !this.frostSkipped) await scene.palace(end.palaceMs)
+      await flourish
+      if (!alive()) return
+      await scene.melt(this.frostSkipped ? 0 : end.meltMs)
+      if (!alive()) return
+      // 화면을 서버 판으로 확정한다. 계획이 접은 판과 어긋나도 서버 값이 이긴다.
+      this.applyGridOverride(plan.consistent ? (plan.steps.at(-1)?.gridAfter ?? plan.grid) : plan.finalGrid)
+      this.emit({ ...endEvent, phase: 'end' })
+    } finally {
+      if (run === this.frostRun) {
+        this.frostActive = false
+        scene.clear()
+        this.winGraphics.clear()
+      }
+    }
+  }
+
   // ------------------------------------------------------------- 진행 상태
 
   setMode(mode: RendererMode): void {
@@ -2664,6 +2974,7 @@ class PixiRenderer implements RendererCore {
     this.killRespinTweens()
     // 동굴 무대는 앱(스테이지)이 내려가기 전에 정리한다. 앱이 먼저 지우면 풀이 이미 파괴된 스프라이트를 만진다.
     this.respinScene?.destroy()
+    this.frostScene?.destroy()
     this.coinFaces.clear()
     this.stopAmbient()
     for (const tween of this.idleTweens) tween.kill()
@@ -2717,6 +3028,7 @@ class PixiRenderer implements RendererCore {
         sheets: sheetTextureSnapshot(),
       },
       ...(this.respinScene === null ? {} : { respin: this.respinScene.stats }),
+      ...(this.frostScene === null ? {} : { frost: this.frostScene.stats }),
     }
   }
 }

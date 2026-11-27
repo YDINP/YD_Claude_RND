@@ -8,6 +8,7 @@ import type {
   SpinToOptions,
 } from './types.js'
 import type { WinLine } from '@tgslot/slot-engine'
+import type { FrostPlayInput } from './frost.js'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { RendererMode } from './features.js'
 import type { SpinSpeed } from './timing.js'
@@ -28,6 +29,8 @@ export interface RendererCore {
   skipWins(): void
   clearWins(): void
   endRespin(): Promise<void>
+  playFrost(input: FrostPlayInput): Promise<void>
+  skipFrost(): void
   setSpinSpeed(speed: SpinSpeed): void
   setSpinningIdle(on: boolean): void
   setMode(mode: RendererMode): void

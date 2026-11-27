@@ -58,6 +58,8 @@ export interface SpinPlanInput {
    * 뒤따르는 릴도 그만큼 밀린다. 모션 축소·터보에서는 무시된다.
    */
   anticipation?: readonly number[]
+  /** 기대감 시간 배율(기본 1). 가운데부터 서는 판처럼 기대감이 자주 걸리는 판은 줄여서 쓴다. */
+  anticipationScale?: number
 }
 
 export interface ReelSpinPlan {
@@ -120,7 +122,11 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
   // 터보는 프로파일이 당김을 0으로 두어 같은 자리에서 생략된다.
   const pullUpMs = reduced ? 0 : profile.pullUpMs
 
-  const extraMs = reduced ? 0 : Math.round(ANTICIPATION_EXTRA_MS * (ANTICIPATION_SPEED_SCALE[input.speed ?? DEFAULT_SPIN_SPEED] ?? 1))
+  const extraMs = reduced
+    ? 0
+    : Math.round(
+        ANTICIPATION_EXTRA_MS * (ANTICIPATION_SPEED_SCALE[input.speed ?? DEFAULT_SPIN_SPEED] ?? 1) * (input.anticipationScale ?? 1),
+      )
   const anticipated = new Set(extraMs > 0 ? (input.anticipation ?? []) : [])
 
   const plans: ReelSpinPlan[] = []
