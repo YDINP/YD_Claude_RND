@@ -58,6 +58,8 @@ export type { BoardAccumulatorData } from './boardStats.js'
 export type { CascadeAccumulatorData } from './cascadeStats.js'
 export { CoinRespinAccumulator, buildCoinRespinReport, coinRespinGates } from './coinRespinStats.js'
 export type { CoinRespinAccumulatorData } from './coinRespinStats.js'
+export { GARDEN_GATES, GardenAccumulator, buildGardenReport, gardenGates, gardenSections } from './gardenStats.js'
+export type { GardenAccumulatorData, GardenReport } from './gardenStats.js'
 export {
   ROULETTE_BUCKETS,
   ROULETTE_GATES,

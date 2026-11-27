@@ -15,6 +15,8 @@ import { boardExpectation, computeBoardRtp, parseGameMath } from '@tgslot/slot-e
 import type { GameMath } from '@tgslot/slot-engine'
 import { buildBoardReport, buildCascadeReport, buildCoinRespinReport, buildRouletteReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
 import type { BoardReport, CascadeReport, CoinRespinReport, RouletteReport } from './audit/index.js'
+import { buildGardenReport } from './audit/gardenStats.js'
+import type { GardenReport } from './audit/gardenStats.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
@@ -221,13 +223,16 @@ export interface TuneSummary {
   coinRespin: CoinRespinReport | null
   /** 무대 룰렛 팩만. */
   roulette?: RouletteReport
+  /** 자라는 정원 팩만. */
+  garden?: GardenReport
 }
 
 export function summarize(math: GameMath, state: SampleState): TuneSummary {
   const cascade = state.cascade
   const coinRespin = state.coinRespin ?? null
   const roulette = state.roulette ?? null
-  if (cascade === null && coinRespin === null && roulette === null) {
+  const garden = state.garden ?? null
+  if (cascade === null && coinRespin === null && roulette === null && garden === null) {
     throw new Error('연쇄·코인 리스핀·무대 룰렛 팩이 아니다. tune은 cascade·coinRespin·stageRoulette 설정이 있는 팩 전용이다')
   }
   const n = state.spins
@@ -247,7 +252,20 @@ export function summarize(math: GameMath, state: SampleState): TuneSummary {
     cascade: cascade === null ? null : buildCascadeReport(math, cascade, state.totalBet),
     coinRespin: coinRespin === null ? null : buildCoinRespinReport(math, coinRespin, state.totalBet),
     ...(roulette === null ? {} : { roulette: buildRouletteReport(math, roulette, state.totalBet, rtp) }),
+    ...(garden === null ? {} : { garden: buildGardenReport(math, garden, state.totalBet) }),
   }
+}
+
+function formatGardenSummary(math: GameMath, summary: TuneSummary, g: GardenReport): string {
+  const b = g.breakdown
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
+    `RTP ${p(summary.rtp, 3)} (목표 ${p(math.rtpTarget)}) = 클러스터 ${p(b.baseCluster, 3)} + 씨앗 ${p(b.baseSeedExtra, 3)} + 물뿌리개 ${p(b.baseScatter, 3)} + 프리스핀 ${p(b.freeSpins, 3)} (최저 보장 ${p(b.topUp, 3)})`,
+    `적중률 ${p(summary.hitRate)}  성장 ≥5/6/7/8 ${g.growthAtLeast.map((v) => p(v, 2)).join(' / ')}  P(지속) ${g.continueProbability.toFixed(3)}  평균 연쇄 ${g.meanChain.toFixed(2)}`,
+    `진입 1/${g.entryRate > 0 ? (1 / g.entryRate).toFixed(1) : '-'} (${g.rounds})  평균 ${g.meanPay.toFixed(1)}x 중앙 ≈${g.medianPay.toFixed(0)}x  길이 ${g.meanLength.toFixed(2)} (최장 ${g.maxLength})  리트리거 ${p(g.retriggerPerSpin)} / 최대 ${p(g.maxRetriggerRoundShare, 1)}`,
+    `시작 크기 ${g.meanStartSize.toFixed(2)}  8×8 첫 도달 ${p(g.first8Position, 1)} (도달 ${p(g.reach8Share, 1)})  8×8 스핀 ${p(g.spins8Share, 1)}  햇살 ${g.sunsPerRound.toFixed(2)}  최고 등급 끝 ${p(g.topTierEndShare, 1)}  최저 보장 발동 ${p(g.under10Share, 1)}`,
+    `최대 ${summary.maxWinMultiplier.toFixed(1)}x  σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})`,
+  ].join('\n')
 }
 
 const p = (value: number, digits = 2): string => `${(value * 100).toFixed(digits)}%`
@@ -282,6 +300,7 @@ function formatRouletteSummary(math: GameMath, summary: TuneSummary, r: Roulette
 export function formatSummary(math: GameMath, summary: TuneSummary): string {
   if (summary.coinRespin !== null) return formatCoinRespin(math, summary, summary.coinRespin)
   if (summary.roulette !== undefined) return formatRouletteSummary(math, summary, summary.roulette)
+  if (summary.garden !== undefined) return formatGardenSummary(math, summary, summary.garden)
   const c = summary.cascade
   if (c === null) throw new Error('요약할 연쇄 통계가 없다')
   const b = c.breakdown
