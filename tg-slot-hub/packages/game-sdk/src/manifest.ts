@@ -14,6 +14,8 @@ export const GameManifestSchema = z.object({
   status: z.enum(['live', 'soon', 'hidden']),
   reels: z.number().int().min(1),
   rows: z.number().int().min(1),
+  /** 릴마다 높이가 다른 판(마름모 등)의 릴별 칸 수. 있으면 math.json의 reelHeights와 같아야 한다. 로비 사양 문구가 «3·4·5·4·3»으로 바뀐다. */
+  reelHeights: z.array(z.number().int().min(1)).optional(),
   /** 페이라인 수 또는 ways 수. 클러스터 게임은 0이다. */
   lines: z.number().int().min(0),
   /** 로비 표기용 배당 방식. 있으면 math.json의 payModel과 같아야 한다. */
@@ -64,5 +66,6 @@ export function toGameSummary(manifest: GameManifest): GameSummary {
     minBet,
     maxBet,
     sort: manifest.sort,
+    ...(manifest.reelHeights !== undefined ? { reelHeights: manifest.reelHeights } : {}),
   }
 }
