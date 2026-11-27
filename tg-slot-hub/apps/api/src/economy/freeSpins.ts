@@ -27,6 +27,18 @@ export function toSharedCarry(carry: RoundCarry): SharedRoundCarry {
           },
         }
       : {}),
+    // 화로 배율 줄(volcano-forge). 빠뜨리면 프리스핀 사이 화로 합계가 사라진다.
+    ...(carry.forge
+      ? {
+          forge: {
+            heat: carry.forge.heat,
+            filled: carry.forge.filled,
+            paid: carry.forge.paid,
+            fulls: carry.forge.fulls,
+            bestSpin: carry.forge.bestSpin,
+          },
+        }
+      : {}),
   }
 }
 
@@ -97,9 +109,30 @@ export function wrapFreeSpinsState(previous: FreeSpinsState | null, input: FreeS
 export function freeSpinsSummary(
   previous: FreeSpinsState | null,
   input: { isFreeSpin: boolean; win: number; ended: boolean; features?: readonly FeatureTrigger[] }
-): { total: number; spins: number; ordersCompleted?: number; orderPrizeTotal?: number } | undefined {
+): {
+  total: number
+  spins: number
+  ordersCompleted?: number
+  orderPrizeTotal?: number
+  forgeHeat?: number
+  forgeFulls?: number
+  bestSpin?: number
+} | undefined {
   if (!input.ended || !input.isFreeSpin || !previous) return undefined
   const base = { total: previous.accumulatedWin + input.win, spins: previous.total }
+  const forge = previous.carry?.forge
+  if (forge) {
+    // 마지막 스핀은 nextState가 없어 carry가 사라졌다. 이전 carry에 이 스핀의 화로 결과를 더해 맞춘다.
+    const rail = (input.features ?? []).find(
+      (feature): feature is Extract<FeatureTrigger, { type: 'forgeRail' }> => feature.type === 'forgeRail'
+    )
+    return {
+      ...base,
+      forgeHeat: rail?.heatAfter ?? forge.heat,
+      forgeFulls: forge.fulls + (rail?.fulls.length ?? 0),
+      bestSpin: Math.max(forge.bestSpin, input.win),
+    }
+  }
   const orders = previous.carry?.orders
   if (!orders) return base
   // 마지막 스핀은 nextState가 없어 carry가 이미 사라졌다. 이전 carry에 이 스핀의 완료를 더해 맞춘다.

@@ -15,6 +15,21 @@ export const DEFAULT_DEBUG_MAX_TRIES = 5000
  */
 export const COIN_RESPIN_FULL_MAX_TRIES = 200_000
 
+/**
+ * 화로 배율 줄 프리셋(`forgeEmbers`·`forgeFull`·`forgeRetrigger`·`forgeBig`)의 내부 탐색 상한. 기본 게임 불씨 2개 판이
+ * 약 1/2,500이라 공용 상한으로는 자주 못 찾는다(`coinRespinFull` 선례). 운영 주의는 위와 같다.
+ */
+export const FORGE_MAX_TRIES = 200_000
+
+/** `forgeBig`: 화로 배율 이 값 이상이 곱해진 연쇄 지급이 총 베팅의 `FORGE_BIG_WIN`배 이상. */
+export const FORGE_BIG_MULTIPLIER = 10
+export const FORGE_BIG_WIN = 50
+
+/** 이 프리셋은 화로 배율 줄이 있는 팩에서만 만족될 수 있다. */
+export function isForgePreset(preset: SpinDebugPreset): boolean {
+  return preset === 'forgeEmbers' || preset === 'forgeFull' || preset === 'forgeRetrigger' || preset === 'forgeBig'
+}
+
 /** 총 베팅의 몇 배부터 `bigWin`으로 치는지. */
 const BIG_WIN_MULTIPLIER = 10
 
@@ -117,11 +132,27 @@ export function matchesDebugPreset(
       if (preset === 'rouletteBig') return roulette.total >= BIG_ROULETTE_MULTIPLIER * totalBet
       return true
     }
+    case 'forgeEmbers':
+      return (forgeOf(result)?.embers.length ?? 0) >= 2
+    case 'forgeFull':
+      return (forgeOf(result)?.fulls.length ?? 0) >= 1
+    case 'forgeRetrigger':
+      return isFreeSpin && result.features.some((feature) => feature.type === 'freeSpins' && feature.retrigger)
+    case 'forgeBig': {
+      const rail = forgeOf(result)
+      return rail !== undefined && rail.multiplier >= FORGE_BIG_MULTIPLIER && rail.boostedWin >= FORGE_BIG_WIN * totalBet
+    }
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)
     }
   }
+}
+
+/** 스핀 결과의 화로 배율 줄 피처. 없으면 undefined. */
+function forgeOf(result: SpinResult): Extract<SpinResult['features'][number], { type: 'forgeRail' }> | undefined {
+  for (const feature of result.features) if (feature.type === 'forgeRail') return feature
+  return undefined
 }
 
 /** 스핀 결과의 말판 피처. 말판이 없으면 undefined. */
@@ -171,7 +202,12 @@ export interface DebugSeedSearchResult {
 export function findDebugSeed(params: DebugSeedSearchParams): DebugSeedSearchResult | null {
   const { math, totalBet, state, nonce, preset, createRng } = params
   const isFreeSpin = state !== undefined
-  const maxTries = preset === 'coinRespinFull' ? Math.max(params.maxTries, COIN_RESPIN_FULL_MAX_TRIES) : params.maxTries
+  const maxTries =
+    preset === 'coinRespinFull'
+      ? Math.max(params.maxTries, COIN_RESPIN_FULL_MAX_TRIES)
+      : isForgePreset(preset)
+        ? Math.max(params.maxTries, FORGE_MAX_TRIES)
+        : params.maxTries
 
   for (let tries = 1; tries <= maxTries; tries += 1) {
     const seed = createRoundSeed()
