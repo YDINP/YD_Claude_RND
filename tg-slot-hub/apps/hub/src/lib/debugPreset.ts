@@ -17,7 +17,7 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = ['win', 'bigWin', 'freeSpin
  * - 라운드(프리스핀·주문 카드 라운드)가 이미 도는 중이면 진입 프리셋(`freeSpins`·`orderRound`)은 맞출 수 없다.
  */
 export function presetsFor(
-  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette'>> | null,
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette' | 'frostRespin'>> | null,
   options: { inRound?: boolean } = {},
 ): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
@@ -39,15 +39,21 @@ export function presetsFor(
     ...(hasCoins ? (['coinRespin', 'columnWrap', 'treasure', 'coinRespinFull'] as const) : []),
     ...(hasBoard ? (['boardBonus', 'boardGoal', 'boardTraps', 'boardFork', 'boardBig'] as const) : []),
     ...(hasRoulette ? STAGE_ROULETTE_PRESETS : []),
+    // 얼려 두기 프리스핀 팩: 라운드 밖에서는 진입만, 라운드 중에는 얼림 프리셋 4종만 맞출 수 있다.
+    ...(math.frostRespin !== undefined ? (inRound ? FROST_ROUND_PRESETS : (['frostRound', 'frostTease'] as const)) : []),
   ]
 }
+
+/** 얼려 두기 프리스핀 라운드 중 프리셋. 서버도 frostRespin이 없는 게임에는 409. */
+export const FROST_ROUND_PRESETS = ['frostChain12', 'auroraUp', 'frostFull', 'frostBig'] as const
 
 /** 무대 룰렛 팩 전용 프리셋. 서버도 룰렛이 없는 게임에는 409. */
 export const STAGE_ROULETTE_PRESETS = ['roulette', 'rouletteInner', 'roulette4', 'rouletteGrand', 'rouletteBig'] as const
 
 /** 서버 시드 탐색 횟수. 드문 룰렛 프리셋(1/1,000~1/5,500)은 스키마 상한 20000을 쓴다. */
 export function debugMaxTries(preset: DebugPreset): number {
-  return preset === 'rouletteInner' || preset === 'roulette4' || preset === 'rouletteGrand' || preset === 'rouletteBig'
+  return preset === 'rouletteInner' || preset === 'roulette4' || preset === 'rouletteGrand' || preset === 'rouletteBig' ||
+    preset === 'frostFull' || preset === 'frostBig'
     ? 20000
     : 5000
 }

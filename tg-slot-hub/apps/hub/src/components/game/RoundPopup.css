@@ -199,3 +199,8 @@
   color: var(--hub-gold-light);
 }
 
+
+/* 얼림 라운드 결과: 카드 글자가 샤워(z-index 1) 위에 온다. 카드 배경은 투명이라 파티클은 글자 사이로 계속 보인다. */
+.hub-round-popup--over-fx {
+  z-index: 2;
+}

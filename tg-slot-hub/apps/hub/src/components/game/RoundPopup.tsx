@@ -30,6 +30,7 @@ import {
 } from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import type { CompletedOrder } from '../../game/orders'
+import { FrostSummary, type FrostSummaryData } from './FrostSummary'
 import './RoundPopup.css'
 
 const TITLE_ID = 'hub-round-popup-title'
@@ -47,6 +48,8 @@ interface RoundPopupViewProps {
   skin?: ResolvedCelebrationSkin
   /** 주문 카드 라운드 종료 요약에서 카드 한 장을 읽는 문구(심볼 이름 포함). */
   orderText?: (order: CompletedOrder) => string
+  /** 얼려 두기 프리스핀 라운드 결과. 종료 팝업에만 그린다. */
+  frost?: FrostSummaryData
 }
 
 export function RoundPopupView({
@@ -57,6 +60,7 @@ export function RoundPopupView({
   labels,
   skin,
   orderText,
+  frost,
 }: RoundPopupViewProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -138,6 +142,8 @@ export function RoundPopupView({
     // 심볼·반짝임·배지가 등급 팔레트를 쓴다 — 팔레트는 카드 **위**에 있어야 상속된다.
     `hub-tier--${tier}`,
     reducedMotion ? 'hub-round-popup--still' : '',
+    // 얼림 라운드 결과는 글줄이 많아 내려오는 눈송이가 글자를 덮었다 — 카드를 파티클 위로 올린다.
+    !entry && frost !== undefined ? 'hub-round-popup--over-fx' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -239,6 +245,8 @@ export function RoundPopupView({
               </span>
             </span>
           )}
+
+          {!entry && frost !== undefined && <FrostSummary data={frost} />}
 
           {/* 탭의 뜻이 단계마다 다르니 힌트도 그대로 따라간다 — 굴러가는 중에 "닫혀요"라고
               써 두면 탭했는데 안 닫히는 화면이 된다. */}

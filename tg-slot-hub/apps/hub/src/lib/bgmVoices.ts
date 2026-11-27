@@ -379,7 +379,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol'>, Kit> = {
+const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol' | 'frost'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -1093,7 +1093,81 @@ const IDOL_KIT: Kit = {
   },
 }
 
-const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT }
+// ── aurora-ice-palace (frost) ─────────────────────────────
+
+/** 결정 종: 비정수 배음(1.414·2.236)이 짧게 울린다. 정수 배음 종·글로켄과 갈린다. */
+const ICE_BELL: readonly Partial3[] = [[1, 1, 0.7], [1.414, 0.5, 0.45], [2.236, 0.2, 0.2], [3.7, 0.07, 0.08]]
+const FROST_HARP: PluckSpec = { bright: 0.42, decay: 0.9968, pick: 0.25, seconds: 1.7 }
+
+/** 하프: 줄을 뜯은 직후 밝고 곧 둥글어진다. 음정 휘어짐 없음. */
+function harp(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const { buffer, playbackRate } = k.pluckBuffer(midi, FROST_HARP)
+  const src = k.c.createBufferSource()
+  src.buffer = buffer
+  src.playbackRate.setValueAtTime(playbackRate, t)
+  const g = k.c.createGain()
+  const end = Math.min(t + buffer.duration / playbackRate, t + Math.max(0.3, dur) + 0.5)
+  g.gain.setValueAtTime(vel, t)
+  g.gain.setValueAtTime(vel, Math.max(t, end - 0.25))
+  g.gain.linearRampToValueAtTime(0, end)
+  src.connect(g).connect(out)
+  src.start(t)
+  src.stop(end + 0.01)
+  k.track(end)
+}
+
+/** 높은 FM 대선율: 변조기를 기음의 1.414배로 잡아 얼음처럼 차갑고 비정수인 소리. */
+function iceFm(k: Tools, t: number, f: number, vel: number, out: AudioNode): void {
+  const car = k.c.createOscillator()
+  const mod = k.c.createOscillator()
+  const modGain = k.c.createGain()
+  car.frequency.value = f
+  mod.frequency.value = f * 1.414
+  modGain.gain.setValueAtTime(f * 1.4, t)
+  modGain.gain.setTargetAtTime(f * 0.25, t, 0.18)
+  mod.connect(modGain).connect(car.frequency)
+  const g = k.c.createGain()
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.01)
+  g.gain.setTargetAtTime(0, t + 0.01, 0.34)
+  const end = t + 1.6
+  car.connect(g).connect(out)
+  car.start(t)
+  mod.start(t)
+  car.stop(end)
+  mod.stop(end)
+  k.track(end)
+}
+
+/** 극야의 얼음 궁전: 디튠 톱니 오로라 패드가 깔리고 하프와 결정 종이 떠다닌다. 라운드의 대선율은 높은 FM. */
+const FROST_KIT: Kit = {
+  gain: 0.92,
+  mix: {
+    pad: [0.07, 0.4],
+    keys: [0.13, 0.35],
+    arp: [0.24, 0.35],
+    lead: [0.22, 0.4],
+    counter: [0.2, 0.35],
+    bass: [0.2, 0.04],
+    kick: [0.2, 0.02],
+    hat: [0.08, 0.1],
+    shaker: [0.1, 0.2],
+  },
+  padCutoff: [500, 1900],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sawtooth', 'sawtooth'], detune: 10, attack: 1.5, release: 2 }),
+    keys: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, ICE_BELL, 0.012),
+    arp: (k, t, m, v, d, out) => harp(k, t, m, v, d, out),
+    lead: (k, t, m, v, _d, out) => partials(k, t, mtof(m), v, out, ICE_BELL, 0.03),
+    counter: (k, t, m, v, _d, out) => iceFm(k, t, mtof(m), v, out),
+    bass: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['triangle', 'sine'], detune: 4, attack: 0.35, release: 0.7 }),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 62, 40, v, out, 0.14),
+    hat: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'highpass', freq: 8800, q: 0.7, attack: 0.001, tau: 0.016 }),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { type: 'bandpass', freq: 5200, q: 0.9, attack: 0.03, tau: 0.045 }),
+  },
+}
+
+const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT, frost: FROST_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 

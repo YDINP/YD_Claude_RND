@@ -22,6 +22,7 @@ import {
   winsForDisplay,
   freeSpinMultiplierOf,
   AUTO_SPIN_COUNTS,
+  isFrostPlaying,
 } from '../../store/game'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
@@ -82,6 +83,10 @@ import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
 import { ClusterHelp, OrderRoundHelp } from './ClusterHelp'
 import { CoinRespinLayer } from './CoinRespinLayer'
 import { CoinRespinHelp } from './CoinRespinHelp'
+import { FrostLayer } from './FrostLayer'
+import type { FrostSummaryData } from './FrostSummary'
+import { DiamondBoardHelp, FrostFeatureHelp, FrostPaytableSpecials } from './DiamondHelp'
+import { useFrostStore } from '../../store/frost'
 import { useCoinRespinStore } from '../../store/coinRespin'
 import { formatCoinAmount } from '../../lib/coinFormat'
 import {
@@ -91,6 +96,7 @@ import {
   respinCelebrationSounded,
   stopRespinCelebration,
 } from '../../lib/respinSfx'
+import { playFrostEventSound, resetFrostSfx } from '../../lib/frostSfx'
 import { readRespinReplay, respinFeaturesMatch } from '../../lib/respinReplay'
 import { BoardHelp } from './board/BoardHelp'
 import { StageRoulette, type StageRouletteHandle } from './StageRoulette'
@@ -207,6 +213,8 @@ type LineLabelSource =
   | { kind: 'order'; order: CompletedOrder; key: number }
   /** 무대 룰렛이 끝난 뒤 «무대 룰렛 +N» 한 줄. */
   | { kind: 'roulette'; total: number; key: number }
+  /** 얼림이 끝나 얼음 보너스가 정산된 뒤 «얼음 보너스 +N» 한 줄. */
+  | { kind: 'frost'; bonus: number; key: number }
 
 /**
  * 이긴 칸에 **실제로 놓여 있던** 심볼 id들 — 좌표를 이번 판 그리드에 짚어 읽는다.
@@ -615,6 +623,21 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 반영한다. 남은 횟수만 바뀌는 같은 모드 안의 변화(재발동 포함 — 커튼이 안 뜬다)는 곧장
   // 반영한다(모드 경계가 아니므로 미룰 이유가 없다).
   const [displayedFreeSpins, setDisplayedFreeSpins] = useState(freeSpins)
+  // 얼림 팩: 프리스핀 라운드가 화면에서 끝나면(종료 커튼이 걷힌 뒤) 오로라·칸 수 표시를 모두 지운다. 다음 라운드는 오로라 0단계부터다.
+  // store.freeSpins로 지우면 마지막 판 응답이 오는 순간 오로라가 ×1로 떨어져 마지막 판 얼림 내내 틀린 단계가 보였다.
+  useEffect(() => {
+    if (displayedFreeSpins === null) useFrostStore.getState().resetRound()
+  }, [displayedFreeSpins])
+  // 게임을 나가면 미뤄 둔 얼림 효과음과 표시를 지운다 — 다른 게임이나 재진입에 지난 오로라 단계가 새지 않게.
+  useEffect(
+    () => () => {
+      resetFrostSfx()
+      useFrostStore.getState().resetRound()
+    },
+    [],
+  )
+  // 얼림 팩: 라운드 결과 팝업이 뜨면 당첨 띠를 마지막 판이 아니라 라운드 합계로 바꾼다(다음 스핀 때 지운다).
+  const [frostRoundTotal, setFrostRoundTotal] = useState<number | null>(null)
   /** 마지막으로 살펴본 freeSpins의 "활성 여부(null이 아님)" — 이 값과 달라지는 순간이 모드 경계다. */
   const freeSpinsActiveRef = useRef(freeSpins !== null)
   /** 모드 경계를 넘은 새 값 — 커튼이 다 걷힐 때까지 여기 담아두고 표시는 아직 미룬다. */
@@ -701,7 +724,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 코인 리스핀 팩은 피처 탭을 «코인 리스핀» 탭이 대신한다(와일드 설명은 배당표 쪽에 있다). 탭이 네 개를 넘지 않게 한다.
   const hasRespinPage = Boolean(math?.coinRespin)
   const hasFeaturesPage = Boolean((math?.wild || math?.scatter || ruleSections.length > 0) && !math?.coinRespin)
-  const payRules = math ? payRuleLines(math, t) : []
+  // 가운데부터 지급하는 마름모 판은 «왼쪽부터 이웃한 릴» 규칙 문구가 틀리다 — 전용 도움말(DiamondBoardHelp)이 대신한다.
+  const payRules = math && !math.frostRespin ? payRuleLines(math, t) : []
   // 저장돼 있던 탭이 피처인데 이 게임엔 와일드/스캐터가 없으면 배당표로 되돌린다 — 있지도 않은
   // 탭에 머물러 있을 수 없다. math가 아직 안 왔을 때는 판단을 미룬다(로딩 중 잠깐의 false를
   // "피처 없음"으로 오판해 막 로드된 진짜 값을 보기도 전에 탭을 되돌려버리면 안 된다).
@@ -746,6 +770,17 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   }
 
   function handleRendererEvent(event: RendererEvent): void {
+    // 얼림: 마퀴 띠·오로라 표시용 진행. 보너스가 정산되는 순간 WinStrip 금액이 곱셈식과 함께 오른다.
+    if (event.type === 'frostStart' || event.type === 'frostStep' || event.type === 'frostEnd') {
+      useFrostStore.getState().apply(event)
+      playFrostEventSound(event)
+      if (event.type === 'frostEnd' && event.phase === 'start' && event.bonus > 0) {
+        lineLabelKeyRef.current += 1
+        setLineLabelSource({ kind: 'frost', bonus: event.bonus, key: lineLabelKeyRef.current })
+        tickWinTo(winValueRef.current + event.bonus, event.quiet ? 250 : 600)
+      }
+      return
+    }
     // 코인 리스핀: 표시용 진행(HUD·보물 띠)과 효과음. 전환 이벤트는 아래 공용 처리도 그대로 탄다.
     useCoinRespinStore.getState().apply(event)
     playRespinEventSound(event)
@@ -1018,10 +1053,23 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     void resumeRouletteAction()
   }, [rendererInstance, math, phase, resumeRouletteAction])
 
+  // 얼림 팩 라운드 결과 팝업: 띠의 금액·문구를 라운드 합계로 맞춘다(«얼음 보너스 +N»은 마지막 판 값이라 낡았다).
+  const frostExitTotal = math?.frostRespin !== undefined && roundPopup?.kind === 'freeSpinsExit' ? roundPopup.totalWin : null
+  useEffect(() => {
+    if (frostExitTotal === null) return
+    if (winRafRef.current !== null) cancelAnimationFrame(winRafRef.current)
+    winRafRef.current = null
+    setLineLabelSource(null)
+    setWinRollupValue(frostExitTotal)
+    setFrostRoundTotal(frostExitTotal)
+  }, [frostExitTotal])
+
   // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
     if (phase !== 'spinning') return
     playSpinStart()
+    setFrostRoundTotal(null)
+    useFrostStore.getState().newSpin()
     useCoinRespinStore.getState().reset()
     resetRespinSfx()
     setWinRollupValue(0)
@@ -1070,6 +1118,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    * 최종 금액을 잠깐이라도 보도록 목표값으로 점프시킨다.
    */
   const handleSkipWinsAndAdvance = (): void => {
+    // 얼림 재생 중이면 남은 단계를 압축해 곧장 마친다. 두 번째 누름은 무시한다(다음 스핀으로 넘어가지 않는다).
+    if (isFrostPlaying()) {
+      rendererInstance?.skipFrost?.()
+      return
+    }
     if (winRafRef.current !== null) winSkipRef.current = true
     rendererInstance?.skipWins?.()
     autoAdvanceAfterSkipRef.current = true
@@ -1383,6 +1436,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const rouletteStripActive = roulette !== null && roulette.stage !== 'pre'
   const winStripLabel = rouletteStripActive
     ? t('stageRouletteTotal')
+    : frostRoundTotal !== null
+    ? t('auroraRoundTotalLabel')
     : showGambleActions
     ? t('gamblePendingWinLabel')
     : respinOnBoard
@@ -1441,6 +1496,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   `×${lineLabelSource.multiplier}`,
                   lineLabelSource.stepWin.toLocaleString('en-US'),
                 ].join(' · ')
+              : lineLabelSource.kind === 'frost'
+                ? t('auroraIceBonusLine', { amount: lineLabelSource.bonus.toLocaleString('en-US') })
               : lineLabelSource.kind === 'roulette'
                 ? t('stageRouletteWinAdd', { amount: lineLabelSource.total.toLocaleString('en-US') })
               : lineLabelSource.kind === 'order'
@@ -1466,6 +1523,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               : undefined,
       }
     : null
+
+  // 얼려 두기 프리스핀 라운드 결과(종료 팝업 안). 서버가 라운드 끝 판에 실어 준 요약 + 베팅 대비 배수.
+  const frostSummary: FrostSummaryData | undefined =
+    math?.frostRespin !== undefined && lastResult?.freeSpinsSummary?.frost !== undefined && roundPopup?.kind === 'freeSpinsExit'
+      ? {
+          bestCount: lastResult.freeSpinsSummary.frost.bestCount,
+          auroraLevel: lastResult.freeSpinsSummary.frost.auroraLevel,
+          bonusTotal: lastResult.freeSpinsSummary.frost.bonusTotal,
+          ladder: math.frostRespin.aurora.ladder,
+          ...(lastResult.totalBet > 0 ? { multipleOfBet: roundPopup.totalWin / lastResult.totalBet } : {}),
+        }
+      : undefined
 
   const handleSpin = (): void => {
     if (isBusy || !math) return
@@ -1880,6 +1949,16 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         <CoinRespinLayer math={math} bet={currentBet} props={theme?.props} locale={locale} />
       )}
 
+      {math?.frostRespin && (
+        <FrostLayer
+          math={math}
+          symbols={theme?.symbols}
+          locale={locale}
+          inFreeSpins={displayedFreeSpins !== null}
+          carryLevel={(freeSpins ?? displayedFreeSpins)?.carry?.frost?.level ?? 0}
+        />
+      )}
+
       {isCascade && math?.cascade && (
         <div className="hub-game-screen__cascade-hud">
           <LadderMeter ladder={math.cascade.multiplierLadder} activeIndex={ladderIndex} />
@@ -2033,6 +2112,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           orderText={(order) => orderCardText(order, math, locale, t, true)}
           {...(lastResult?.freeSpinsSummary ? { freeSpinsPlayed: lastResult.freeSpinsSummary.spins } : {})}
           {...(scatterImageUrl === undefined ? {} : { scatterImageUrl })}
+          {...(frostSummary === undefined ? {} : { frost: frostSummary })}
         />
       )}
 
@@ -2345,7 +2425,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
+                {math.frostRespin
+                  ? t('auroraTabBoard')
+                  : isCluster
+                    ? t('tabCluster')
+                    : isWays
+                      ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays')
+                      : t('paylinesTitle')}
               </button>
               {hasRespinPage && (
                 <button
@@ -2370,7 +2456,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   }
                   onClick={() => setHelpPage('features')}
                 >
-                  {t(math.stageRoulette ? 'stageRouletteTitle' : 'tabFeatures')}
+                  {math.frostRespin ? t('auroraTabFreeze') : t(math.stageRoulette ? 'stageRouletteTitle' : 'tabFeatures')}
                 </button>
               )}
               <button
@@ -2396,6 +2482,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   </p>
                   {/* 1개 지급 각주는 표 위에 둔다 — 아래에 두면 390폭에서 스크롤해야 보였다. */}
                   {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
+                  {math.frostRespin && <FrostPaytableSpecials math={math} symbols={theme?.symbols} />}
                   <ul className="hub-paytable__list">
                     {Object.entries(math.paytable).map(([id, payrule]) => {
                       const isGroup = Boolean(math.groups?.[id])
@@ -2461,7 +2548,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       )
                     })}
                   </ul>
-                  {math.wild && !math.coinRespin && (
+                  {math.wild && !math.coinRespin && !math.frostRespin && (
                     <p className="hub-paytable__wild-note">{t(isCluster ? 'wildClusterNote' : math.stageRoulette ? 'stageRouletteWildNote' : wildAllKey)}</p>
                   )}
                   {math.coinRespin && (
@@ -2504,7 +2591,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 </ul>
               )}
 
-              {helpPage === 'paylines' && isWays && (
+              {helpPage === 'paylines' && math.frostRespin && <DiamondBoardHelp math={math} symbols={theme?.symbols} />}
+
+              {helpPage === 'paylines' && isWays && !math.frostRespin && (
                 <div className="hub-paylines__ways-explainer">
                   <p className="hub-sheet__message">
                     {t(math.stageRoulette ? 'stageRouletteWaysExplainer' : 'waysExplainer', { base: math.ways?.base ?? 0 })}
@@ -2518,7 +2607,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 <ClusterHelp math={math} symbols={theme?.symbols} locale={locale} />
               )}
 
-              {helpPage === 'paylines' && !isWays && !isCluster && (
+              {helpPage === 'paylines' && !isWays && !isCluster && !math.frostRespin && (
                 <div className="hub-paylines__grid-list">
                   {math.paylines.map((line, index) => (
                     <div key={index} className="hub-paylines__item">
@@ -2555,8 +2644,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
               {helpPage === 'features' && hasFeaturesPage && (
                 <>
-                  <FeatureRules sections={ruleSections.filter((section) => section.title === t('rulesTitle'))} />
-                  {math.wild && !math.stageRoulette && (
+                  {!math.frostRespin && (
+                    <FeatureRules sections={ruleSections.filter((section) => section.title === t('rulesTitle'))} />
+                  )}
+                  {math.wild && !math.stageRoulette && !math.frostRespin && (
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresWildTitle')}</h3>
                       <p className="hub-paytable__wild-note">
@@ -2570,7 +2661,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       </p>
                     </div>
                   )}
-                  {math.scatter && !math.stageRoulette && (
+                  {math.scatter && !math.stageRoulette && !math.frostRespin && (
                     <div className="hub-features__section">
                       <h3 className="hub-sheet__subtitle">{t('featuresScatterTitle')}</h3>
                       <div className="hub-paytable__row">
@@ -2620,6 +2711,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                     </div>
                   )}
                   <FeatureRules sections={ruleSections.filter((section) => section.title !== t('rulesTitle'))} />
+                  {math.frostRespin && <FrostFeatureHelp math={math} />}
                   {math.orderRound && <OrderRoundHelp math={math} locale={locale} />}
                   {math.boardBonus && <BoardHelp math={math} symbols={theme?.symbols} />}
                   {math.stageRoulette && <RouletteHelp math={math} symbols={theme?.symbols} locale={locale} />}

@@ -44,6 +44,12 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   roulette4: 'stageRouletteDebugStart4',
   rouletteGrand: 'stageRouletteDebugGrand',
   rouletteBig: 'stageRouletteDebugBig',
+  frostRound: 'auroraDebugRound',
+  frostChain12: 'auroraDebugChain12',
+  auroraUp: 'auroraDebugAuroraUp',
+  frostFull: 'auroraDebugFull',
+  frostBig: 'auroraDebugBig',
+  frostTease: 'auroraDebugTease',
 }
 
 interface DebugPanelProps {
@@ -211,6 +217,11 @@ export function DebugPanel({
             )
           })}
           <p className="hub-debug-panel__state-line">{`sheetSpriteKeys: ${diagnostics.sheetSpriteKeys}`}</p>
+          {diagnostics.frost && (
+            <p className="hub-debug-panel__state-line">
+              {`frost: caps ${diagnostics.frost.caps} · pooled ${diagnostics.frost.pooled} · tweens ${diagnostics.frost.tweens} · shards ${diagnostics.frost.shardSets}`}
+            </p>
+          )}
         </section>
       )}
 

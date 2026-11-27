@@ -10,6 +10,7 @@ import type { WinTier } from '@tgslot/renderer'
 import { BGM_STYLES, BgmSequencer, type AudioPreset, type BgmVariant } from './bgm'
 import { createBgmVoices, type BgmVoices } from './bgmVoices'
 import { createDeepseaAudio, type TreasureSize } from './audioDeepsea'
+import { createFrostAudio, type FrostBonusTier } from './audioFrost'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
 
@@ -860,6 +861,8 @@ const CANDY_RECIPE: Recipe = {
 
 /** kraken-cove: 물방울·소나·금화·종. 합성 재료만 넘기고 레시피와 리스핀 전용 소리는 `audioDeepsea.ts`에 있다. */
 const deepsea = createDeepseaAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+/** aurora-ice-palace: 얼음 균열·비정수 배음 결정. 레시피와 얼림 전용 소리는 `audioFrost.ts`에 있다. */
+const frost = createFrostAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds), noiseLoop })
 // ── 한복 야시장 (hanbok-night-market) ─────────────────────
 // 평조 오음(G A B D E) 한 옥타브 반. 가야금(명주실 줄)·해금(활)·대금(숨)·장구·꽹과리·징으로 만든다.
 // shrine 의 고토는 미야코부시 음계의 날카로운 뜯는 현이었다 — 여기는 장조 오음의 부드러운 현이고,
@@ -1729,6 +1732,7 @@ const RECIPES: Record<AudioPreset, Recipe> = {
   candy: CANDY_RECIPE,
   royal: ROYAL_RECIPE,
   deepsea: deepsea.recipe,
+  frost: frost.recipe,
   hanbok: HANBOK_RECIPE,
   idol: IDOL_RECIPE,
 }
@@ -1995,6 +1999,49 @@ export function playSettleTick(progress: number): void {
 export function playTopTreasure(): void {
   const c = live()
   if (c) deepsea.cues.topTreasure(c)
+}
+
+// ── 얼림 (aurora-ice-palace) ───────────────────────────────
+// 음색은 `audioFrost.ts`의 frost 프리셋이다. 이 소리들은 얼림 게임에서만 불린다. 언제 어느 소리를 낼지는 `frostSfx.ts`.
+
+export function playFrostStart(): void {
+  const c = live()
+  if (c) frost.cues.freezeStart(c)
+}
+
+export function playFrostLand(count: number): void {
+  const c = live()
+  if (c) frost.cues.freezeLand(c, count)
+}
+
+export function playFrostTurn(): void {
+  const c = live()
+  if (c) frost.cues.turnTick(c)
+}
+
+export function playFrostGauge(): void {
+  const c = live()
+  if (c) frost.cues.gauge(c)
+}
+
+export function playFrostBonus(tier: FrostBonusTier): void {
+  const c = live()
+  if (c) frost.cues.bonusReveal(c, tier)
+}
+
+export function playAuroraRise(): void {
+  const c = live()
+  if (c) frost.cues.auroraRise(c)
+}
+
+export function playFrostPalace(): void {
+  const c = live()
+  if (c) frost.cues.palace(c)
+}
+
+export function playFrostThaw(): void {
+  const c = live()
+  if (c) frost.cues.thaw(c)
 }
 
 // ── 무대 룰렛 (idol-stage-live) ────────────────────────────

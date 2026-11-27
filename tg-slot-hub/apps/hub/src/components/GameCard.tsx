@@ -21,7 +21,7 @@ export function specLabel(
   game: GameSummary & { payModel?: 'lines' | 'ways' | 'cluster'; minCluster?: number },
   locale: Locale = 'en',
 ): string {
-  const grid = `${game.reels}×${game.rows}`
+  const grid = game.reelHeights !== undefined ? game.reelHeights.join('·') : `${game.reels}×${game.rows}`
   const model = game.payModel ?? (game.lines === 0 ? 'cluster' : game.lines >= 100 ? 'ways' : 'lines')
   if (model === 'cluster') return `${grid} · ${t(locale, 'specCluster', { n: game.minCluster ?? 5 })}`
   if (model === 'ways') return `${grid} · ${t(locale, 'specWays', { n: game.lines })}`

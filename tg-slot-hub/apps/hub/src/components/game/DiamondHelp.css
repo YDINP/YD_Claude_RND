@@ -1,0 +1,178 @@
+/* 마름모 판 도움말 — 칸은 전부 정사각(aspect-ratio: 1)이라 찌그러지지 않는다. */
+.hub-diamond-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-md);
+  min-width: 0;
+}
+
+.hub-diamond-help__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+}
+
+.hub-diamond-help__figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--hub-space-md);
+  justify-items: center;
+}
+
+.hub-diamond-help__figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-align: center;
+}
+
+.hub-diamond-help__figure--small {
+  max-width: 150px;
+}
+
+.hub-diamond-help__figure:not(.hub-diamond-help__figure--small) {
+  max-width: 200px;
+  align-self: center;
+}
+
+.hub-diamond-help__board {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+}
+
+.hub-diamond-help__reel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* 칸은 열 폭 기준 정사각이다(aspect-ratio). 열은 세로 가운데 정렬이라 높이 4 릴은 반 칸 내려앉는다. */
+.hub-diamond-help__cell {
+  aspect-ratio: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+  box-sizing: border-box;
+  font-size: 10px;
+  color: #07203a;
+}
+
+.hub-diamond-help__cell b {
+  font-weight: 900;
+  line-height: 1;
+}
+
+.hub-diamond-help__cell[data-state='win'] {
+  background: linear-gradient(180deg, #ffe9a3, #d8a94a);
+  border-color: #fff3c8;
+}
+
+.hub-diamond-help__cell[data-state='hit'] {
+  background: color-mix(in srgb, #d8a94a 40%, var(--hub-secondary-bg));
+  border-color: color-mix(in srgb, #d8a94a 60%, var(--hub-border));
+}
+
+.hub-diamond-help__cell[data-state='ice'] {
+  background: linear-gradient(180deg, #d4f4ff, #6cb9ea);
+  border-color: #eafaff;
+}
+
+.hub-diamond-help__steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--hub-space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-diamond-help__steps li {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.hub-diamond-help__step-no {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--hub-gold);
+  color: #1a1203;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.hub-diamond-help__table-wrap {
+  overflow-x: auto;
+}
+
+.hub-diamond-help__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--hub-font-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-diamond-help__table th,
+.hub-diamond-help__table td {
+  padding: 5px 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--hub-border);
+  color: var(--hub-text);
+}
+
+.hub-diamond-help__table thead th {
+  color: var(--hub-text-sub);
+  font-weight: 700;
+}
+
+.hub-diamond-help__table tbody th {
+  text-align: left;
+  font-weight: 700;
+  color: #bfefff;
+  white-space: nowrap;
+}
+
+/* 배당표 맨 위 특수 그림 두 줄(와일드·오로라 구슬) — 아래 일반 배당표와 한 칸 띄운다. */
+.hub-diamond-help__specials {
+  margin-bottom: var(--hub-space-md);
+}
+
+.hub-diamond-help__special-rule {
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  line-height: 1.4;
+}
+
+/* 문장 앞에 그 그림을 붙인 줄. */
+.hub-diamond-help__icon-line {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+}
+
+.hub-diamond-help__icon-line > img,
+.hub-diamond-help__icon-line > .hub-paytable__symbol-fallback {
+  flex: none;
+}
