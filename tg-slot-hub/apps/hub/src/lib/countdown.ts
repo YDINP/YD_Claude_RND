@@ -3,6 +3,8 @@
  * 1초 간격으로 갱신한다. target이 null이면(이미 수령 가능 등) 타이머를 돌리지 않는다.
  */
 import { useEffect, useState } from 'react'
+import type { Locale } from '@tgslot/shared'
+import { t as translate } from '../i18n'
 
 function remainingMs(targetIso: string | null): number {
   if (!targetIso) return 0
@@ -38,6 +40,20 @@ export function formatCountdown(ms: number): string {
     return `${hours}:${String(minutes).padStart(2, '0')}`
   }
   return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+/**
+ * 남은 시간을 «N일 M시간» / «H시간 M분» / «M분»으로 포맷한다(리더보드 주간 마감처럼 긴 카운트다운용).
+ * 1일 이상이면 일·시간, 1시간 이상이면 시간·분, 그 밑은 분(0분이어도 «0분»)이다. 분 이하는 올림하지 않고 버린다.
+ */
+export function formatRemainingLong(ms: number, locale: Locale): string {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60_000))
+  const days = Math.floor(totalMinutes / 1440)
+  const hours = Math.floor((totalMinutes % 1440) / 60)
+  const minutes = totalMinutes % 60
+  if (days >= 1) return translate(locale, 'durationDaysHours', { d: days, h: hours })
+  if (hours >= 1) return translate(locale, 'durationHoursMinutes', { h: hours, m: minutes })
+  return translate(locale, 'durationMinutes', { m: minutes })
 }
 
 /**

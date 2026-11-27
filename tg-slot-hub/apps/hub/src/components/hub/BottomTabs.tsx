@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import { useRoute, navigateToLobby, navigateToMissions, navigateToLeaderboard, type Route } from '../../router'
 import { useT } from '../../i18n'
+import { useHubStore, unclaimedMissionCount } from '../../store/hub'
 import './BottomTabs.css'
 
 interface Tab {
@@ -16,6 +17,7 @@ interface Tab {
 export function BottomTabs(): ReactNode {
   const t = useT()
   const route = useRoute()
+  const unclaimed = useHubStore(unclaimedMissionCount)
 
   const tabs: Tab[] = [
     { name: 'lobby', label: t('tabLobby'), icon: '🎰', onClick: navigateToLobby },
@@ -35,6 +37,11 @@ export function BottomTabs(): ReactNode {
         >
           <span className="hub-bottom-tabs__icon" aria-hidden="true">
             {tab.icon}
+            {tab.name === 'missions' && unclaimed > 0 && (
+              <span className="hub-bottom-tabs__badge" data-testid="missions-badge">
+                {unclaimed > 9 ? '9+' : unclaimed}
+              </span>
+            )}
           </span>
           <span className="hub-bottom-tabs__label">{tab.label}</span>
         </button>

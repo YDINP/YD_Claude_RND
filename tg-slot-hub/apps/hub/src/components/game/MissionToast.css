@@ -1,0 +1,59 @@
+.hub-mission-toast {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 34;
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 32px));
+  height: 52px;
+  padding: 0 10px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 12px;
+  background: rgba(24, 18, 40, 0.94);
+  border: 1px solid var(--hub-gold-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  color: var(--hub-text);
+}
+
+.hub-mission-toast__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hub-mission-toast__claim {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--hub-gold);
+  color: #1a1206;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.hub-mission-toast__claim:disabled {
+  opacity: 0.45;
+}
+
+.hub-mission-toast__hint {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--hub-text-sub);
+}
+
+.hub-mission-toast__claimed {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--hub-gold-light);
+  font-variant-numeric: tabular-nums;
+}

@@ -35,3 +35,25 @@
   font-size: 10px;
   font-weight: 700;
 }
+
+.hub-bottom-tabs__icon {
+  position: relative;
+}
+
+.hub-bottom-tabs__badge {
+  position: absolute;
+  top: -6px;
+  left: 100%;
+  margin-left: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
