@@ -110,3 +110,31 @@
 .hub-settings__slider:disabled {
   opacity: 0.4;
 }
+
+/* 이번 세션 — 플레이 시간·게임 손익. 감정을 싣지 않도록 색은 중립(본문색)으로 둔다. */
+.hub-settings__session {
+  padding: var(--hub-space-sm) var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-settings__session-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--hub-space-md);
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text-sub);
+}
+
+.hub-settings__session-row strong {
+  color: var(--hub-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-settings__virtual-note {
+  margin: 0;
+  text-align: center;
+  font-size: var(--hub-font-tiny, 11px);
+  color: var(--hub-text-sub);
+}

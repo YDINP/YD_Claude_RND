@@ -10,6 +10,7 @@ import type { PublicUser } from '@tgslot/shared'
 import { playUiSound } from '../lib/audio'
 import { useSettingsStore, type SettingsLocale, type SpinSpeed } from '../store/settings'
 import { useSessionStore } from '../store/session'
+import { formatPlayTime, formatSigned, usePlaySessionStore } from '../store/playSession'
 import { patchMe } from '../sdk/api'
 import { useT } from '../i18n'
 import { Modal } from './Modal'
@@ -73,6 +74,15 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
   const spinSpeed = useSettingsStore((s) => s.spinSpeed)
   const setSpinSpeed = useSettingsStore((s) => s.setSpinSpeed)
 
+  // 이번 세션 — 플레이 시간은 분 단위로만 바뀌게 구독한다(1초마다 다시 그리지 않는다).
+  const sessionMinutes = usePlaySessionStore((s) => Math.floor(s.visibleMs / 60_000))
+  const sessionNet = usePlaySessionStore((s) => s.spinNet)
+  const playTimeText = formatPlayTime(sessionMinutes * 60_000, {
+    hour: t('playTimeHour'),
+    minute: t('playTimeMinute'),
+    underMinute: t('playTimeUnderMinute'),
+  })
+
   const spinSpeedOptions: { value: SpinSpeed; label: string }[] = [
     { value: 'normal', label: t('spinSpeedNormal') },
     { value: 'quick', label: t('spinSpeedQuick') },
@@ -99,6 +109,18 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
       <h2 id={SETTINGS_TITLE_ID} className="hub-sheet__title">
         {t('settings')}
       </h2>
+
+      <div className="hub-settings__section hub-settings__session" data-testid="settings-session">
+        <span className="hub-settings__label">{t('sessionTitle')}</span>
+        <div className="hub-settings__session-row">
+          <span>{t('sessionPlayTime')}</span>
+          <strong>{playTimeText}</strong>
+        </div>
+        <div className="hub-settings__session-row">
+          <span>{t('sessionNet')}</span>
+          <strong data-testid="settings-session-net">{formatSigned(sessionNet)}</strong>
+        </div>
+      </div>
 
       <div className="hub-settings__section">
         <span className="hub-settings__label">{t('language')}</span>
@@ -199,6 +221,7 @@ export function SettingsModal({ user, onClose }: SettingsModalProps): ReactNode 
         <span className="hub-settings__label">{t('fairnessSectionTitle')}</span>
         <p className="hub-settings__explainer">{t('fairnessExplainer')}</p>
       </div>
+      <p className="hub-settings__virtual-note">{t('virtualCoinsFooter')}</p>
 
       <div className="hub-settings__footer">
         <span>

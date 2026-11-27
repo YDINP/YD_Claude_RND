@@ -627,6 +627,22 @@
   margin-top: 0;
 }
 
+/* «받기»가 있을 때 — 받기는 금색 주 버튼(맨 앞), 앞면/뒷면은 외곽선 보조 버튼. */
+.hub-sheet__reveal.hub-gamble__collect {
+  margin-top: 0;
+  width: 100%;
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  color: #2a1a04;
+}
+
+.hub-gamble-picks--secondary .hub-sheet__reveal,
+.hub-gamble--themed .hub-gamble-picks--secondary .hub-sheet__reveal {
+  background: transparent;
+  border: 1px solid var(--hub-gamble-theme, var(--hub-gold));
+  color: var(--hub-text);
+  text-shadow: none;
+}
+
 .hub-gamble--win .hub-gamble-picks .hub-sheet__reveal:not(:disabled) {
   box-shadow: 0 0 0 1px var(--hub-gamble-glow);
 }

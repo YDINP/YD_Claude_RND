@@ -7,7 +7,7 @@
  * 타이밍/금액/파티클 계산은 `gambleToss.ts`의 순수 함수라 아래에서 따로(렌더 없이) 검증한다.
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { GambleModal } from './GambleModal'
 import {
   ACTIONS_DELAY_MS,
@@ -348,5 +348,29 @@ describe('GambleModal', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Heads' })), {
       timeout: 4000,
     })
+  })
+})
+
+describe('GambleModal 책임 설계 — 받기 주 버튼', () => {
+  it('onCollect가 있으면 받기가 앞에 서는 주 버튼이고, 남은 시간 표기가 없다', () => {
+    const onCollect = vi.fn()
+    const { container } = render(<GambleModal {...baseProps} onCollect={onCollect} pendingWin={50} />)
+    const collect = screen.getByRole('button', { name: /Collect/ })
+    expect(collect).toHaveClass('hub-gamble__collect')
+    expect(collect).toHaveTextContent('50')
+    // 받기가 앞면/뒷면 고르기보다 먼저(위에) 온다.
+    const picks = container.querySelector('.hub-gamble-picks')
+    expect(picks).not.toBeNull()
+    expect(collect.compareDocumentPosition(picks as Element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(picks).toHaveClass('hub-gamble-picks--secondary')
+    expect(container.textContent).not.toMatch(/expire|만료|\d+:\d{2}/i)
+
+    fireEvent.click(collect)
+    expect(onCollect).toHaveBeenCalledTimes(1)
+  })
+
+  it('onCollect가 없으면 받기 버튼을 그리지 않는다(기존 모양 유지)', () => {
+    render(<GambleModal {...baseProps} />)
+    expect(screen.queryByRole('button', { name: /Collect/ })).toBeNull()
   })
 })

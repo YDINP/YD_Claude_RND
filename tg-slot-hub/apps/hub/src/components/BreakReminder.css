@@ -1,0 +1,34 @@
+.hub-break__net {
+  margin: 0;
+  color: var(--hub-text);
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  text-align: center;
+}
+
+.hub-break__hint {
+  margin: 0;
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-sub);
+  text-align: center;
+}
+
+.hub-break__actions {
+  display: flex;
+  gap: var(--hub-space-sm);
+}
+
+.hub-break__actions .hub-sheet__reveal {
+  flex: 1;
+  margin-top: var(--hub-space-sm);
+}
+
+.hub-break__actions .hub-sheet__reveal.hub-break__continue {
+  flex: 1.4;
+}
+
+.hub-break__actions .hub-sheet__reveal.hub-break__lobby {
+  background: transparent;
+  border: 1px solid var(--hub-gold);
+  color: var(--hub-text);
+}

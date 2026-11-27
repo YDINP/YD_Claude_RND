@@ -35,6 +35,8 @@ import './GambleModal.css'
 
 interface GambleModalProps {
   onClose: () => void
+  /** 걸린 금액을 그대로 받는다. 있으면 «받기»가 주 버튼으로 맨 앞에 선다(책임 설계 — 남은 시간 압박은 두지 않는다). */
+  onCollect?: () => void
   onPick: (pick: GambleSide) => void
   /** 서버 응답을 기다리는 동안(코인이 도는 동안) 픽 버튼을 잠그고 닫기를 막는다. */
   flipping: boolean
@@ -73,6 +75,7 @@ interface GambleModalProps {
 
 export function GambleModal({
   onClose,
+  onCollect,
   onPick,
   flipping,
   revealedSide,
@@ -326,7 +329,18 @@ export function GambleModal({
           )}
         </div>
 
-        <div className={`hub-gamble-picks${actionsState}`} aria-busy={isAirborne(phase)} ref={actionsRef}>
+        {onCollect && (
+          <button
+            type="button"
+            className={`hub-sheet__reveal hub-gamble__collect${actionsState}`}
+            onClick={onCollect}
+            disabled={actionsDisabled}
+          >
+            {t('gambleCollect')} · {pendingWin.toLocaleString('en-US')}
+          </button>
+        )}
+
+        <div className={`hub-gamble-picks${onCollect ? ' hub-gamble-picks--secondary' : ''}${actionsState}`} aria-busy={isAirborne(phase)} ref={actionsRef}>
           <button
             type="button"
             className="hub-sheet__reveal"

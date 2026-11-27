@@ -10,6 +10,7 @@ vi.mock('../sdk/api', async () => {
 import { patchMe } from '../sdk/api'
 import { useSessionStore } from '../store/session'
 import { useSettingsStore } from '../store/settings'
+import { usePlaySessionStore } from '../store/playSession'
 import { SettingsModal } from './SettingsModal'
 
 const mockedPatchMe = vi.mocked(patchMe)
@@ -204,5 +205,37 @@ describe('SettingsModal', () => {
     })
 
     expect(onClose).toHaveBeenCalled()
+  })
+})
+
+describe('SettingsModal 이번 세션·고정 안내', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    useSettingsStore.setState({ locale: 'ko' })
+    useSessionStore.setState({
+      status: 'ready',
+      token: 'test-token',
+      user: baseUser,
+      wallet: { coins: 1000, gems: 0 },
+      errorMessage: null,
+      refreshError: null,
+    })
+    usePlaySessionStore.setState({ visibleMs: 65 * 60_000, spinNet: -340, breakStep: 0, lastTickAt: null, hiddenAt: null })
+  })
+
+  it('맨 위에 이번 세션 플레이 시간과 게임 손익(부호 표기)을 보여 준다', () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
+    const session = screen.getByTestId('settings-session')
+    expect(session).toHaveTextContent('이번 세션')
+    expect(session).toHaveTextContent('1시간 5분')
+    expect(screen.getByTestId('settings-session-net')).toHaveTextContent('\u2212340')
+    // 모달 안 첫 칸이다(언어보다 위).
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.querySelector('.hub-settings__section')).toBe(session)
+  })
+
+  it('공정성 아래에 가상 코인·현금 가치 없음·성인용 한 줄이 고정으로 있다', () => {
+    render(<SettingsModal user={baseUser} onClose={() => {}} />)
+    expect(screen.getByText('가상 코인 전용 · 현금 가치 없음 · 성인용')).toBeInTheDocument()
   })
 })

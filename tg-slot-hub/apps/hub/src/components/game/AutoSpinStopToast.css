@@ -1,0 +1,22 @@
+.hub-autospin-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  z-index: 34;
+  box-sizing: border-box;
+  max-width: min(360px, calc(100vw - 24px));
+  width: max-content;
+  text-wrap: balance;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(24, 18, 40, 0.94);
+  border: 1px solid var(--hub-gold-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  color: var(--hub-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
