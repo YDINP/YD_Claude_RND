@@ -1,0 +1,161 @@
+{
+  "game": "volcano-forge",
+  "concept": "Volcano Forge: bright casual chunky clay-like 3D weapons and gems in a lava forge, warm rim light from below. 6x5 anywhere-pays board in a 1024x1024 frame of black iron, backdrop is a cheerful volcano forge. Low symbols are told apart by silhouette and colour: ruby round red, crystal tall blue columns, horseshoe U silver, ingot flat bar grey, coal lumpy black.",
+  "stylePrefix": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — ",
+  "negative": "photorealistic photography, text, letters, numbers, random glyphs, watermark, signature, faces, hands, fingers, people, busy cluttered background, cropped edges, multiple duplicate objects, baked-in drop shadow, diagonal glare streaks across the image, cheap clip-art look",
+  "assets": [
+    {
+      "id": "sword",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a short broad flame sword standing diagonally, blade glowing orange with flowing flame grain, chunky golden crossguard, the most ornate symbol, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/sword.webp",
+      "outSize": 512
+    },
+    {
+      "id": "hammer",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a blacksmith hammer with a thick square iron head glowing red-hot at the face, short wooden handle wrapped in leather, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/hammer.webp",
+      "outSize": 512
+    },
+    {
+      "id": "shield",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a round iron shield with a raised central boss and a lava-red painted rim with rivets, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/shield.webp",
+      "outSize": 512
+    },
+    {
+      "id": "helmet",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a rounded steel helmet with cheek guards, warm reflected lava light on the dome, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/helmet.webp",
+      "outSize": 512
+    },
+    {
+      "id": "ruby",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a round faceted ruby gemstone, deep crimson with a warm inner glow, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/ruby.webp",
+      "outSize": 512
+    },
+    {
+      "id": "crystal",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a cluster of three upright pale sky blue crystal columns on a tiny rock base, clearly cool blue not red, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/crystal.webp",
+      "outSize": 512
+    },
+    {
+      "id": "horseshoe",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a silver horseshoe standing upright in a U shape with nail holes, shiny bright silver, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/horseshoe.webp",
+      "outSize": 512
+    },
+    {
+      "id": "ingot",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a single trapezoid blue-grey iron ingot bar seen from 3/4, dull matte steel, a flat bar shape clearly different from a U shape, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/ingot.webp",
+      "outSize": 512
+    },
+    {
+      "id": "coal",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a lumpy black coal chunk with glowing orange cracks and a bright warm rim light so it reads on dark backgrounds, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/coal.webp",
+      "outSize": 512
+    },
+    {
+      "id": "anvil",
+      "kind": "symbol",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a heavy dark iron anvil, the ONLY wide low silhouette, a small bright flame dancing on its flat top, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/anvil.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "prompt": "Front-on elevation view (not 3/4 top-down), full-bleed SQUARE 1:1 artwork with no isolated chroma background around the frame itself — a richly rendered chunky stylized 3D illustration with soft clay-like shading (NOT flat vector, NOT simple stripes) of a volcano forge slot cabinet frame: black iron bands with rivets, warm lava rim light, small dark iron corner blocks, a low stone base. FILL THE WHOLE CANVAS: the frame artwork touches all four canvas edges, there is NO empty margin or empty space outside the frame on any side, the top marquee starts at the very top edge and the stone base ends at the very bottom edge. EXACT LAYOUT: the reel window is a rectangle spanning x 2% to 98% and y 10% to 90% of the canvas, i.e. 96% of the width by 80% of the height, a window only 1.2 times WIDER than it is tall (6:5, a TALL window: 960 px wide by 800 px tall on a 1000 px canvas, NOT a wide panorama). It is filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel, NO gradient and NO ornament inside it, bordered by only a hairline thin dark iron rim just outside the green. Reel window interior must be pure flat #00FF00, nothing painted inside — no white, no glass, no reflection, no grid lines, no symbols. THIN TOP BAND: above the window, only y 0% to 10% holds a low flat-topped black iron marquee strip with a single row of small round flame lanterns that sit INSIDE the strip (never taller than the strip, straight flat top edge, no high arch) and NO text. THIN BOTTOM BAND: below the window, only y 90% to 100% holds a short low rough stone base with a soft ambient shadow, no text. SIDES: the left and right rails are extremely slim black iron strips, each at most 2% of the canvas width (x 0%-2% and x 98%-100%), no big pillars. Overall symmetrical, centered, no characters, no diagonal light streaks. CRITICAL PROPORTION: the window is a WIDE landscape rectangle, 96% of the canvas width and 80% of the canvas height, so a grid of 6 columns by 5 rows of square cells fits it edge to edge with no leftover space; all decorative bulk lives only in the thin top band and the thin bottom band, never at the sides, and the green window must NOT shrink into a small inner rectangle surrounded by thick ornament.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the inside of a cheerful volcano forge seen softly out of focus: warm dark stone walls, glowing lava rivers far below at the bottom corners, hanging chains and racks of finished weapons as soft dark silhouettes along the left and right edges, deep brown-maroon (#3a2620) in the centre band where the reels sit, faint orange glow from below. Soft and low contrast in the centre, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, calm uncluttered composition, no characters, no readable text, no sharp details competing for attention, no diagonal light beams or god rays, no light streaks.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the great forge hearth at full blaze seen softly out of focus: a huge furnace mouth roaring orange and yellow at the top, big leather bellows at the sides, glowing sparks drifting up, brighter and hotter than a calm forge, lava orange (#ff7a1a) and ember yellow (#ffd23f) light fading to dark brown-maroon (#3a2620) in the centre band where the reels sit. Soft focus, mid contrast, a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, no characters, no readable text, no sharp details competing for attention, no diagonal light beams or god rays, no light streaks.",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a red-hot flame sword and a smith hammer bursting out of a glowing 6 by 5 board of weapon icons, glowing yellow embers flying up into a row of four round furnace slots with the first three lit orange, set in a bright warm volcano forge with lava glow, lava orange (#ff7a1a) and ember yellow (#ffd23f) on dark iron (#2b2f3a), bright and vivid, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no numbers, no clutter, no diagonal light streaks.",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640
+    },
+    {
+      "id": "ember",
+      "kind": "thumb",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a single glowing ember orb, bright yellow core fading to orange, tiny flame wisps on top, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/ember.webp",
+      "outSize": 512
+    },
+    {
+      "id": "furnace-slot",
+      "kind": "thumb",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a small round iron furnace mouth seen front-on, dark empty inside, riveted black iron ring, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/furnace-slot.webp",
+      "outSize": 256
+    },
+    {
+      "id": "bellows",
+      "kind": "thumb",
+      "prompt": "Bright casual mobile slot game icon, chunky stylized 3D render with soft clay-like shading, warm lava rim light from below and a soft key light from the top-left, palette of lava orange (#ff7a1a), ember yellow (#ffd23f), magma red (#e8432e), dark iron (#2b2f3a), steel grey (#8a94a6) and cream highlights (#fff3e0), bold simple silhouette that reads at 58px, no diagonal light streaks, no watermark, no baked-in drop shadow, premium mobile slot game asset quality — a leather and wood blacksmith bellows, side view, no hands, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill). No text, no letters, no numbers anywhere on the object.",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/props/bellows.webp",
+      "outSize": 512
+    }
+  ]
+}

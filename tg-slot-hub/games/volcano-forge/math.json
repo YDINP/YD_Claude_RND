@@ -1,0 +1,181 @@
+{
+  "id": "volcano-forge",
+  "reels": 6,
+  "rows": 5,
+  "payModel": "anywhere",
+  "symbols": [
+    {
+      "id": "sword",
+      "name": {"en": "Flame Sword", "ko": "불꽃 검"}
+    },
+    {
+      "id": "hammer",
+      "name": {"en": "Smith Hammer", "ko": "대장장이 망치"}
+    },
+    {
+      "id": "shield",
+      "name": {"en": "Round Shield", "ko": "둥근 방패"}
+    },
+    {
+      "id": "helmet",
+      "name": {"en": "Helmet", "ko": "투구"}
+    },
+    {
+      "id": "ruby",
+      "name": {"en": "Ruby", "ko": "붉은 원석"}
+    },
+    {
+      "id": "crystal",
+      "name": {"en": "Blue Crystal", "ko": "푸른 수정"}
+    },
+    {
+      "id": "horseshoe",
+      "name": {"en": "Horseshoe", "ko": "편자"}
+    },
+    {
+      "id": "ingot",
+      "name": {"en": "Iron Ingot", "ko": "쇠 주괴"}
+    },
+    {
+      "id": "coal",
+      "name": {"en": "Coal", "ko": "석탄"}
+    },
+    {
+      "id": "anvil",
+      "name": {"en": "Anvil", "ko": "모루"},
+      "scatter": true
+    }
+  ],
+  "anywhere": {
+    "minCount": 8
+  },
+  "cascade": {
+    "enabled": true,
+    "maxCascades": 12,
+    "refill": "gravity",
+    "source": "strip-pull",
+    "multiplierLadder": [
+      1
+    ]
+  },
+  "round": {
+    "maxWinCap": 5000
+  },
+  "forgeRail": {
+    "slots": 4,
+    "fullMultiplier": 2,
+    "heatCap": 300,
+    "spawn": {
+      "chanceBase": 75,
+      "chanceFree": 520
+    },
+    "values": {
+      "2": 760,
+      "3": 150,
+      "4": 45,
+      "5": 18,
+      "8": 12,
+      "10": 8,
+      "15": 4,
+      "25": 2,
+      "50": 1
+    },
+    "startHeat": {
+      "5": 5,
+      "6": 10
+    },
+    "retrigger": {
+      "trigger": 3,
+      "spins": 5
+    },
+    "maxRoundSpins": 30
+  },
+  "paytable": {
+    "sword": {
+      "8": 8,
+      "10": 20,
+      "12": 40,
+      "15": 100
+    },
+    "hammer": {
+      "8": 4,
+      "10": 10,
+      "12": 20,
+      "15": 50
+    },
+    "shield": {
+      "8": 2.5,
+      "10": 6,
+      "12": 12,
+      "15": 30
+    },
+    "helmet": {
+      "8": 1.5,
+      "10": 4,
+      "12": 8,
+      "15": 20
+    },
+    "ruby": {
+      "8": 1,
+      "10": 2,
+      "12": 5,
+      "15": 12
+    },
+    "crystal": {
+      "8": 0.8,
+      "10": 1.6,
+      "12": 4,
+      "15": 10
+    },
+    "horseshoe": {
+      "8": 0.6,
+      "10": 1.2,
+      "12": 3,
+      "15": 8
+    },
+    "ingot": {
+      "8": 0.4,
+      "10": 1,
+      "12": 2.5,
+      "15": 6
+    },
+    "coal": {
+      "8": 0.3,
+      "10": 0.75,
+      "12": 2,
+      "15": 5
+    }
+  },
+  "scatter": {
+    "symbol": "anvil",
+    "pays": {
+      "4": 2.75,
+      "5": 8,
+      "6": 40
+    },
+    "freeSpins": {
+      "trigger": 4,
+      "count": 10,
+      "multiplier": 1,
+      "retrigger": false
+    }
+  },
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "volatility": "high",
+  "strips": [
+    ["ruby","anvil","ingot","shield","ingot","horseshoe","crystal","ingot","ingot","shield","coal","ingot","ruby","helmet","ingot","ruby","helmet","ruby","ruby","ruby","shield","shield","shield","crystal","sword","crystal","ruby","ingot","horseshoe","horseshoe","horseshoe","hammer","coal","horseshoe","coal","crystal","ingot","coal","ingot","ingot","hammer","anvil","shield","coal","shield","ingot","helmet","ingot","horseshoe","horseshoe","coal","crystal","coal","ingot","sword","crystal","hammer","crystal","helmet","horseshoe","coal","horseshoe","horseshoe","hammer","ruby","ingot","ingot","coal","ruby","coal","helmet","ingot","coal","coal","sword","crystal","helmet","crystal","horseshoe","crystal","ruby","anvil","sword","crystal","helmet","ingot","shield","horseshoe","helmet","ruby","ruby","horseshoe","coal","ruby","horseshoe","horseshoe","horseshoe","ruby","coal","hammer","crystal","helmet","hammer","coal","sword","horseshoe","crystal","ruby","coal","hammer","sword","helmet","crystal","crystal","shield","hammer","shield","helmet","coal","crystal"],
+    ["hammer","horseshoe","hammer","hammer","crystal","ruby","horseshoe","horseshoe","shield","crystal","coal","coal","coal","ingot","horseshoe","ingot","hammer","shield","ruby","ingot","shield","coal","horseshoe","crystal","ingot","ingot","coal","ruby","ruby","ruby","ruby","anvil","coal","coal","ingot","ingot","crystal","helmet","horseshoe","horseshoe","coal","ingot","shield","hammer","coal","ingot","crystal","crystal","crystal","crystal","horseshoe","shield","shield","coal","ingot","hammer","crystal","crystal","helmet","sword","ruby","shield","horseshoe","helmet","horseshoe","horseshoe","ruby","ruby","shield","helmet","helmet","anvil","sword","sword","ruby","helmet","helmet","horseshoe","shield","hammer","coal","horseshoe","ingot","coal","coal","coal","coal","helmet","helmet","sword","horseshoe","hammer","ingot","ruby","ruby","crystal","horseshoe","helmet","helmet","crystal","sword","ingot","ingot","coal","sword","horseshoe","horseshoe","coal","shield","ruby","crystal","anvil","crystal","crystal","ruby","ruby","crystal","ingot","ingot","ingot"],
+    ["anvil","helmet","horseshoe","ingot","ruby","hammer","ruby","coal","sword","helmet","helmet","crystal","shield","horseshoe","ruby","coal","ruby","horseshoe","ingot","ingot","crystal","crystal","horseshoe","horseshoe","ingot","horseshoe","horseshoe","ingot","horseshoe","helmet","horseshoe","ingot","ingot","coal","coal","crystal","coal","crystal","shield","horseshoe","anvil","coal","coal","coal","sword","sword","ingot","ruby","shield","shield","shield","ingot","horseshoe","ruby","ruby","coal","coal","coal","sword","ingot","horseshoe","horseshoe","horseshoe","ruby","crystal","crystal","crystal","coal","horseshoe","sword","hammer","shield","shield","shield","shield","ingot","ruby","hammer","coal","helmet","anvil","crystal","helmet","ingot","ingot","crystal","hammer","shield","ruby","ingot","coal","helmet","coal","coal","helmet","helmet","helmet","helmet","sword","hammer","ruby","hammer","ingot","crystal","crystal","hammer","crystal","crystal","crystal","ingot","hammer","ruby","ruby","ruby","crystal","ruby","horseshoe","horseshoe","ingot","coal"],
+    ["ruby","crystal","ingot","ingot","ingot","ruby","crystal","horseshoe","horseshoe","crystal","ruby","ruby","crystal","crystal","shield","coal","ruby","helmet","coal","horseshoe","ingot","shield","shield","shield","helmet","coal","crystal","coal","coal","coal","coal","sword","anvil","horseshoe","horseshoe","horseshoe","helmet","crystal","ingot","horseshoe","helmet","coal","coal","sword","ingot","coal","coal","shield","helmet","helmet","horseshoe","ruby","sword","helmet","shield","ingot","ingot","helmet","horseshoe","hammer","helmet","sword","ingot","coal","coal","crystal","crystal","crystal","hammer","hammer","ingot","ingot","anvil","shield","crystal","shield","shield","hammer","ruby","ingot","ingot","horseshoe","shield","horseshoe","horseshoe","coal","helmet","ruby","horseshoe","horseshoe","ruby","crystal","sword","horseshoe","ingot","ingot","coal","ruby","ruby","horseshoe","crystal","ruby","hammer","crystal","hammer","hammer","ruby","sword","crystal","ruby","ingot","hammer","anvil","horseshoe","helmet","ruby","coal","coal","crystal","ingot"],
+    ["ingot","hammer","helmet","coal","ruby","anvil","coal","crystal","ingot","helmet","ruby","crystal","ingot","crystal","coal","ruby","ruby","ruby","ruby","crystal","sword","helmet","horseshoe","ingot","ingot","hammer","ingot","coal","coal","ingot","coal","helmet","hammer","ingot","ingot","ingot","ingot","ingot","shield","coal","shield","shield","ruby","crystal","hammer","anvil","horseshoe","sword","horseshoe","ruby","ruby","horseshoe","horseshoe","horseshoe","helmet","helmet","ingot","sword","crystal","ingot","ingot","shield","ingot","crystal","coal","coal","coal","horseshoe","helmet","horseshoe","ruby","ruby","horseshoe","shield","shield","horseshoe","helmet","helmet","ruby","helmet","sword","shield","hammer","coal","horseshoe","anvil","coal","crystal","horseshoe","shield","horseshoe","hammer","hammer","crystal","crystal","crystal","horseshoe","coal","ruby","ingot","shield","hammer","horseshoe","shield","coal","horseshoe","coal","coal","coal","sword","sword","crystal","helmet","ruby","ruby","crystal","horseshoe","crystal","crystal","crystal"],
+    ["coal","crystal","crystal","coal","shield","ingot","shield","helmet","ruby","ingot","shield","coal","ingot","ingot","anvil","horseshoe","ingot","ruby","crystal","horseshoe","ruby","horseshoe","coal","sword","coal","hammer","helmet","ruby","helmet","ruby","horseshoe","crystal","ingot","ingot","ingot","crystal","ruby","ingot","horseshoe","hammer","horseshoe","hammer","crystal","crystal","crystal","crystal","horseshoe","horseshoe","horseshoe","horseshoe","coal","coal","coal","coal","anvil","horseshoe","horseshoe","sword","crystal","crystal","ruby","helmet","helmet","shield","crystal","ingot","helmet","helmet","ingot","ingot","hammer","sword","coal","coal","ingot","shield","coal","coal","shield","shield","helmet","helmet","shield","helmet","hammer","hammer","sword","sword","sword","ruby","horseshoe","horseshoe","horseshoe","ruby","anvil","shield","shield","ingot","coal","ruby","ruby","ingot","coal","crystal","hammer","helmet","ruby","ruby","horseshoe","coal","coal","crystal","horseshoe","ruby","ingot","crystal","ruby","crystal","hammer","ingot"]
+  ]
+}

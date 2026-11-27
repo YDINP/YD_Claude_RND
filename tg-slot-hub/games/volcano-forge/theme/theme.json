@@ -1,0 +1,91 @@
+{
+  "symbols": {
+    "sword": "symbols/sword.webp",
+    "hammer": "symbols/hammer.webp",
+    "shield": "symbols/shield.webp",
+    "helmet": "symbols/helmet.webp",
+    "ruby": "symbols/ruby.webp",
+    "crystal": "symbols/crystal.webp",
+    "horseshoe": "symbols/horseshoe.webp",
+    "ingot": "symbols/ingot.webp",
+    "coal": "symbols/coal.webp",
+    "anvil": "symbols/anvil.webp"
+  },
+  "version": "1.0.0",
+  "palette": {
+    "frame": "#2b2f3a",
+    "reelBg": "#3a2620",
+    "winLine": [
+      "#ff7a1a",
+      "#ffd23f",
+      "#e8432e",
+      "#8a94a6",
+      "#fff3e0"
+    ],
+    "text": "#fff3e0"
+  },
+  "frame": "frame.webp",
+  "frameLayout": {
+    "window": {
+      "x": 0.0283203125,
+      "y": 0.1240234375,
+      "w": 0.943359375,
+      "h": 0.7509765625
+    }
+  },
+  "background": "bg.webp",
+  "backgroundFreeSpins": "bg-freespins.webp",
+  "reelBackdrop": {
+    "color": "#3a2620",
+    "alpha": 0.82,
+    "radius": 0.04
+  },
+  "celebration": {
+    "palette": {
+      "core": "#ffd23f",
+      "edge": "#ff7a1a",
+      "glow": "#e8432e80"
+    },
+    "particles": {
+      "shapes": [
+        "spark",
+        "shard",
+        "coin"
+      ],
+      "symbols": [
+        "sword",
+        "hammer"
+      ],
+      "motion": "tumble"
+    },
+    "rays": {
+      "style": "beams"
+    },
+    "waves": {
+      "style": "double"
+    },
+    "title": {
+      "font": "slab"
+    }
+  },
+  "sound": {
+    "preset": "forge"
+  },
+  "props": {
+    "ember": "props/ember.webp",
+    "furnace-slot": "props/furnace-slot.webp",
+    "bellows": "props/bellows.webp"
+  },
+  "transitions": {
+    "freeSpinsEnter": {
+      "src": "transitions/fs-enter.webp",
+      "opaqueMs": 2200,
+      "durationMs": 3000
+    },
+    "freeSpinsExit": {
+      "src": "transitions/fs-exit.webp",
+      "opaqueMs": 0,
+      "durationMs": 3000
+    }
+  }
+}
