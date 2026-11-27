@@ -8,7 +8,9 @@ import type {
 } from './types.js'
 import type { RendererCore, ResolvedRendererOptions } from './internal.js'
 import type { SpinSpeed } from './timing.js'
-import type { WinLine } from '@tgslot/slot-engine'
+import type { GardenBounds, GardenSeed, WinLine } from '@tgslot/slot-engine'
+
+type GardenView = { bounds: GardenBounds; seeds: readonly GardenSeed[] } | null
 import { DEFAULT_OVERFLOW_X } from './constants.js'
 import { coinFreeInitialStops } from './initialStops.js'
 import { emptyDiagnostics } from './diagnostics.js'
@@ -54,6 +56,7 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
   let destroyed = false
   let pendingMode: RendererMode | null = null
   let pendingSpeed: SpinSpeed | null = null
+  let pendingGarden: { view: GardenView; immediate: boolean } | null = null
 
   const ready: Promise<void> = (async () => {
     const module = await import('./pixi/pixiRenderer.js')
@@ -65,6 +68,8 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
     core = created
     if (pendingSpeed !== null) core.setSpinSpeed(pendingSpeed)
     if (pendingMode !== null) core.setMode(pendingMode)
+    const restore = pendingGarden as { view: GardenView; immediate: boolean } | null
+    if (restore !== null) core.setGardenView(restore.view, restore.immediate)
   })()
   // ready를 구독하지 않는 호출자 때문에 unhandled rejection이 뜨지 않도록 한 번 삼킨다.
   // 실제 오류는 ready를 await 한 쪽에서 그대로 다시 던져진다.
@@ -133,5 +138,10 @@ export function createSlotRenderer(options: RendererOptions): SlotRenderer {
     // 아직 없거나 이미 내려간 렌더러에는 셀 것이 없다. null 대신 빈 진단을 준다.
     diagnostics: () => core?.diagnostics() ?? emptyDiagnostics(),
     getCellRect: (reel: number, row: number) => core?.getCellRect(reel, row) ?? null,
+    setGardenView: (view, immediate) => {
+      // 초기화 전에 불러도 잃지 않도록 기억해 뒀다가 준비되면 적용한다(복원 경로).
+      pendingGarden = { view, immediate: immediate === true }
+      core?.setGardenView(view, immediate)
+    },
   }
 }

@@ -130,6 +130,7 @@ function featurePayout(features: readonly FeatureTrigger[]): number {
   for (const feature of features) {
     if (feature.type === 'scatterWin') sum += feature.win
     else if (feature.type === 'orderComplete') sum += feature.prize
+    else if (feature.type === 'gardenTopUp') sum += feature.amount
   }
   return sum
 }

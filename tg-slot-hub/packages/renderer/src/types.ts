@@ -1,4 +1,4 @@
-import type { CascadeStep, CoinCell, GameMath, GridPosition, MutationEvent, SymbolId, TreasureTier, WinLine } from '@tgslot/slot-engine'
+import type { CascadeStep, CoinCell, GameMath, GardenBounds, GardenSeed, GardenTrigger, GridPosition, MutationEvent, SymbolId, TreasureTier, WinLine } from '@tgslot/slot-engine'
 import type { RespinInput } from './respin.js'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
@@ -10,7 +10,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol' | 'garden'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -251,6 +251,41 @@ export type RendererEvent =
   | { type: 'respinTop'; amount: number; phase: 'start' | 'end' }
   /** 리스핀 라운드가 끝났다(정산까지). 화면은 아직 동굴이고, 기본 화면으로 돌아가는 것은 `endRespin()`이다. */
   | { type: 'respinEnd'; coinWin: number; topWin: number; full: boolean }
+  /**
+   * 정원 한 단계(강조 → 팝 → 낙하 → 성장)가 시작하거나 끝났다. `start`에는 `end`가 반드시 짝으로 온다(STOP 압축·끼어들기도 같다).
+   * `popped`는 이 단계 뒤 성장 막대 값, `size`는 단계 시작(`start`) 또는 끝(`end`)의 활성 한 변,
+   * `seedMultiplier`는 이 단계 클러스터에 붙은 가장 큰 씨앗 배율(없으면 1), `bloomed`는 쓰인 씨앗 수다.
+   */
+  | {
+      type: 'gardenStep'
+      index: number
+      total: number
+      phase: 'start' | 'end'
+      stepWin: number
+      cumulativeWin: number
+      popped: number
+      size: number
+      bloomed: number
+      seedMultiplier: number
+      /** 이 단계의 당첨 묶음(WinStrip 한 줄용). 칸 수 `count`와 씨앗 배율 `seed`(없으면 생략). */
+      wins: readonly { symbol: SymbolId; count: number; win: number; seed?: number }[]
+    }
+  /** 판이 한 겹 자란다. `start`는 새 칸을 열기 전(카메라가 물러나기 직전), `end`는 새 칸이 다 열린 순간이다. */
+  | {
+      type: 'gardenGrow'
+      phase: 'start' | 'end'
+      from: GardenBounds
+      to: GardenBounds
+      size: number
+      newCells: number
+      newSeeds: number
+      grown: number
+      popped: number
+    }
+  /** 씨앗 칸이 낀 클러스터가 터지기 직전, 씨앗이 피며 배율이 곱해진다. */
+  | { type: 'seedBloom'; count: number; multipliers: readonly number[] }
+  /** 프리스핀 8×8 햇살. 씨앗 전부 한 등급 오르고 새 씨앗이 심긴다. */
+  | { type: 'gardenSun'; phase: 'start' | 'end'; grown: number; planted: number }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -320,6 +355,11 @@ export interface SpinToOptions {
    * 재생이 끝나도 화면은 동굴에 머문다 — 기본 화면으로 돌아가는 것은 `endRespin()`이다.
    */
   respin?: RespinInput
+  /**
+   * 자라는 정원 스핀(`garden` 피처). 착지 뒤 단계(팝 → 낙하 → 성장)와 햇살을 재생한다. 서버가 정한 결과 그대로다.
+   * `fast`(프리스핀)이면 착지는 `growBoard.bonus.strips`를 읽는다. 시작 판은 `gridBefore`(응답 `grid`, 8×8)를 주는 것이 좋다.
+   */
+  garden?: GardenTrigger
 }
 
 export interface ShowWinsOptions {
@@ -458,4 +498,9 @@ export interface SlotRenderer {
    * 초기화 전이나 해제 뒤에는 null. 범위 밖 칸이면 던진다.
    */
   getCellRect(reel: number, row: number): CellRect | null
+  /**
+   * 자라는 정원 팩의 판 크기·씨앗을 맞춘다(새로고침 복원·프리스핀 종료). `null`이면 4×4·씨앗 없음.
+   * `immediate`면 카메라를 트윈 없이 옮긴다. 정원 팩이 아니면 아무 일도 하지 않는다.
+   */
+  setGardenView?(view: { bounds: GardenBounds; seeds: readonly GardenSeed[] } | null, immediate?: boolean): void
 }

@@ -1,6 +1,6 @@
-import { Application, Color, Container, Graphics, Sprite, type Texture } from 'pixi.js'
+import { Application, Assets, Color, Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { gsap } from 'gsap'
-import type { CoinCell, GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
+import type { CoinCell, GardenBounds, GardenSeed, GardenTrigger, GridPosition, SymbolId, WinLine } from '@tgslot/slot-engine'
 import {
   ACCEL_DISTANCE_RATIO,
   ACCEL_TIME_RATIO,
@@ -118,6 +118,29 @@ import {
 } from '../cascade.js'
 import { CascadeSpritePool, playCascadeFx, type CascadeFxHandle } from './cascadeFx.js'
 import {
+  GARDEN_CAMERA_RESET_MS,
+  GARDEN_IDENTITY_CAMERA,
+  GARDEN_SKIP_GROW_MS,
+  buildGardenPlan,
+  buildGardenSunPlan,
+  compressGardenStep,
+  gardenActiveReels,
+  gardenAnticipatedReels,
+  gardenBounds,
+  gardenCameraFor,
+  gardenCellRect,
+  gardenPlanIndexOf,
+  gardenSkipStepMs,
+  gardenWindowFromStops,
+  sameGardenBounds,
+  type GardenCamera,
+  type GardenPlan,
+  type GardenPlanStep,
+  type GardenStepDurations,
+} from '../garden.js'
+import { GardenScene, type GardenFxHandle } from './gardenFx.js'
+import { LayerSpritePool } from './spritePool.js'
+import {
   applyMutationEventsToGrid,
   buildMutationPlan,
   compressMutationStep,
@@ -196,6 +219,12 @@ import { RespinScene, type RespinHandle } from './respinFx.js'
 const PROP_KEYS = ['coin-small', 'coin-medium', 'coin-large', 'treasure-top', 'tentacle'] as const
 type PropKey = (typeof PROP_KEYS)[number]
 type PropTextures = Partial<Record<PropKey, Texture>>
+
+/** 정원 팩이 읽는 `theme.props` 그림. 없는 것은 코드로 그린 대체 그림으로 동작한다. */
+interface GardenProps {
+  pot: Texture | null
+  seeds: (Texture | null)[]
+}
 
 interface Cell {
   view: Container
@@ -287,6 +316,27 @@ class PixiRenderer implements RendererCore {
   private readonly cascadeLayer = new Container()
   private readonly cascadeSprites = new CascadeSpritePool(this.cascadeLayer, MUTATION_SPRITE_POOL_MAX)
   private readonly cascadeOutline = new Graphics()
+  /**
+   * 정원 카메라 층(`math.growBoard` 팩만 쓴다). 릴·연출 층을 담아 활성 n×n이 창을 채우도록 배율로 옮긴다.
+   * 마스크는 이 층 **밖**(콘텐츠 층)에 있어 창 크기는 배율과 무관하다. 정원이 아니면 비어 있고 쓰지 않는다.
+   */
+  private readonly cameraLayer = new Container()
+  private cameraState: GardenCamera = { ...GARDEN_IDENTITY_CAMERA }
+  private cameraTween: gsap.core.Tween | null = null
+  private gardenScene: GardenScene | null = null
+  /** 카메라가 보고 있는(또는 보러 가는) 활성 범위. 정원 팩이 아니면 null. */
+  private gardenView: GardenBounds | null = null
+  /** 정원 연출 전용 풀. 8×8 한 단계가 심볼·리필·파편을 많이 쓰므로 연쇄 풀과 따로 둔다. */
+  private readonly gardenSymbols = new CascadeSpritePool(this.cascadeLayer, MUTATION_SPRITE_POOL_MAX)
+  private readonly gardenDebris = new LayerSpritePool(this.mutationLayer, MUTATION_SPRITE_POOL_MAX)
+  /** 지금 릴이 읽는 스트립. 정원 프리스핀은 `bonus.strips`다. 나머지 팩은 늘 `math.strips`. */
+  private strips: readonly (readonly SymbolId[])[]
+  private activeGarden: { finish: () => void; compress: () => void } | null = null
+  /** 정원 팩: 지금 쥐고 있는 프리스핀 배경 텍스처(프리스핀 동안만). */
+  private freeSpinsBackground: Texture | null = null
+  private freeSpinsBackgroundLoading = false
+  /** 이번 스핀에서 소리를 내는 활성 열 범위(정원). 정원이 아니면 null. */
+  private spinActive: { from: number; count: number } | null = null
   /** 승리 파티클 재사용 풀 겸 총량 예산. 코인·색종이·스캐터가 이 하나를 나눠 쓴다. */
   private readonly particlePool = new ParticlePool(this.fxLayer)
   /**
@@ -451,8 +501,10 @@ class PixiRenderer implements RendererCore {
     freeSpinsTexture: Texture | null,
     ownedTextures: TextureRegistry,
     props: PropTextures = {},
+    gardenProps: GardenProps = { pot: null, seeds: [] },
   ) {
     this.options = options
+    this.strips = options.math.strips
     this.formatCoin = options.formatCoin ?? ((amount: number): string => amount.toLocaleString('en-US'))
     // 시트 스프라이트 상한은 격자에서 유도한다. 한 심볼이 동시에 점등될 수 있는 최대가
     // 곧 격자 칸 수다 — 4x5 팩 실측 최대 20이 정확히 이 값이었다(2백만 스핀).
@@ -495,18 +547,31 @@ class PixiRenderer implements RendererCore {
     this.curtain.visible = false
 
     this.reelsLayer.mask = this.maskGraphics
-    this.contentLayer.addChild(
-      // 패널이 맨 먼저다. 릴보다 뒤에 그려져야 심볼이 그 위에 뜬다.
-      this.backdropGraphics,
-      this.reelsLayer,
-      this.maskGraphics,
-      this.cascadeOutline,
-      this.mutationLayer,
-      this.featureGraphics,
-      this.modeGraphics,
-      this.winGraphics,
-      this.fxLayer,
-    )
+    if (options.math.growBoard === undefined) {
+      this.contentLayer.addChild(
+        // 패널이 맨 먼저다. 릴보다 뒤에 그려져야 심볼이 그 위에 뜬다.
+        this.backdropGraphics,
+        this.reelsLayer,
+        this.maskGraphics,
+        this.cascadeOutline,
+        this.mutationLayer,
+        this.featureGraphics,
+        this.modeGraphics,
+        this.winGraphics,
+        this.fxLayer,
+      )
+    } else {
+      // 정원 팩: 릴·연출 층을 카메라 층에 넣는다. 마스크와 창 테두리(modeGraphics)는 카메라 밖이다.
+      this.cameraLayer.addChild(
+        this.reelsLayer,
+        this.cascadeOutline,
+        this.mutationLayer,
+        this.featureGraphics,
+        this.winGraphics,
+        this.fxLayer,
+      )
+      this.contentLayer.addChild(this.backdropGraphics, this.cameraLayer, this.maskGraphics, this.modeGraphics)
+    }
     this.root.addChild(this.backgroundLayer)
     // 베젤 아트가 없을 때만 반짝임이 진짜 "배경"에 놓인다.
     if (this.frameSprite === null) this.root.addChild(this.sparkleLayer)
@@ -521,6 +586,7 @@ class PixiRenderer implements RendererCore {
     this.buildReels()
     // 릴 위, 같은 마스크 안. 창 위에서 떨어지는 리필이 창 밖에서는 보이지 않는다.
     this.reelsLayer.addChild(this.cascadeLayer)
+    this.gardenScene = this.buildGardenScene(gardenProps)
     this.coinFaces = new CoinFaceCache(
       {
         coin: textures.get(options.math.coinRespin?.symbol ?? '') ?? coinTexture,
@@ -668,6 +734,8 @@ class PixiRenderer implements RendererCore {
     this.drawMask()
     this.drawMode()
     this.respinScene?.layout()
+    this.gardenScene?.layout()
+    this.snapGardenCamera()
 
     for (let reel = 0; reel < this.reels.length; reel += 1) {
       const view = this.reels[reel]
@@ -765,7 +833,7 @@ class PixiRenderer implements RendererCore {
   /** 릴 1개를 현재 위치로 다시 그린다. 위치의 소수부가 스크롤 오프셋이 된다. */
   private renderReel(reel: number): void {
     const view = this.reels[reel]
-    const strip = this.options.math.strips[reel]
+    const strip = this.strips[reel]
     if (view === undefined || strip === undefined) return
 
     const position = view.position + view.idleOffset
@@ -829,6 +897,7 @@ class PixiRenderer implements RendererCore {
     this.activeMutation?.finish()
     // 연쇄는 끝내지 않고 압축한다. 남은 단계도 같은 길이로 재생된다.
     this.activeCascade?.compress()
+    this.activeGarden?.compress()
     // 코인 리스핀도 건너뛰지 않고 압축한다. 금액·순서는 그대로다.
     this.activeRespin?.compress()
     if (this.activeReels.size === 0) return
@@ -883,18 +952,33 @@ class PixiRenderer implements RendererCore {
     // 화면 밖으로 빠져나간 뒤에 릴 단위로 놓인다(`expireMutationOverlay`).
     this.fadeGridOverride()
     const token = (this.spinToken += 1)
+    const garden = this.options.math.growBoard === undefined ? undefined : opts?.garden
+    this.spinActive = garden === undefined ? null : gardenActiveReels(garden.start)
+    this.strips = this.stripsFor(opts)
+    // 정원: 시작 범위·씨앗을 먼저 맞춘다. 카메라가 이 스핀의 활성 범위로 돌아오는 동안 릴이 돌기 시작한다.
+    if (garden !== undefined) this.beginGardenSpin(garden)
 
-    const plan = buildSpinPlan({
-      reels: this.options.math.reels,
+    const spinReels = garden === undefined ? this.options.math.reels : gardenActiveReels(garden.start).count
+    const spinPlan = buildSpinPlan({
+      reels: spinReels,
       ...(opts?.durationMs === undefined ? {} : { durationMs: opts.durationMs }),
       ...(opts?.stagger === undefined ? {} : { stagger: opts.stagger }),
       ...(opts?.fast === undefined ? {} : { fast: opts.fast }),
       speed: opts?.speed ?? this.spinSpeed,
       reducedMotion: this.options.reducedMotion,
-      anticipation: this.options.math.coinRespin
-        ? coinAnticipatedReels(this.options.math, stops)
-        : anticipatedReels(this.options.math, stops),
+      anticipation:
+        garden !== undefined
+          ? gardenAnticipatedReels(
+              this.options.math,
+              gardenWindowFromStops(this.strips, stops, this.options.math.rows),
+              garden.start,
+            ).map((reel) => reel - garden.start.x)
+          : this.options.math.coinRespin
+            ? coinAnticipatedReels(this.options.math, stops)
+            : anticipatedReels(this.options.math, stops),
     })
+    // 정원: 활성 열만 엇갈려 선다. 카메라 밖 열은 가장 가까운 활성 열과 함께 선다(보이지 않는 열 때문에 기다리지 않는다).
+    const plan = garden === undefined ? spinPlan : this.expandGardenSpinPlan(spinPlan, garden.start)
     this.anticipatedPlan = new Set(plan.reels.filter((r) => r.anticipationMs > 0).map((r) => r.reel))
 
     await Promise.all(
@@ -926,6 +1010,12 @@ class PixiRenderer implements RendererCore {
     } else if (opts?.finalGrid !== undefined && (opts.cascades?.length ?? 0) > 0) {
       // 단계가 판과 어긋나 계획을 못 세웠다. 연출은 버려도 화면은 서버 판과 같아야 한다.
       this.applyGridOverride(opts.finalGrid)
+    }
+
+    // 정원: 착지 뒤 단계(팝 → 낙하 → 성장)와 햇살을 재생한다. 끝나면 화면은 서버 finalGrid·씨앗·범위다.
+    if (garden !== undefined) {
+      await this.runGardenPhase(garden, stops, opts, token)
+      if (this.destroyed || token !== this.spinToken) return
     }
 
     // 코인 리스핀은 연쇄·변형과 같은 자리 — spinEnd 앞이다. 끝나도 화면은 동굴에 머문다(`endRespin()`).
@@ -982,7 +1072,12 @@ class PixiRenderer implements RendererCore {
         this.renderReel(plan.reel)
         if (token === this.spinToken && !this.destroyed) {
           this.endAnticipation()
-          this.emit({ type: 'reelStop', reel: plan.reel })
+          // 정원: 카메라 밖 열은 소리를 내지 않는다. 보이는 열만 0부터 센다.
+          const active = this.spinActive
+          if (active === null) this.emit({ type: 'reelStop', reel: plan.reel })
+          else if (plan.reel >= active.from && plan.reel < active.from + active.count) {
+            this.emit({ type: 'reelStop', reel: plan.reel - active.from })
+          }
           const next = plan.reel + 1
           if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) {
             this.anticipatingReel = next
@@ -1059,6 +1154,7 @@ class PixiRenderer implements RendererCore {
     // 재생 중이던 변형도 함께 끊는다. 끊긴 단계는 자기 그리드를 확정하고 물러난다.
     this.activeMutation?.finish()
     this.activeCascade?.finish()
+    this.activeGarden?.finish()
     this.activeRespin?.finish()
     const resolvers = this.spinResolvers
     this.spinResolvers = []
@@ -1243,6 +1339,370 @@ class PixiRenderer implements RendererCore {
         width: symbolSize,
         height: reelArea.height,
       }))
+  }
+
+  // ------------------------------------------------------------------ 정원
+
+  /** 이 스핀이 읽을 스트립. 정원 프리스핀은 전용 스트립(`bonus.strips`)에서 착지한다. */
+  private stripsFor(opts?: SpinToOptions): readonly (readonly SymbolId[])[] {
+    const bonus = this.options.math.growBoard?.bonus.strips
+    return opts?.garden !== undefined && opts.fast === true && bonus !== undefined ? bonus : this.options.math.strips
+  }
+
+  private buildGardenScene(props: GardenProps): GardenScene | null {
+    const config = this.options.math.growBoard
+    if (config === undefined) return null
+    this.gardenView = gardenBounds(0)
+    return new GardenScene({
+      reelsLayer: this.reelsLayer,
+      registry: this.ownedTextures,
+      tiers: config.seedTiers,
+      potTexture: props.pot,
+      seedTextures: props.seeds,
+      spark: this.fxTextures.spark,
+      solid: this.confettiTexture,
+      getLayout: () => this.layout,
+      cameraHandle: { state: this.cameraState, apply: () => this.applyCamera() },
+    })
+  }
+
+  private applyCamera(): void {
+    const camera = this.cameraState
+    this.cameraLayer.scale.set(camera.scale)
+    this.cameraLayer.position.set(camera.x, camera.y)
+  }
+
+  /** 레이아웃이 바뀌면 지금 보는 범위를 새 레이아웃에서 다시 구한다. */
+  private snapGardenCamera(): void {
+    if (this.gardenView === null) return
+    this.cameraTween?.kill()
+    this.cameraTween = null
+    Object.assign(this.cameraState, gardenCameraFor(this.layout, this.gardenView))
+    this.applyCamera()
+  }
+
+  /** 카메라가 활성 범위를 보게 한다. `ms`가 0이거나 모션 축소면 곧장 옮긴다. */
+  private setGardenCamera(bounds: GardenBounds, ms: number): void {
+    if (this.gardenView === null) return
+    this.cameraTween?.kill()
+    this.cameraTween = null
+    this.gardenView = { ...bounds }
+    const target = gardenCameraFor(this.layout, bounds)
+    const camera = this.cameraState
+    if (camera.scale === target.scale && camera.x === target.x && camera.y === target.y) return
+    if (ms <= 0 || this.options.reducedMotion) {
+      Object.assign(camera, target)
+      this.applyCamera()
+      return
+    }
+    this.cameraTween = gsap.to(camera, {
+      scale: target.scale,
+      x: target.x,
+      y: target.y,
+      duration: ms / 1000,
+      ease: 'power2.out',
+      onUpdate: () => this.applyCamera(),
+      onComplete: () => {
+        this.cameraTween = null
+      },
+    })
+  }
+
+  /** 4×4·씨앗 없음으로 되돌린다(프리스핀 종료·새 라운드). */
+  private resetGardenView(): void {
+    this.gardenScene?.setSeeds([])
+    this.setGardenCamera(gardenBounds(0), 0)
+  }
+
+  private beginGardenSpin(garden: GardenTrigger): void {
+    this.gardenScene?.setSeeds(garden.startSeeds)
+    this.setGardenCamera(garden.start, GARDEN_CAMERA_RESET_MS)
+  }
+
+  /** 허브가 복원(새로고침)·종료 때 판 크기와 씨앗을 맞춘다. `null`이면 4×4·씨앗 없음. */
+  setGardenView(view: { bounds: GardenBounds; seeds: readonly GardenSeed[] } | null, immediate = false): void {
+    if (this.destroyed || this.gardenScene === null) return
+    if (view === null) {
+      this.resetGardenView()
+      return
+    }
+    this.gardenScene.setSeeds(view.seeds)
+    this.setGardenCamera(view.bounds, immediate ? 0 : GARDEN_CAMERA_RESET_MS)
+  }
+
+  /** 활성 열만 엇갈려 서는 정지 계획. 카메라 밖 열은 가장 가까운 활성 열과 같은 시각에 선다. */
+  private expandGardenSpinPlan(plan: SpinPlan, bounds: GardenBounds): SpinPlan {
+    const active = gardenActiveReels(bounds)
+    const reels: ReelSpinPlan[] = Array.from({ length: this.options.math.reels }, (_, reel) => {
+      const base = plan.reels[gardenPlanIndexOf(reel, active)] as ReelSpinPlan
+      const inside = reel >= active.from && reel < active.from + active.count
+      return { ...base, reel, anticipationMs: inside ? base.anticipationMs : 0 }
+    })
+    return { ...plan, reels }
+  }
+
+  /** 정원 팩: 프리스핀 배경을 받는다. 이미 쥐고 있거나 받는 중이면 아무 일도 없다. 없거나 실패하면 금빛 틴트로 간다. */
+  private ensureFreeSpinsBackground(): void {
+    const url = this.options.theme.backgroundFreeSpins
+    if (this.gardenScene === null || url === undefined || this.freeSpinsBackground !== null || this.freeSpinsBackgroundLoading) return
+    this.freeSpinsBackgroundLoading = true
+    void loadImageTexture(url).then((texture) => {
+      this.freeSpinsBackgroundLoading = false
+      if (texture === null) return
+      // 기다리는 사이 프리스핀이 끝났거나 화면이 내려갔으면 곧장 놓는다.
+      if (this.destroyed || (!isFreeSpinsActive(this.mode) && !this.freeSpinsVisible)) {
+        void Assets.unload(url).catch(() => undefined)
+        return
+      }
+      this.freeSpinsBackground = texture
+      this.freeSpinsSprite.texture = texture
+      this.freeSpinsSprite.tint = 0xffffff
+      this.freeSpinsSprite.alpha = 1
+      this.freeSpinsSprite.width = this.geometry.canvasWidth
+      this.freeSpinsSprite.height = this.geometry.canvasHeight
+    })
+  }
+
+  /** 정원 팩: 프리스핀 배경을 놓는다(텍스처 수명 = 프리스핀 동안). 스프라이트는 금빛 틴트 대체로 돌아간다. */
+  private releaseFreeSpinsBackground(): void {
+    const url = this.options.theme.backgroundFreeSpins
+    if (this.gardenScene === null || url === undefined || this.freeSpinsBackground === null) return
+    this.freeSpinsBackground = null
+    this.freeSpinsSprite.texture = this.confettiTexture
+    this.freeSpinsSprite.tint = this.options.theme.palette.frame
+    this.freeSpinsSprite.alpha = MODE_TINT_ALPHA
+    this.freeSpinsSprite.width = this.geometry.canvasWidth
+    this.freeSpinsSprite.height = this.geometry.canvasHeight
+    void Assets.unload(url).catch(() => undefined)
+  }
+
+  /** 서버 결과 그대로 확정한다(연출을 못 세웠거나 끼어들었을 때). */
+  private settleGarden(garden: GardenTrigger): void {
+    this.applyGridOverride(garden.finalGrid)
+    this.setGardenCamera(garden.final, 0)
+    this.gardenScene?.setSeeds(garden.seeds)
+  }
+
+  private planGarden(garden: GardenTrigger, stops: number[], opts?: SpinToOptions): GardenPlan | null {
+    const config = this.options.math.growBoard
+    if (config === undefined) return null
+    try {
+      const grid = opts?.gridBefore ?? gardenWindowFromStops(this.strips, stops, this.options.math.rows)
+      const scatter = this.options.math.scatter?.symbol
+      return buildGardenPlan(
+        grid,
+        { start: garden.start, startSeeds: garden.startSeeds, steps: garden.steps, finalGrid: garden.finalGrid },
+        {
+          speed: opts?.speed ?? this.spinSpeed,
+          reducedMotion: this.options.reducedMotion,
+          maxTier: config.seedTiers.length - 1,
+          ...(scatter === undefined ? {} : { scatter: { symbol: scatter, trigger: config.bonus.trigger } }),
+        },
+      )
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * 정원 단계를 순서대로 재생한다. 단계마다 `gardenStep` start/end 한 쌍을 낸다.
+   * STOP은 남은 단계를 건너뛰지 않고 압축한다(캐스케이드와 같은 규칙). 어떻게 끝나든 화면은 서버 `finalGrid`다.
+   */
+  private async runGardenPhase(
+    garden: GardenTrigger,
+    stops: number[],
+    opts: SpinToOptions | undefined,
+    token: number,
+  ): Promise<void> {
+    const scene = this.gardenScene
+    const config = this.options.math.growBoard
+    if (scene === null || config === undefined) return
+    const plan = this.planGarden(garden, stops, opts)
+    if (plan === null) {
+      this.settleGarden(garden)
+      return
+    }
+    const total = plan.steps.length
+    let skipStepMs: number | null = null
+    const skipMsAt = (index: number): number | null => {
+      if (this.skipRequestedToken !== token) return null
+      if (skipStepMs === null) skipStepMs = gardenSkipStepMs(total - index)
+      return skipStepMs
+    }
+    for (const planned of plan.steps) {
+      if (this.destroyed || token !== this.spinToken) return
+      const ms = skipMsAt(planned.index)
+      const durations =
+        ms === null
+          ? planned.durations
+          : compressGardenStep(ms, planned.boundsBefore.size, planned.step.removed.length > 0, planned.grow !== undefined)
+      const best = planned.groups.reduce((max, group) => Math.max(max, group.seed ?? 1), 1)
+      this.emit({
+        type: 'gardenStep',
+        index: planned.index,
+        total,
+        phase: 'start',
+        stepWin: planned.stepWin,
+        cumulativeWin: planned.cumulativeWin,
+        popped: planned.popped,
+        size: planned.boundsBefore.size,
+        bloomed: planned.bloomed.length,
+        seedMultiplier: best,
+        wins: planned.groups.map((group) => ({
+          symbol: group.symbol,
+          count: group.positions.length,
+          win: group.win,
+          ...(group.seed === undefined ? {} : { seed: group.seed }),
+        })),
+      })
+      await this.playGardenStep(planned, durations, () => skipMsAt(planned.index))
+      // start를 냈으면 end도 반드시 낸다. 끼어들어도 화면은 이미 gridAfter·boundsAfter로 확정됐다.
+      this.emit({
+        type: 'gardenStep',
+        index: planned.index,
+        total,
+        phase: 'end',
+        stepWin: planned.stepWin,
+        cumulativeWin: planned.cumulativeWin,
+        popped: planned.popped,
+        size: planned.boundsAfter.size,
+        bloomed: planned.bloomed.length,
+        seedMultiplier: best,
+        wins: [],
+      })
+      if (this.destroyed || token !== this.spinToken) return
+    }
+    this.applyGridOverride(plan.finalGrid)
+    this.setGardenCamera(plan.finalBounds, 0)
+    scene.setSeeds(plan.seeds)
+
+    let before = plan.seeds
+    for (const sun of garden.sun ?? []) {
+      if (this.destroyed || token !== this.spinToken) return
+      const sunPlan = buildGardenSunPlan(before, sun, {
+        speed: opts?.speed ?? this.spinSpeed,
+        reducedMotion: this.options.reducedMotion,
+        maxTier: config.seedTiers.length - 1,
+      })
+      this.emit({ type: 'gardenSun', phase: 'start', grown: sun.grown, planted: sun.planted.length })
+      await this.playGardenSun(sunPlan, plan.finalBounds, () => (this.skipRequestedToken === token ? 160 : null))
+      this.emit({ type: 'gardenSun', phase: 'end', grown: sun.grown, planted: sun.planted.length })
+      before = sun.seeds
+    }
+    scene.setSeeds(garden.seeds)
+  }
+
+  private playGardenStep(
+    planned: GardenPlanStep,
+    durations: GardenStepDurations,
+    skipMs: () => number | null,
+  ): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const scene = this.gardenScene
+      if (scene === null) {
+        resolve()
+        return
+      }
+      let handle: GardenFxHandle | null = null
+      let settled = false
+      let growStarted = false
+      let growEnded = false
+      const emitGrow = (phase: 'start' | 'end'): void => {
+        const grow = planned.grow
+        if (grow === undefined) return
+        if (phase === 'start') growStarted = true
+        else growEnded = true
+        this.emit({
+          type: 'gardenGrow',
+          phase,
+          from: grow.from,
+          to: grow.to,
+          size: grow.to.size,
+          newCells: grow.cells.length,
+          newSeeds: grow.newSeeds.length,
+          grown: grow.grown,
+          popped: planned.popped,
+        })
+      }
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        this.activeGarden = null
+        this.applyGridOverride(planned.gridAfter)
+        this.setGardenCamera(planned.boundsAfter, 0)
+        this.setReelsVisible(true)
+        handle?.release()
+        // 성장이 시작됐는데 끝 신호 전에 끊겼으면 짝을 맞춘다.
+        if (growStarted && !growEnded) emitGrow('end')
+        resolve()
+      }
+      this.activeGarden = {
+        finish,
+        compress: () => {
+          const ms = skipMs()
+          if (ms !== null) handle?.compress(ms + (planned.grow === undefined ? 0 : GARDEN_SKIP_GROW_MS))
+        },
+      }
+      this.setReelsVisible(false)
+      const scatter = this.options.math.scatter?.symbol
+      const trigger = this.options.math.growBoard?.bonus.trigger
+      handle = scene.playStep(
+        planned,
+        durations,
+        {
+          layout: this.layout,
+          symbols: this.gardenSymbols,
+          debris: this.gardenDebris,
+          textures: this.textures,
+          reducedMotion: this.options.reducedMotion,
+          ...(scatter === undefined || trigger === undefined ? {} : { scatter: { symbol: scatter, trigger } }),
+          hooks: {
+            bloom: () => {
+              const multipliers = planned.groups
+                .filter((group) => group.seed !== undefined && group.seed > 1)
+                .map((group) => group.seed as number)
+              if (multipliers.length > 0) this.emit({ type: 'seedBloom', count: planned.bloomed.length, multipliers })
+            },
+            growStart: () => emitGrow('start'),
+            growEnd: () => emitGrow('end'),
+          },
+        },
+        finish,
+      )
+      if (settled) handle.release()
+    })
+  }
+
+  private playGardenSun(
+    plan: ReturnType<typeof buildGardenSunPlan>,
+    bounds: GardenBounds,
+    skipMs: () => number | null,
+  ): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const scene = this.gardenScene
+      if (scene === null) {
+        resolve()
+        return
+      }
+      let handle: GardenFxHandle | null = null
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        this.activeGarden = null
+        handle?.release()
+        resolve()
+      }
+      this.activeGarden = {
+        finish,
+        compress: () => {
+          const ms = skipMs()
+          if (ms !== null) handle?.compress(ms)
+        },
+      }
+      handle = scene.playSun(plan, bounds, { layout: this.layout, reducedMotion: this.options.reducedMotion }, finish)
+      if (settled) handle.release()
+    })
   }
 
   // ------------------------------------------------------------------ 연쇄
@@ -2288,6 +2748,7 @@ class PixiRenderer implements RendererCore {
       this.clearWins()
     }
     this.mode = mode
+    if (isFreeSpinsActive(mode)) this.ensureFreeSpinsBackground()
 
     if (target === null) {
       if (mode.immediate === true) {
@@ -2478,6 +2939,10 @@ class PixiRenderer implements RendererCore {
     this.modeGraphics.alpha = 1
     this.applyReelsHidden()
     this.drawMode()
+    // 정원: 프리스핀이 끝나 기본 화면으로 돌아오는 순간(커튼이 덮은 동안) 판을 4×4로 되돌린다.
+    if (to === 'base' && this.gardenView !== null) this.resetGardenView()
+    if (to === 'base') this.releaseFreeSpinsBackground()
+    else this.ensureFreeSpinsBackground()
     // 화면이 갈리는 순간에 한 번만 불리는 콜백(코인 리스핀의 동굴 입장·퇴장). 멱등 호출에서 두 번 돌지 않는다.
     const hook = this.pendingSwapHook
     this.pendingSwapHook = null
@@ -2664,6 +3129,9 @@ class PixiRenderer implements RendererCore {
     this.killRespinTweens()
     // 동굴 무대는 앱(스테이지)이 내려가기 전에 정리한다. 앱이 먼저 지우면 풀이 이미 파괴된 스프라이트를 만진다.
     this.respinScene?.destroy()
+    this.cameraTween?.kill()
+    this.gardenScene?.destroy()
+    this.releaseFreeSpinsBackground()
     this.coinFaces.clear()
     this.stopAmbient()
     for (const tween of this.idleTweens) tween.kill()
@@ -2681,6 +3149,8 @@ class PixiRenderer implements RendererCore {
     // 풀에 감춰 둔 것은 무대 밖이라 앱과 함께 내려가지 않는다. 여기서 직접 버린다.
     this.mutationPool.clear()
     this.cascadeSprites.clear()
+    this.gardenSymbols.clear()
+    this.gardenDebris.clear()
     this.particlePool.clear()
     this.sheetSprites.clear()
     this.symbolFxPool.clear()
@@ -2695,7 +3165,11 @@ class PixiRenderer implements RendererCore {
   /** 칸 하나의 캔버스 기준 사각형(CSS px). 허브가 주문 토큰을 날릴 출발점이다. */
   getCellRect(reel: number, row: number): CellRect {
     const { math } = this.options
-    return cellRect(this.layout, this.geometry.content, math.reels, math.rows, reel, row)
+    const rect = cellRect(this.layout, this.geometry.content, math.reels, math.rows, reel, row)
+    if (this.gardenView === null) return rect
+    // 정원: 카메라 배율·위치를 통과한 사각형. 허브 토큰이 보이는 칸 위치에서 출발한다.
+    const moved = gardenCellRect(this.layout, this.cameraState, reel, row)
+    return { x: this.geometry.content.x + moved.x, y: this.geometry.content.y + moved.y, w: moved.w, h: moved.h }
   }
 
   /**
@@ -2717,6 +3191,7 @@ class PixiRenderer implements RendererCore {
         sheets: sheetTextureSnapshot(),
       },
       ...(this.respinScene === null ? {} : { respin: this.respinScene.stats }),
+      ...(this.gardenScene === null ? {} : { garden: this.gardenScene.stats }),
     }
   }
 }
@@ -2746,7 +3221,8 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
     loadSymbolTextures(options.theme, symbolIds, ownedTextures),
     loadBackgroundTexture(options.theme),
     loadFrameTexture(options.theme.frame, ownedTextures),
-    loadImageTexture(options.theme.backgroundFreeSpins),
+    // 정원 팩의 프리스핀 배경(1080×1620)은 프리스핀에 들어갈 때 받고 끝나면 놓는다(`ensureFreeSpinsBackground`).
+    options.math.growBoard === undefined ? loadImageTexture(options.theme.backgroundFreeSpins) : Promise.resolve(null),
   ])
   const coinTexture = createCoinTexture(options.theme, ownedTextures)
   // 보물 코인·촉수 그림. 코인 리스핀 팩만 받는다. 없거나 실패하면 코드로 그린 대체 그림으로 동작한다.
@@ -2756,6 +3232,15 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
       PROP_KEYS.map(async (id) => [id, await loadImageTexture(options.theme.props?.[id])] as const),
     )
     for (const [id, texture] of loaded) if (texture !== null) props[id] = texture
+  }
+
+  // 정원 팩: 화분 덮개·씨앗 얼굴. 없거나 실패하면 코드로 그린 대체 그림으로 동작한다.
+  const gardenProps: GardenProps = { pot: null, seeds: [] }
+  if (options.math.growBoard !== undefined) {
+    gardenProps.pot = await loadImageTexture(options.theme.props?.['pot'])
+    gardenProps.seeds = await Promise.all(
+      options.math.growBoard.seedTiers.map((_, tier) => loadImageTexture(options.theme.props?.[`seed-${tier}`])),
+    )
   }
 
   return new PixiRenderer(
@@ -2768,5 +3253,6 @@ export async function createPixiRendererCore(options: ResolvedRendererOptions): 
     freeSpinsTexture,
     ownedTextures,
     props,
+    gardenProps,
   )
 }
