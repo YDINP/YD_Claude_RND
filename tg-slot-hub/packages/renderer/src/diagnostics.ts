@@ -32,6 +32,8 @@ export interface RendererDiagnostics {
     /** 여러 렌더러가 나눠 쓰는 시트 아틀라스. 참조가 끊긴 것부터 밀려난다. */
     sheets: TextureRegistrySnapshot
   }
+  /** 얼림 무대의 지금 상태. 얼림 팩에만 있다. 라운드가 끝나면 `caps`·`tweens`·`shardSets`는 0으로 돌아와야 한다. */
+  frost?: { caps: number; pooled: number; tweens: number; shardSets: number }
   /**
    * 코인 리스핀 무대의 지금 상태. 코인 리스핀이 없는 팩에는 없다.
    * 라운드를 여러 번 돌려도 `coinFaces`는 상한(64) 아래에, `tentaclesCreated`는 5 이하에 머물고 `liveTweens`는 0으로 돌아와야 한다.

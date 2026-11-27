@@ -15,7 +15,7 @@ import {
   toSharedFeatures,
   toSharedWinLine,
 } from '../games/engineSpin.js'
-import { DebugNoMatchError, findDebugSeed, isForgePreset, isGardenPreset, isRoulettePreset } from '../games/debugSpin.js'
+import { DebugNoMatchError, findDebugSeed, isForgePreset, isFrostPreset, isGardenPreset, isRoulettePreset } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
@@ -135,6 +135,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     if (debug !== undefined && isGardenPreset(debug.preset) && !pack.math.growBoard) {
       return c.json({ error: 'This game has no growing garden, so no garden outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
     }
+    if (debug !== undefined && isFrostPreset(debug.preset) && !pack.math.frostRespin) {
+      return c.json({ error: 'This game has no freeze spins, so no frost outcome can be forced', code: 'DEBUG_NO_MATCH' }, 409)
+    }
 
     // 베팅 상한은 레벨로 해금된다. 유저는 미들웨어가 이미 읽어 컨텍스트에 실어 뒀고,
     // 저장된 level 컬럼이 아니라 xp에서 다시 계산한다 (/me가 보여주는 상한과 항상 같아야 한다).
@@ -247,6 +250,9 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       // 코인 리스핀 지급은 저장된 리스핀 피처의 `win`이다 (엔진의 `respinWin`과 같다). 진입 스핀에만 싣는다.
       const respinFeature = round.features.find((feature) => feature.type === 'coinRespin')
       const respinWin = respinFeature?.type === 'coinRespin' ? respinFeature.win : undefined
+      // 얼음 보너스는 저장된 얼림 피처의 `bonus`다 (엔진의 `frostWin`과 같다). 얼림이 일어난 프리스핀에만 싣는다.
+      const frostFeature = round.features.find((feature) => feature.type === 'frostChain')
+      const frostWin = frostFeature?.type === 'frostChain' ? frostFeature.bonus : undefined
 
       const response: SpinResponse = {
         roundId: round.id,
@@ -257,6 +263,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         ...(cascades ? { cascades: cascades.map(toSharedCascadeStep), finalGrid: rebuildFinalGrid(grid, cascades) } : {}),
         ...(orderWin === undefined ? {} : { orderWin }),
         ...(respinWin === undefined ? {} : { respinWin }),
+        ...(frostWin === undefined ? {} : { frostWin }),
         wins: round.wins.map(toSharedWinLine),
         totalBet: round.bet,
         totalWin: round.win,

@@ -12,6 +12,7 @@ import { createBgmVoices, type BgmVoices } from './bgmVoices'
 import { createDeepseaAudio, type TreasureSize } from './audioDeepsea'
 import { createForgeAudio } from './audioForge'
 import { createGardenAudio, type BloomTier } from './audioGarden'
+import { createFrostAudio, type FrostBonusTier } from './audioFrost'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
 
@@ -868,6 +869,9 @@ const forge = createForgeAudio({ tone, noise, live, duck: (seconds) => duckBgmFo
 
 /** greenhouse-garden: 나무 칼림바·대나무 윈드차임·하프·잎 바스락. 레시피와 정원 전용 소리는 `audioGarden.ts`에 있다. */
 const garden = createGardenAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+
+/** aurora-ice-palace: 얼음 균열·비정수 배음 결정. 레시피와 얼림 전용 소리는 `audioFrost.ts`에 있다. */
+const frost = createFrostAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds), noiseLoop })
 // ── 한복 야시장 (hanbok-night-market) ─────────────────────
 // 평조 오음(G A B D E) 한 옥타브 반. 가야금(명주실 줄)·해금(활)·대금(숨)·장구·꽹과리·징으로 만든다.
 // shrine 의 고토는 미야코부시 음계의 날카로운 뜯는 현이었다 — 여기는 장조 오음의 부드러운 현이고,
@@ -1738,6 +1742,7 @@ const RECIPES: Record<AudioPreset, Recipe> = {
   royal: ROYAL_RECIPE,
   deepsea: deepsea.recipe,
   garden: garden.recipe,
+  frost: frost.recipe,
   hanbok: HANBOK_RECIPE,
   idol: IDOL_RECIPE,
   forge: forge.recipe,
@@ -2149,6 +2154,49 @@ export function playGardenSun(grown: number): void {
 export function playGardenWaterDrop(): void {
   const c = live()
   if (c) garden.cues.waterDrop(c)
+}
+
+// ── 얼림 (aurora-ice-palace) ───────────────────────────────
+// 음색은 `audioFrost.ts`의 frost 프리셋이다. 이 소리들은 얼림 게임에서만 불린다. 언제 어느 소리를 낼지는 `frostSfx.ts`.
+
+export function playFrostStart(): void {
+  const c = live()
+  if (c) frost.cues.freezeStart(c)
+}
+
+export function playFrostLand(count: number): void {
+  const c = live()
+  if (c) frost.cues.freezeLand(c, count)
+}
+
+export function playFrostTurn(): void {
+  const c = live()
+  if (c) frost.cues.turnTick(c)
+}
+
+export function playFrostGauge(): void {
+  const c = live()
+  if (c) frost.cues.gauge(c)
+}
+
+export function playFrostBonus(tier: FrostBonusTier): void {
+  const c = live()
+  if (c) frost.cues.bonusReveal(c, tier)
+}
+
+export function playAuroraRise(): void {
+  const c = live()
+  if (c) frost.cues.auroraRise(c)
+}
+
+export function playFrostPalace(): void {
+  const c = live()
+  if (c) frost.cues.palace(c)
+}
+
+export function playFrostThaw(): void {
+  const c = live()
+  if (c) frost.cues.thaw(c)
 }
 
 // ── 무대 룰렛 (idol-stage-live) ────────────────────────────

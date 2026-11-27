@@ -24,6 +24,8 @@ describe('GameCard', () => {
     expect(screen.getByText('4×5 · 625 ways')).toBeInTheDocument()
     rerender(<GameCard game={{ ...baseGame, reels: 6, rows: 5, lines: 0 }} locale="en" />)
     expect(screen.getByText('6×5 · Cluster 5+')).toBeInTheDocument()
+    rerender(<GameCard game={{ ...baseGame, reels: 5, rows: 5, lines: 720, reelHeights: [3, 4, 5, 4, 3] }} locale="ko" />)
+    expect(screen.getByText('3·4·5·4·3 · 720웨이')).toBeInTheDocument()
   })
 
   it('renders the Korean localized name for the ko locale', () => {

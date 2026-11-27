@@ -1647,3 +1647,30 @@ Vertical full-screen game transition effect, kawaii chibi cel-shaded game art, t
 16fps / q60 / 360×640 / `loop 1`, 48프레임, 최대 프레임 63ms, 정지 0.0%, 진입 672 KiB / 복귀 425 KiB. `check:clips` 통과.
 
 **한계.** 복귀 끝 프레임은 «맑은 주황 빛»이라 `bg.webp` 와 정확히 같지는 않다(이음매 수치는 재지 않았다). 복귀 시작은 쇠판이 화면을 이미 가득 채워 R1 을 지킨다.
+
+### 2-9. aurora-ice-palace — 오로라 얼음 궁전 (프리스핀 = 얼려 두기)
+
+PLAN §10 프롬프트를 그대로 발주했다(진입 «서리가 자라 덮는다», 복귀 «얼음판이 마름모 금을 따라 갈라져 흩어진다»). SeeDance 2.0 t2v 9:16 13초, 각 1편, **재시도 없이 총 2편 $1.86**. 소스·프롬프트·로그는 `D:/park/tgslot-wt/_qa/new-c-sound/clips/`(`aurora-enter.mp4`, `aurora-exit.mp4`와 각 `.json`·`-prompt.txt`)에 있어 다시 자를 때 발주가 필요 없다.
+
+- **진입**: 서리 고사리가 네 가장자리에서 자라 맞물리며 화면을 덮는다(R1·R8 충족). 덮인 뒤에도 가지가 계속 새로 나와 단색 정지가 없다(R11). 소스 사이클은 약 8초(요청한 3초보다 길다). 컷 02.00 → 05.00 등속, 어두운 하늘 픽셀 비율이 4.05초(컷 +2.05초)에 3% 아래로 내려간다 → `opaqueMs 2050`, 덮인 구간 약 0.95초.
+- **복귀**: 덮인 얼음판 한가운데 눈꽃 무늬에서 빛이 터지고 금이 마름모로 뻗어 큰 조각으로 갈라져 날아가며 오로라 하늘이 드러난다(R6, 역재생 아님). 컷 00.30 → 03.30 등속, 첫 프레임부터 불투명 → `opaqueMs 0`. 끝 장면은 조각 몇 개가 떨어지는 맑은 오로라 하늘이다.
+- 규격 16fps / q60 / 360×640 / `loop 1`. 둘 다 48프레임·최대 프레임 63ms·정지 0.0%(`check:clips` 통과).
+- **용량**: 처음 인코딩은 진입 1.18 MiB + 복귀 0.78 MiB = **1.96 MiB**로 팩 합계 1.2 MiB 선을 넘었다(고사리·유리 조각 질감이 빽빽해서 q60 에서도 크다).
+  **통합 QA(2026-11-28)에서 §4-4 규칙대로 소스 블러를 먹였다** — fps·q는 그대로 두고 스케일 뒤 `gblur=sigma=1.2`. 실측: sigma 0.8은 832+606 = 1,438 KiB(여전히 초과), **sigma 1.2는 진입 685 KiB + 복귀 518 KiB = 1,203 KiB(1.175 MiB)**로 선 안이다.
+  고사리가 가장 촘촘한 진입 +1.6초와 금이 가장 많은 복귀 +1.5초 프레임을 원본과 나란히 놓고 봤다. 고사리 잎맥과 조각 테두리가 그대로 읽혀서, 전면 커튼으로는 잃는 것이 없다.
+  복귀는 블러로 이웃 두 프레임이 같아져 libwebp가 한 장으로 합쳤다(47프레임, 최대 프레임 125ms). `check:clips`는 둘 다 통과했다(정지 0.0%).
+- `theme.json`:
+
+```json
+"transitions": {
+  "freeSpinsEnter": { "src": "transitions/fs-enter.webp", "opaqueMs": 2050, "durationMs": 2999 },
+  "freeSpinsExit":  { "src": "transitions/fs-exit.webp",  "opaqueMs": 0,    "durationMs": 2999 }
+}
+```
+
+```sh
+ffmpeg -ss 2.0 -t 3.0 -i aurora-enter.mp4 -an -vf "fps=16,scale=360:640:flags=lanczos,gblur=sigma=1.2" -c:v libwebp_anim -quality 60 -compression_level 6 -loop 1 fs-enter.webp
+ffmpeg -ss 0.3 -t 3.0 -i aurora-exit.mp4  -an -vf "fps=16,scale=360:640:flags=lanczos,gblur=sigma=1.2" -c:v libwebp_anim -quality 60 -compression_level 6 -loop 1 fs-exit.webp
+```
+
+**눈 확인.** 개발 스택(API 8930 / 허브 5330, 저장소 밖 QA 복사본 + 실제 테마)에서 390×844 로 진입·종료를 찍었다. 진입: 라운드 팝업을 누르면 서리가 판을 덮고(오로라가 비침) → 완전히 덮임 → 페이드로 프리스핀 판. 종료: 얼음판 → 빛 → 금 → 조각이 날아감 → 오로라 하늘 → 기본 판. 두 전환 모두 막히거나 첫 프레임에 멈추지 않았고 콘솔 오류는 없었다. 텔레그램 iOS 확인은 여전히 못 했다(§5-2 경고).

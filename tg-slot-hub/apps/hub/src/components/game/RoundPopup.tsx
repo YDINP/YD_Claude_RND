@@ -32,6 +32,7 @@ import {
 } from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import type { CompletedOrder } from '../../game/orders'
+import { FrostSummary, type FrostSummaryData } from './FrostSummary'
 import './RoundPopup.css'
 
 const TITLE_ID = 'hub-round-popup-title'
@@ -54,6 +55,8 @@ interface RoundPopupViewProps {
    * 아래 `tier`는 여전히 매기지 않는다 — 이름·색 등급은 세션 총액으로 정하지 않는다.
    */
   totalBet?: number
+  /** 얼려 두기 프리스핀 라운드 결과. 종료 팝업에만 그린다. */
+  frost?: FrostSummaryData
 }
 
 export function RoundPopupView({
@@ -65,6 +68,7 @@ export function RoundPopupView({
   skin,
   orderText,
   totalBet,
+  frost,
 }: RoundPopupViewProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -150,6 +154,8 @@ export function RoundPopupView({
     // 심볼·반짝임·배지가 등급 팔레트를 쓴다 — 팔레트는 카드 **위**에 있어야 상속된다.
     `hub-tier--${tier}`,
     reducedMotion ? 'hub-round-popup--still' : '',
+    // 얼림 라운드 결과는 글줄이 많아 내려오는 눈송이가 글자를 덮었다 — 카드를 파티클 위로 올린다.
+    !entry && frost !== undefined ? 'hub-round-popup--over-fx' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -220,8 +226,8 @@ export function RoundPopupView({
             </span>
           )}
 
-          {/* 화로·정원 요약은 자기 «베팅의 ×N» 줄을 이미 보인다 — 같은 줄을 두 번 쓰지 않는다. */}
-          {!entry && showMultiple && !(popup.kind === 'freeSpinsExit' && (popup.forge !== undefined || popup.garden !== undefined)) && (
+          {/* 화로·정원·얼림 요약은 자기 «베팅의 ×N» 줄을 이미 보인다 — 같은 줄을 두 번 쓰지 않는다. */}
+          {!entry && showMultiple && !(popup.kind === 'freeSpinsExit' && (popup.forge !== undefined || popup.garden !== undefined)) && frost === undefined && (
             <span className="hub-round-popup__multiple">{t('winBandMultiple', { x: multipleText })}</span>
           )}
 
@@ -294,6 +300,8 @@ export function RoundPopupView({
               )}
             </span>
           )}
+
+          {!entry && frost !== undefined && <FrostSummary data={frost} />}
 
           {/* 탭의 뜻이 단계마다 다르니 힌트도 그대로 따라간다 — 굴러가는 중에 "닫혀요"라고
               써 두면 탭했는데 안 닫히는 화면이 된다. */}

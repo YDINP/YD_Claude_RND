@@ -969,3 +969,92 @@ z 는 의도 문구 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거가 약하다
 
 - 하네스·분석: `D:/park/tgslot-wt/_qa/new-b-sound/garden/{setup.js,entry.ts,build.mjs,run.mjs,analyze.py,mixcheck.py}`, 측정 로그 `final_sfx.txt`·`final_bgm.txt`·`final_mix.txt`.
 - 스템·믹스: `.../garden/wav/garden_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 정원 전용 `cue_<pop0|pop3|pop6|pop8|drop|grow5|grow6|grow7|bloom0|bloom1|bloom2|sun0|sun2|water>.wav`, BGM `bgm_garden_{base,free}.wav`(50초), 믹스 `mix_garden_{mix,sfx,duck}.wav`.
+
+## aurora-ice-palace 사운드 (`frost` 프리셋) — 2026-11-27
+
+`frost` 프리셋의 기본 레시피, 얼림 전용 소리 8종, 전용 BGM(base·free)을 earshot 으로 듣고 잰 기록. 방법은 앞 절과 같다(실제 `audio.ts`·`bgm.ts`·`bgmVoices.ts`를 esbuild 로 묶어 헤드리스 Chrome 의 OfflineAudioContext + 가상 시계로 렌더, 기존 9개 프리셋도 같은 방식으로 다시 렌더해 비교).
+**수치는 참고값이고 최종 귀 판정은 사용자 몫이다.** 코드는 `apps/hub/src/lib/audioFrost.ts`(레시피·얼림 전용 소리), `bgmFrost.ts`(악보), `bgmVoices.ts`의 `FROST_KIT`(악기), `frostSfx.ts`(이벤트 → 소리 표)다. `audio.ts`는 import 한 줄·`frost` 인스턴스 한 줄·`RECIPES.frost` 한 줄·위임 export 8개만 더했다. 열거 `sound.preset`에 `frost`를 더했다(game-sdk `SOUND_PRESETS`, renderer `SoundPreset`, 테스트).
+
+### 소리 설계 (극야의 얼음 궁전: 찬 바람·얼음 균열·비정수 배음 결정)
+
+정수 배음 차임(글로켄·유리·종)을 피하고 **비정수 배음 사인 묶음(1·1.414·2.236·3.7배)** 과 **잡음 균열(대역 잡음 쓸림 + 잔금 클릭 무더기)** 을 얼굴 소리로 삼았다. 음계는 E 도리안 E4~F#5(다른 프리셋보다 낮고 어둡다).
+
+| 이벤트 | 소리 |
+|---|---|
+| 스핀 시작 | 찬 바람 휘익(대역 잡음 600→3200 Hz) + 눈 밟는 «뽀득» 2개 |
+| 릴 정지 | 잡음 «똑» + 2.4 kHz 비정수 핑. 가운데 → 안쪽 → 바깥으로 갈수록 렌더러가 주는 `lift`로 높아짐 |
+| 작은 당첨 | 낮은 균열 + 바람결 + 느리게 울리는 낮은 결정 2음 |
+| 큰 당첨 | 오로라 합창 패드(디튠 톱니 4음)가 부풀고 → 마루에서 큰 균열 + 62 Hz 울림 → 결정 화음 하행. 등급마다 3/4/5음 |
+| 피처 진입 | 잔금 클릭이 점점 촘촘해짐(서리 번짐) + 패드 부풂 + 결정 화음 |
+| 기대감 | 낮은 바람 울음(대역 잡음 0.8 Hz 진폭 흔들림, 520→1150 Hz) + 82 Hz 드론 |
+| 롤업 틱 / 마감 | 잡음 클릭 + 낮은 «톡», 높이는 진행률 / 결정 화음 + 작은 균열 |
+| 얼림 시작 `freezeStart` | **«쩌억»**: 쓸림 + 잔금 11개 + 낮은 울림 + 결정 한 음. 게임의 얼굴 소리 |
+| 새로 언 칸 `freezeLand` | 작은 균열 + 핑. 언 칸 수가 오를수록 반음씩(3칸 → 19칸 = 16단) |
+| 칸 회전 `turnTick` | 아주 작은 바람 틱(단계당 1회) |
+| 눈금 통과 `gauge` | 결정 2음 상행 |
+| 얼음 보너스 공개 `bonusReveal` | 하 2음(<4배) / 중 3음(<25배) / 상 4음 + 패드. 보너스 0 또는 베팅 1배 미만(`quiet`)이면 소리 없음 |
+| 오로라 상승 | 코러스 패드 상향 + 눈 반짝임 |
+| 궁전 완성 | 전체 결정 화음 + 균열 + 반짝임 + 2.0 s 배경음 덕킹 |
+| 녹음 | 아래로 쓸리는 «사르르» |
+
+이벤트 → 소리 배선은 `frostSfx.ts`(`GameScreen`의 얼림 이벤트 분기에서 호출). 곱셈식 공개(`frostEnd.start`) 때 보너스 화음 → 380 ms 뒤 오로라 → 곱셈식 길이 뒤 궁전 → 녹음이 미뤄져 울리고, STOP 압축·`frostEnd.end`가 오면 남은 소리를 접고 녹음만 낸다. 1배 미만 당첨은 기존 규칙(점검 A3)대로 칸 빛만 있고 `quiet`면 화음이 없다.
+
+### 효과음 구분 (같은 이벤트끼리 CLAP 코사인, frost vs 기존 9개, 높을수록 비슷, 목표 ≤ 0.90)
+
+| 이벤트 | 최댓값 (상대) | 이벤트 | 최댓값 (상대) |
+|---|---|---|---|
+| 스핀 시작 | 0.74 (candy) | 큰 당첨 | 0.86 (deepsea) |
+| 릴 정지 | 0.88 (western) | 피처 | 0.75 (deepsea) |
+| 릴 5개 연속 | 0.84 (shrine) | 변형 | 0.86 (hanbok) |
+| 작은 당첨 | 0.86 (shrine) | 기대감 | 0.71 (deepsea) |
+| 롤업 | 0.82 (deepsea) | | |
+
+전부 0.90 이하다. 첫 렌더는 작은 당첨이 clockwork 0.93·bell 0.92, 큰 당첨이 deepsea 0.92, 롤업이 deepsea 0.96, 변형이 hanbok 0.91 이었다 — 높은 «팅» 2음 구조를 «낮은 균열 + 느린 결정», «패드 → 큰 균열 + 62 Hz 울림 → 하행 화음», «잡음 클릭 틱»으로 바꿔 내렸다.
+
+### 레벨 (효과음 단독 스템, LUFS / dBTP)
+
+| 이벤트 | 스핀 | 릴 정지 | 작은 당첨 | 큰 당첨 | 피처 | 변형 | 기대감 | 롤업 |
+|---|---|---|---|---|---|---|---|---|
+| frost | −42.0 / −18.6 | −26.7 / −11.3 | −18.7 / −6.8 | −21.0 / −4.6 | −21.0 / −6.9 | −23.9 / −9.8 | −25.7 / −16.9 | −23.3 / −9.1 |
+
+기존 프리셋 범위(큰 당첨 −19.0~−24.2, 작은 당첨 −20.4~−24.9, 기대감 −23.3~−29.6) 안이다. 첫 렌더는 스핀 −45.5·기대감 −33.0·작은 당첨 −27.7 로 작아 음량을 올렸다.
+
+### 의도 판독 (earshot `match` z, 짧은 원샷은 태거가 약하다)
+
+대부분 «weak»~«no match»다. 판독기가 결정 핑을 칼림바·성공 차임으로 읽는다. 작은 당첨 «success chime» +3.94, 큰 당첨 «success chime» +2.89, 눈금 통과 z 2.95(plausible), 기대감 «uplifter sweep» +3.12, 궁전 z 2.47(weak), 녹음 z 0.15(no match, 최상위 «downlifter falling sweep» +2.33). **«쩌억» 균열은 의도 문구(ice cracking) z 1.3 으로 못 읽혔다**(최상위 kick drum·kalimba) — 균열 합성을 한 번 고쳐 봤으나(쓸림 + 잔금 클릭으로) 판독이 안 올랐다. 귀로 확인해야 한다.
+
+### 배경음 (72 bpm, E 도리안, 오로라 패드 + 하프 아르페지오 + 활 저음 + 브러시 셰이커, 기본 꺼짐)
+
+| 항목 | frost | 비고 |
+|---|---|---|
+| 기본(base) LUFS / dBTP | **−31.2** / −19.4 | 목표 −30~−32 충족 |
+| 프리스핀(free) LUFS / dBTP | **−30.6** / −18.1 | 76 bpm, +2 반음, 높은 FM 대선율 + 서브 맥동 + 16분 하이햇 |
+| 밝기 / 중심 주파수 | base 709 / 216 Hz → free 1096 / 362 Hz | 기존 중 가장 낮은 중심 |
+| 기존 BGM 18곡과 CLAP 코사인 최댓값 | base 0.824 (shrine_base), free 0.872 (bell_free) | **목표 ≤ 0.88 충족** |
+| base ↔ free | **0.895** | 기존(deepsea 0.967 등)보다 훨씬 갈림 |
+| “calm ambient music with soft harp and shimmering pad” | +3.81 (base) / +3.52 (free) | “cold icy ethereal ambient” +3.13 / +2.43 |
+| “happy upbeat cheerful” | +0.82 / +1.35 | 차분한 곡 |
+
+기존 곡 빠르기(62·88·96·108·116~128)와 겹치지 않는다. `bpm` 필드는 earshot 이 읽지 못한다(설계값 72). 악보는 `bgmFrost.ts`. 첫 악보는 free 에서 음이 MIDI 100 을 넘어 `bgm.test.ts` 범위 검사에 걸려 아르페지오·대선율 하한을 낮췄다.
+
+### 믹스 (BGM 40% 기본 음량, 30초 장면)
+
+믹스 −25.9 LUFS, true peak −5.2 dBTP, 클리핑 0.
+
+| 구간 | 릴 정지 | 작은 당첨 | 기대감 | 큰 당첨 | 피처 |
+|---|---|---|---|---|---|
+| SFX − BGM (dB) | +5.7 | +10.8 | +11.6 | +16.5 | +23.1(커튼 덕킹 겹침) |
+| BGM 덕킹 | | | −6.0 | −6.1 | −13.2 |
+
+### 귀로 확인할 것 (earshot 이 못 가르는 것)
+
+- «쩌억» 균열이 얼음 갈라짐으로 들리는지(판독기는 못 읽음), 새로 언 칸 «쩡»이 16단 오르는 진행감으로 들리는지.
+- 결정 화음(비정수 배음)이 맑은 종이 아니라 차가운 얼음으로 들리는지, 기존 clockwork·deepsea 와 구별되는지.
+- 곱셈식 → 오로라 → 궁전 → 녹음 소리가 화면 박자와 맞는지(타이머는 «보통» 속도 기준 고정값이라 빠름·터보에서는 약간 어긋날 수 있다).
+- 얼림 중 STOP 압축 시 소리가 겹쳐 시끄럽지 않은지.
+- 최종 귀 판정은 사용자 몫이다.
+
+### 파일
+
+- 스템·믹스: `D:/park/tgslot-wt/_qa/new-c-sound/wav/frost_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup>.wav`, 얼림 전용 `cue_frost_<frostcrack|frostland3|frostland19|frostlands|frostturn|frostgauge|bonuslow|bonusmid|bonushigh|aurora|palace|thaw>.wav`, BGM `bgm_frost_{base,free}.wav`, 믹스 `mix_frost_{mix,sfx,duck}.wav`
+- 하네스·분석: `.../new-c-sound/{setup.js,run.mjs,build.mjs,analyze.py,intent_frost.py,mixcheck.py}`

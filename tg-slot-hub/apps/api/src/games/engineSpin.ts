@@ -167,6 +167,26 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       positions: feature.positions.map(([reel, row]) => [reel, row] as [number, number]),
     }
   }
+  if (feature.type === 'frostChain') {
+    // 얼림 전체(단계·끝난 판·보너스·오로라). 키 순서 고정: jsonb 왕복 뒤에도 응답 바이트가 같아야 멱등 재전송이 성립한다.
+    const pos = (positions: readonly (readonly [number, number])[]): [number, number][] =>
+      positions.map(([reel, row]) => [reel, row] as [number, number])
+    return {
+      type: 'frostChain',
+      target: feature.target,
+      tier: feature.tier,
+      startFrozen: pos(feature.startFrozen),
+      steps: feature.steps.map((step) => ({ cells: [...step.cells], frozen: pos(step.frozen) })),
+      finalGrid: feature.finalGrid.map((row) => [...row]),
+      count: feature.count,
+      bonusMultiple: feature.bonusMultiple,
+      auroraBefore: feature.auroraBefore,
+      auroraAfter: feature.auroraAfter,
+      auroraMultiplier: feature.auroraMultiplier,
+      bonus: feature.bonus,
+      hitHardCap: feature.hitHardCap,
+    }
+  }
   if (feature.type === 'boardBonus') {
     // 키 순서 고정: jsonb 왕복 뒤에도 응답 바이트가 같아야 멱등 재전송이 성립한다.
     return {

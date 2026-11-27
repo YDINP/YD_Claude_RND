@@ -35,7 +35,7 @@ export class Accumulators {
   readonly lineWin: number[]
   readonly lineHits: number[]
   /** ways 지급을 (경로 수, 방향)별로 나눠 담는다. 라인 게임에서는 비어 있다. */
-  readonly ways = new Map<string, Bucket & { ways: number; direction: 'ltr' | 'rtl' }>()
+  readonly ways = new Map<string, Bucket & { ways: number; direction: 'ltr' | 'rtl' | 'center' }>()
   /** 뮤테이션 종류별 발동 스핀 수와 바뀐 칸 수. */
   readonly mutations = new Map<string, { spins: number; cells: number; win: number }>()
   /** 뮤테이션 통계를 잰 스핀 수 (프리스핀 포함). */

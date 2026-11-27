@@ -85,6 +85,8 @@ export const GameSummarySchema = z.object({
   payModel: z.literal('anywhere').optional(),
   /** 자라는 정원(growBoard) 팩이면 true. 로비 카드가 «8×8» 대신 «자라는 정원» 문구를 쓴다. 다른 팩은 키가 없다 */
   growBoard: z.boolean().optional(),
+  /** 릴마다 높이가 다른 판(마름모 등)의 릴별 칸 수. 직사각 판은 없다 */
+  reelHeights: z.array(z.number().int().min(1)).optional(),
 })
 export type GameSummary = z.infer<typeof GameSummarySchema>
 
@@ -176,6 +178,15 @@ export const SpinDebugPresetSchema = z.enum([
   'gardenSun',
   'gardenBig',
   'gardenTopUp',
+  // 얼려 두기 프리스핀 게임 전용(aurora-ice-palace): 유료 판 진입 / 라운드 중 12칸 이상 얼림 / 오로라 상승 /
+  // 19칸 전부(궁전 완성) / 얼음 보너스가 총 베팅의 25배 이상(큰 결과)
+  'frostRound',
+  'frostChain12',
+  'auroraUp',
+  'frostFull',
+  'frostBig',
+  // 유료 판에서 바깥 릴 앞에 구슬이 진입 개수 −1개(바깥 릴 기대감 감속을 화면으로 확인)
+  'frostTease',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -218,8 +229,8 @@ const WinLineObjectSchema = z
     group: z.string().optional(),
     /** ways 지급일 때 경로 수. 라인 지급이면 없다 */
     ways: z.number().int().min(1).optional(),
-    /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지 */
-    direction: z.enum(['ltr', 'rtl']).optional(),
+    /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지. `center`는 가운데 릴부터 양쪽 */
+    direction: z.enum(['ltr', 'rtl', 'center']).optional(),
     /** [reel, row] 좌표 목록 */
     positions: z.array(GridPositionSchema),
     /** 지급 종류. 파싱하면 항상 채워진다(없던 라운드는 line/ways에서 되짚는다). `anywhere`는 위치 무관(판 전체 개수) */
@@ -280,6 +291,19 @@ export const OrderRoundCarrySchema = z.object({
 })
 export type OrderRoundCarry = z.infer<typeof OrderRoundCarrySchema>
 
+/** 얼려 두기 프리스핀 라운드의 스핀 간 상태(aurora-ice-palace). 얼음은 판 사이에 안 남고 오로라 단계만 남는다 */
+export const FrostCarrySchema = z.object({
+  /** 오로라 단계 0..3 */
+  level: z.number().int().min(0),
+  /** 이 라운드 프리스핀에서 지금까지 지급한 코인(진입 판 제외). 라운드 상한이 이 값을 본다 */
+  paid: z.number().int().min(0),
+  /** 한 판에 가장 많이 얼린 칸 수 */
+  bestCount: z.number().int().min(0),
+  /** 얼음 보너스 지급 합계 코인 */
+  bonusTotal: z.number().int().min(0),
+})
+export type FrostCarry = z.infer<typeof FrostCarrySchema>
+
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다 */
 /** 화로 배율 줄 프리스핀 라운드의 스핀 간 상태(volcano-forge). 서버 값만이 정본이다 */
 export const ForgeCarrySchema = z.object({
@@ -301,6 +325,7 @@ export const RoundCarrySchema = z.object({
   forge: ForgeCarrySchema.optional(),
   /** 자라는 정원 프리스핀만. 판 크기·성장 막대·씨앗 */
   garden: GardenCarrySchema.optional(),
+  frost: FrostCarrySchema.optional(),
 })
 export type RoundCarry = z.infer<typeof RoundCarrySchema>
 
@@ -345,6 +370,8 @@ export const SpinResponseSchema = z.object({
   orderWin: z.number().int().min(0).optional(),
   /** 코인 리스핀 지급 합계 코인. `totalWin`에 이미 들어 있다. 리스핀 진입 스핀만 */
   respinWin: z.number().int().min(0).optional(),
+  /** 얼음 보너스 지급 코인(`frostChain` 피처의 `bonus`). `totalWin`에 이미 들어 있다. 얼림이 일어난 프리스핀만 */
+  frostWin: z.number().int().min(0).optional(),
   wins: z.array(WinLineSchema),
   totalBet: z.number().int(),
   totalWin: z.number().int(),
@@ -404,6 +431,14 @@ export const SpinResponseSchema = z.object({
       bestSpin: z.number().int().min(0).optional(),
       /** 자라는 정원 프리스핀만. 최대 정원 크기·가장 큰 씨앗·최고 한 판·최저 보장 코인 */
       garden: GardenSummarySchema.optional(),
+      /** 얼려 두기 프리스핀만. 한 판 최다 얼린 칸 · 마지막 오로라 단계 · 얼음 보너스 합계 코인 */
+      frost: z
+        .object({
+          bestCount: z.number().int().min(0),
+          auroraLevel: z.number().int().min(0),
+          bonusTotal: z.number().int().min(0),
+        })
+        .optional(),
     })
     .optional(),
   /**
@@ -637,6 +672,36 @@ export const ForgeRailFeatureSchema = z.object({
 })
 export type ForgeRailFeature = z.infer<typeof ForgeRailFeatureSchema>
 
+// ---- 얼려 두기 프리스핀 (aurora-ice-palace) ----
+
+/** 얼림 다시 돌리기 1단계. `cells`는 이 단계 시작 때 얼지 않은 칸(릴 → 행 순서)에 새로 뽑힌 심볼, `frozen`은 새로 언 칸 */
+export const FrostStepSchema = z.object({
+  cells: z.array(z.string()),
+  frozen: z.array(GridPositionSchema),
+})
+export type FrostStep = z.infer<typeof FrostStepSchema>
+
+/**
+ * 프리스핀 한 판의 얼림 전체(서버가 끝까지 정했다). 허브는 재생만 한다.
+ * `bonus`가 `frostWin`과 같고 `totalWin`에 이미 들어 있다. 오로라 상승 = `auroraAfter > auroraBefore`
+ */
+export const FrostChainFeatureSchema = z.object({
+  type: z.literal('frostChain'),
+  target: z.string(),
+  tier: z.enum(['high', 'mid', 'low']),
+  startFrozen: z.array(GridPositionSchema),
+  steps: z.array(FrostStepSchema).max(64),
+  finalGrid: z.array(z.array(z.string())),
+  count: z.number().int().min(0),
+  bonusMultiple: z.number().min(0),
+  auroraBefore: z.number().int().min(0),
+  auroraAfter: z.number().int().min(0),
+  auroraMultiplier: z.number().int().min(1),
+  bonus: z.number().int().min(0),
+  hitHardCap: z.boolean(),
+})
+export type FrostChainFeature = z.infer<typeof FrostChainFeatureSchema>
+
 export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('freeSpins'), spins: z.number().int().min(1), multiplier: z.number().min(1), retrigger: z.boolean() }),
   z.object({
@@ -692,6 +757,7 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   ForgeRailFeatureSchema,
   GardenFeatureSchema,
   GardenTopUpFeatureSchema,
+  FrostChainFeatureSchema,
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 

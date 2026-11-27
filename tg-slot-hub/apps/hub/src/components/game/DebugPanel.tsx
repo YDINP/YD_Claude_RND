@@ -58,6 +58,12 @@ const PRESET_LABEL_KEY: Record<DebugPreset, TranslationKey> = {
   gardenSun: 'gardenDebugSun',
   gardenBig: 'gardenDebugBig',
   gardenTopUp: 'gardenDebugTopUp',
+  frostRound: 'auroraDebugRound',
+  frostChain12: 'auroraDebugChain12',
+  auroraUp: 'auroraDebugAuroraUp',
+  frostFull: 'auroraDebugFull',
+  frostBig: 'auroraDebugBig',
+  frostTease: 'auroraDebugTease',
 }
 
 interface DebugPanelProps {
@@ -228,6 +234,11 @@ export function DebugPanel({
           {diagnostics.garden && (
             <p className="hub-debug-panel__state-line">
               {`garden: covers ${diagnostics.garden.covers} · badges ${diagnostics.garden.badges} · glows ${diagnostics.garden.glows} · tweens ${diagnostics.garden.liveTweens} · seeds ${diagnostics.garden.seeds}`}
+            </p>
+          )}
+          {diagnostics.frost && (
+            <p className="hub-debug-panel__state-line">
+              {`frost: caps ${diagnostics.frost.caps} · pooled ${diagnostics.frost.pooled} · tweens ${diagnostics.frost.tweens} · shards ${diagnostics.frost.shardSets}`}
             </p>
           )}
         </section>

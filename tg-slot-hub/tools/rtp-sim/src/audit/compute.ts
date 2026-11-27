@@ -6,6 +6,7 @@ import { coinRespinGates } from './coinRespinStats.js'
 import { rouletteGates } from './rouletteStats.js'
 import { forgeGates } from './forgeStats.js'
 import { gardenGates } from './gardenStats.js'
+import { frostGates } from './frostStats.js'
 import { Z95 } from './stats.js'
 import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
@@ -367,6 +368,7 @@ export function buildGates(input: GateInput): GateRow[] {
   if (distribution.roulette !== undefined) gates.push(...rouletteGates(distribution.roulette))
   if (distribution.forge !== undefined) gates.push(...forgeGates(distribution.forge))
   if (distribution.garden !== undefined) gates.push(...gardenGates(distribution.garden))
+  if (distribution.frost !== undefined) gates.push(...frostGates(distribution.frost))
 
   if (jackpot !== null) {
     gates.push({

@@ -3,6 +3,8 @@ import type { GameMath, RtpBreakdown } from '@tgslot/slot-engine'
 import { CascadeAccumulator, buildCascadeReport } from './cascadeStats.js'
 import type { CascadeAccumulatorData } from './cascadeStats.js'
 import { CoinRespinAccumulator, buildCoinRespinReport } from './coinRespinStats.js'
+import { FrostAccumulator, buildFrostReport } from './frostStats.js'
+import type { FrostAccumulatorData } from './frostStats.js'
 import type { CoinRespinAccumulatorData } from './coinRespinStats.js'
 import { BoardAccumulator, buildBoardReport } from './boardStats.js'
 import type { BoardAccumulatorData } from './boardStats.js'
@@ -89,6 +91,8 @@ export interface SampleState {
   forge?: ForgeAccumulatorData | null
   /** 자라는 정원 팩만. 없던 시절 상태와 섞여도 되게 선택 필드다. */
   garden?: GardenAccumulatorData | null
+  /** 얼려 두기 프리스핀 팩만. 없던 시절 상태와 섞여도 되게 선택 필드다. */
+  frost?: FrostAccumulatorData | null
   bucketCounts: number[]
   bucketMultiplier: number[]
   hits: number
@@ -147,6 +151,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
   const roulette = math.stageRoulette === undefined ? null : new RouletteAccumulator(math)
   const forge = math.forgeRail === undefined ? null : new ForgeAccumulator(math)
   const garden = math.growBoard === undefined ? null : new GardenAccumulator(math)
+  const frost = math.frostRespin === undefined ? null : new FrostAccumulator(math)
   const bucketCounts = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
   const bucketMultiplier = new Array<number>(HISTOGRAM_BUCKETS.length).fill(0)
 
@@ -191,6 +196,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     roulette?.observe(round, totalBet)
     forge?.observe(round, totalBet)
     garden?.observe(round, totalBet, math)
+    frost?.observe(round, totalBet)
     if (round.length > 1) triggers += 1
 
     if (roundWin > 0) {
@@ -220,6 +226,7 @@ export function collectSample(math: GameMath, totalBet: number, options: SampleO
     roulette,
     forge,
     garden,
+    frost,
     bucketCounts,
     bucketMultiplier,
     hits,
@@ -278,6 +285,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
   const roulette = math.stageRoulette === undefined ? null : new RouletteAccumulator(math)
   const forge = math.forgeRail === undefined ? null : new ForgeAccumulator(math)
   const garden = math.growBoard === undefined ? null : new GardenAccumulator(math)
+  const frost = math.frostRespin === undefined ? null : new FrostAccumulator(math)
   const merged: SampleState = {
     totalBet: first.totalBet,
     spins: 0,
@@ -290,6 +298,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     roulette,
     forge,
     garden,
+    frost,
     bucketCounts: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     bucketMultiplier: new Array<number>(HISTOGRAM_BUCKETS.length).fill(0),
     hits: 0,
@@ -311,6 +320,7 @@ export function mergeSampleStates(math: GameMath, parts: readonly SampleState[],
     if (part.roulette !== null && part.roulette !== undefined) roulette?.absorb(part.roulette)
     if (part.forge != null) forge?.absorb(part.forge)
     if (part.garden != null) garden?.absorb(part.garden)
+    if (part.frost != null) frost?.absorb(part.frost)
     part.bucketCounts.forEach((count, index) => {
       merged.bucketCounts[index] = (merged.bucketCounts[index] ?? 0) + count
     })
@@ -401,6 +411,7 @@ export function finishSample(math: GameMath, state: SampleState): DistributionRe
     report.roulette = buildRouletteReport(math, state.roulette, totalBet, state.multiplierSum / Math.max(1, spins))
   }
   if (state.forge != null) report.forge = buildForgeReport(state.forge, totalBet)
+  if (state.frost != null) report.frost = buildFrostReport(math, state.frost, totalBet)
   return report
 }
 

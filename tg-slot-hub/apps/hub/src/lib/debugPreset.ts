@@ -27,7 +27,7 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = [
  * - 라운드(프리스핀·주문 카드 라운드)가 이미 도는 중이면 진입 프리셋(`freeSpins`·`orderRound`)은 맞출 수 없다.
  */
 export function presetsFor(
-  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette' | 'forgeRail' | 'growBoard'>> | null,
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette' | 'forgeRail' | 'growBoard' | 'frostRespin'>> | null,
   options: { inRound?: boolean } = {},
 ): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
@@ -53,6 +53,8 @@ export function presetsFor(
     // 화로 배율 줄 팩만. 화로 가득·추가 스핀은 프리스핀 안에서만 맞출 수 있다.
     ...(math.forgeRail !== undefined ? (inRound ? FORGE_PRESETS : (['forgeEmbers', 'forgeBig'] as const)) : []),
     ...(hasGarden ? (inRound ? GARDEN_ROUND_PRESETS : GARDEN_PAID_PRESETS) : []),
+    // 얼려 두기 프리스핀 팩: 라운드 밖에서는 진입만, 라운드 중에는 얼림 프리셋 4종만 맞출 수 있다.
+    ...(math.frostRespin !== undefined ? (inRound ? FROST_ROUND_PRESETS : (['frostRound', 'frostTease'] as const)) : []),
   ]
 }
 
@@ -63,12 +65,16 @@ export const FORGE_PRESETS = ['forgeEmbers', 'forgeFull', 'forgeRetrigger', 'for
 export const GARDEN_PAID_PRESETS = ['cascade3', 'gardenGrow', 'gardenGrow8', 'seedBloom', 'gardenBig'] as const
 export const GARDEN_ROUND_PRESETS = [...GARDEN_PAID_PRESETS, 'gardenSun', 'gardenTopUp'] as const
 
+/** 얼려 두기 프리스핀 라운드 중 프리셋. 서버도 frostRespin이 없는 게임에는 409. */
+export const FROST_ROUND_PRESETS = ['frostChain12', 'auroraUp', 'frostFull', 'frostBig'] as const
+
 /** 무대 룰렛 팩 전용 프리셋. 서버도 룰렛이 없는 게임에는 409. */
 export const STAGE_ROULETTE_PRESETS = ['roulette', 'rouletteInner', 'roulette4', 'rouletteGrand', 'rouletteBig'] as const
 
 /** 서버 시드 탐색 횟수. 드문 룰렛 프리셋(1/1,000~1/5,500)은 스키마 상한 20000을 쓴다. */
 export function debugMaxTries(preset: DebugPreset): number {
-  return preset === 'rouletteInner' || preset === 'roulette4' || preset === 'rouletteGrand' || preset === 'rouletteBig'
+  return preset === 'rouletteInner' || preset === 'roulette4' || preset === 'rouletteGrand' || preset === 'rouletteBig' ||
+    preset === 'frostFull' || preset === 'frostBig'
     ? 20000
     : 5000
 }

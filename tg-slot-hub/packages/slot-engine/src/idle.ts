@@ -4,6 +4,7 @@ import { buildGrid, getBetUnit } from './spin.js'
 import type { GameMath } from './schema.js'
 import type { SymbolId } from './types.js'
 import { evaluateWays } from './ways.js'
+import { reelHeight } from './shape.js'
 
 /** 릴마다 살펴볼 «깨끗한» 정지 위치 후보 수. 5릴이면 최대 8^5번 평가한다. */
 const CANDIDATES_PER_REEL = 8
@@ -48,9 +49,11 @@ export function pickIdleStops(math: GameMath): number[] {
   const candidates: number[][] = math.strips.slice(0, math.reels).map((strip: readonly SymbolId[], reel: number) => {
     const clean: { stop: number; variety: number }[] = []
     for (let stop = 0; stop < strip.length; stop += 1) {
-      if (!isCleanWindow(strip, stop, math.rows, special)) continue
+      // 릴별 높이 팩은 그 릴의 칸 수만 본다. 직사각 판은 reelHeight = rows라 기존과 같다.
+      const height = reelHeight(math, reel)
+      if (!isCleanWindow(strip, stop, height, special)) continue
       const seen = new Set<SymbolId>()
-      for (let row = 0; row < math.rows; row += 1) seen.add(strip[(stop + row) % strip.length] as SymbolId)
+      for (let row = 0; row < height; row += 1) seen.add(strip[(stop + row) % strip.length] as SymbolId)
       clean.push({ stop, variety: seen.size })
     }
     // 같은 심볼이 쌓인 창보다 여러 심볼이 보이는 창을 먼저(동률이면 앞 위치). 정렬은 안정적이다.

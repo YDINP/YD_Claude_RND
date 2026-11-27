@@ -59,6 +59,11 @@ export interface Layout {
   reelArea: Rect
   reels: number
   rows: number
+  /**
+   * 릴별 세로 오프셋(px). 릴 높이가 다른 판(마름모)에서만 있다. 없으면 모든 릴이 위에 붙는다.
+   * 셀 좌표 함수(`symbolCenter`·`positionRects`·`cellRect`)가 이 값을 더해, 기존 직사각 판은 결과가 그대로다.
+   */
+  reelOffsets?: readonly number[]
 }
 
 /** 셀 + 간격을 합친 한 칸의 피치(px). */
@@ -130,7 +135,7 @@ export function rowTop(layout: Layout, row: number): number {
 export function symbolCenter(layout: Layout, reel: number, row: number): Point {
   return {
     x: reelLeft(layout, reel) + layout.symbolSize / 2,
-    y: rowTop(layout, row) + layout.symbolSize / 2,
+    y: rowTop(layout, row) + (layout.reelOffsets?.[reel] ?? 0) + layout.symbolSize / 2,
   }
 }
 
@@ -149,7 +154,7 @@ export function paylinePoints(layout: Layout, payline: readonly number[]): Point
 export function positionRects(layout: Layout, positions: readonly (readonly [number, number])[]): Rect[] {
   return positions.map(([reel, row]) => ({
     x: reelLeft(layout, reel),
-    y: rowTop(layout, row),
+    y: rowTop(layout, row) + (layout.reelOffsets?.[reel] ?? 0),
     width: layout.symbolSize,
     height: layout.symbolSize,
   }))
@@ -172,7 +177,7 @@ export function cellRect(
   }
   return {
     x: content.x + reelLeft(layout, reel),
-    y: content.y + rowTop(layout, row),
+    y: content.y + rowTop(layout, row) + (layout.reelOffsets?.[reel] ?? 0),
     w: layout.symbolSize,
     h: layout.symbolSize,
   }

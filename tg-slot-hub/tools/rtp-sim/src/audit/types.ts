@@ -6,6 +6,7 @@ import type { GameMath, GridPosition, RtpBreakdown, SymbolId, WinLine } from '@t
 import type { RouletteReport } from './rouletteStats.js'
 import type { ForgeReport } from './forgeStats.js'
 import type { GardenReport } from './gardenStats.js'
+import type { FrostReport } from './frostStats.js'
 
 /** 심볼 또는 그룹 하나가 RTP에 기여하는 몫. */
 export interface ContributionRow {
@@ -48,7 +49,7 @@ export interface WaysContributionRow {
   /** 이 지급이 커버한 경로 수 (`WinLine.ways`). */
   ways: number
   /** 방향별로 나눠 본다. bothWays가 아니면 전부 ltr이다. */
-  direction: 'ltr' | 'rtl'
+  direction: 'ltr' | 'rtl' | 'center'
   win: number
   rtp: number
   share: number
@@ -188,6 +189,8 @@ export interface DistributionReport {
   forge?: ForgeReport
   /** 자라는 정원 팩의 성장·씨앗·정원 프리스핀 통계. 정원이 없으면 없다. */
   garden?: GardenReport
+  /** 얼려 두기 프리스핀 팩의 진입·얼림·보너스·오로라 통계. 없으면 없다. */
+  frost?: FrostReport
 }
 
 /** 코인 리스핀 통계(표본). 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. */

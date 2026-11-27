@@ -171,6 +171,11 @@ function checkManifestMathAgreement(pack: GamePack, add: Add): void {
   const file = PACK_FILES.manifest
   if (manifest.reels !== math.reels) add('error', file, 'reels', `math.json(${math.reels})과 다르다: ${manifest.reels}`)
   if (manifest.rows !== math.rows) add('error', file, 'rows', `math.json(${math.rows})과 다르다: ${manifest.rows}`)
+  if (manifest.reelHeights !== undefined || math.reelHeights !== undefined) {
+    const a = manifest.reelHeights?.join(',') ?? '없음'
+    const b = math.reelHeights?.join(',') ?? '없음'
+    if (a !== b) add('error', file, 'reelHeights', `math.json(${b})과 다르다: ${a}`)
+  }
 
   // 클러스터 게임은 라인도 ways도 없어 0과 비교한다.
   const mathLines =

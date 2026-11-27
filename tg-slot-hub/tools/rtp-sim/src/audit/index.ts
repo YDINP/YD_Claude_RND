@@ -60,6 +60,10 @@ export { CoinRespinAccumulator, buildCoinRespinReport, coinRespinGates } from '.
 export type { CoinRespinAccumulatorData } from './coinRespinStats.js'
 export { GARDEN_GATES, GardenAccumulator, buildGardenReport, gardenGates, gardenSections } from './gardenStats.js'
 export type { GardenAccumulatorData, GardenReport } from './gardenStats.js'
+export { FrostAccumulator, buildFrostReport, frostGates, frostSections } from './frostStats.js'
+export type { FrostAccumulatorData, FrostReport } from './frostStats.js'
+export { centerWaysAnalytic } from '../centerWaysAnalytic.js'
+export type { CenterWaysAnalytic } from '../centerWaysAnalytic.js'
 export {
   ROULETTE_BUCKETS,
   ROULETTE_GATES,

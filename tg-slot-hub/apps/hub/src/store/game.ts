@@ -54,6 +54,7 @@ import {
 // 않는다. 이 모듈은 React/DOM에 기대지 않아 store에서 import해도 안전하다.
 import { celebrationTier } from '../components/game/winTiers'
 import { clearRespinReplay, hasCoinRespin, saveRespinReplay } from '../lib/respinReplay'
+import { findFrostChain, frostHoldCoins, frostPlayInput } from '../game/frostFlow'
 import {
   findRouletteFeature,
   rouletteRendererMode,
@@ -166,6 +167,8 @@ let boardGate: (() => void) | null = null
  * 봤자 아무도 닫지 않으므로 spin()은 말판을 건너뛰고 곧장 결과를 공개한다.
  */
 let boardPlayerReady = false
+/** 얼림 재생 중인가. STOP/SPIN 연타가 남은 단계를 압축하게 한다. */
+let currentFrostPlaying = false
 
 /** 지갑에서 `held` 코인을 «아직 공개하지 않은 것»으로 덜어 낸 사본. 서버 값 자체는 건드리지 않는다. */
 function withHeldCoins<T extends { coins: number }>(wallet: T, held: number): T {
@@ -238,6 +241,8 @@ export interface SpinToOptionsLike {
   respin?: Extract<FeatureTrigger, { type: 'coinRespin' }>
   /** 자라는 정원 스핀(`garden` 피처). 착지 뒤 단계(팝 → 낙하 → 성장)와 햇살을 재생한다. 결과는 이미 서버가 정했다. */
   garden?: Extract<FeatureTrigger, { type: 'garden' }>
+  /** 얼림 팩: 프리스핀 판이면 정지 위치가 `freeStrips` 기준이다. 렌더러가 릴 스트립을 갈아 끼운다. */
+  frost?: { freeSpin: boolean }
 }
 
 export interface SpinRenderer {
@@ -297,6 +302,14 @@ export interface SpinRenderer {
    * 빅윈 연출은 동굴 배경 위에서 먼저 끝나야 해서 `spinTo`가 resolve해도 자동으로 나가지 않는다.
    */
   endRespin?(): Promise<void>
+  /** 얼림(`frostChain` 피처)을 재생한다. 얼림 팩이 아닌 렌더러에는 없다. 끝나면 화면은 서버 `finalGrid`와 같다. */
+  playFrost?(input: {
+    chain: ReturnType<typeof frostPlayInput>['chain']
+    grid: string[][]
+    thresholds: number[]
+  }): Promise<void>
+  /** 얼림 재생 중이면 남은 단계를 압축해 곧장 마친다. */
+  skipFrost?(): void
   /** 이후 스핀의 릴 속도 프로파일을 바꾼다. 돌고 있는 스핀은 건드리지 않는다. */
   setSpinSpeed?(speed: 'normal' | 'quick' | 'turbo'): void
   /** 그리기 루프를 멈추거나 다시 돌린다. 말판 화면이 캔버스를 통째로 덮는 동안 GPU를 쉬게 한다. */
@@ -348,7 +361,11 @@ function writeStoredBetAmount(gameId: string, bet: number): void {
  * spinTo()에 넘길 옵션을 만든다 — 아무것도 특별한 게 없으면(프리스핀도 아니고 gridBefore/mutations도
  * 없으면) `undefined`를 돌려준다(기존 테스트/렌더러 호출부가 기대하는 "옵션 없음" 그대로).
  */
-export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | undefined {
+export function buildSpinToOptions(
+  result: SpinResponse,
+  math?: { frostRespin?: unknown } | null,
+): SpinToOptionsLike | undefined {
+  const frostPack = math?.frostRespin !== undefined
   const hasGridBefore = result.gridBefore !== undefined
   const hasMutations = result.mutations.length > 0
   const hasCascades = hasCascadeSteps(result)
@@ -362,13 +379,15 @@ export function buildSpinToOptions(result: SpinResponse): SpinToOptionsLike | un
     !hasCascades &&
     coinBoard === undefined &&
     coinRespin === undefined &&
-    garden === undefined
+    garden === undefined &&
+    !frostPack
   ) {
     return undefined
   }
 
   const options: SpinToOptionsLike = {}
   if (result.isFreeSpin) options.fast = true
+  if (frostPack) options.frost = { freeSpin: result.isFreeSpin }
   if (hasGridBefore) options.gridBefore = result.gridBefore
   if (hasMutations) options.mutations = result.mutations
   if (hasCascades) {
@@ -1100,7 +1119,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       })
     }
     /** 릴 착지 때 아직 보여 주면 안 되는 말판 몫(코인). 말판 재생이 끝나야 풀린다. */
-    const boardHoldCoins = board !== undefined && boardPlayerReady ? board.win : 0
+    // 얼림 판은 얼음 보너스 몫도 재생이 끝날 때까지 덜어 둔다(얼기도 전에 지갑에 오르면 결과가 새어 나간다).
+    const frostChain = findFrostChain(result.features)
+    const canPlayFrost = renderer?.playFrost !== undefined && math !== null && frostChain !== undefined
+    const boardHoldCoins =
+      board !== undefined && boardPlayerReady ? board.win : frostHoldCoins(result.features, canPlayFrost)
     let boardHeld = 0
 
     // 더블업 세션 — gambleOffer가 있으면 이번 스핀 당첨을 걸 수 있는 새 세션이다. 값은 지금
@@ -1232,7 +1255,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // gridBefore/mutations를 함께 넘기면(뮤테이션이 있는 게임) 렌더러가 리빌 연출까지 재생한
         // 뒤에야 이 손잡이가 resolve된다 — 승리 연출은 항상 그 다음이다(아래 흐름 그대로).
         set({ playing: result })
-        const handle = renderer.spinTo(result.stops, buildSpinToOptions(result))
+        const handle = renderer.spinTo(result.stops, buildSpinToOptions(result, math))
         currentSpinHandle = handle
         if (skipRequested) {
           skipRequested = false
@@ -1291,7 +1314,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return get().gameId === gameId
       }
       // 무대 룰렛 스핀은 룰렛이 끝난 뒤(아래)에 한 번만 띄운다.
-      if (!ceremony && board === undefined && rouletteFeature === null && !(await celebrateIfBig())) return
+      // 얼림 판은 얼음 보너스까지 정산된 뒤(아래) 한 번만 축하한다.
+      if (!ceremony && board === undefined && rouletteFeature === null && !canPlayFrost && !(await celebrateIfBig())) return
 
       // 코인 리스핀: 빅윈 연출까지 동굴 배경 위에서 마쳤다. 복귀 전환으로 기본 화면에 돌아온 뒤 라인 당첨을 보여 준다.
       if (renderer?.endRespin !== undefined && hasCoinRespin(result)) {
@@ -1315,8 +1339,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // 간격이 20초를 넘겨 "진행이 멈춘 것"처럼 보인다(실측). 수동 기본 게임만 full +
           // 순환이다(옵션 자체를 넘기지 않아 기존 호출 형태를 그대로 유지한다).
           // 말판 판은 «초롱 3개 → 말판»이 주인공이라(무대 룰렛 진입도 같다) 라인 연출은 전체 표시 한 번으로 짧게 보여 주고 넘어간다.
+          // 얼림 팩의 유료 판 프리스핀 진입은 «구슬 3개 → 프리스핀»이 주인공이다 — 길마다 순환하면 진입까지 5초가 더 걸렸다.
+          const frostEntry =
+            math?.frostRespin !== undefined && freeSpins === null && result.features.some((feature) => feature.type === 'freeSpins')
           const presentation =
-            board !== undefined || rouletteFeature !== null
+            board !== undefined || rouletteFeature !== null || frostEntry
               ? 'brief'
               : winPresentationMode({
                   autoSpinActive: get().autoSpin !== null,
@@ -1337,6 +1364,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
           })
           timing.firstPassMs = Date.now() - winStartAt
         }
+      }
+
+      // ---- 얼림 — 착지 판의 평소 당첨을 보여 준 뒤, 가장 큰 그림이 얼고 나머지가 다시 돌고 보너스가 정산된다 ----
+      if (canPlayFrost && renderer?.playFrost !== undefined && frostChain !== undefined && math !== null && get().gameId === gameId) {
+        set({ phase: 'showingWin' })
+        currentFrostPlaying = true
+        try {
+          await renderer.playFrost(frostPlayInput(result, frostChain, math))
+        } finally {
+          currentFrostPlaying = false
+        }
+        if (get().gameId !== gameId) return
+        releaseBoardHold()
+        if (!ceremony && !(await celebrateIfBig())) return
       }
 
       // ---- 말판 보너스 — 릴·라인 연출이 끝난 뒤, 요약 [받기]와 복귀 커튼이 끝날 때까지 이 판은 여기서 멈춰 선다 ----
@@ -1694,6 +1735,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   requestSkip() {
+    if (currentFrostPlaying) {
+      // 얼림 도중 STOP: 남은 단계를 압축해 곧장 마친다(결과·순서 그대로).
+      get().renderer?.skipFrost?.()
+      return
+    }
     if (get().phase !== 'spinning') return
     if (currentSpinHandle) {
       currentSpinHandle.skip?.()
@@ -1740,3 +1786,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(initialState)
   },
 }))
+
+/** 얼림이 재생되는 중인가. SPIN/STOP 버튼이 «다음 스핀» 대신 «남은 단계 압축»을 하게 한다. */
+export function isFrostPlaying(): boolean {
+  return currentFrostPlaying
+}

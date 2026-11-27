@@ -1,0 +1,286 @@
+/* 얼림 — 마퀴 띠(높이 고정 64)와 오로라 4단. 사선 광택은 쓰지 않는다(세로 커튼·방사형만). */
+.hub-frost {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 64px;
+  margin: var(--hub-space-xs) var(--hub-space-sm);
+  padding: 4px var(--hub-space-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border-radius: var(--hub-radius-sm);
+  background: linear-gradient(180deg, color-mix(in srgb, #8fe8ff 14%, var(--hub-card-bg)), var(--hub-card-bg));
+  border: 1px solid color-mix(in srgb, #bfefff 36%, var(--hub-border));
+  overflow: hidden;
+}
+
+.hub-frost--guide {
+  justify-content: center;
+}
+
+.hub-frost__guide {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+}
+
+.hub-frost__guide-icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.hub-frost__guide-icon--fallback,
+.hub-frost__target-icon--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, #3fe0c5 22%, var(--hub-card-bg));
+  color: #bfefff;
+  font-size: 18px;
+}
+
+.hub-frost__guide-text {
+  min-width: 0;
+  color: #dff6ff;
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.hub-frost__row {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  min-width: 0;
+  height: 32px;
+}
+
+.hub-frost__target {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-frost__target-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.hub-frost__count {
+  color: #f4fbff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2em;
+}
+
+.hub-frost__count[data-pop='true'] {
+  animation: hub-frost-pop 0.28s ease-out;
+}
+
+@keyframes hub-frost-pop {
+  0% {
+    transform: scale(1.35);
+    color: #8fe8ff;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hub-frost__info {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: right;
+  color: #bfefff;
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-frost__info[data-kind='done'] {
+  color: #ffe39a;
+  font-size: 13px;
+  animation: hub-frost-pop 0.3s ease-out;
+}
+
+/* 곱셈식(×6.3 × 오로라 ×5 = 31.5배)은 390·430 한 줄에 다 안 들어간다 — 잘라 먹지 말고 두 줄로 접는다(줄 높이 32 안). */
+.hub-frost__info[data-kind='done'],
+.hub-frost__info[data-kind='quiet'] {
+  white-space: normal;
+  text-wrap: balance;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.hub-frost__info[data-kind='palace'] {
+  color: #ffe39a;
+  animation: hub-frost-pop 0.3s ease-out;
+}
+
+.hub-frost__info[data-kind='quiet'] {
+  color: var(--hub-text-sub);
+}
+
+.hub-frost__info[data-kind='wait'] {
+  color: var(--hub-text-sub);
+  font-weight: 600;
+}
+
+.hub-frost__bottom {
+  display: flex;
+  align-items: center;
+  gap: var(--hub-space-sm);
+  height: 18px;
+  min-width: 0;
+}
+
+.hub-frost__ticks {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-frost__ticks[data-flash='true'] {
+  animation: hub-frost-flash 0.34s ease-out;
+}
+
+@keyframes hub-frost-flash {
+  0% {
+    filter: brightness(1.9) saturate(1.4);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+.hub-frost__tick {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--hub-secondary-bg) 80%, #000);
+  border: 1px solid color-mix(in srgb, #bfefff 18%, var(--hub-border));
+  color: var(--hub-text-sub);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.hub-frost__tick[data-lit='true'] {
+  background: linear-gradient(180deg, #bfefff, #5fb8e8);
+  border-color: #eafaff;
+  color: #07203a;
+}
+
+.hub-frost__tick[data-aurora='true'] {
+  border-color: #3fe0c5;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #3fe0c5 50%, transparent);
+}
+
+.hub-frost__tick[data-aurora='true'][data-lit='true'] {
+  background: linear-gradient(180deg, #8bffe6, #3fb0e0);
+}
+
+.hub-frost__tick[data-crossed='true'] {
+  animation: hub-frost-pop 0.3s ease-out;
+}
+
+/* ---- 오로라 4단 ---- */
+.hub-aurora {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hub-aurora__label {
+  color: #8bffe6;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.hub-aurora__steps {
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-aurora__step {
+  width: 30px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--hub-secondary-bg) 80%, #000);
+  border: 1px solid color-mix(in srgb, #8a6bff 24%, var(--hub-border));
+  color: var(--hub-text-sub);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 세로 커튼: 위는 청록, 아래는 보라로 번지는 세로 그라데이션(사선 아님). */
+.hub-aurora__step[data-lit='true'] {
+  background: linear-gradient(180deg, #5cf2d4 0%, #4aa6ee 55%, #8a6bff 100%);
+  border-color: #cffff4;
+  color: #05203a;
+}
+
+.hub-aurora__step[data-current='true'] {
+  box-shadow: 0 0 6px 1px color-mix(in srgb, #3fe0c5 70%, transparent);
+}
+
+.hub-aurora__step[data-rise] {
+  animation: hub-aurora-rise 0.7s ease-out;
+}
+
+@keyframes hub-aurora-rise {
+  0% {
+    transform: scaleY(1.7);
+    filter: brightness(2.2);
+  }
+  100% {
+    transform: scaleY(1);
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-frost__count[data-pop='true'],
+  .hub-frost__info[data-kind='done'],
+  .hub-frost__info[data-kind='palace'],
+  .hub-frost__ticks[data-flash='true'],
+  .hub-frost__tick[data-crossed='true'],
+  .hub-aurora__step[data-rise] {
+    animation: none;
+  }
+}

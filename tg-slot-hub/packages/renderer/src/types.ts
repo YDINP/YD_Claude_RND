@@ -1,5 +1,6 @@
 import type { CascadeStep, CoinCell, GameMath, GardenBounds, GardenSeed, GardenTrigger, GridPosition, MutationEvent, SymbolId, TreasureTier, WinLine } from '@tgslot/slot-engine'
 import type { RespinInput } from './respin.js'
+import type { FrostPlayInput } from './frost.js'
 import type { RendererDiagnostics } from './diagnostics.js'
 import type { FrameWindow } from './layout.js'
 import type { CelebrationSkin, FxMap, ReelBackdrop, SheetMap, ThemeTransitions } from './theme.js'
@@ -11,7 +12,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol' | 'forge' | 'garden'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol' | 'forge' | 'garden' | 'frost'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -149,7 +150,7 @@ export type RendererEvent =
       count: number
       ways?: number
       group?: string
-      direction?: 'ltr' | 'rtl'
+      direction?: 'ltr' | 'rtl' | 'center'
       positions?: readonly (readonly [number, number])[]
       /** `WinLine.payKind`. 없으면 line/ways로 짐작한다. */
       payKind?: 'line' | 'ways' | 'cluster' | 'anywhere'
@@ -292,6 +293,50 @@ export type RendererEvent =
   | { type: 'seedBloom'; count: number; multipliers: readonly number[] }
   /** 프리스핀 8×8 햇살. 씨앗 전부 한 등급 오르고 새 씨앗이 심긴다. */
   | { type: 'gardenSun'; phase: 'start' | 'end'; grown: number; planted: number }
+  /**
+   * 얼림 시작: 가장 큰 그림(`target`)이 «빛남 → 정적 → 얼음»으로 갇혔다(`phase: 'end'`).
+   * `start`는 대상 칸이 빛나기 시작한 순간이다. `count`는 처음 언 칸 수, `nextThreshold`는 다음 눈금(없으면 null).
+   */
+  | {
+      type: 'frostStart'
+      phase: 'start' | 'end'
+      target: SymbolId
+      tier: 'high' | 'mid' | 'low'
+      count: number
+      nextThreshold: number | null
+      positions: readonly GridPosition[]
+    }
+  /**
+   * 얼림 다시 돌리기 한 단계. `start`는 얼지 않은 칸이 돌기 시작한 순간, `land`는 칸이 다 서서 새로 언 칸이 «쩡» 하는 순간
+   * (`count`·`crossed`·`nextThreshold`는 이 순간부터 새 값), `end`는 단계가 끝난 순간이다. STOP으로 압축해도 한 쌍은 빠지지 않는다.
+   */
+  | {
+      type: 'frostStep'
+      phase: 'start' | 'land' | 'end'
+      index: number
+      total: number
+      newlyFrozen: readonly GridPosition[]
+      count: number
+      crossed: readonly number[]
+      nextThreshold: number | null
+    }
+  /**
+   * 얼림 끝: `start`는 곱셈식을 보여 줄 때(허브가 «12칸 ×11 × 오로라 ×2 = 22배»를 그린다), `end`는 녹음까지 끝난 뒤다.
+   * `quiet`면 보너스가 0이거나 베팅 1배 미만이라 곱셈식 없이 짧게 끝낸다.
+   */
+  | {
+      type: 'frostEnd'
+      phase: 'start' | 'end'
+      count: number
+      bonusMultiple: number
+      auroraMultiplier: number
+      auroraBefore: number
+      auroraAfter: number
+      auroraUp: boolean
+      bonus: number
+      palace: boolean
+      quiet: boolean
+    }
 
 export interface RendererOptions {
   /** 캔버스를 붙일 DOM 요소. 크기는 이 요소의 클라이언트 박스를 따른다. */
@@ -371,6 +416,11 @@ export interface SpinToOptions {
    * `fast`(프리스핀)이면 착지는 `growBoard.bonus.strips`를 읽는다. 시작 판은 `gridBefore`(응답 `grid`, 8×8)를 주는 것이 좋다.
    */
   garden?: GardenTrigger
+  /**
+   * 얼림 팩(`math.frostRespin`)만. `freeSpin: true`면 이번 정지 위치가 `frostRespin.freeStrips` 기준이라 릴 그림을 그 스트립으로 갈아 끼운다.
+   * 없거나 얼림 팩이 아니면 아무 일도 없다(기존 팩 경로 불변).
+   */
+  frost?: { freeSpin: boolean }
 }
 
 export interface ShowWinsOptions {
@@ -475,6 +525,14 @@ export interface SlotRenderer {
    * 다음 `spinTo`·`destroy`가 끼어들면 전환 없이 기본 화면으로 곧장 돌아온다.
    */
   endRespin(): Promise<void>
+  /**
+   * 얼림(`frostChain` 피처)을 재생한다. 착지 판 위에서 대상이 얼고, 얼지 않은 칸만 다시 돌고, 끝에서 녹는다.
+   * `frostStart`·`frostStep`·`frostEnd` 이벤트가 나간다. 끝나면 화면은 서버 `finalGrid`와 같다.
+   * 선택 메서드: 얼림 팩이 아닌 렌더러(테스트 가짜)는 없어도 된다. 부르는 쪽은 `playFrost?.()`로 부른다.
+   */
+  playFrost?(input: FrostPlayInput): Promise<void>
+  /** 얼림 재생 중이면 남은 단계를 압축해 곧장 마친다(결과·순서 그대로). 재생 중이 아니면 아무 일도 없다. */
+  skipFrost?(): void
   /**
    * 이후 모든 스핀의 속도 프로파일. 기본 `'normal'`.
    *

@@ -1,0 +1,41 @@
+{
+  "id": "aurora-ice-palace",
+  "name": {
+    "en": "Aurora Ice Palace",
+    "ko": "오로라 얼음 궁전"
+  },
+  "version": "0.0.0",
+  "thumbnail": "/games/aurora-ice-palace/thumb.webp",
+  "status": "live",
+  "reels": 5,
+  "rows": 5,
+  "reelHeights": [
+    3,
+    4,
+    5,
+    4,
+    3
+  ],
+  "lines": 720,
+  "payModel": "ways",
+  "betLevels": [
+    50,
+    100,
+    250,
+    500,
+    1000,
+    2500
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "auditSpins": 30000000,
+  "volatility": "high",
+  "features": [
+    "ways",
+    "freezeSpins",
+    "scatter",
+    "wild"
+  ],
+  "sort": 14
+}

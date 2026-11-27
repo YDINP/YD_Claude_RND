@@ -10,6 +10,8 @@ import { resolveForgeSpin } from './forge.js'
 import { resolveGardenSpin } from './garden.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
+import { resolveFrostSpin, spinFrost } from './frost.js'
+import { VOID_CELL } from './shape.js'
 import type {
   Bet,
   FeatureTrigger,
@@ -31,9 +33,15 @@ export function buildGrid(math: GameMath, stops: number[]): SymbolId[][] {
     throw new RangeError(`stops 개수(${stops.length})가 reels(${math.reels})와 다르다`)
   }
   const grid: SymbolId[][] = []
+  // 릴별 높이가 있는 팩만. 없으면 아래 루프가 기존과 한 글자도 다르지 않게 돈다.
+  const heights = math.reelHeights
   for (let row = 0; row < math.rows; row += 1) {
     const line: SymbolId[] = []
     for (let reel = 0; reel < math.reels; reel += 1) {
+      if (heights !== undefined && row >= (heights[reel] ?? math.rows)) {
+        line.push(VOID_CELL)
+        continue
+      }
       const strip = math.strips[reel]
       const stop = stops[reel]
       if (strip === undefined || stop === undefined) {
@@ -82,6 +90,8 @@ export function spinUnchecked(
   rng: Rng,
   state?: RoundState,
 ): SpinResult {
+  // 얼려 두기 프리스핀 팩만. 프리스핀 판은 `frostRespin.freeStrips`로 멈추므로 정지 추첨부터 따로 간다.
+  if (math.frostRespin !== undefined) return spinFrost(math, totalBet, rng, state)
   const betUnit = getBetUnit(math, totalBet)
   // RNG 소비 순서는 계약이다. 릴 정지를 전부 뽑은 **뒤에** 뮤테이션이 뽑는다.
   const stops: number[] = []
@@ -128,6 +138,8 @@ export function resolveSpin(
   if (math.coinRespin !== undefined) {
     return resolveCoinRespinSpin(math, grid, stops, totalBet, betUnit, gridBefore, mutations, rng)
   }
+  // 얼려 두기 프리스핀 팩만. `grid`는 호출부가 맞는 스트립(프리스핀이면 freeStrips)으로 만든 판이어야 한다.
+  if (math.frostRespin !== undefined) return resolveFrostSpin(math, grid, stops, totalBet, betUnit, state, rng)
   const { wins, totalWin: lineWin } =
     math.payModel === 'ways' ? evaluateWays(grid, math, betUnit) : evaluate(grid, math, betUnit)
   const scatter = evaluateScatter(grid, math, totalBet)
