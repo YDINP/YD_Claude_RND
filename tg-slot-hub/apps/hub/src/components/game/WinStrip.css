@@ -1,0 +1,63 @@
+/*
+ * 당첨 패널의 배수 단계 표시. 마크업·높이는 건드리지 않고 색과 라벨 모션만 바꾼다.
+ *   under  — 베팅 미만(돌려받음): 흐린 색(투명도). 굴림·축하 없음
+ *   good   — 2~5배: 라벨 한 번 톡
+ *   great  — 5~10배: 라벨 두 번 톡
+ * 모션 줄이기(설정·OS)면 톡을 끈다.
+ */
+@keyframes hub-win-strip-label-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hub-win-strip--band-under .hub-win-strip__label,
+.hub-win-strip--band-under .hub-win-strip__amount {
+  opacity: 0.6;
+}
+
+.hub-win-strip--band-under .hub-win-strip__amount {
+  font-weight: 700;
+}
+
+/* 꽝(금액 0)은 라벨·금액을 흐리게 — 큰 금색 «0»이 당첨처럼 보이지 않게 한다. */
+.hub-win-strip--zero .hub-win-strip__label,
+.hub-win-strip--zero .hub-win-strip__amount {
+  opacity: 0.45;
+}
+
+.hub-win-strip--band-good .hub-win-strip__label,
+.hub-win-strip--band-great .hub-win-strip__label {
+  animation: hub-win-strip-label-pop 240ms ease-out 1;
+}
+
+.hub-win-strip--band-great .hub-win-strip__label {
+  animation-iteration-count: 2;
+}
+
+/* 단계 차이가 라벨로도 읽히게 good은 금색, great는 밝은 금색 + 조금 크게. */
+.hub-win-strip--band-good .hub-win-strip__label {
+  color: var(--hub-gold);
+}
+
+.hub-win-strip--band-great .hub-win-strip__label {
+  color: var(--hub-gold-light);
+  font-size: calc(var(--hub-font-small) + 1px);
+}
+
+.hub-win-strip--still .hub-win-strip__label {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-win-strip--band-good .hub-win-strip__label,
+  .hub-win-strip--band-great .hub-win-strip__label {
+    animation: none;
+  }
+}

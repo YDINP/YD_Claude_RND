@@ -23,6 +23,13 @@ import {
   freeSpinMultiplierOf,
   AUTO_SPIN_COUNTS,
 } from '../../store/game'
+import {
+  AUTO_SPIN_LOSS_LIMITS,
+  lossLimitAmount,
+  readAutoSpinPrefs,
+  writeAutoSpinPrefs,
+  type AutoSpinPrefs,
+} from '../../lib/autoSpinRules'
 import { useSessionStore } from '../../store/session'
 import { useGamesStore } from '../../store/games'
 import { useHubStore } from '../../store/hub'
@@ -60,6 +67,7 @@ import {
   playSpinStart,
   playUiSound,
   playWin,
+  playWinBand,
   setBgmMode,
   setSfxOverrides,
   setSoundPreset,
@@ -73,9 +81,13 @@ import { Modal } from '../Modal'
 import { activePopup, isRoundFlowBusy } from '../../game/roundFlow'
 import { RoundPopupView } from './RoundPopup'
 import { WinCelebrationOverlay } from './WinCelebrationOverlay'
-import type { CelebrationTier } from './winTiers'
+import { floorMultipleLabel, type CelebrationTier, type WinBand } from './winTiers'
 import { WinStrip, type WinStripLineLabel } from './WinStrip'
 import { GambleModal } from './GambleModal'
+import { MissionToast } from './MissionToast'
+import { AutoSpinStopToast } from './AutoSpinStopToast'
+import { LevelUpCard } from './LevelUpCard'
+import { pickProgressLine, formatProgressLine } from '../../lib/progressLine'
 import { DebugPanel } from './DebugPanel'
 import { LadderMeter } from './LadderMeter'
 import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
@@ -169,14 +181,6 @@ interface VerifyResult {
 
 function stopsEqual(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i])
-}
-
-/** 남은 시간(ms)을 "M:SS"로 짧게 보여준다 — 더블업 제안 만료 카운트다운용. */
-function formatGambleCountdown(remainingMs: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
 /**
@@ -367,6 +371,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const bonusStatus = useHubStore((s) => s.bonusStatus)
   const claimingBonus = useHubStore((s) => s.claimingBonus)
   const claimRescue = useHubStore((s) => s.claimRescue)
+  const hubMissions = useHubStore((s) => s.missions)
 
   const math = useGameStore((s) => s.math)
   const phase = useGameStore((s) => s.phase)
@@ -377,6 +382,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const freeSpins = useGameStore((s) => s.freeSpins)
   const gambleSession = useGameStore((s) => s.gambleSession)
   const autoSpin = useGameStore((s) => s.autoSpin)
+  const autoSpinNotice = useGameStore((s) => s.autoSpinNotice)
+  const dismissAutoSpinNotice = useGameStore((s) => s.dismissAutoSpinNotice)
   // 프리스핀 진입/종료 세리머니 — 팝업이 떠 있는지, 커튼이 도는지가 이 한 값에 다 들어 있다
   // (예전의 modeTransitioning/freeSpinsIntro/freeSpinsComplete 불리언 셋을 대신한다).
   const roundFlow = useGameStore((s) => s.roundFlow)
@@ -419,6 +426,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [betSheetOpen, setBetSheetOpen] = useState(false)
   const [autoSpinSheetOpen, setAutoSpinSheetOpen] = useState(false)
+  /** 오토스핀 시트에서 고른 값 — 마지막 선택을 기억한다(localStorage tgslot.autospin.v1). */
+  const [autoPrefs, setAutoPrefs] = useState<AutoSpinPrefs>(() => readAutoSpinPrefs())
   const [helpSheetOpen, setHelpSheetOpen] = useState(false)
   // 게임 도중에도 음량·배경음·언어를 바꿀 수 있게 로비와 같은 설정 팝업(중앙)을 연다.
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -433,6 +442,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const titleTapsRef = useRef<number[]>([])
   /** WinStrip 라인 문구의 원천. 렌더러의 winLine/winCycle 이벤트가 채우고, 새 스핀/탭-스킵이 지운다. */
   const [lineLabelSource, setLineLabelSource] = useState<LineLabelSource | null>(null)
+  /** 마지막 당첨의 배수 단계와 표기용 배수(내림). 새 스핀이 시작되면 지운다. */
+  const [winBandInfo, setWinBandInfo] = useState<{ band: WinBand; x: string } | null>(null)
   const lineLabelKeyRef = useRef(0)
   const [verifyState, setVerifyState] = useState<VerifyState>('idle')
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
@@ -921,6 +932,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
 
     if (event.type !== 'winTotal') return
     rolledRoundIdRef.current = useGameStore.getState().lastResult?.roundId ?? null
+    // 배수 단계 — 첫 바퀴가 정한 값을 그대로 쓴다(순환 바퀴도 같은 값을 다시 보낸다).
+    const bandBet = useGameStore.getState().lastResult?.totalBet ?? 0
+    setWinBandInfo(
+      !event.band || event.band === 'none' || event.band === 'big'
+        ? null
+        : { band: event.band, x: bandBet > 0 ? floorMultipleLabel(event.totalWin / bandBet) : '' },
+    )
 
     // 등급 단어 배너는 더 이상 없다 — 이 이벤트는 이제 WinStrip 금액 롤업만 다룬다.
     const target = event.totalWin
@@ -945,11 +963,19 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       return
     }
 
+    // 베팅 미만(돌려받음): 굴리지 않고 금액을 곧장 보인다. 소리·틱·마감음 모두 없다.
+    if (event.band === 'under') {
+      winSkipRef.current = false
+      setWinRollupValue(target)
+      return
+    }
+
     winSkipRef.current = false
     setWinRollupValue(rollFrom)
     // 코인 리스핀 판은 정산 뒤 빅윈 오버레이에서 큰 당첨 소리를 이미 냈다 — 복귀 뒤 라인 당첨 롤업은 작은 당첨 소리만 낸다.
     const soundTier = respinCelebrationSounded() ? 'none' : event.tier
-    playWin(soundTier, duration)
+    if (event.band === 'good' || event.band === 'great') playWinBand(event.band, duration)
+    else playWin(soundTier, duration)
 
     // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
     // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
@@ -1026,6 +1052,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     resetRespinSfx()
     setWinRollupValue(0)
     setLineLabelSource(null)
+    setWinBandInfo(null)
     compressedRef.current = false
     orderHoldUntilRef.current = 0
     ladderRef.current = 0
@@ -1316,12 +1343,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     }
   }, [gambleSession?.roundId, gambleSession?.expiresAt, syncGambleExpiryAction])
 
-  // 카운트다운 텍스트를 부드럽게 갱신하기 위한 1초 틱 — 위 effect(만료 동기화)와는 별개다.
-  // 실제 만료 판정/서버 동기화는 항상 expiresAt 값 자체가 하고, 이 틱은 화면 표시만 건드린다.
+  // 만료 시각에 한 번만 «지금»을 갱신해 «더블»을 숨긴다 — 카운트다운 표시를 없앴으니 1초 틱으로
+  // 화면 전체를 다시 그릴 이유가 없다. 실제 만료 판정/서버 동기화는 위 effect가 expiresAt으로 한다.
   useEffect(() => {
     if (!gambleSession?.expiresAt) return
-    const id = setInterval(() => setGambleNowTick(Date.now()), 1000)
-    return () => clearInterval(id)
+    setGambleNowTick(Date.now())
+    const wait = new Date(gambleSession.expiresAt).getTime() - Date.now()
+    if (wait <= 0) return
+    const id = setTimeout(() => setGambleNowTick(Date.now()), Math.min(wait + 50, 2_147_000_000))
+    return () => clearTimeout(id)
   }, [gambleSession?.roundId, gambleSession?.expiresAt])
 
   const gambleExpiresAtMs = gambleSession?.expiresAt ? new Date(gambleSession.expiresAt).getTime() : null
@@ -1395,7 +1425,18 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         ? t('chainLabel', { n: chainStep })
         : freeSpins && winRollupValue === 0
           ? t(isOrderRound ? 'orderRoundTotalLabel' : 'freeSpinsTotalLabel')
-          : t('winStripLabel')
+          : winBandInfo?.band === 'under'
+            ? t('winBandUnder')
+            : winBandInfo?.band === 'good' && winBandInfo.x !== ''
+              ? t('winBandGood', { x: winBandInfo.x })
+              : winBandInfo?.band === 'great' && winBandInfo.x !== ''
+                ? t('winBandGreat', { x: winBandInfo.x })
+                : winStripAmount === 0 &&
+                    (phase === 'spinning' ||
+                      (phase !== 'showingWin' &&
+                        (rolledRoundIdRef.current === null || rolledRoundIdRef.current !== lastResult?.roundId)))
+                  ?' ' // 꽝·대기 중에는 «당첨» 글자를 띄우지 않는다(줄 높이만 유지).
+                  : t('winStripLabel')
 
   // WinStrip 아래 프리스핀 진행 상황("프리스핀 5/8 ×2") — 릴 위에 그리던 명판을 대신한다.
   // 렌더러 이벤트가 아니라 store의 freeSpins 상태(left/total/multiplier)를 쓰되, 커튼 전환이
@@ -1416,6 +1457,24 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           multiplier: counterState.multiplier,
         })
       : t('freeSpinsCounter', { left: counterState.left, total: counterState.total })
+    : null
+
+  // 당첨 패널의 «빈 시간» 진행 한 줄(받을 미션 > 진행률 최고 미션 > 다음 레벨까지). 라인 문구·당첨 금액·
+  // 더블업·프리스핀·룰렛·리스핀이 하나도 없는 idle 때만 보인다. WinStrip은 같은 line-label 모양으로 그린다.
+  const progressLine =
+    lineLabelSource === null &&
+    phase === 'idle' &&
+    !roundBusy &&
+    winStripAmount === 0 &&
+    !showGambleActions &&
+    freeSpins === null &&
+    roulette === null &&
+    !respinActive
+      ? pickProgressLine({ missions: hubMissions?.missions, gameId, levelInfo: hubLevelInfo })
+      : null
+  const progressLineText = progressLine ? formatProgressLine(progressLine, locale) : null
+  const progressLineLabel: WinStripLineLabel | null = progressLineText
+    ? { key: progressLineText.length, text: progressLineText }
     : null
 
   // WinStrip 아래 라인 문구 — 항상 최신 t()/locale/math로 지금 계산한다(handleRendererEvent는
@@ -1465,7 +1524,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               ? buildOrderIcons(theme, lineLabelSource.order, orderCardText(lineLabelSource.order, math, locale, t, true))
               : undefined,
       }
-    : null
+    : progressLineLabel
 
   const handleSpin = (): void => {
     if (isBusy || !math) return
@@ -1476,12 +1535,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 오토스핀이 돌고 있는 동안 메인 버튼은 "중지 (남은 수)"로 바뀐다. */
   const autoSpinning = autoSpin !== null
 
-  /** 오토스핀 시트에서 회수를 고르면 — 시트를 닫고 그 자리에서 무장한다(첫 판은 store가 건다). */
-  const handleAutoSpinPick = (count: number): void => {
+  /** 오토스핀 시트의 [오토스핀 시작] — 고른 값을 기억하고 시트를 닫은 뒤 무장한다(첫 판은 store가 건다). */
+  const handleAutoSpinStart = (): void => {
+    writeAutoSpinPrefs(autoPrefs)
     setAutoSpinSheetOpen(false)
     haptic('medium')
     playUiSound('toggle')
-    startAutoSpinAction(count)
+    startAutoSpinAction(autoPrefs.count, { lossLimit: autoPrefs.lossLimit, stopOnBigWin: autoPrefs.stopOnBigWin })
   }
 
   /**
@@ -1932,19 +1992,33 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               <Odometer className="hub-game-screen__win-value" value={lastResult.jackpotWin} />
             </div>
           )}
-          {lastResult?.levelUp && (
-            <div className="hub-game-screen__win-banner hub-game-screen__win-banner--levelup">
-              <span className="hub-game-screen__level-up-label">
-                {t('levelUp', { from: lastResult.levelUp.from, to: lastResult.levelUp.to })}
-              </span>
-              {lastResult.levelUp.bonus > 0 && (
-                <span className="hub-game-screen__win-label">
-                  +{lastResult.levelUp.bonus.toLocaleString('en-US')} 🪙
-                </span>
-              )}
-            </div>
-          )}
         </div>
+
+        <MissionToast idle={phase === 'idle' && !roundBusy} autoSpinning={autoSpinning} />
+        {autoSpinNotice && (
+          <AutoSpinStopToast
+            noticeId={autoSpinNotice.id}
+            text={
+              autoSpinNotice.reason === 'lossLimit'
+                ? t('autoSpinStoppedLoss', { limit: (autoSpinNotice.limitAmount ?? 0).toLocaleString('en-US') })
+                : autoSpinNotice.reason === 'lossLimitStart'
+                  ? t('autoSpinLossLimitTooSmall', { limit: (autoSpinNotice.limitAmount ?? 0).toLocaleString('en-US') })
+                : autoSpinNotice.reason === 'bigWin'
+                  ? t('autoSpinStoppedBigWin')
+                  : t('autoSpinStoppedBreak')
+            }
+            onDone={dismissAutoSpinNotice}
+          />
+        )}
+        <LevelUpCard
+          levelUp={lastResult?.levelUp}
+          roundId={lastResult?.roundId}
+          idle={phase === 'idle'}
+          blocked={roundBusy || roundPopup !== null || showGambleActions || freeSpins !== null}
+          autoSpinning={autoSpinning}
+          levelInfo={hubLevelInfo}
+          reducedMotion={reducedMotion}
+        />
 
         {/* 무대 룰렛 — 릴 캔버스 위 DOM 오버레이(캔버스 리사이즈 0). 결과는 서버 응답(roulette.feature)이 정한다. */}
         {roulette !== null && math?.stageRoulette !== undefined && (
@@ -1996,6 +2070,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           몫이다(handleSkipWinsAndAdvance). 더블업 세션이 있으면 받기/더블 버튼을 보여준다 —
           한 번 뜨면 사용자가 누르거나 만료될 때까지 고정이다(더 이상 승리 배너에 가려 깜빡이지 않는다). */}
       <WinStrip
+        band={showGambleActions || respinOnBoard || respinCollecting || rouletteStripActive ? undefined : winBandInfo?.band}
         label={winStripLabel}
         amount={winStripAmount}
         lineLabel={lineLabel}
@@ -2010,10 +2085,6 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 disabled: gambleCollecting || gambleFlip.flipping,
                 // 만료됐으면(로컬 시계 기준) "더블"부터 숨긴다 — "받기"는 서버 동기화가 끝날 때까지 남겨둔다.
                 hideDouble: gambleExpired,
-                expiresInLabel:
-                  gambleRemainingMs !== null && !gambleExpired
-                    ? t('gambleExpiresIn', { time: formatGambleCountdown(gambleRemainingMs) })
-                    : undefined,
               }
             : undefined
         }
@@ -2023,7 +2094,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       {/* 세리머니 팝업에 넘기는 값은 «그 판의 서버 응답»에서 온다.
           - freeSpinsPlayed: 서버가 세션 종료 스핀에만 실어 주는 실제 소진 횟수(리트리거 포함).
           - scatterImageUrl: 진입 팝업 상단에 떨어지는 트리거 심볼. 테마가 아직 없으면 그냥 생략된다.
-          총 베팅은 **일부러 넘기지 않는다** — 이 팝업은 세션 총액으로 등급을 매기지 않는다
+          총 베팅(totalBet)은 등급을 매기려는 게 아니라 «베팅의 ×N» 한 줄과 베팅 미만일 때 샤워를 끄는 데만 쓴다 —
+          이 팝업은 세션 총액으로 등급(이름·색)을 매기지 않는다
           (프리스핀 도중 빅윈은 그 판에서 이미 오버레이로 축하했다. RoundPopup.tsx의 tier 주석 참고). */}
       {roundPopup && (
         <RoundPopupView
@@ -2031,6 +2103,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           onDismiss={dismissRoundPopupAction}
           skin={celebrationSkin}
           orderText={(order) => orderCardText(order, math, locale, t, true)}
+          {...(lastResult?.totalBet ? { totalBet: lastResult.totalBet } : {})}
           {...(lastResult?.freeSpinsSummary ? { freeSpinsPlayed: lastResult.freeSpinsSummary.spins } : {})}
           {...(scatterImageUrl === undefined ? {} : { scatterImageUrl })}
         />
@@ -2059,6 +2132,10 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       {gambleModalOpen && (
         <GambleModal
           onClose={closeGambleModal}
+          onCollect={() => {
+            handleGambleCollect()
+            closeGambleModal()
+          }}
           onPick={(pick) => void handleGamblePick(pick)}
           flipping={gambleFlip.flipping}
           revealedSide={gambleFlip.side}
@@ -2207,26 +2284,71 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         )}
       </div>
 
-      {/* 오토스핀 회수 선택 — 설정 모달과 같은 중앙 모달(Modal)을 쓴다(포커스 트랩/Esc/스크롤
-          잠금을 그대로 물려받는다). 무제한은 제공하지 않는다. */}
+      {/* 오토스핀 설정 — 설정 모달과 같은 중앙 모달(Modal)을 쓴다(포커스 트랩/Esc/스크롤
+          잠금을 그대로 물려받는다). 횟수·손실 한도·큰 당첨 멈춤을 고르고 [오토스핀 시작]을 누른다. */}
       {autoSpinSheetOpen && (
         <Modal onClose={() => setAutoSpinSheetOpen(false)} titleId={AUTO_SPIN_SHEET_TITLE_ID}>
           <h2 id={AUTO_SPIN_SHEET_TITLE_ID} className="hub-sheet__title">
             {t('autoSpinTitle')}
           </h2>
           <p className="hub-sheet__message">{t(math?.stageRoulette ? 'stageRouletteAutoSpinHint' : math?.scatter?.freeSpins || math?.orderRound ? 'autoSpinHint' : 'autoSpinHintNoFreeSpins')}</p>
-          <div className="hub-autospin__counts">
+          <span className="hub-autospin__label">{t('autoSpinCountLabel')}</span>
+          <div className="hub-autospin__counts" role="group" aria-label={t('autoSpinCountLabel')}>
             {AUTO_SPIN_COUNTS.map((count) => (
               <button
                 key={count}
                 type="button"
+                aria-pressed={autoPrefs.count === count}
+                data-active={autoPrefs.count === count}
                 className="hub-autospin__count"
-                onClick={() => handleAutoSpinPick(count)}
+                onClick={() => setAutoPrefs((p) => ({ ...p, count }))}
               >
                 {Number.isFinite(count) ? t('autoSpinCount', { n: count }) : t('autoSpinInfinite')}
               </button>
             ))}
           </div>
+          <span className="hub-autospin__label">{t('autoSpinLossLimitLabel')}</span>
+          <div className="hub-autospin__limits" role="group" aria-label={t('autoSpinLossLimitLabel')}>
+            {AUTO_SPIN_LOSS_LIMITS.map((limit) => (
+              <button
+                key={String(limit)}
+                type="button"
+                aria-pressed={autoPrefs.lossLimit === limit}
+                data-active={autoPrefs.lossLimit === limit}
+                className="hub-autospin__count"
+                onClick={() => setAutoPrefs((p) => ({ ...p, lossLimit: limit }))}
+              >
+                {limit === null ? t('autoSpinLossLimitNone') : t('autoSpinLossLimitPercent', { percent: Math.round(limit * 100) })}
+              </button>
+            ))}
+          </div>
+          <p className="hub-autospin__note">
+            {autoPrefs.lossLimit === null
+              ? t('autoSpinLossLimitNoteNone')
+              : t('autoSpinLossLimitNote', {
+                  limit: (lossLimitAmount(wallet?.coins ?? 0, autoPrefs.lossLimit) ?? 0).toLocaleString('en-US'),
+                })}
+          </p>
+          <div className="hub-autospin__toggle-row">
+            <div className="hub-autospin__toggle-text">
+              <span className="hub-autospin__label">{t('autoSpinStopOnBigWinLabel')}</span>
+              <span className="hub-autospin__note">{t('autoSpinStopOnBigWinHint')}</span>
+            </div>
+            <button
+              type="button"
+              className="hub-settings__switch"
+              role="switch"
+              aria-checked={autoPrefs.stopOnBigWin}
+              aria-label={t('autoSpinStopOnBigWinLabel')}
+              data-on={autoPrefs.stopOnBigWin}
+              onClick={() => setAutoPrefs((p) => ({ ...p, stopOnBigWin: !p.stopOnBigWin }))}
+            >
+              <span className="hub-settings__switch-knob" />
+            </button>
+          </div>
+          <button type="button" className="hub-sheet__reveal hub-autospin__start" onClick={handleAutoSpinStart}>
+            {t('autoSpinStart')}
+          </button>
           <button type="button" className="hub-sheet__close" onClick={() => setAutoSpinSheetOpen(false)}>
             {t('close')}
           </button>

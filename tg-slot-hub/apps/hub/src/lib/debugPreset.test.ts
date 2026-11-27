@@ -13,8 +13,9 @@ describe('presetsFor', () => {
   })
 
   it('drops freeSpins / gamble presets the server would reject with 409', () => {
-    expect(presetsFor(fruit)).toEqual(['win', 'bigWin', 'freeSpins', 'lose'])
-    expect(presetsFor(classic)).toEqual(['win', 'bigWin', 'lose'])
+    const bands = ['winUnder', 'winSmall', 'winGood', 'winGreat']
+    expect(presetsFor(fruit)).toEqual(['win', 'bigWin', 'freeSpins', 'lose', ...bands])
+    expect(presetsFor(classic)).toEqual(['win', 'bigWin', 'lose', ...bands])
     expect(presetsFor(candy)).not.toContain('gamble')
   })
 

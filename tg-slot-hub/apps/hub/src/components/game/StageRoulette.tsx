@@ -24,7 +24,7 @@ import type { GameMath } from '@tgslot/slot-engine'
 import { useT } from '../../i18n'
 import { symbolLabel } from '../../game/labels'
 import type { RouletteSession } from '../../game/rouletteFlow'
-import { celebrationTier } from './winTiers'
+import { celebrationTier, floorMultipleLabel, winBandFor } from './winTiers'
 import { ringNameKey, RouletteWheel, type RouletteWheelHandle } from './RouletteWheel'
 import { runRouletteShow, type RouletteHost } from '../../lib/rouletteDirector'
 import { playRouletteCue } from '../../lib/rouletteCues'
@@ -644,10 +644,13 @@ export const StageRoulette = forwardRef<StageRouletteHandle, StageRouletteProps>
       async summary() {
         const tm = timings()
         patch({ summary: true, action: 'idle', badge: null })
-        playRouletteCue({
-          kind: 'summary',
-          big: celebrationTier(session.totalWin, session.totalBet) !== 'none',
-        })
+        // 합계가 베팅 미만이면 요약 큐를 내지 않는다(손해를 축하처럼 꾸미지 않는다).
+        if (winBandFor(session.totalWin, session.totalBet) !== 'under') {
+          playRouletteCue({
+            kind: 'summary',
+            big: celebrationTier(session.totalWin, session.totalBet) !== 'none',
+          })
+        }
         await waitForTap(tm.summaryMs, true)
         // 요약 카드는 건너뛰기 뒤에도 보여 준다 — 건너뛰기는 회전만 압축한다.
         patch({ summary: false })
@@ -902,6 +905,11 @@ export const StageRoulette = forwardRef<StageRouletteHandle, StageRouletteProps>
               <span>{t('stageRouletteSummarySpinTotal')}</span>
               <strong data-testid="roulette-summary-spin-total">{session.totalWin.toLocaleString('en-US')}</strong>
             </div>
+            {session.totalWin > 0 && session.totalBet > 0 && (
+              <p className="hub-roulette__summary-multiple" data-testid="roulette-summary-multiple">
+                {t('winBandMultiple', { x: floorMultipleLabel(session.totalWin / session.totalBet) })}
+              </p>
+            )}
             {feature.endedBy === 'capped' && <p className="hub-roulette__capped">{t('stageRouletteSummaryCapped')}</p>}
             <p className="hub-roulette__summary-hint">{t('stageRouletteSummaryClose')}</p>
           </div>

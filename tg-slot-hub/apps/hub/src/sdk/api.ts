@@ -321,6 +321,13 @@ export async function getLeaderboard(token: string): Promise<LeaderboardResponse
   return authedFetch<LeaderboardResponse>('/leaderboard', LeaderboardResponseSchema, token)
 }
 
+/** POST /leaderboard/claim — 지난 주 순위 보상 받기. 보너스 수령과 같은 응답 형태 */
+export async function claimLeaderboardReward(token: string): Promise<BonusClaimResponse> {
+  return authedFetch<BonusClaimResponse>('/leaderboard/claim', BonusClaimResponseSchema, token, {
+    method: 'POST',
+  })
+}
+
 /** GET /missions — 오늘의 미션 목록 */
 export async function getMissions(token: string): Promise<MissionsResponse> {
   return authedFetch<MissionsResponse>('/missions', MissionsResponseSchema, token)

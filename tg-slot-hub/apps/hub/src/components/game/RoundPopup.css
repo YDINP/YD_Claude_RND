@@ -199,3 +199,11 @@
   color: var(--hub-gold-light);
 }
 
+
+/* 종료 팝업의 «베팅의 ×N» 한 줄 — 금액 아래, 요약 줄 위. 조용한 보조 문구다. */
+.hub-round-popup__multiple {
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  color: var(--hub-text-sub);
+  font-variant-numeric: tabular-nums;
+}

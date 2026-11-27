@@ -1246,3 +1246,12 @@
   flex-direction: column;
   gap: 3px;
 }
+
+/* 요약 카드의 «베팅의 ×N» 한 줄 — 코인 금액 아래 보조 문구. */
+.board-summary__multiple {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--board-ivory);
+  opacity: 0.85;
+}

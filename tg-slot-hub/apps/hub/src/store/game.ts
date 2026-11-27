@@ -30,6 +30,9 @@ import { useSessionStore } from './session'
 import { useHubStore } from './hub'
 import type { DebugPreset } from '../lib/debugPreset'
 import { debugMaxTries } from '../lib/debugPreset'
+import { pickDefaultBetIndex, storedBetIndex } from '../lib/defaultBet'
+import { exceedsLossLimit, type AutoSpinStopReason } from '../lib/autoSpinRules'
+import { spinNetOf, usePlaySessionStore } from './playSession'
 import { completedOrders, type CompletedOrder } from '../game/orders'
 import { boardFeatureOf, saveBoardSnapshot } from '../game/boardPlayback'
 import {
@@ -60,6 +63,21 @@ import { clearRouletteCache, readRouletteCache, writeRouletteCache } from '../li
 
 /** SpinResponse.debug의 형태 — 어떤 프리셋이 실제로 적용됐고 몇 번 만에 그 결과를 찾았는지. */
 type SpinDebugResponse = NonNullable<SpinResponse['debug']>
+
+/** 진행 중인 오토스핀. lossLimit은 시작 잔액 대비 비율(null=제한 없음). */
+export interface AutoSpinState {
+  remaining: number
+  startCoins: number
+  /** 오토를 켠 뒤의 게임 손익(당첨+잭팟−베팅, 더블업 증감). 보너스는 넣지 않는다 — 손실 한도 판정용. */
+  net: number
+  lossLimit: number | null
+  stopOnBigWin: boolean
+}
+
+export interface AutoSpinOptions {
+  lossLimit?: number | null
+  stopOnBigWin?: boolean
+}
 
 export type GamePhase = 'loading' | 'idle' | 'spinning' | 'showingWin' | 'error'
 
@@ -244,6 +262,8 @@ export interface SpinRenderer {
       /** 'cascade'면 연쇄 재생 중 강조를 이미 마친 스핀이다 — A단계와 피처만 보여 준다. */
       mode?: 'standard' | 'cascade'
       totalBet?: number
+      /** 베팅을 내고 얻은 판인지(기본 true). 프리스핀 판은 false — 베팅 미만 당첨(돌려받음)을 당첨으로 올려 보인다. */
+      paid?: boolean
       features?: FeatureTrigger[]
       /**
        * 전체 표시(A단계)를 붙들 시간(ms) — 당첨 라인이 많을수록 길어진다(winHoldMs).
@@ -291,20 +311,30 @@ export function toRendererFreeSpinsMode(
 
 const BET_INDEX_KEY_PREFIX = 'tgslot.bet.'
 
-function readStoredBetIndex(gameId: string): number | null {
+/**
+ * 사용자가 고른 베팅 «금액». 새 형식은 {"v":2,"bet":금액}, 옛 형식(숫자 인덱스)은 그 인덱스의 금액으로
+ * 읽는다 — 둘 다 사용자가 직접 고른 것으로 존중한다. 없거나 읽을 수 없으면 null.
+ */
+function readStoredBetAmount(gameId: string, betLevels: readonly number[]): number | null {
   try {
     const raw = localStorage.getItem(`${BET_INDEX_KEY_PREFIX}${gameId}`)
     if (raw === null) return null
-    const parsed = Number.parseInt(raw, 10)
-    return Number.isNaN(parsed) ? null : parsed
+    if (raw.trim().startsWith('{')) {
+      const parsed = JSON.parse(raw) as { v?: unknown; bet?: unknown }
+      return parsed.v === 2 && typeof parsed.bet === 'number' && Number.isFinite(parsed.bet) ? parsed.bet : null
+    }
+    const index = Number.parseInt(raw, 10)
+    if (Number.isNaN(index)) return null
+    return betLevels[index] ?? null
   } catch {
     return null
   }
 }
 
-function writeStoredBetIndex(gameId: string, index: number): void {
+/** 사용자가 −/+로 직접 바꿨을 때만 부른다. BET_LOCKED 보정 같은 자동 조정은 저장하지 않는다. */
+function writeStoredBetAmount(gameId: string, bet: number): void {
   try {
-    localStorage.setItem(`${BET_INDEX_KEY_PREFIX}${gameId}`, String(index))
+    localStorage.setItem(`${BET_INDEX_KEY_PREFIX}${gameId}`, JSON.stringify({ v: 2, bet }))
   } catch {
     /* localStorage 접근 불가 — 베팅 레벨 기억 없이 계속 진행 */
   }
@@ -468,7 +498,12 @@ export interface GameState {
    * 지금 돌고 있는 판은 끝날 때 하나 깎이고, 0이 되면 스스로 꺼진다(=null).
    * 프리스핀 중에 도는 판은 서버가 공짜로 주는 것이므로 이 카운터를 소모하지 않는다.
    */
-  autoSpin: { remaining: number } | null
+  autoSpin: AutoSpinState | null
+  /**
+   * 오토스핀이 스스로 멈춘 이유 알림(토스트용). `id`는 같은 이유가 연달아 와도 토스트를 다시 띄우기 위한 번호.
+   * 사용자가 직접 중지하거나 횟수가 끝난 경우에는 만들지 않는다.
+   */
+  autoSpinNotice: { reason: AutoSpinStopReason; limitAmount: number | null; id: number } | null
   /** 실패한(또는 진행 중인) 더블업 한 판의 idempotencyKey. 재시도 시 재사용한다(spin과 같은 패턴). */
   gambleIdempotencyKey: string | null
   /**
@@ -573,12 +608,14 @@ export interface GameActions {
    * 오토스핀을 `count`판만큼 무장하고, 지금 바로 돌 수 있는 상태면(idle, 프리스핀 아님) 첫 판을
    * 곧장 시작한다. 이미 스핀 중이면 예약만 해두고 그 판이 끝나는 대로 이어진다.
    */
-  startAutoSpin: (count: number) => void
+  startAutoSpin: (count: number, options?: AutoSpinOptions) => void
   /**
    * 오토스핀을 멈춘다 — 지금 돌고 있는 판은 그대로 끝나고, 예약돼 있던 다음 판만 거둬들인다
    * (업계 관행 "이번 스핀만 마치고 중단"). 프리스핀 자동진행이 걸어 둔 예약은 건드리지 않는다.
    */
-  stopAutoSpin: () => void
+  stopAutoSpin: (reason?: AutoSpinStopReason) => void
+  /** 오토스핀 멈춤 알림 토스트를 닫는다. */
+  dismissAutoSpinNotice: () => void
   /**
    * 더블업 한 판. pick(heads/tails)이 서버가 실제로 뒤집은 면과 같으면 2배, 다르면 0 — 클라이언트는
    * 절대 스스로 계산하지 않고 서버 응답을 그대로 반영한다. 진행 중인 세션이 없으면 아무 일도 안 한다.
@@ -624,6 +661,7 @@ const initialState: GameState = {
   orderCompleted: [],
   gambleSession: null,
   autoSpin: null,
+  autoSpinNotice: null,
   debugPreset: null,
   debugMessage: null,
   lastSpinTiming: null,
@@ -670,6 +708,12 @@ function scheduleNextRound(get: StoreGet): void {
   const coins = useSessionStore.getState().wallet?.coins ?? 0
   if (nextBet === undefined || coins < nextBet) {
     get().stopAutoSpin()
+    return
+  }
+  // 손실 한도 — 다음 «유료» 판을 걸기 직전에 판정한다(한도를 넘기기 전에 멈춘다).
+  const armed = get().autoSpin
+  if (armed && exceedsLossLimit({ startCoins: armed.startCoins, net: armed.net, nextBet, lossLimit: armed.lossLimit })) {
+    get().stopAutoSpin('lossLimit')
     return
   }
   scheduleSpinAfter(AUTO_SPIN_INTERVAL_MS, 'autoSpin', get)
@@ -775,11 +819,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       const raw = await getGameMath(gameId)
       const math = parseGameMath(raw)
-      const storedIndex = readStoredBetIndex(gameId)
-      const betIndex =
-        storedIndex !== null && storedIndex >= 0 && storedIndex < math.betLevels.length
-          ? storedIndex
-          : 0
+      // 기본 베팅 — 사용자가 고른 금액(저장)이 아직 쓸 수 있으면 그대로, 아니면 잔액의 0.2~0.5% 규칙.
+      // 저장된 선택은 지우지 않는다(잔액이 회복되면 다시 쓴다).
+      // 게임 화면으로 바로 들어온(새로고침 등) 경우 허브 레벨 정보가 아직 없을 수 있다. 상한을 모르는데 100으로 가정하면
+      // 높은 레벨 사용자가 고른 베팅을 «상한 초과»로 잘못 버리므로, 저장된 선택은 상한을 모를 때 그대로 쓰고
+      // (잘못이면 서버 BET_LOCKED가 바로잡는다) 규칙 값만 보수적으로 100을 상한으로 가정한다.
+      const balance = useSessionStore.getState().wallet?.coins ?? 0
+      const knownMaxBet = useHubStore.getState().levelInfo?.maxBet
+      const storedIndex = storedBetIndex(
+        math.betLevels,
+        readStoredBetAmount(gameId, math.betLevels),
+        balance,
+        knownMaxBet ?? Number.POSITIVE_INFINITY,
+      )
+      const betIndex = storedIndex >= 0 ? storedIndex : pickDefaultBetIndex(math.betLevels, balance, knownMaxBet ?? 100)
       // load()가 재호출됐을 수 있으므로(재시도), 여전히 같은 게임을 보고 있을 때만 반영한다.
       if (get().gameId !== gameId) return
       set({ math, betIndex, phase: 'idle', error: null, errorCode: null })
@@ -821,7 +874,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 남아있던 idempotencyKey는 실패했던 스핀의 totalBet과 묶여 있다 — 베팅을 바꾼 뒤에도 그
     // 키를 재사용하면 서버가 "같은 요청"으로 오인해 다른 금액으로 재생될 수 있으므로 버린다.
     set({ betIndex: index, idempotencyKey: null })
-    writeStoredBetIndex(gameId, index)
+    const amount = math.betLevels[index]
+    if (amount !== undefined) writeStoredBetAmount(gameId, amount)
   },
 
   setRenderer(renderer) {
@@ -930,7 +984,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
           )
           if (validIndex >= 0) clampedIndex = validIndex
         }
-        writeStoredBetIndex(gameId, clampedIndex)
         set({
           phase: 'idle',
           error: err.message,
@@ -1060,6 +1113,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       boardHeld = holdNow
       useSessionStore.setState({ wallet: withHeldCoins(result.wallet, holdNow) })
       useHubStore.getState().setJackpotPool(result.jackpot)
+      const spinNet = spinNetOf({
+        totalWin: result.totalWin,
+        jackpotWin: result.jackpotWin,
+        totalBet: result.totalBet,
+        isFreeSpin: result.isFreeSpin,
+      })
+      usePlaySessionStore.getState().recordSpin({
+        totalWin: result.totalWin,
+        jackpotWin: result.jackpotWin,
+        totalBet: result.totalBet,
+        isFreeSpin: result.isFreeSpin,
+      })
+      const armedNow = get().autoSpin
+      if (armedNow) set({ autoSpin: { ...armedNow, net: armedNow.net + spinNet } })
       if (result.missions && result.missions.length > 0) {
         useHubStore.getState().setMissions(result.missions)
       }
@@ -1222,6 +1289,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const shown = winsForDisplay(result, freeSpins?.multiplier ?? 1)
           await renderer.showWins(shown.wins, {
             totalBet: result.totalBet,
+            // 프리스핀 판은 베팅을 내지 않았다 — 베팅 미만 당첨을 «돌려받음»으로 낮춰 보이지 않게 렌더러에 알린다.
+            paid: freeSpins === null,
             features: shown.features,
             ...(hasCascadeSteps(result) ? { mode: 'cascade' as const } : {}),
             // brief는 자기만의 짧은 홀드를 쓴다 — 여기서 늘리면 짧게 스쳐 지나간다는 약속이 깨진다.
@@ -1299,7 +1368,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         const armedBefore = get().autoSpin
         if (armedBefore && freeSpins === null) {
           const left = Math.max(0, armedBefore.remaining - 1)
-          set({ autoSpin: left > 0 ? { remaining: left } : null })
+          set({ autoSpin: left > 0 ? { ...armedBefore, remaining: left } : null })
+        }
+        // 큰 당첨 멈춤 — 유료든 프리스핀 판이든 방금 판이 빅윈(베팅의 10배 이상)이면 오토스핀을 끈다.
+        // 프리스핀 자동진행은 주인이 달라(autoSpinTimeoutOwner) 그대로 끝까지 돈다.
+        const armedNow = get().autoSpin
+        if (armedNow?.stopOnBigWin && celebrationTier(result.totalWin, result.totalBet) !== 'none') {
+          get().stopAutoSpin('bigWin')
         }
 
         // 이번 판이 프리스핀 모드 경계를 넘었으면(위에서 판정해 둔 ceremony) 곧장 커튼을 걸지 않고
@@ -1419,12 +1494,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  startAutoSpin(count) {
+  startAutoSpin(count, options = {}) {
     if (Number.isNaN(count) || count <= 0) return
     const { phase, freeSpins } = get()
     if (phase === 'loading' || phase === 'error') return
 
-    set({ autoSpin: { remaining: Math.floor(count) } })
+    const startCoins = useSessionStore.getState().wallet?.coins ?? 0
+    const lossLimit = options.lossLimit ?? null
+    // 첫 판부터 한도를 넘는 베팅이면(예: 시작 잔액이 작은데 베팅이 큼) 시작하지 않고 이유를 알린다.
+    const firstBet = freeSpins ? undefined : get().math?.betLevels[get().betIndex]
+    if (firstBet !== undefined && exceedsLossLimit({ startCoins, net: 0, nextBet: firstBet, lossLimit })) {
+      set({ autoSpinNotice: { reason: 'lossLimitStart', limitAmount: Math.floor(startCoins * (lossLimit ?? 0)), id: Date.now() } })
+      return
+    }
+
+    set({
+      autoSpin: {
+        remaining: Math.floor(count),
+        startCoins,
+        net: 0,
+        lossLimit,
+        stopOnBigWin: options.stopOnBigWin === true,
+      },
+      autoSpinNotice: null,
+    })
 
     // 프리스핀이 돌고 있으면 그 루프가 주인이다 — 오토스핀은 카운터만 들고 기다렸다가 끝난 뒤
     // 이어받는다. 스핀/승리 연출 중이면 그 판의 finally가 다음 판을 알아서 예약한다.
@@ -1432,13 +1525,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (phase === 'idle') void get().spin()
   },
 
-  stopAutoSpin() {
+  dismissAutoSpinNotice() {
+    if (get().autoSpinNotice !== null) set({ autoSpinNotice: null })
+  },
+
+  stopAutoSpin(reason) {
     // 지금 돌고 있는 판은 그대로 마치게 두고, 오토스핀이 걸어 둔 다음 판 예약만 거둬들인다.
     // 프리스핀 자동진행이 걸어 둔 타이머는 주인이 다르므로 건드리지 않는다. 세리머니가 끝난 뒤의
     // 재개도 따로 지울 게 없다 — 무엇을 이어갈지는 그때 store 상태를 다시 읽어 정하므로
     // (scheduleNextRound), autoSpin을 null로 만드는 것만으로 재개가 사라진다.
     if (autoSpinTimeoutOwner === 'autoSpin') clearScheduledSpin()
-    if (get().autoSpin !== null) set({ autoSpin: null })
+    const armed = get().autoSpin
+    if (armed === null) return
+    if (reason) {
+      set({
+        autoSpin: null,
+        autoSpinNotice: {
+          reason,
+          limitAmount: armed.lossLimit === null ? null : Math.floor(armed.startCoins * armed.lossLimit),
+          id: Date.now(),
+        },
+      })
+    } else {
+      set({ autoSpin: null })
+    }
   },
 
   async gamble(pick) {
@@ -1454,6 +1564,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ gambleIdempotencyKey: idempotencyKey })
 
     let response: GambleResponse
+    const walletBefore = useSessionStore.getState().wallet?.coins ?? 0
     try {
       response = await apiGamble(token, session.roundId, pick, idempotencyKey)
     } catch (err) {
@@ -1472,6 +1583,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 서버 응답이 유일한 권위 — 이겼는지/졌는지는 절대 클라이언트가 스스로 판정하지 않는다.
     // 대기 당첨금은 에스크로(지갑 밖에 잠긴 돈)라 서버가 돌려준 wallet에는 이미 반영돼 있다.
     useSessionStore.setState({ wallet: response.wallet })
+    // 세션 손익 — 요청 전후 지갑 차이에 «걸려 있는 금액(에스크로)»의 변화를 더한다. 졌을 때는 지갑이 그대로여도
+    // 걸려 있던 금액만큼 잃은 것이고, 이겨서 계속 걸면 늘어난 만큼 번 것이다.
+    const escrowAfter = response.outcome === 'win' && response.stepsLeft > 0 && !response.autoCollected ? response.pendingWin : 0
+    usePlaySessionStore
+      .getState()
+      .recordGambleDelta(walletBefore + session.pendingWin, response.wallet.coins + escrowAfter)
+    const armedGamble = get().autoSpin
+    if (armedGamble) {
+      const gambleNet = response.wallet.coins + escrowAfter - (walletBefore + session.pendingWin)
+      set({ autoSpin: { ...armedGamble, net: armedGamble.net + gambleNet } })
+    }
     if (get().gambleSession?.roundId !== session.roundId) return response
 
     // 'collected'(만료 등으로 판정 없이 회수됨)나 'lose', 혹은 이겼어도 stepsLeft가 0이면(상한

@@ -195,20 +195,9 @@
   letter-spacing: 0.08em;
 }
 
-.hub-game-screen__win-banner--levelup {
-  border-color: var(--hub-success);
-}
-
 .hub-game-screen__win-banner--freespins {
   border-color: var(--hub-gold-light);
   box-shadow: 0 0 24px rgba(244, 217, 138, 0.55);
-}
-
-.hub-game-screen__level-up-label {
-  font-size: var(--hub-font-sub);
-  font-weight: 800;
-  color: var(--hub-success);
-  letter-spacing: 0.04em;
 }
 
 .hub-game-screen__win-label {
@@ -348,11 +337,6 @@
   position: relative;
 }
 
-.hub-win-strip__gamble-countdown {
-  font-size: var(--hub-font-tiny, 11px);
-  color: var(--hub-text-sub);
-}
-
 /* 받기/더블 버튼 줄은 흐름 밖으로 띄운다(position: absolute) — 예전엔 이 줄이 .hub-win-strip
    안에 쌓여 더블업 진입/이탈마다 WinStrip 전체 높이가 58px씩 바뀌었고, WinStrip은
    .hub-game-screen__stage와 flex: 1을 나눠 쓰므로 그 58px만큼 릴 캔버스가 리사이즈되며
@@ -380,6 +364,8 @@
   display: flex;
   gap: var(--hub-space-sm);
   justify-content: center;
+  width: 100%;
+  max-width: 360px;
 }
 
 /* 손가락 타깃 권장치(44px) 확보 — 패널이 흐름 밖으로 뜨면서 세로 공간을 더 빌리지 않아도
@@ -396,15 +382,18 @@
   font-weight: 700;
 }
 
+/* 책임 설계 — «받기»가 주 버튼(금색, 폭 1.4·왼쪽), «두 배 도전»은 외곽선 보조 버튼. */
 .hub-win-strip__gamble-btn--collect {
-  background: var(--hub-card-bg);
-  border: 1px solid var(--hub-border);
-  color: var(--hub-text);
+  flex: 1.4 1 0;
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  color: #2a1a04;
 }
 
 .hub-win-strip__gamble-btn--double {
-  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
-  color: #2a1a04;
+  flex: 1 1 0;
+  background: transparent;
+  border: 1px solid var(--hub-gold);
+  color: var(--hub-text);
 }
 
 .hub-win-strip__gamble-btn:disabled {
@@ -573,18 +562,53 @@
   opacity: 0.5;
 }
 
-/* 오토스핀 회수 선택(중앙 모달) — 10/25/50/100 네 칸. */
+/* 오토스핀 설정(중앙 모달) — 횟수 칩 / 손실 한도 칩 / 큰 당첨 토글 / 시작. */
 .hub-autospin__counts {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--hub-space-sm);
 }
 
-.hub-autospin__count:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
+.hub-autospin__limits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--hub-space-sm);
+}
+
+.hub-autospin__label {
+  font-size: var(--hub-font-sub);
+  font-weight: 700;
+  color: var(--hub-text);
+}
+
+.hub-autospin__note {
+  margin: 0;
+  font-size: var(--hub-font-tiny, 11px);
+  color: var(--hub-text-sub);
+  line-height: 1.35;
+}
+
+.hub-autospin__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hub-space-md);
+}
+
+.hub-autospin__toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hub-autospin__count[data-active='true'] {
+  background: linear-gradient(135deg, var(--hub-gold-light), var(--hub-gold));
+  border-color: var(--hub-gold);
+  color: #2a1a04;
 }
 
 .hub-autospin__count {
+  padding: 0 4px;
   min-height: var(--hub-touch-min);
   border-radius: var(--hub-radius-sm);
   background: var(--hub-card-bg);

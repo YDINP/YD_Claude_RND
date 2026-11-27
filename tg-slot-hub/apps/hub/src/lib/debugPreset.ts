@@ -8,7 +8,17 @@ import type { GameMath } from '@tgslot/slot-engine'
 
 export type DebugPreset = SpinDebugPreset
 
-export const DEBUG_PRESETS: readonly DebugPreset[] = ['win', 'bigWin', 'freeSpins', 'gamble', 'lose']
+export const DEBUG_PRESETS: readonly DebugPreset[] = [
+  'win',
+  'bigWin',
+  'freeSpins',
+  'gamble',
+  'lose',
+  'winUnder',
+  'winSmall',
+  'winGood',
+  'winGreat',
+]
 
 /**
  * 이 게임에서 보여 줄 프리셋. 서버가 409를 돌려줄 프리셋은 처음부터 뺀다.

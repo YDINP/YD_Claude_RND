@@ -2504,7 +2504,7 @@ describe('GameScreen', () => {
       await waitFor(() => expect(screen.queryByRole('button', { name: 'Collect' })).not.toBeInTheDocument())
     })
 
-    it('carries expiresAt from a resumed gamble session: shows a countdown, then hides "Double" (but keeps "Collect") once it passes, synced via a state re-read (not a collect POST)', async () => {
+    it('carries expiresAt from a resumed gamble session: shows no countdown, then hides "Double" (but keeps "Collect") once it passes, synced via a state re-read (not a collect POST)', async () => {
       // shouldAdvanceTime: true — findByText/waitFor의 내부 폴링이 실시간에 비례해 자동으로
       // 진행되므로, 렌더링 직후부터 페이크 타이머를 걸어도 초기 로딩이 멈추지 않는다. 이렇게 해야
       // 만료 effect의 setTimeout이 "페이크 타이머가 걸린 채로" 예약돼, 나중에 advanceTimersByTimeAsync로
@@ -2531,8 +2531,9 @@ describe('GameScreen', () => {
         render(<GameScreen gameId="classic-777" />)
         await screen.findByText('10')
 
-        expect(await screen.findByText(/Expires in/)).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Double (50%)' })).toBeInTheDocument()
+        expect(await screen.findByRole('button', { name: 'Double (50%)' })).toBeInTheDocument()
+        // 책임 설계 — 남은 시간 카운트다운으로 압박하지 않는다.
+        expect(screen.queryByText(/Expires in/)).not.toBeInTheDocument()
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(6_000)
@@ -3137,6 +3138,10 @@ describe('GameScreen', () => {
       await act(async () => {
         pick.click()
       })
+      // 오토스핀 시트는 고르고 [시작]을 눌러야 무장한다(책임 설계).
+      await act(async () => {
+        screen.getByRole('button', { name: 'Start autospin' }).click()
+      })
     }
 
     it('offers exactly 10/25/50/100 (no unlimited) in a centered sheet, and arming it starts spinning right away', async () => {
@@ -3165,8 +3170,12 @@ describe('GameScreen', () => {
       await act(async () => {
         within(sheet).getByRole('button', { name: '25 spins' }).click()
       })
+      expect(useGameStore.getState().autoSpin).toBeNull()
+      await act(async () => {
+        within(sheet).getByRole('button', { name: 'Start autospin' }).click()
+      })
 
-      expect(useGameStore.getState().autoSpin).toEqual({ remaining: 25 })
+      expect(useGameStore.getState().autoSpin).toMatchObject({ remaining: 25 })
       expect(mockedApiSpin).toHaveBeenCalledTimes(1)
 
       await act(async () => {
@@ -3233,7 +3242,7 @@ describe('GameScreen', () => {
           await vi.advanceTimersByTimeAsync(0)
         })
         expect(mockedApiSpin).toHaveBeenCalledTimes(1)
-        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
+        expect(useGameStore.getState().autoSpin).toMatchObject({ remaining: 2 })
 
         // 진입 팝업이 떠 있는 동안은 어느 쪽도 다음 판을 걸지 않는다.
         expect(screen.getByText('FREE SPINS!')).toBeInTheDocument()
@@ -3261,7 +3270,7 @@ describe('GameScreen', () => {
           await vi.advanceTimersByTimeAsync(1300)
         })
         expect(mockedApiSpin).toHaveBeenCalledTimes(2)
-        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 2 })
+        expect(useGameStore.getState().autoSpin).toMatchObject({ remaining: 2 })
 
         // 종료 팝업 + 종료 커튼이 도는 동안에도 스핀이 나가면 안 된다.
         expect(screen.getByText('FREE SPINS COMPLETE')).toBeInTheDocument()
@@ -3286,7 +3295,7 @@ describe('GameScreen', () => {
           await vi.advanceTimersByTimeAsync(700)
         })
         expect(mockedApiSpin).toHaveBeenCalledTimes(3)
-        expect(useGameStore.getState().autoSpin).toEqual({ remaining: 1 })
+        expect(useGameStore.getState().autoSpin).toMatchObject({ remaining: 1 })
 
         useGameStore.getState().stopAutoSpin()
       } finally {

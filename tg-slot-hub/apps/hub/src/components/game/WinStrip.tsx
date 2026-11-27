@@ -37,6 +37,9 @@
  * 렌더러 이벤트가 아니다(GameScreen이 문구까지 합성해 내려준다).
  */
 import type { KeyboardEvent, ReactNode } from 'react'
+import type { WinBand } from '@tgslot/renderer'
+import { useSettingsStore } from '../../store/settings'
+import './WinStrip.css'
 
 export interface WinStripLineLabel {
   /**
@@ -76,8 +79,6 @@ interface GambleActions {
   /** 제안이 만료됐으면(로컬 시계 기준) "더블"은 숨기고 "받기"만 남긴다 — 새 판을 걸 수는 없어도
    * 서버가 아직 회수 처리 중일 수 있으니 눌러서 화면을 바로 맞출 수 있게는 해 둔다. */
   hideDouble?: boolean
-  /** 만료까지 남은 시간을 짧게 보여준다(예: "9:45"). 없으면 표시하지 않는다. */
-  expiresInLabel?: string
 }
 
 interface WinStripProps {
@@ -98,6 +99,11 @@ interface WinStripProps {
    * 남겨 높이만 유지한다(진입/이탈 시 아래 금액·버튼 줄이 들썩이지 않도록).
    */
   freeSpinsCounter?: string | null
+  /**
+   * 마지막 당첨의 배수 단계. 클래스(`hub-win-strip--band-<band>`)만 바꾼다 — 마크업 줄 수·높이는 그대로다.
+   * `under`는 흐린 색, `good`은 라벨이 한 번, `great`는 두 번 톡 튄다(모션 줄이기면 끈다).
+   */
+  band?: WinBand
 }
 
 export function WinStrip({
@@ -107,8 +113,24 @@ export function WinStrip({
   gambleActions,
   lineLabel,
   freeSpinsCounter,
+  band,
 }: WinStripProps): ReactNode {
   const formattedAmount = amount.toLocaleString('en-US')
+  const reducedMotion = useSettingsStore((s) => s.reducedMotion)
+  const rootClass = [
+    'hub-win-strip',
+    band !== undefined && band !== 'none' ? `hub-win-strip--band-${band}` : '',
+    amount === 0 && !gambleActions ? 'hub-win-strip--zero' : '',
+    reducedMotion ? 'hub-win-strip--still' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  // 라벨 톡은 단계가 바뀔 때마다 다시 튼다(key). 단계 없는 평소 라벨은 key가 같아 다시 만들어지지 않는다.
+  const labelNode = (
+    <span key={`${band ?? 'none'}:${label}`} className="hub-win-strip__label">
+      {label}
+    </span>
+  )
 
   // 라벨과 한 블록으로 읽히도록 라벨 바로 아래, 금액 위에 둔다. 프리스핀이 아니면 내용 없이
   // 높이만 유지해(min-height) 진입/이탈 때 금액·버튼 줄이 튀지 않게 한다.
@@ -145,9 +167,6 @@ export function WinStrip({
             {lineLabel.text}
           </span>
         ))}
-      {gambleActions?.expiresInLabel && (
-        <span className="hub-win-strip__gamble-countdown">{gambleActions.expiresInLabel}</span>
-      )}
     </div>
   )
 
@@ -182,8 +201,8 @@ export function WinStrip({
 
   if (gambleActions) {
     return (
-      <div className="hub-win-strip hub-win-strip--gamble">
-        <span className="hub-win-strip__label">{label}</span>
+      <div className={`${rootClass} hub-win-strip--gamble`}>
+        {labelNode}
         {freeSpinsRow}
         <span className="hub-win-strip__amount">{formattedAmount}</span>
         {lineRow}
@@ -194,14 +213,14 @@ export function WinStrip({
 
   return (
     <div
-      className="hub-win-strip"
+      className={rootClass}
       onClick={onTap}
       onKeyDown={onTap ? handleKeyDown : undefined}
       role={onTap ? 'button' : undefined}
       tabIndex={onTap ? 0 : undefined}
       aria-label={onTap ? `${label} ${formattedAmount}` : undefined}
     >
-      <span className="hub-win-strip__label">{label}</span>
+      {labelNode}
       {freeSpinsRow}
       <span className="hub-win-strip__amount">{formattedAmount}</span>
       {lineRow}

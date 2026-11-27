@@ -7,6 +7,9 @@ import { useEffect, type ReactNode } from 'react'
 import { useSessionStore } from './store/session'
 import { useGamesStore } from './store/games'
 import { useHubStore } from './store/hub'
+import { startPlaySessionClock } from './store/playSession'
+import { AgeNotice } from './components/AgeNotice'
+import { BreakReminder } from './components/BreakReminder'
 import { Header } from './components/Header'
 import { Lobby } from './components/Lobby'
 import { Loading } from './components/Loading'
@@ -44,6 +47,9 @@ export function App(): ReactNode {
   useEffect(() => {
     void bootstrap()
   }, [bootstrap])
+
+  // 이번 세션 플레이 시간 시계(보이는 시간만) — 설정 팝업·휴식 안내가 읽는다.
+  useEffect(() => startPlaySessionClock(), [])
 
   // 문서 언어·제목을 화면 언어에 맞춘다(스크린 리더 발음, 브라우저 번역 제안). 기본은 index.html의 ko.
   useEffect(() => {
@@ -84,6 +90,8 @@ export function App(): ReactNode {
             컴포넌트 로컬 state(승리 금액 등)가 그대로 남는 문제가 있었다 — 리마운트로 둘 다
             한번에 해결한다(store reset도 언마운트 cleanup에서 새 마운트보다 먼저 실행됨). */}
         <GameScreen key={route.gameId} gameId={route.gameId} />
+        <AgeNotice />
+        <BreakReminder />
       </div>
     )
   }
@@ -106,6 +114,8 @@ export function App(): ReactNode {
         )}
       </div>
       <BottomTabs />
+      <AgeNotice />
+      <BreakReminder />
     </div>
   )
 }

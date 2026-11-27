@@ -28,7 +28,8 @@ import {
   claimMission as apiClaimMission,
   ApiClientError,
 } from '../sdk/api'
-import { useHubStore } from './hub'
+import { useHubStore, unclaimedMissionCount } from './hub'
+import type { Mission } from '@tgslot/shared'
 import { useSessionStore } from './session'
 
 const mockedGetMe = vi.mocked(getMe)
@@ -53,6 +54,8 @@ function resetHubStore(): void {
     claimingBonus: null,
     claimingMissionId: null,
     bonusClaimError: null,
+    missionNotices: [],
+    claimingLeaderboardReward: false,
   })
 }
 
@@ -242,6 +245,109 @@ describe('hub store', () => {
 
       // 최초 즉시 호출 1회(중복 시작이 무시됨) + 15초 후 1회 = 2회
       expect(mockedGetJackpot).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('미션 완료 알림', () => {
+    const TODAY = '2026-09-02'
+
+    function mission(id: string, patch: Partial<Mission> = {}): Mission {
+      return {
+        id,
+        name: { en: id, ko: id },
+        target: 3,
+        progress: 0,
+        reward: 500,
+        claimed: false,
+        completed: false,
+        ...patch,
+      }
+    }
+
+    beforeEach(() => {
+      vi.setSystemTime(new Date(`${TODAY}T09:00:00Z`))
+    })
+
+    it('미완료 -> 완료로 바뀐 미션만 큐에 넣는다', () => {
+      useHubStore.setState({ missions: { day: TODAY, missions: [mission('a'), mission('b')] } })
+
+      useHubStore.getState().setMissions([mission('a', { progress: 3, completed: true }), mission('b', { progress: 1 })])
+
+      expect(useHubStore.getState().missionNotices.map((m) => m.id)).toEqual(['a'])
+    })
+
+    it('이미 완료였던 미션은 다시 넣지 않는다', () => {
+      useHubStore.setState({
+        missions: { day: TODAY, missions: [mission('a', { progress: 3, completed: true })] },
+      })
+
+      useHubStore.getState().setMissions([mission('a', { progress: 3, completed: true })])
+
+      expect(useHubStore.getState().missionNotices).toEqual([])
+    })
+
+    it('같은 알림이 두 번 쌓이지 않는다', () => {
+      useHubStore.setState({ missions: { day: TODAY, missions: [mission('a')] } })
+      const done = mission('a', { progress: 3, completed: true })
+
+      useHubStore.getState().setMissions([done])
+      useHubStore.getState().setMissions([done])
+
+      expect(useHubStore.getState().missionNotices).toHaveLength(1)
+    })
+
+    it('이전 목록이 없으면(허브 로딩 전) 알림을 만들지 않는다', () => {
+      useHubStore.getState().setMissions([mission('a', { progress: 3, completed: true })])
+      expect(useHubStore.getState().missionNotices).toEqual([])
+    })
+
+    it('날이 바뀌면 큐를 비운다', () => {
+      useHubStore.setState({
+        missions: { day: '2026-09-01', missions: [mission('a')] },
+        missionNotices: [mission('a', { completed: true })],
+      })
+
+      useHubStore.getState().setMissions([mission('a', { progress: 1 })])
+
+      expect(useHubStore.getState().missionNotices).toEqual([])
+      expect(useHubStore.getState().missions?.day).toBe(TODAY)
+    })
+
+    it('받을 수 있는 미션 수를 센다', () => {
+      useHubStore.setState({
+        missions: {
+          day: TODAY,
+          missions: [
+            mission('a', { completed: true }),
+            mission('b', { completed: true, claimed: true }),
+            mission('c'),
+          ],
+        },
+      })
+      expect(unclaimedMissionCount(useHubStore.getState())).toBe(1)
+    })
+
+    it('수령하면 큐에서 빠지고, shouldApplyWallet이 false면 지갑을 덮지 않는다', async () => {
+      useHubStore.setState({
+        missions: { day: TODAY, missions: [mission('a', { completed: true })] },
+        missionNotices: [mission('a', { completed: true })],
+      })
+      mockedClaimMission.mockResolvedValue({ amount: 500, wallet: { coins: 9999, gems: 0 } })
+
+      await useHubStore.getState().claimMission('a', { shouldApplyWallet: () => false })
+
+      expect(useSessionStore.getState().wallet?.coins).toBe(1000)
+      expect(useHubStore.getState().missionNotices).toEqual([])
+      expect(useHubStore.getState().missions?.missions[0]?.claimed).toBe(true)
+    })
+
+    it('기본값은 응답 지갑을 반영한다', async () => {
+      useHubStore.setState({ missions: { day: TODAY, missions: [mission('a', { completed: true })] } })
+      mockedClaimMission.mockResolvedValue({ amount: 500, wallet: { coins: 1500, gems: 0 } })
+
+      await useHubStore.getState().claimMission('a')
+
+      expect(useSessionStore.getState().wallet?.coins).toBe(1500)
     })
   })
 })

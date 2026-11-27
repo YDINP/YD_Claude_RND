@@ -211,3 +211,33 @@ describe('RoundPopupView', () => {
     await waitFor(() => expect(live?.textContent).toBe('12 free spins ×3'), { timeout: 3000 })
   })
 })
+
+describe('RoundPopupView 베팅 대비 ×N', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ reducedMotion: false })
+  })
+
+  it('totalBet이 있으면 종료 팝업에 «N× your bet» 한 줄(내림)을 보이고 샤워를 유지한다', () => {
+    const { container } = render(
+      <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 98 }} totalBet={20} onDismiss={() => {}} />,
+    )
+    expect(screen.getByText('4.9× your bet')).toBeInTheDocument()
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.none)
+  })
+
+  it('세션 합계가 베팅 미만이면 코인 샤워를 끄고 숫자만 보인다', () => {
+    const { container } = render(
+      <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 15 }} totalBet={20} onDismiss={() => {}} />,
+    )
+    expect(screen.getByText('0.7× your bet')).toBeInTheDocument()
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(0)
+  })
+
+  it('totalBet이 없거나 진입 팝업이면 ×N 줄이 없다', () => {
+    const { unmount } = render(<RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin: 98 }} onDismiss={() => {}} />)
+    expect(screen.queryByText(/your bet/)).not.toBeInTheDocument()
+    unmount()
+    render(<RoundPopupView popup={ENTRY} totalBet={20} onDismiss={() => {}} />)
+    expect(screen.queryByText(/your bet/)).not.toBeInTheDocument()
+  })
+})

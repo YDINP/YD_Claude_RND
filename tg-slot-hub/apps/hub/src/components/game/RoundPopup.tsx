@@ -26,6 +26,8 @@ import {
   celebrationTiming,
   countUpMs,
   type CelebrationTier,
+  floorMultipleLabel,
+  winBandFor,
   type WinTierLabels,
 } from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
@@ -47,6 +49,11 @@ interface RoundPopupViewProps {
   skin?: ResolvedCelebrationSkin
   /** 주문 카드 라운드 종료 요약에서 카드 한 장을 읽는 문구(심볼 이름 포함). */
   orderText?: (order: CompletedOrder) => string
+  /**
+   * 종료 팝업에서 «베팅의 ×N» 한 줄과 베팅 미만(under)일 때 코인 샤워를 끄는 데만 쓴다.
+   * 아래 `tier`는 여전히 매기지 않는다 — 이름·색 등급은 세션 총액으로 정하지 않는다.
+   */
+  totalBet?: number
 }
 
 export function RoundPopupView({
@@ -57,6 +64,7 @@ export function RoundPopupView({
   labels,
   skin,
   orderText,
+  totalBet,
 }: RoundPopupViewProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts) —
@@ -124,6 +132,10 @@ export function RoundPopupView({
 
   // 한 푼도 못 딴 라운드(무당첨 8회 ≈ 4.6%)에 색종이와 «획득 0»은 결과와 어긋난다 — 위로 톤으로 바꾼다.
   const noWin = !entry && target === 0
+  // 세션 합계가 베팅 미만이면 샤워 없이 숫자만 — 손해를 축하처럼 꾸미지 않는다.
+  const band = entry || totalBet === undefined ? 'none' : winBandFor(popup.kind === 'freeSpinsExit' ? popup.totalWin : 0, totalBet)
+  const showMultiple = band !== 'none'
+  const multipleText = showMultiple && totalBet !== undefined ? floorMultipleLabel(target / totalBet) : ''
   const playedText =
     freeSpinsPlayed !== undefined && freeSpinsPlayed > 0
       ? t(popup.kind === 'freeSpinsExit' && popup.orders !== undefined ? 'orderRoundPopupSpins' : 'freeSpinsPopupSpins', {
@@ -146,7 +158,7 @@ export function RoundPopupView({
     <Modal onClose={handleTap} titleId={TITLE_ID}>
       {/* 배경 연출은 카드의 형제여야 한다(z-index/컨테이닝 블록 — WinCelebration.css 참고).
           진입에는 코인 샤워 대신 심볼 주위의 반짝임을 쓴다. */}
-      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry && !noWin} skin={skin} />
+      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} shower={!entry && !noWin && band !== 'under'} skin={skin} />
 
       {/* 카드 전체가 하나의 탭 영역이다 — 탭/클릭은 물론 키보드(Enter/Space)로도 같은 뜻이다.
           Modal이 열릴 때 카드 안 첫 포커스 가능 요소로 포커스를 옮기므로 이게 그 대상이 된다. */}
@@ -206,6 +218,10 @@ export function RoundPopupView({
             >
               ×{multiplier}
             </span>
+          )}
+
+          {!entry && showMultiple && (
+            <span className="hub-round-popup__multiple">{t('winBandMultiple', { x: multipleText })}</span>
           )}
 
           {!entry && <span className="hub-win__summary">{summary}</span>}

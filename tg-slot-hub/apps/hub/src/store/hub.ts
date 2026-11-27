@@ -21,6 +21,7 @@ import {
   getLeaderboard,
   getMissions,
   claimMission as apiClaimMission,
+  claimLeaderboardReward as apiClaimLeaderboardReward,
   getMe,
   ApiClientError,
 } from '../sdk/api'
@@ -48,6 +49,14 @@ export interface HubState {
   claimingBonus: BonusKind | null
   claimingMissionId: string | null
   bonusClaimError: string | null
+  /** 완료로 바뀐(미완료 -> 완료) 미션 알림 큐. 날이 바뀌거나 수령하면 비운다. */
+  missionNotices: Mission[]
+  claimingLeaderboardReward: boolean
+}
+
+/** 오늘 미션 중 완료했지만 아직 받지 않은 개수 (미션 탭 배지) */
+export function unclaimedMissionCount(state: Pick<HubState, 'missions'>): number {
+  return state.missions?.missions.filter((m) => m.completed && !m.claimed).length ?? 0
 }
 
 export interface HubActions {
@@ -56,7 +65,17 @@ export interface HubActions {
   claimDaily: () => Promise<BonusClaimResponse | null>
   claimTimed: () => Promise<BonusClaimResponse | null>
   claimRescue: () => Promise<BonusClaimResponse | null>
-  claimMission: (missionId: string) => Promise<BonusClaimResponse | null>
+  /**
+   * `shouldApplyWallet`가 false를 돌려주면 응답의 wallet을 세션에 반영하지 않는다
+   * (그 사이 더 새로운 스핀 응답이 지갑을 갱신했을 때 낡은 잔액으로 덮어쓰지 않기 위해).
+   */
+  claimMission: (
+    missionId: string,
+    options?: { shouldApplyWallet?: () => boolean },
+  ) => Promise<BonusClaimResponse | null>
+  claimLeaderboardReward: () => Promise<BonusClaimResponse | null>
+  /** 토스트에서 알림 한 건을 닫는다 */
+  dismissMissionNotice: (missionId: string) => void
   refreshLeaderboard: () => Promise<void>
   refreshMissions: () => Promise<void>
   /** 보너스 타일의 카운트다운이 0에 도달했을 때(수령 가능 전환 감지) 호출 — GET /bonus만 다시 받아온다 */
@@ -88,6 +107,8 @@ const initialState: HubState = {
   claimingBonus: null,
   claimingMissionId: null,
   bonusClaimError: null,
+  missionNotices: [],
+  claimingLeaderboardReward: false,
 }
 
 /** setInterval id — zustand 상태에 두면 값이 바뀔 때마다 불필요한 리렌더를 유발하므로 모듈 스코프에 둔다 */
@@ -171,7 +192,7 @@ export const useHubStore = create<HubStore>((set, get) => {
       return performBonusClaim('rescue', claimRescueBonus)
     },
 
-    async claimMission(missionId) {
+    async claimMission(missionId, options) {
       if (get().claimingMissionId !== null) return null
       const token = useSessionStore.getState().token
       if (!token) return null
@@ -179,9 +200,12 @@ export const useHubStore = create<HubStore>((set, get) => {
       set({ claimingMissionId: missionId, bonusClaimError: null })
       try {
         const result = await apiClaimMission(token, missionId)
-        useSessionStore.setState({ wallet: result.wallet })
+        if (options?.shouldApplyWallet?.() !== false) {
+          useSessionStore.setState({ wallet: result.wallet })
+        }
         set((state) => ({
           claimingMissionId: null,
+          missionNotices: state.missionNotices.filter((m) => m.id !== missionId),
           missions: state.missions
             ? {
                 ...state.missions,
@@ -196,6 +220,32 @@ export const useHubStore = create<HubStore>((set, get) => {
         set({ claimingMissionId: null, bonusClaimError: errorMessageOf(err, '보상 수령에 실패했어요') })
         return null
       }
+    },
+
+    async claimLeaderboardReward() {
+      if (get().claimingLeaderboardReward) return null
+      const token = useSessionStore.getState().token
+      if (!token) return null
+
+      set({ claimingLeaderboardReward: true, bonusClaimError: null })
+      try {
+        const result = await apiClaimLeaderboardReward(token)
+        useSessionStore.setState({ wallet: result.wallet })
+        set((state) => ({
+          claimingLeaderboardReward: false,
+          leaderboard: state.leaderboard?.lastWeek
+            ? { ...state.leaderboard, lastWeek: { ...state.leaderboard.lastWeek, claimed: true } }
+            : state.leaderboard,
+        }))
+        return result
+      } catch (err) {
+        set({ claimingLeaderboardReward: false, bonusClaimError: errorMessageOf(err, '보상 수령에 실패했어요') })
+        return null
+      }
+    },
+
+    dismissMissionNotice(missionId) {
+      set((state) => ({ missionNotices: state.missionNotices.filter((m) => m.id !== missionId) }))
     },
 
     async refreshLeaderboard() {
@@ -214,7 +264,11 @@ export const useHubStore = create<HubStore>((set, get) => {
       if (!token) return
       try {
         const missions = await getMissions(token)
-        set({ missions })
+        set((state) => ({
+          missions,
+          // 날이 바뀐 목록이면 어제 알림은 의미가 없다.
+          missionNotices: state.missions && state.missions.day !== missions.day ? [] : state.missionNotices,
+        }))
       } catch {
         /* noop */
       }
@@ -236,7 +290,10 @@ export const useHubStore = create<HubStore>((set, get) => {
       if (!token) return
       try {
         const me = await getMe(token)
-        useSessionStore.setState({ user: me.user, wallet: me.wallet })
+        // 지갑은 덮지 않는다. 레벨업 판마다 불리므로 오토·터보에서 늦게 온 /me가 다음 판 지갑을
+        // 옛 값으로 되돌리거나, 말판처럼 일부러 숨겨 둔 당첨을 상단 잔액에 미리 드러낼 수 있다.
+        // 스핀 응답 지갑(레벨업 보너스 포함)이 이미 권위 값이다.
+        useSessionStore.setState({ user: me.user })
         set({ levelInfo: me.levelInfo })
       } catch {
         /* noop */
@@ -250,9 +307,30 @@ export const useHubStore = create<HubStore>((set, get) => {
     setMissions(missions) {
       // loadAll()이 아직 끝나지 않아 day를 모를 수도 있으므로 오늘 날짜(UTC)로 채워둔다 —
       // 곧이어 refreshMissions()/loadAll()이 정확한 day로 다시 채운다.
-      set((state) => ({
-        missions: { day: state.missions?.day ?? new Date().toISOString().slice(0, 10), missions },
-      }))
+      set((state) => {
+        const today = new Date().toISOString().slice(0, 10)
+        const previous = state.missions
+        const sameDay = previous !== null && previous.day === today
+        const day = previous?.day ?? today
+        // 날이 바뀌었으면 큐를 비운다. 같은 날이면 미완료 -> 완료로 바뀐 미션만 알림에 넣는다.
+        // 이전 목록이 없으면(허브 로딩 전) 무엇이 «바뀌었는지» 알 수 없으므로 알림을 만들지 않는다.
+        if (previous !== null && !sameDay) {
+          return { missions: { day: today, missions }, missionNotices: [] }
+        }
+        const knownIds = new Set(state.missionNotices.map((m) => m.id))
+        const fresh =
+          previous === null
+            ? []
+            : missions.filter((m) => {
+                if (!m.completed || m.claimed || knownIds.has(m.id)) return false
+                const before = previous.missions.find((p) => p.id === m.id)
+                return before !== undefined && !before.completed
+              })
+        return {
+          missions: { day, missions },
+          missionNotices: fresh.length > 0 ? [...state.missionNotices, ...fresh] : state.missionNotices,
+        }
+      })
     },
 
     addXp(amount) {

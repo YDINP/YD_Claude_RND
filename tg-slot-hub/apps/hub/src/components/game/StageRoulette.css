@@ -1110,3 +1110,11 @@
   text-decoration-thickness: 1.2px;
   text-underline-offset: 1.5px;
 }
+
+/* 요약의 «베팅의 ×N» 한 줄. */
+.hub-roulette__summary-multiple {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.85;
+}

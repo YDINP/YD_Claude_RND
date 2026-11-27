@@ -144,6 +144,33 @@ describe('recipe table', () => {
     // 프리셋이 9종으로 늘어 병렬 실행(pnpm -r test) 중에는 기본 5초를 넘길 때가 있다.
   }, 20_000)
 
+  it('playWinBand: under·none·big은 소리 노드를 만들지 않고, small<good<great 순으로 소리가 늘어난다', async () => {
+    vi.stubGlobal('AudioContext', FakeAudioContext)
+    vi.resetModules()
+    const audio = await import('./audio')
+    audio.installAudioUnlock()
+    window.dispatchEvent(new Event('pointerdown'))
+    const nodes = (): number => lastContext!.oscillators + lastContext!.sources
+    for (const preset of PRESETS) {
+      audio.setSoundPreset(preset)
+      const silent = nodes()
+      audio.playWinBand('under', 600)
+      audio.playWinBand('none', 600)
+      audio.playWinBand('big', 600)
+      expect(nodes(), `${preset} 무음`).toBe(silent)
+
+      const counts = (['small', 'good', 'great'] as const).map((band) => {
+        const before = nodes()
+        expect(() => audio.playWinBand(band, 900), `${preset} ${band}`).not.toThrow()
+        return nodes() - before
+      })
+      expect(counts[0], `${preset} small`).toBeGreaterThan(0)
+      expect(counts[1], `${preset} good > small`).toBeGreaterThan(counts[0]!)
+      expect(counts[2], `${preset} great > good`).toBeGreaterThan(counts[1]!)
+    }
+    vi.unstubAllGlobals()
+  }, 20_000)
+
   it('every preset plays the double-up cues, each mutation kind and the count-up, and each makes sound', async () => {
     vi.stubGlobal('AudioContext', FakeAudioContext)
     vi.resetModules()

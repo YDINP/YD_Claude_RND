@@ -37,6 +37,8 @@ import { YutThrow, type YutThrowHandle } from './YutThrow'
 import { CoinGlyph, LanternGlyph } from './tileIcons'
 import { createFxPool, punch, shake, type FxPool } from './boardFx'
 import { boardSfx } from './boardSfx'
+import { floorMultipleLabel, winBandFor } from '../winTiers'
+import { playRollupEnd } from '../../../lib/audio'
 import type { BoardLayout } from './yutLayout'
 import './BoardBonus.css'
 
@@ -381,7 +383,9 @@ export function BoardBonus(props: BoardBonusProps): ReactNode {
             if (last !== undefined) mapRef.current?.snapToken(last.at)
             props.onProgress(feature.throws.length)
           }
-          boardSfx.summary()
+          // 합계가 베팅 미만이면 축하음 대신 조용한 마감음만 낸다(손해를 축하처럼 꾸미지 않는다).
+          if (winBandFor(feature.win, totalBet) === 'under') playRollupEnd('none')
+          else boardSfx.summary()
           break
         case 'finish':
           props.onProgress('done')
@@ -670,6 +674,7 @@ export function BoardBonus(props: BoardBonusProps): ReactNode {
         <BoardSummary
           feature={feature}
           config={config}
+          totalBet={totalBet}
           minApplied={feature.payout === config.minPayout && feature.pot * feature.multiplier < config.minPayout}
           disabled={closing}
           reducedMotion={reducedMotion}
@@ -684,6 +689,7 @@ export function BoardBonus(props: BoardBonusProps): ReactNode {
 function BoardSummary(props: {
   feature: BoardBonusFeature
   config: BoardBonusConfig
+  totalBet: number
   minApplied: boolean
   disabled: boolean
   reducedMotion: boolean
@@ -692,6 +698,7 @@ function BoardSummary(props: {
   const t = useT()
   const { feature } = props
   const roll = useWinRollup(feature.win, props.reducedMotion ? 300 : 1200)
+  const band = winBandFor(feature.win, props.totalBet)
   const reason =
     feature.end === 'goal' ? t('boardEndGoal') : feature.end === 'traps' ? t('boardEndTraps') : t('boardEndThrows')
   return (
@@ -710,6 +717,9 @@ function BoardSummary(props: {
           </svg>{' '}
           {formatInt(roll.value)}
         </p>
+        {band !== 'none' && (
+          <p className="board-summary__multiple">{t('winBandMultiple', { x: floorMultipleLabel(feature.win / props.totalBet) })}</p>
+        )}
         <button type="button" className="board-btn board-btn--throw board-summary__collect" disabled={props.disabled} onClick={props.onCollect}>
           {t('boardCollectBtn')}
         </button>

@@ -20,6 +20,9 @@ import {
   type ResolvedCelebrationSkin,
 } from '@tgslot/renderer'
 
+// 베팅 대비 당첨 단계(under~great)는 렌더러가 정한다. 허브가 렌더러 상수를 직접 들고 다니지 않게 여기서 다시 내보낸다.
+export { winBandFor, floorMultipleLabel, type WinBand } from '@tgslot/renderer'
+
 /**
  * 축하 등급. 인덱스가 곧 강도이자 결이다 —
  * SURGE(밀려 올라옴) → BLAST(터짐) → STORM(휘몰아침) → CATACLYSM(뒤흔듦).

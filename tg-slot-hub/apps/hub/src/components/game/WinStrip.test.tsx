@@ -68,7 +68,6 @@ describe('WinStrip', () => {
           onDouble: vi.fn(),
           collectLabel: 'Collect',
           doubleLabel: 'Double (50%)',
-          expiresInLabel: '9:45',
         }}
       />,
     )
@@ -79,7 +78,8 @@ describe('WinStrip', () => {
     expect(strip?.querySelector('.hub-win-strip__gamble-amount')).toBeNull()
     expect(strip?.querySelector('.hub-win-strip__label')?.textContent).toBe('PENDING WIN')
     expect(strip?.querySelector('.hub-win-strip__amount')?.textContent).toBe('200')
-    expect(strip?.querySelector('.hub-win-strip__gamble-countdown')?.textContent).toBe('9:45')
+    // 책임 설계 — 남은 시간 카운트다운으로 압박하지 않는다.
+    expect(strip?.querySelector('.hub-win-strip__gamble-countdown')).toBeNull()
     expect(strip?.querySelector('.hub-win-strip__gamble-actions')).not.toBeNull()
   })
 
@@ -303,5 +303,33 @@ describe('WinStrip', () => {
     )
     expect(screen.getByText('Free spins 5/8 ×2')).toHaveClass('hub-win-strip__free-spins-counter')
     expect(screen.getByRole('button', { name: 'Collect' })).toBeInTheDocument()
+  })
+})
+
+describe('WinStrip band', () => {
+  it('단계 클래스를 루트에 붙이고 마크업 구조(라벨·금액·줄)는 그대로다', () => {
+    const plain = render(<WinStrip label="WIN" amount={10} />).container
+    const bandStrip = render(<WinStrip label="Nice win ×2.8" amount={70} band="good" />).container
+
+    const plainRoot = plain.querySelector('.hub-win-strip')
+    const bandRoot = bandStrip.querySelector('.hub-win-strip')
+    expect(bandRoot).toHaveClass('hub-win-strip--band-good')
+    expect(plainRoot?.className).not.toMatch(/band/)
+    expect(bandRoot?.children.length).toBe(plainRoot?.children.length)
+    expect([...(bandRoot?.children ?? [])].map((el) => el.className)).toEqual(
+      [...(plainRoot?.children ?? [])].map((el) => el.className),
+    )
+  })
+
+  it('none이면 단계 클래스가 없다', () => {
+    const { container } = render(<WinStrip label="WIN" amount={0} band="none" />)
+    expect(container.querySelector('.hub-win-strip')?.className).not.toMatch(/band/)
+  })
+
+  it('under·great도 각자의 클래스를 가진다', () => {
+    const under = render(<WinStrip label="Returned" amount={5} band="under" />).container
+    const great = render(<WinStrip label="Great win ×6.5" amount={130} band="great" />).container
+    expect(under.querySelector('.hub-win-strip')).toHaveClass('hub-win-strip--band-under')
+    expect(great.querySelector('.hub-win-strip')).toHaveClass('hub-win-strip--band-great')
   })
 })

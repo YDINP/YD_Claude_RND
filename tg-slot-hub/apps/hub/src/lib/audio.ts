@@ -1840,6 +1840,48 @@ export function playWin(tier: WinTier, durationMs: number): void {
   else recipe.winBig(c, tier, rollup)
 }
 
+/** 짧은 오름 음. 프리셋 음계(`recipe.scale`)의 칸 번호를 `step`초 간격으로 부드러운 삼각파로 친다. */
+function bandSting(c: AudioContext, notes: readonly number[], vol = 0.1): void {
+  const scale = recipe.scale
+  notes.forEach((n, i) => {
+    const f = scale[Math.min(n, scale.length - 1)]
+    if (f !== undefined) tone(c, { freq: f, at: i * 0.08, dur: 0.22, vol, type: 'triangle', attack: 0.006 })
+  })
+}
+
+/**
+ * 베팅 대비 단계(`winBands`)별 당첨 소리. 새 레시피 키 없이 기존 `winSmall`·`scale`·`tickEnd`만 조합한다.
+ *
+ * - `under`·`none`: 소리 없음(베팅 미만 당첨은 축하하지 않는다. 릴 정지음만 난다)
+ * - `small`: 기존 작은 당첨음(`winSmall` 0.5초 안팎)
+ * - `good`: `winSmall` 0.9초 + 3음 오름
+ * - `great`: `winSmall` 1.4초 + 5음 오름 + 마감음(`tickEnd`)
+ * - `big`: 이 함수를 쓰지 않는다(`playWin(tier)`)
+ */
+export function playWinBand(band: 'none' | 'under' | 'small' | 'good' | 'great' | 'big', durationMs: number): void {
+  if (band === 'none' || band === 'under' || band === 'big') return
+  if (band === 'small') {
+    playWin('none', durationMs)
+    return
+  }
+  if (playOverride('win')) return
+  const c = live()
+  if (!c) return
+  if (band === 'good') {
+    recipe.winSmall(c, 0.9)
+    bandSting(c, [0, 2, 4])
+    return
+  }
+  recipe.winSmall(c, 1.4)
+  bandSting(c, [0, 2, 4, 5, 7], 0.11)
+  sched = 0.4
+  try {
+    recipe.tickEnd(c, 'none')
+  } finally {
+    sched = 0
+  }
+}
+
 /** 프리스핀 등 피처 발동. */
 export function playFeature(): void {
   const c = live()
