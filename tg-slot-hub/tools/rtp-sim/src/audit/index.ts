@@ -67,6 +67,8 @@ export {
   rouletteSections,
 } from './rouletteStats.js'
 export type { RouletteAccumulatorData, RouletteReport, RouletteSegmentRow } from './rouletteStats.js'
+export { FORGE_GATES, ForgeAccumulator, buildForgeReport, forgeGates, forgeSections } from './forgeStats.js'
+export type { ForgeAccumulatorData, ForgeReport, ForgeValueRow } from './forgeStats.js'
 export {
   finishAuditParts,
   mergeConvergence,

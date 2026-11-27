@@ -1,5 +1,6 @@
 import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import { rouletteSections } from './rouletteStats.js'
+import { forgeSections } from './forgeStats.js'
 import type {
   AuditResult,
   BoardReport,
@@ -417,8 +418,8 @@ export function buildAuditMarkdown(result: AuditResult): string {
     `# RTP 검수 리포트 — ${title} (\`${game.id}\`)`,
     '',
     `- 생성 시각: ${result.generatedAt}`,
-    game.payModel === 'cluster'
-      ? `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (클러스터 배당은 총 베팅액 기준)`
+    game.payModel === 'cluster' || game.payModel === 'anywhere'
+      ? `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (${game.payModel === 'anywhere' ? '위치 무관' : '클러스터'} 배당은 총 베팅액 기준)`
       : `- 검수 베팅액: ${num(result.options.totalBet)} 코인 (라인당 ${num(dist.betPerLine)})`,
     ...(result.options.shards === undefined
       ? []
@@ -464,7 +465,9 @@ export function buildAuditMarkdown(result: AuditResult): string {
           '배당 모델',
           dist.isWays
             ? `ways (${num(dist.totalBet / dist.betPerLine)} 단위, 웨이당 베팅액 ${num(dist.betPerLine)})`
-            : game.payModel === 'cluster'
+            : game.payModel === 'anywhere'
+              ? 'anywhere (판 전체 같은 그림 개수, 배당 기준 = 총 베팅액)'
+              : game.payModel === 'cluster'
               ? 'cluster (직교 인접 클러스터, 배당 기준 = 총 베팅액)'
               : `lines (${game.lines}개)`,
         ],
@@ -536,10 +539,10 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '### 베팅 레벨별',
     '',
     table(
-      ['총 베팅액', game.payModel === 'cluster' ? '배당 기준' : '라인당', 'RTP', '목표 대비', '95% CI', '적중률', '최대 배수', '방법', '판정'],
+      ['총 베팅액', game.payModel === 'cluster' || game.payModel === 'anywhere' ? '배당 기준' : '라인당', 'RTP', '목표 대비', '95% CI', '적중률', '최대 배수', '방법', '판정'],
       result.betLevels.map((row) => [
         num(row.totalBet),
-        game.payModel === 'cluster' ? '총 베팅액' : num(row.betPerLine),
+        game.payModel === 'cluster' || game.payModel === 'anywhere' ? '총 베팅액' : num(row.betPerLine),
         pct(row.rtp),
         pp(row.delta),
         row.ci95HalfWidth === null ? '-' : `±${(row.ci95HalfWidth * 100).toFixed(3)}%p`,
@@ -603,19 +606,19 @@ export function buildAuditMarkdown(result: AuditResult): string {
     '',
     contributionTable(dist.groups, '그룹'),
     '',
-    game.payModel === 'cluster' ? '' : dist.isWays ? '### 웨이즈 수 분포' : '### 페이라인별',
+    game.payModel === 'cluster' || game.payModel === 'anywhere' ? '' : dist.isWays ? '### 웨이즈 수 분포' : '### 페이라인별',
     '',
     game.payModel !== 'cluster' && dist.isWays
       ? `이 게임은 페이라인이 없다. 인접 릴의 심볼 개수를 곱해 경로 수를 세고, 웨이당 베팅액(총 베팅액 / ${num(
           dist.totalBet / dist.betPerLine,
         )})에 배수를 곱해 지급한다.`
       : '',
-    dist.isWays || game.payModel === 'cluster' ? '' : lineTable(dist.lines),
+    dist.isWays || game.payModel === 'cluster' || game.payModel === 'anywhere' ? '' : lineTable(dist.lines),
     dist.isWays ? waysTable(dist.ways) : '',
     '',
-    game.payModel === 'cluster' ? '### 클러스터 크기별 (스캐터는 개수)' : '### 매치 개수별',
+    game.payModel === 'anywhere' ? '### 판 전체 개수별 (스캐터는 개수)' : game.payModel === 'cluster' ? '### 클러스터 크기별 (스캐터는 개수)' : '### 매치 개수별',
     '',
-    countTable(dist.counts, game.payModel === 'cluster'),
+    countTable(dist.counts, game.payModel === 'cluster' || game.payModel === 'anywhere'),
     '',
   )
 
@@ -710,6 +713,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
     if (dist.cascade.orders !== null) sections.push(...orderSections(dist.cascade.orders, dist.cascade.breakdown))
   }
   if (dist.roulette !== undefined) sections.push(...rouletteSections(dist.roulette))
+  if (dist.forge !== undefined) sections.push(...forgeSections(dist.forge))
 
   if (dist.precision !== null) {
     const sigma = dist.precision.stdErr * Math.sqrt(dist.precision.spins)
