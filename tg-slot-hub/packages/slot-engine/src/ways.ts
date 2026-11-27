@@ -1,6 +1,7 @@
 import type { GameMath } from './schema.js'
 import { getLineCandidates, getWildChampions, getWildIds } from './evaluate.js'
 import type { EvaluateResult, GridPosition, SymbolId, WinLine } from './types.js'
+import { evaluateCenterWays } from './centerWays.js'
 
 /** ways 게임의 "웨이당 베팅액". 총 베팅액을 `ways.betDivisor`로 나눈다. */
 export function getBetPerWay(math: GameMath, totalBet: number): number {
@@ -59,6 +60,8 @@ interface Direction {
  * 와일드와 심볼이 섞인 창에서도 순수 와일드 경로는 챔피언에서만 한 번 지급된다.
  */
 export function evaluateWays(grid: SymbolId[][], math: GameMath, betPerWay: number): EvaluateResult {
+  // 가운데부터 양쪽으로 읽는 팩만(`ways.from: 'center'`). 없으면 아래 기존 경로 그대로다.
+  if (math.ways?.from === 'center') return evaluateCenterWays(grid, math, betPerWay)
   const candidates = getLineCandidates(math)
   const wildIds = getWildIds(math)
   const wildChampions = getWildChampions(math)

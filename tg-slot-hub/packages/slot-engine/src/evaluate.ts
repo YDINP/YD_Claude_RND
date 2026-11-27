@@ -352,7 +352,13 @@ export function evaluateScatter(grid: SymbolId[][], math: GameMath, totalBet: nu
  * 기대감 연출처럼 "몇 개면 열리나"만 알면 되는 쪽은 이것만 본다.
  */
 export function featureTriggerCount(math: GameMath): number | undefined {
-  return math.orderRound?.trigger ?? math.scatter?.freeSpins?.trigger ?? math.boardBonus?.trigger ?? math.stageRoulette?.trigger
+  return (
+    math.orderRound?.trigger ??
+    math.scatter?.freeSpins?.trigger ??
+    math.boardBonus?.trigger ??
+    math.stageRoulette?.trigger ??
+    math.frostRespin?.freeSpins.trigger
+  )
 }
 
 /** 이번 그리드가 프리스핀을 여는가. */

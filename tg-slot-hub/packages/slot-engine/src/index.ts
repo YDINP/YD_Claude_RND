@@ -102,4 +102,36 @@ export {
   type WinBucket,
 } from './rtp.js'
 export { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
+export {
+  VOID_CELL,
+  inShape,
+  reelHeight,
+  shapeCellCount,
+  shapeCells,
+  shapeWaysBase,
+  type ShapeHost,
+} from './shape.js'
+export { evaluateCenterWays } from './centerWays.js'
+export {
+  FrostRespinSchema,
+  checkFrostRespin,
+  checkShape,
+  frostRetriggerBound,
+  type FrostRespinConfig,
+} from './frostSchema.js'
+export {
+  buildShapeGrid,
+  foldFrost,
+  frostBonusMultiple,
+  frostReelStrips,
+  frostSpinMath,
+  frostSpinsFor,
+  frostTierOf,
+  initialFrostCarry,
+  pickFrostTarget,
+  resolveFrostSpin,
+  runFrostChain,
+  spinFrost,
+  type FrostChainRun,
+} from './frost.js'
 export { createSeededRng } from './rng/seeded.js'

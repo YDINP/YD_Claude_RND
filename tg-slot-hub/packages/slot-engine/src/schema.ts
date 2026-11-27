@@ -3,6 +3,8 @@ import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { CoinRespinSchema, checkCoinRespin } from './coinRespinSchema.js'
 import { BoardBonusConfigSchema, checkBoardConfig } from './boardSchema.js'
+import { FrostRespinSchema, checkFrostRespin, checkShape } from './frostSchema.js'
+import { shapeWaysBase } from './shape.js'
 
 export { VolatilitySchema }
 export type { Volatility } from '@tgslot/shared'
@@ -122,6 +124,8 @@ export const WaysConfigSchema = z.object({
   /** 오른쪽에서 왼쪽으로도 평가한다. 전 릴 매칭은 한 번만 센다. */
   bothWays: z.boolean().default(false),
   betDivisor: z.number().int().positive().default(25),
+  /** 'center'면 가운데 릴부터 양쪽으로 읽는다(릴 수 홀수, 가운데 릴 = 최대 높이). 없으면 왼쪽부터. */
+  from: z.enum(['left', 'center']).optional(),
 })
 export type WaysConfig = z.infer<typeof WaysConfigSchema>
 
@@ -266,6 +270,13 @@ const BaseGameMathSchema = z.object({
   /** 말판 보너스. 스캐터로 열리고 트리거 스핀 하나에서 끝까지 정한다. */
   boardBonus: BoardBonusConfigSchema.optional(),
   stageRoulette: StageRouletteConfigSchema.optional(),
+  /**
+   * 릴별 높이(예: [3,4,5,4,3] 마름모). 릴 r은 행 `0..h_r−1`만 쓰고 그 아래 칸은 `VOID_CELL`이다.
+   * `rows`는 최댓값과 같아야 하고, ways 팩에서만 쓴다. 없으면 모든 릴이 `rows`칸(기존 팩).
+   */
+  reelHeights: z.array(z.number().int().min(1)).optional(),
+  /** 얼려 두기 프리스핀. `scatter.freeSpins` 대신 쓴다. */
+  frostRespin: FrostRespinSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -377,7 +388,8 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     if (math.ways === undefined) {
       issue("payModel이 'ways'면 ways 설정이 필요하다", ['ways'])
     } else {
-      const expected = math.rows ** math.reels
+      // 릴별 높이가 있으면 Π h_r(마름모 3·4·5·4·3 = 720), 없으면 rows^reels.
+      const expected = shapeWaysBase(math)
       if (math.ways.base !== expected) {
         issue(`ways.base(${math.ways.base})가 rows^reels(${expected})와 다르다`, ['ways', 'base'])
       }
@@ -694,6 +706,8 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
 
   checkCoinRespin(math, issue)
   checkBoardConfig(math, issue)
+  checkShape(math, issue)
+  checkFrostRespin(math, issue)
   const roulette = math.stageRoulette
   if (roulette !== undefined) {
     const at = (...path: (string | number)[]): (string | number)[] => ['stageRoulette', ...path]

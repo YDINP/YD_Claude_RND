@@ -24,8 +24,8 @@ export interface WinLine {
   count: number
   /** ways 지급일 때 경로 수. 라인 지급이면 없다. */
   ways?: number
-  /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지. */
-  direction?: 'ltr' | 'rtl'
+  /** ways 지급 방향. `bothWays` 게임에서 어느 쪽으로 읽었는지. `center`는 가운데 릴부터 양쪽(`ways.from: 'center'`). */
+  direction?: 'ltr' | 'rtl' | 'center'
   /** 라인 게임은 betPerLine 배수, ways 게임은 웨이당 베팅액 배수, 클러스터는 총 베팅액 배수. */
   multiplier: number
   /** 실제 지급 코인 (정수). 연쇄 게임은 사다리 배수까지 곱한 값이다. */
@@ -74,6 +74,7 @@ export interface OrderRoundCarry {
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다. 없으면 이월할 것이 없다. */
 export interface RoundCarry {
   orders?: OrderRoundCarry
+  frost?: FrostCarry
 }
 
 /**
@@ -324,6 +325,7 @@ export type FeatureTrigger =
   | CoinRespinTrigger
   | BoardBonusTrigger
   | StageRouletteTrigger
+  | FrostChainTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {
@@ -374,6 +376,8 @@ export interface SpinResult {
   boardWin?: number
   /** 무대 룰렛 지급 합계 코인 (캡 적용 후). `totalWin`에 이미 들어 있다. 룰렛 트리거 스핀만. */
   rouletteWin?: number
+  /** 얼음 보너스 지급 코인 (캡·오로라 반영). `totalWin`에 이미 들어 있다. 얼림이 일어난 프리스핀만. */
+  frostWin?: number
 }
 
 /**
@@ -431,4 +435,58 @@ export interface ScatterResult {
 export interface Rng {
   /** 0 이상 maxExclusive 미만의 정수를 균등하게 반환한다. */
   nextInt(maxExclusive: number): number
+}
+
+/** 얼림 다시 돌리기 1단계. */
+export interface FrostStep {
+  /** 이번 단계에 다시 뽑힌 칸의 새 심볼. 칸 순서 = 이 단계 시작 때 얼지 않은 칸을 릴 0→끝, 행 0→h−1로. */
+  cells: SymbolId[]
+  /** 이번 단계에 새로 언 칸 [reel, row]. 같은 순서. 비면 이 단계가 마지막이다. */
+  frozen: GridPosition[]
+}
+
+/** 얼음 보너스 등급. */
+export type FrostTier = 'high' | 'mid' | 'low'
+
+/** 프리스핀 한 판의 얼림 전체 결과. 서버(엔진)가 끝까지 정한다. */
+export interface FrostOutcome {
+  /** 얼린 그림(심볼 id). 와일드만으로 된 길이 가장 컸으면 와일드 챔피언. */
+  target: SymbolId
+  tier: FrostTier
+  /** 착지 판에서 처음 언 칸(target + 와일드 전부). 릴 → 행 순서. */
+  startFrozen: GridPosition[]
+  steps: FrostStep[]
+  /** 얼림이 끝난 판 `grid[row][reel]`. `foldFrost(grid, outcome)`과 같다. */
+  finalGrid: SymbolId[][]
+  /** 얼린 칸 수(와일드 포함). */
+  count: number
+  /** 보너스표 값(총 베팅액 배수, 오로라 곱하기 전). 첫 눈금 미만이면 0. */
+  bonusMultiple: number
+  /** 이 판 시작 때 오로라 단계(0..). */
+  auroraBefore: number
+  /** 이 판 보너스에 쓴 오로라 단계. `count ≥ aurora.threshold`면 한 단계 위(최대 단계에서 멈춤). */
+  auroraAfter: number
+  /** 이 판 보너스에 곱한 오로라 배수 = `aurora.ladder[auroraAfter]`. */
+  auroraMultiplier: number
+  /** 실제 지급 코인(라운드 상한 반영). */
+  bonus: number
+  /** 하드캡(`frostRespin.hardCap`)에 닿아 멈췄는가. 구조상 false여야 한다. */
+  hitHardCap: boolean
+}
+
+/** 얼림 결과를 싣는 피처. 프리스핀 판에서 당첨이 있을 때만 하나 붙는다. 오로라 상승은 `auroraAfter > auroraBefore`. */
+export interface FrostChainTrigger extends FrostOutcome {
+  type: 'frostChain'
+}
+
+/** 얼려 두기 프리스핀 라운드의 스핀 간 상태. 얼음은 판 사이에 안 남고 오로라 단계만 남는다. */
+export interface FrostCarry {
+  /** 오로라 단계 0..(ladder 길이 − 1). */
+  level: number
+  /** 이 라운드 프리스핀에서 지금까지 지급한 코인(진입 판 제외). 라운드 지급 상한이 이 값을 본다. */
+  paid: number
+  /** 이 라운드에서 한 판에 가장 많이 얼린 칸 수. */
+  bestCount: number
+  /** 이 라운드 얼음 보너스 지급 합계 코인. */
+  bonusTotal: number
 }
