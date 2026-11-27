@@ -3,6 +3,7 @@ import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { CoinRespinSchema, checkCoinRespin } from './coinRespinSchema.js'
 import { BoardBonusConfigSchema, checkBoardConfig } from './boardSchema.js'
+import { AnywhereConfigSchema, ForgeRailConfigSchema, checkAnywhere, checkForgeRail } from './forgeSchema.js'
 
 export { VolatilitySchema }
 export type { Volatility } from '@tgslot/shared'
@@ -255,7 +256,7 @@ const BaseGameMathSchema = z.object({
   /** 릴별 스트립. strips.length === reels. */
   strips: z.array(z.array(z.string().min(1)).min(1)).min(1),
   /** 'lines'면 페이라인, 'ways'면 인접 카운트 곱, 'cluster'면 상하좌우 그룹. 없으면 'lines'. */
-  payModel: z.enum(['lines', 'ways', 'cluster']).default('lines'),
+  payModel: z.enum(['lines', 'ways', 'cluster', 'anywhere']).default('lines'),
   ways: WaysConfigSchema.optional(),
   cluster: ClusterConfigSchema.optional(),
   cascade: CascadeConfigSchema.optional(),
@@ -266,6 +267,10 @@ const BaseGameMathSchema = z.object({
   /** 말판 보너스. 스캐터로 열리고 트리거 스핀 하나에서 끝까지 정한다. */
   boardBonus: BoardBonusConfigSchema.optional(),
   stageRoulette: StageRouletteConfigSchema.optional(),
+  /** 위치 무관 지불 설정. payModel 'anywhere'일 때만. */
+  anywhere: AnywhereConfigSchema.optional(),
+  /** 화로 배율 줄(volcano-forge). 연쇄 리필 칸의 불씨가 판 밖 합계를 키운다. */
+  forgeRail: ForgeRailConfigSchema.optional(),
   /** 페이라인 1개 = 릴별 행 인덱스 배열. 예: [1,1,1]은 가운데 가로줄. ways 게임은 비운다. */
   paylines: z.array(z.array(z.number().int().min(0)).min(1)).default([]),
   /** 평가 직전에 그리드를 변형하는 파이프라인. 선언 순서대로 적용한다. */
@@ -390,17 +395,23 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
     if (math.cascade === undefined) issue("payModel이 'cluster'면 cascade 설정이 필요하다", ['cascade'])
     if (math.paylines.length > 0) issue('클러스터 게임은 paylines를 두지 않는다', ['paylines'])
     if (math.ways !== undefined) issue('클러스터 게임은 ways를 두지 않는다', ['ways'])
+  } else if (math.payModel === 'anywhere') {
+    checkAnywhere(math, issue)
   } else if (math.paylines.length === 0) {
     issue("payModel이 'lines'면 paylines가 최소 1개 필요하다", ['paylines'])
   }
   if (math.payModel !== 'cluster' && math.cluster !== undefined) {
     issue("cluster 설정은 payModel이 'cluster'일 때만 둔다", ['cluster'])
   }
+  if (math.payModel !== 'anywhere' && math.anywhere !== undefined) {
+    issue("anywhere 설정은 payModel이 'anywhere'일 때만 둔다", ['anywhere'])
+  }
 
   // 클러스터는 총 베팅액이 배당 단위라 단위 수가 1이다.
+  const totalBetUnit = math.payModel === 'cluster' || math.payModel === 'anywhere'
   const unitCount =
-    math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : math.payModel === 'cluster' ? 1 : math.paylines.length
-  const unitLabel = math.payModel === 'ways' ? 'betDivisor' : math.payModel === 'cluster' ? '총 베팅액' : '라인 수'
+    math.payModel === 'ways' ? (math.ways?.betDivisor ?? 25) : totalBetUnit ? 1 : math.paylines.length
+  const unitLabel = math.payModel === 'ways' ? 'betDivisor' : totalBetUnit ? '총 베팅액' : '라인 수'
   if (unitCount > 0) {
     math.betLevels.forEach((level, index) => {
       if (level % unitCount !== 0) {
@@ -429,7 +440,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
 
     const counts = payruleCounts(payrule)
     // 클러스터의 키는 그룹 크기라 상한이 화면 칸 수다.
-    const maxCount = math.payModel === 'cluster' ? math.reels * math.rows : math.reels
+    const maxCount = totalBetUnit ? math.reels * math.rows : math.reels
     for (const count of counts) {
       if (count < 1 || count > maxCount) {
         issue(`매치 개수 ${count}가 1..${maxCount} 범위를 벗어났다`, ['paytable', key, String(count)])
@@ -694,6 +705,7 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
 
   checkCoinRespin(math, issue)
   checkBoardConfig(math, issue)
+  checkForgeRail(math, issue)
   const roulette = math.stageRoulette
   if (roulette !== undefined) {
     const at = (...path: (string | number)[]): (string | number)[] => ['stageRoulette', ...path]

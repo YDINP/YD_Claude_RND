@@ -261,7 +261,8 @@ describe('무대 룰렛 정산', () => {
       maxSteps = Math.max(maxSteps, roulette.steps.length)
     }
     expect(maxSteps).toBeLessThanOrEqual(7)
-  })
+    // 단독 2초 남짓이지만 다른 테스트와 함께 돌면 기본 5초를 넘는다
+  }, 30_000)
 })
 
 describe('무대 룰렛 RNG 계약', () => {

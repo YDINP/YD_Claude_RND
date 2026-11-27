@@ -31,8 +31,8 @@ export interface WinLine {
   /** 실제 지급 코인 (정수). 연쇄 게임은 사다리 배수까지 곱한 값이다. */
   win: number
   positions: GridPosition[]
-  /** 지급 종류. 없으면 `line === -1`이면 ways, 아니면 line이다 (기존 팩은 싣지 않는다). */
-  payKind?: 'line' | 'ways' | 'cluster'
+  /** 지급 종류. 없으면 `line === -1`이면 ways, 아니면 line이다 (기존 팩은 싣지 않는다). `anywhere`는 위치 무관(판 전체 개수). */
+  payKind?: 'line' | 'ways' | 'cluster' | 'anywhere'
   /** 연쇄 단계 인덱스 (0부터). 연쇄 게임만. */
   cascade?: number
   /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만. */
@@ -74,6 +74,60 @@ export interface OrderRoundCarry {
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다. 없으면 이월할 것이 없다. */
 export interface RoundCarry {
   orders?: OrderRoundCarry
+  forge?: ForgeCarry
+}
+
+/**
+ * 화로 배율 줄의 프리스핀 라운드 상태(volcano-forge). 값은 전부 정수다.
+ * `paid`는 진입 스핀을 포함한 라운드 누적 지급 코인이라 라운드 지급 상한을 건다.
+ */
+export interface ForgeCarry {
+  /** 화로 합계(배율). 0이면 아직 불씨가 없다. */
+  heat: number
+  /** 켜진 화로 칸 수 (0..slots-1). */
+  filled: number
+  /** 라운드 누적 지급 코인 (진입 스핀 포함). */
+  paid: number
+  /** 라운드에서 «화로 가득» 두 배가 난 횟수. */
+  fulls: number
+  /** 프리스핀 한 판 최고 지급 코인 (진입 스핀 제외). */
+  bestSpin: number
+}
+
+/** 불씨 1개. 연쇄 단계 `step`의 리필 칸 `position`에서 솟았다. `value`는 배율(정수). */
+export interface EmberDrop {
+  step: number
+  /** [reel, row]. 그 단계 리필이 떨어진 뒤의 칸이다(릴 위쪽). */
+  position: GridPosition
+  value: number
+}
+
+/** 화로 가득 사건. `afterEmber`번째(0부터) 불씨가 들어온 직후에 났다. */
+export interface ForgeFullEvent {
+  afterEmber: number
+  heatBefore: number
+  heatAfter: number
+}
+
+/**
+ * 화로 배율 줄 한 스핀의 결과. 기본 게임은 불씨가 있을 때만, 프리스핀은 항상 싣는다.
+ * `boostedWin`은 연쇄 지급에 배율을 곱하고 상한까지 적용한 코인이고, `totalWin = boostedWin + 스캐터 지급`이다.
+ */
+export interface ForgeRailTrigger {
+  type: 'forgeRail'
+  /** 생긴 순서(단계 → 릴 0→5 → 리필 위→아래). */
+  embers: EmberDrop[]
+  heatBefore: number
+  filledBefore: number
+  heatAfter: number
+  filledAfter: number
+  fulls: ForgeFullEvent[]
+  /** 이번 스핀 연쇄 지급에 곱한 배율. 1이면 미적용. */
+  multiplier: number
+  /** 연쇄 지급 합 (배율 전). */
+  baseWin: number
+  /** 배율·상한 적용 후 연쇄 지급 코인. */
+  boostedWin: number
 }
 
 /**
@@ -324,6 +378,7 @@ export type FeatureTrigger =
   | CoinRespinTrigger
   | BoardBonusTrigger
   | StageRouletteTrigger
+  | ForgeRailTrigger
 
 /** 뮤테이션이 바꾼 칸 하나. */
 export interface MutationCellChange {
