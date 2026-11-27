@@ -1,0 +1,188 @@
+{
+  "game": "aurora-ice-palace",
+  "concept": "Soft frosted toy-like 3D: matte frosted porcelain and plush packed-snow with fine snow sparkle, NOT glossy glass. Diamond 3-4-5-4-3 reel in a 1024x1536 portrait ice-palace frame with a square window. Symbols are told apart by silhouette: hexagon crystal, round ribbon orb, bear, owl, fox, square gem, teardrop gem, six-arm snowflake, tall icicles, plain round bead, curved feather.",
+  "stylePrefix": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality —",
+  "negative": "photorealistic photography, real animal fur photo, glossy glass reflections, diagonal light streak across the image, blurry, watermark, signature, text, letters, numbers, random glyphs, busy cluttered background, baked-in drop shadow, cropped edges, multiple duplicate objects, people, hands, scary teeth, cheap clip-art look",
+  "assets": [
+    {
+      "id": "wild",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a single chunky hexagonal ice crystal gem with soft teal-and-violet aurora light swirling inside, frosted matte facets, the largest and most ornate symbol and the only one with an inner glow, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/wild.webp",
+      "outSize": 512
+    },
+    {
+      "id": "scatter",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a frosted snow-globe-like orb (not glass, a round frosted porcelain sphere) with teal and violet aurora ribbons swirling inside and tiny snow crystals around its base, the only round symbol with swirling ribbon bands, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/scatter.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bear",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a round chubby plush-toy polar bear sitting upright, frosty white fur with faint ice-blue shading, small teal scarf, friendly simple face, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bear.webp",
+      "outSize": 512
+    },
+    {
+      "id": "owl",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a round plush-toy snowy owl, white feathers with soft grey speckles, teal rings around its eyes, wings folded, friendly simple face, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/owl.webp",
+      "outSize": 512
+    },
+    {
+      "id": "fox",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a plush-toy arctic fox curled up with its fluffy white tail wrapped around its body, violet tail tip, friendly simple face, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/fox.webp",
+      "outSize": 512
+    },
+    {
+      "id": "gem_teal",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a chunky square emerald-cut ice gem in aurora teal (bluish teal, not green, hue clearly toward cyan), frosted matte surface, thin snow rim, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/gem_teal.webp",
+      "outSize": 512
+    },
+    {
+      "id": "gem_violet",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a chunky teardrop-cut ice gem in aurora violet, frosted matte surface, thin snow rim, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/gem_violet.webp",
+      "outSize": 512
+    },
+    {
+      "id": "flake",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a bold six-armed snowflake with thick rounded arms, pale ice-blue porcelain, star-shaped silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/flake.webp",
+      "outSize": 512
+    },
+    {
+      "id": "icicle",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — three chunky icicles hanging side by side from a small snow cap, pale cyan, tall vertical silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/icicle.webp",
+      "outSize": 512
+    },
+    {
+      "id": "bead",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a small round frozen ice bead with a frosty white core, plain smooth sphere, no bands, no swirls, simple circular silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/bead.webp",
+      "outSize": 512
+    },
+    {
+      "id": "feather",
+      "kind": "symbol",
+      "prompt": "Soft frosted toy-like 3D mobile game icon render, matte frosted porcelain and plush packed-snow textures with a fine sparkle of snow crystals, not glossy, not glass, rounded chunky shapes, bold simple silhouette that reads at 64px, 3/4 top-down camera angle, cool soft top-left key light with a faint aurora teal and violet rim light, night navy (#0d1838) and snow white (#f4fbff) color story with aurora teal (#3fe0c5), aurora violet (#8a6bff) and ice sky (#bfefff) accents, no green tones on the object, no diagonal light streaks, no lens flare, no baked-in drop shadow, premium casual mobile slot game asset quality — a single curved frost-covered feather, pale lavender with white frost edges, gently curved S-shaped silhouette, centered composition with 10% padding, isolated on a flat solid #00FF00 chroma-key green background (the object itself must contain no green-screen colour spill).",
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/symbols/feather.webp",
+      "outSize": 512
+    },
+    {
+      "id": "frame",
+      "kind": "frame",
+      "size": "1024x1536",
+      "transparent": true,
+      "out": "theme/frame.webp",
+      "outSize": 1080,
+      "prompt": "Front-on elevation view (not 3/4 top-down), full-bleed PORTRAIT 2:3 artwork with no isolated chroma background around the frame itself — a richly rendered soft frosted toy-like 3D illustration (matte frosted porcelain and packed snow, NOT glossy, NOT glass, same quality as chunky frosted icons) of an ice palace slot cabinet frame, cool soft top-left light with a faint aurora teal and violet rim light, night navy (#0d1838), snow white (#f4fbff), ice sky (#bfefff) with small teal and violet accents, no diagonal light streaks. EXACT LAYOUT: the reel window is a SQUARE opening spanning x 2% to 98% and y 18% to 82% of the canvas (96% of the width by 64% of the height), filled edge-to-edge with a flat solid #00FF00 chroma-key rectangle with NO bevel, NO gradient and NO ornament inside it, bordered only by a hairline 0.5% frosted rim just outside the green. Reel window interior must be pure flat #00FF00, nothing painted inside — no white, no glass, no reflection, no grid lines, no symbols. TOP: y 0% to 18% holds a LOW flat frosted ice arch marquee strip (no tall pointed arch, nothing taller than 18% of the canvas) with a few small snowflake crests along its edge and a calm EMPTY centre with no text and no emblem. BOTTOM: y 82% to 100% holds a short packed-snow base molding with a soft ambient shadow, no text. SIDES: the left and right rails are extremely slim frosted ice strips, each at most 2% of the canvas width, no big pillars. Symmetrical, centered, no characters. CRITICAL PROPORTION: the green window must be as wide as the canvas allows (96%) and must NOT shrink into a small inner rectangle surrounded by thick ice; all decorative bulk lives only in the thin top and bottom bands."
+    },
+    {
+      "id": "bg",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — a calm polar night landscape: soft snowy hills and a distant ice palace silhouette under gentle teal, green and violet aurora curtains, deep night navy sky with a few small stars. Low saturation, mid-to-low contrast with a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, calm uncluttered composition, soft toy-like matte rendering, no characters, no readable text, no diagonal light streaks, no sharp details competing for attention, nothing that resembles the playable symbols."
+    },
+    {
+      "id": "bgFreeSpins",
+      "kind": "bg",
+      "size": "1024x1536",
+      "transparent": false,
+      "out": "theme/bg-freespins.webp",
+      "outSize": 1080,
+      "prompt": "Front-on atmospheric scene (not 3/4 top-down), full-bleed portrait background artwork with no isolated chroma background — the inside of the ice palace great hall: frosted ice pillars on both sides and a crystal dome above showing bright teal and violet aurora curtains, a floor of packed snow, soft toy-like matte rendering. A little brighter and more festive than a calm night landscape but still mid-to-low contrast with a gentle radial vignette darkening the corners so reels and UI read clearly in front of it, symmetrical calm composition, no characters, no readable text, no diagonal light streaks."
+    },
+    {
+      "id": "thumb",
+      "kind": "thumb",
+      "size": "1536x1024",
+      "transparent": false,
+      "out": "thumb.webp",
+      "outSize": 640,
+      "prompt": "Front-on hero composition (not 3/4 top-down), full-bleed landscape artwork with no isolated chroma background — a diamond-shaped frosted ice reel board (rows of 3, 4, 5, 4, 3 square tiles forming a rhombus) in the centre where chubby plush-toy polar bear tiles freeze over into ice from the middle outward, under a bright teal and violet aurora sky with an ice palace silhouette far behind, soft toy-like matte frosted rendering, eye-catching and readable even as a small lobby list thumbnail, no text, no letters, no diagonal light streaks, no clutter."
+    },
+    {
+      "id": "bear-win",
+      "kind": "sheet",
+      "symbol": "bear",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/bear-win.webp",
+      "outSize": 768,
+      "prompt": "a round chubby plush-toy polar bear sitting upright, frosty white fur with faint ice-blue shading, small teal scarf, friendly simple face, centered, isolated on a flat solid #00FF00 chroma-key green background with no green spill on the object. Win-celebration animation: frames 1-3 the polar bear rises slightly and nods its head down; frames 4-6 a second bigger nod at peak with a soft ice-blue glow and tiny snow sparkles around it; frames 7-9 the bear settles back to the resting pose, ending close to frame 1 for a seamless loop."
+    },
+    {
+      "id": "wild-win",
+      "kind": "sheet",
+      "symbol": "wild",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/wild-win.webp",
+      "outSize": 768,
+      "prompt": "a single chunky flat-topped hexagonal ice crystal gem with a smooth beveled frame of translucent pale blue ice and thin snow dusted on the top edges, and a large smooth hexagonal panel in the middle filled with swirling teal and violet aurora light, NO snowflake motif, NO ornaments, NO leaf shapes, just the gem and the aurora glow inside, centered, isolated on a flat solid #00FF00 chroma-key green background with no green spill on the object. Win-celebration animation: frames 1-3 the aurora light inside the crystal begins to swirl faster and the crystal pulses slightly larger; frames 4-6 the swirl is brightest at peak size with a soft teal and violet glow and tiny sparkles; frames 7-9 the swirl slows and the crystal settles back, ending close to frame 1 for a seamless loop."
+    },
+    {
+      "id": "scatter-win",
+      "kind": "sheet",
+      "symbol": "scatter",
+      "grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "fps": 12,
+      "size": "1024x1024",
+      "transparent": true,
+      "out": "theme/sheets/scatter-win.webp",
+      "outSize": 768,
+      "prompt": "a frosted snow-globe-like orb (not glass, a round frosted porcelain sphere) with teal and violet aurora ribbons swirling inside and tiny snow crystals around its base, the only round symbol with swirling ribbon bands, centered, isolated on a flat solid #00FF00 chroma-key green background with no green spill on the object. Win-celebration animation: frames 1-3 the aurora ribbon bands inside the frosted orb start rotating around it and the orb lifts slightly; frames 4-6 the bands spin fastest at peak with a soft teal and violet glow and tiny snow sparkles; frames 7-9 the bands slow and the orb settles back, ending close to frame 1 for a seamless loop."
+    }
+  ]
+}

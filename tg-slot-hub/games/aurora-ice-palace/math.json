@@ -1,0 +1,75 @@
+{
+  "id": "aurora-ice-palace",
+  "reels": 5,
+  "rows": 5,
+  "reelHeights": [3, 4, 5, 4, 3],
+  "symbols": [
+    {"id": "wild", "name": {"en": "Hex Ice", "ko": "육각 얼음"}, "wild": true},
+    {"id": "scatter", "name": {"en": "Aurora Orb", "ko": "오로라 구슬"}, "scatter": true},
+    {"id": "bear", "name": {"en": "Polar Bear", "ko": "북극곰"}},
+    {"id": "owl", "name": {"en": "Snowy Owl", "ko": "흰올빼미"}},
+    {"id": "fox", "name": {"en": "Arctic Fox", "ko": "북극여우"}},
+    {"id": "gem_teal", "name": {"en": "Teal Ice Gem", "ko": "청록 얼음 보석"}},
+    {"id": "gem_violet", "name": {"en": "Violet Ice Gem", "ko": "보라 얼음 보석"}},
+    {"id": "flake", "name": {"en": "Snowflake", "ko": "눈꽃"}},
+    {"id": "icicle", "name": {"en": "Icicle", "ko": "고드름"}},
+    {"id": "bead", "name": {"en": "Ice Bead", "ko": "얼음 방울"}},
+    {"id": "feather", "name": {"en": "Frost Feather", "ko": "서리 깃털"}}
+  ],
+  "strips": [
+    ["scatter", "gem_violet", "icicle", "feather", "bead", "owl", "flake", "gem_teal", "feather", "icicle", "bead", "flake", "bear", "feather", "fox", "bead", "gem_violet", "icicle", "feather", "flake", "bead", "gem_teal", "feather", "icicle", "bead", "owl", "flake", "feather", "bead", "gem_violet", "fox", "icicle", "bear", "feather", "scatter", "flake", "bead", "gem_teal", "feather", "icicle", "bead", "flake", "feather", "gem_violet", "bead", "owl", "icicle", "fox", "feather", "flake", "gem_teal", "bead", "icicle", "bear", "feather", "bead", "flake", "feather", "gem_violet", "icicle", "bead", "flake", "feather", "gem_teal", "fox", "bead", "owl", "icicle", "scatter", "feather", "flake", "bead", "bear", "gem_violet", "feather", "icicle", "bead", "flake", "feather", "gem_teal", "bead", "fox", "icicle", "feather", "flake", "bead", "owl", "gem_violet", "feather", "icicle", "bead", "flake", "bear", "gem_teal", "feather", "bead", "icicle", "fox", "feather", "flake", "bead"],
+    ["icicle", "gem_violet", "flake", "icicle", "flake", "owl", "icicle", "flake", "gem_teal", "icicle", "flake", "icicle", "flake", "icicle", "bear", "flake", "fox", "icicle", "wild", "flake", "icicle", "flake", "gem_violet", "icicle", "flake", "icicle", "flake", "icicle", "gem_teal", "flake", "owl", "icicle", "flake", "icicle", "flake", "fox", "icicle", "flake", "icicle", "bear", "flake", "gem_violet", "icicle", "flake", "icicle", "flake", "icicle", "flake", "gem_teal", "scatter", "icicle", "flake", "icicle", "flake", "feather", "owl", "icicle", "fox", "flake", "icicle", "flake", "gem_violet", "icicle", "flake", "icicle", "bear", "flake", "icicle", "wild", "flake", "gem_teal", "icicle", "flake", "icicle", "flake", "icicle", "fox", "flake", "icicle", "flake", "owl", "icicle", "gem_violet", "flake", "icicle", "flake", "icicle", "flake", "gem_teal", "icicle", "bear", "flake", "icicle", "bead", "flake", "icicle", "flake", "fox", "icicle", "flake", "scatter"],
+    ["bead", "feather", "bead", "fox", "feather", "bead", "feather", "bead", "gem_violet", "feather", "bead", "scatter", "feather", "bead", "owl", "feather", "bead", "gem_teal", "feather", "bead", "feather", "bead", "feather", "fox", "bear", "bead", "feather", "bead", "feather", "gem_violet", "bead", "feather", "bead", "feather", "bead", "gem_teal", "feather", "bead", "feather", "owl", "bead", "feather", "bead", "fox", "feather", "scatter", "bead", "feather", "bead", "gem_violet", "bear", "feather", "bead", "feather", "bead", "feather", "gem_teal", "bead", "feather", "bead", "feather", "bead", "feather", "fox", "owl", "bead", "feather", "bead", "gem_violet", "feather", "bead", "feather", "bead", "wild", "bear", "feather", "bead", "gem_teal", "feather", "bead", "scatter", "feather", "bead", "feather", "bead", "fox", "feather", "bead", "feather", "gem_violet", "bead", "owl", "feather", "bead", "feather", "bead", "feather", "gem_teal", "bead", "feather", "bear"],
+    ["icicle", "flake", "icicle", "flake", "gem_teal", "wild", "icicle", "flake", "icicle", "bear", "flake", "icicle", "fox", "flake", "icicle", "flake", "gem_violet", "icicle", "flake", "icicle", "flake", "icicle", "flake", "gem_teal", "owl", "icicle", "flake", "icicle", "flake", "feather", "icicle", "fox", "flake", "icicle", "bear", "flake", "icicle", "gem_violet", "scatter", "flake", "icicle", "flake", "icicle", "flake", "gem_teal", "icicle", "flake", "icicle", "flake", "owl", "icicle", "flake", "fox", "icicle", "flake", "wild", "icicle", "gem_violet", "flake", "icicle", "bear", "flake", "icicle", "flake", "gem_teal", "icicle", "flake", "icicle", "bead", "flake", "icicle", "flake", "fox", "icicle", "flake", "owl", "icicle", "flake", "gem_violet", "icicle", "flake", "icicle", "flake", "icicle", "bear", "gem_teal", "flake", "icicle", "scatter", "flake", "icicle", "flake", "fox", "icicle", "flake", "icicle", "flake", "gem_violet", "icicle", "flake", "owl"],
+    ["feather", "flake", "bear", "bead", "feather", "fox", "icicle", "bead", "gem_violet", "flake", "feather", "bead", "icicle", "gem_teal", "owl", "feather", "flake", "bead", "icicle", "feather", "bear", "bead", "fox", "gem_violet", "flake", "scatter", "feather", "bead", "icicle", "gem_teal", "flake", "feather", "bead", "owl", "icicle", "feather", "gem_violet", "flake", "bead", "fox", "feather", "icicle", "bear", "bead", "gem_teal", "flake", "feather", "bead", "icicle", "feather", "gem_violet", "flake", "bead", "owl", "feather", "fox", "icicle", "gem_teal", "bead", "flake", "feather", "bear", "bead", "icicle", "feather", "gem_violet", "flake", "bead", "icicle", "feather", "gem_teal", "bead", "fox", "flake", "scatter", "owl", "feather", "bead", "icicle", "gem_violet", "flake", "feather", "bear", "bead", "icicle", "gem_teal", "feather", "flake", "bead", "fox", "feather", "icicle", "bead", "gem_violet", "flake", "owl", "feather", "bead", "icicle", "gem_teal"]
+  ],
+  "payModel": "ways",
+  "ways": {"base": 720, "bothWays": false, "betDivisor": 50, "from": "center"},
+  "paytable": {
+    "bear": {"3": 113, "4": 271, "5": 678},
+    "owl": {"3": 90, "4": 215, "5": 520},
+    "fox": {"3": 68, "4": 158, "5": 395},
+    "gem_teal": {"3": 56, "4": 130, "5": 316},
+    "gem_violet": {"3": 56, "4": 130, "5": 316},
+    "flake": {"3": 16, "4": 38, "5": 96},
+    "icicle": {"3": 16, "4": 38, "5": 96},
+    "bead": {"3": 11, "4": 28, "5": 70},
+    "feather": {"3": 11, "4": 28, "5": 70}
+  },
+  "wild": {"substitutesFor": "all", "excludes": ["scatter"]},
+  "scatter": {"symbol": "scatter", "pays": {"3": 2.5, "4": 12, "5": 60}},
+  "frostRespin": {
+    "freeSpins": {"trigger": 3, "counts": {"3": 8, "4": 10, "5": 12}, "retrigger": 4, "maxTotal": 20},
+    "freeStrips": [
+      ["gem_teal", "feather", "flake", "bead", "bear", "feather", "icicle", "fox", "gem_violet", "bead", "flake", "gem_teal", "feather", "owl", "bead", "icicle", "feather", "flake", "gem_violet", "bead", "bear", "icicle", "gem_teal", "feather", "fox", "bead", "flake", "feather", "scatter", "gem_violet", "icicle", "owl", "bead", "flake", "gem_teal", "feather", "bead", "bear", "icicle", "feather", "fox", "flake", "gem_violet", "bead", "gem_teal", "feather", "icicle", "owl", "bead", "flake", "feather", "gem_violet", "bead", "icicle", "bear", "flake", "gem_teal", "feather", "fox", "bead", "icicle", "feather", "gem_violet", "owl", "flake", "bead", "gem_teal", "feather", "icicle", "bead", "bear", "flake", "feather", "fox", "gem_violet", "bead", "icicle", "gem_teal", "feather", "flake", "scatter", "owl", "bead", "icicle", "feather", "gem_violet", "bead", "bear", "flake", "gem_teal", "feather", "fox", "icicle", "bead", "flake", "feather", "gem_violet", "owl", "bead", "icicle"],
+      ["gem_teal", "flake", "icicle", "bear", "flake", "icicle", "feather", "fox", "flake", "gem_violet", "icicle", "flake", "gem_teal", "icicle", "owl", "flake", "icicle", "flake", "bear", "icicle", "gem_violet", "flake", "icicle", "fox", "flake", "gem_teal", "bead", "icicle", "flake", "scatter", "owl", "icicle", "wild", "flake", "gem_violet", "icicle", "flake", "bear", "icicle", "gem_teal", "flake", "fox", "icicle", "flake", "icicle", "flake", "gem_violet", "owl", "icicle", "flake", "gem_teal", "icicle", "flake", "bear", "icicle", "flake", "feather", "fox", "icicle", "gem_violet", "flake", "icicle", "flake", "gem_teal", "owl", "icicle", "wild", "flake", "icicle", "bear", "flake", "gem_violet", "icicle", "flake", "fox", "icicle", "gem_teal", "bead", "flake", "scatter", "icicle", "owl", "flake", "icicle", "gem_violet", "flake", "icicle", "bear", "flake", "gem_teal", "icicle", "fox", "flake", "icicle", "flake", "gem_violet", "icicle", "owl", "flake", "wild", "icicle"],
+      ["gem_violet", "feather", "bead", "owl", "feather", "gem_teal", "bead", "feather", "bead", "bear", "feather", "bead", "gem_violet", "fox", "feather", "bead", "wild", "gem_teal", "feather", "bead", "owl", "feather", "bead", "feather", "bead", "gem_violet", "bear", "icicle", "feather", "bead", "fox", "gem_teal", "feather", "bead", "feather", "bead", "owl", "feather", "gem_violet", "bead", "feather", "bead", "gem_teal", "bear", "feather", "bead", "fox", "feather", "scatter", "bead", "feather", "gem_violet", "bead", "owl", "feather", "bead", "gem_teal", "feather", "bead", "bear", "feather", "bead", "feather", "gem_violet", "fox", "bead", "flake", "feather", "wild", "bead", "gem_teal", "feather", "owl", "bead", "feather", "bead", "gem_violet", "feather", "bear", "bead", "feather", "fox", "gem_teal", "bead", "feather", "bead", "feather", "owl", "bead", "gem_violet", "feather", "bead", "feather", "gem_teal", "bear", "bead", "feather", "bead", "fox", "scatter", "feather", "bead"],
+      ["flake", "icicle", "fox", "flake", "gem_violet", "icicle", "flake", "icicle", "owl", "gem_teal", "flake", "icicle", "bead", "flake", "bear", "scatter", "icicle", "flake", "gem_violet", "icicle", "fox", "flake", "gem_teal", "icicle", "wild", "flake", "owl", "icicle", "flake", "icicle", "gem_violet", "flake", "bear", "icicle", "flake", "gem_teal", "fox", "icicle", "flake", "icicle", "flake", "owl", "gem_violet", "icicle", "feather", "flake", "icicle", "gem_teal", "flake", "bear", "icicle", "flake", "fox", "icicle", "gem_violet", "flake", "wild", "icicle", "flake", "owl", "gem_teal", "icicle", "flake", "bead", "icicle", "bear", "flake", "scatter", "gem_violet", "icicle", "flake", "fox", "icicle", "gem_teal", "flake", "icicle", "owl", "flake", "icicle", "flake", "gem_violet", "icicle", "bear", "flake", "gem_teal", "icicle", "fox", "flake", "icicle", "flake", "wild", "icicle", "owl", "gem_violet", "flake", "feather", "icicle", "flake", "gem_teal", "icicle", "bear"],
+      ["bead", "gem_violet", "icicle", "scatter", "feather", "owl", "bead", "flake", "gem_teal", "feather", "icicle", "bead", "bear", "gem_violet", "flake", "feather", "fox", "bead", "gem_teal", "icicle", "feather", "flake", "owl", "bead", "gem_violet", "feather", "icicle", "bead", "bear", "gem_teal", "flake", "feather", "fox", "bead", "icicle", "gem_violet", "flake", "feather", "owl", "bead", "gem_teal", "icicle", "feather", "flake", "bead", "bear", "gem_violet", "feather", "fox", "icicle", "bead", "gem_teal", "flake", "scatter", "feather", "owl", "bead", "icicle", "gem_violet", "feather", "flake", "bead", "bear", "gem_teal", "icicle", "feather", "fox", "bead", "flake", "gem_violet", "feather", "owl", "icicle", "bead", "gem_teal", "flake", "feather", "bead", "bear", "gem_violet", "icicle", "feather", "fox", "flake", "bead", "gem_teal", "feather", "icicle", "owl", "bead", "flake", "gem_violet", "feather", "bead", "bear", "gem_teal", "icicle", "feather", "flake", "fox"]
+    ],
+    "respinStrips": [
+      ["fox", "bead", "gem_violet", "icicle", "owl", "feather", "gem_teal", "flake", "bear", "bead", "fox", "icicle", "gem_violet", "feather", "flake", "owl", "bead", "gem_teal", "bear", "icicle", "fox", "feather", "flake", "gem_violet", "bead", "owl", "icicle", "gem_teal", "bear", "feather", "flake"],
+      ["fox", "bead", "wild", "gem_violet", "icicle", "owl", "feather", "gem_teal", "flake", "bear", "bead", "fox", "icicle", "gem_violet", "feather", "flake", "owl", "bead", "gem_teal", "wild", "bear", "icicle", "fox", "feather", "flake", "gem_violet", "bead", "owl", "icicle", "gem_teal", "bear", "feather", "flake"],
+      ["gem_teal", "feather", "bear", "flake", "bead", "fox", "gem_violet", "icicle", "owl", "wild", "feather", "flake", "gem_teal", "bead", "bear", "fox", "icicle", "feather", "gem_violet", "flake", "owl", "bead", "gem_teal", "icicle", "bear", "wild", "feather", "fox", "flake", "bead", "gem_violet", "owl", "icicle"],
+      ["gem_violet", "owl", "icicle", "feather", "gem_teal", "flake", "bear", "bead", "fox", "icicle", "gem_violet", "feather", "owl", "flake", "wild", "gem_teal", "bead", "bear", "icicle", "fox", "feather", "flake", "gem_violet", "bead", "owl", "gem_teal", "icicle", "bear", "feather", "flake", "fox", "wild", "bead"],
+      ["gem_teal", "feather", "flake", "bear", "bead", "fox", "icicle", "gem_violet", "owl", "feather", "flake", "gem_teal", "bead", "bear", "icicle", "fox", "feather", "gem_violet", "flake", "owl", "bead", "gem_teal", "icicle", "bear", "feather", "fox", "flake", "bead", "gem_violet", "owl", "icicle"]
+    ],
+    "hardCap": 17,
+    "thresholds": [6, 9, 12, 15, 18, 19],
+    "tiers": {
+      "high": ["bear", "owl", "fox"],
+      "mid": ["gem_teal", "gem_violet"],
+      "low": ["flake", "icicle", "bead", "feather"]
+    },
+    "bonus": {
+      "high": [1.48, 3.26, 5.92, 11.1, 28.12, 88.8],
+      "mid": [0.88, 1.62, 3.26, 6.3, 15.54, 47.36],
+      "low": [0.76, 0.96, 1.56, 3.1, 7.4, 23.68]
+    },
+    "aurora": {"ladder": [1, 2, 3, 5], "threshold": 15}
+  },
+  "round": {"maxWinCap": 2500},
+  "betLevels": [50, 100, 250, 500, 1000, 2500],
+  "rtpTarget": 0.945,
+  "volatility": "high"
+}
