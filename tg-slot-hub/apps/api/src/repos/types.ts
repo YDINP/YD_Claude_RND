@@ -70,6 +70,8 @@ export interface FreeSpinsSummaryRecord {
   spins: number
   ordersCompleted?: number
   orderPrizeTotal?: number
+  /** 자라는 정원 프리스핀만. 결과 팝업 행 */
+  garden?: { maxSize: number; bestSeed: number; bestSpinWin: number; topUp: number }
 }
 
 /** 저장된 스핀 1회. `grid`는 math.json + stops로 재구성하므로 저장하지 않는다. */

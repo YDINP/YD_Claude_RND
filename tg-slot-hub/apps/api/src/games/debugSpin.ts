@@ -23,6 +23,32 @@ export const BOARD_BIG_PAYOUT = 100
 /** 룰렛 합계가 총 베팅의 몇 배부터 `rouletteBig`으로 치는지. */
 const BIG_ROULETTE_MULTIPLIER = 100
 
+/** 정원 지급이 총 베팅의 몇 배부터 `gardenBig`으로 치는지. */
+export const GARDEN_BIG_MULTIPLIER = 50
+
+/**
+ * 드문 정원 프리셋(`gardenGrow8` 기본 게임 약 1/430, `gardenBig`, 프리스핀 중 `gardenSun`)의 내부 탐색 상한.
+ * 공용 `maxTries` 상한(20,000)보다 크게 잡아 못 찾을 확률을 무시할 만큼 줄인다. 요청 값이 더 크면 그것을 쓴다.
+ */
+export const GARDEN_RARE_MAX_TRIES = 50_000
+
+/** 이 프리셋은 자라는 정원(growBoard)이 있는 팩에서만 만족될 수 있다. */
+export function isGardenPreset(preset: SpinDebugPreset): boolean {
+  return (
+    preset === 'gardenGrow' ||
+    preset === 'gardenGrow8' ||
+    preset === 'seedBloom' ||
+    preset === 'gardenSun' ||
+    preset === 'gardenBig' ||
+    preset === 'gardenTopUp'
+  )
+}
+
+/** 프리스핀 중에만 나올 수 있는 정원 프리셋(햇살·최저 보장). 유료 스핀이면 탐색 없이 실패한다. */
+export function isGardenRoundOnlyPreset(preset: SpinDebugPreset): boolean {
+  return preset === 'gardenSun' || preset === 'gardenTopUp'
+}
+
 /** 이 프리셋은 무대 룰렛이 있는 팩에서만 만족될 수 있다. */
 export function isRoulettePreset(preset: SpinDebugPreset): boolean {
   return (
@@ -61,7 +87,8 @@ export function matchesDebugPreset(
   isFreeSpin: boolean,
   math?: GameMath
 ): boolean {
-  const hasFeature = result.features.length > 0
+  // 정원 팩은 매 스핀 `garden` 피처를 싣는다. 성장·개화·햇살이 없는 정원 피처는 «평범한 스핀»으로 친다.
+  const hasFeature = result.features.some((feature) => !isPlainGarden(feature))
   switch (preset) {
     case 'win':
       return result.totalWin > 0 && !hasFeature
@@ -75,7 +102,7 @@ export function matchesDebugPreset(
     case 'lose':
       return result.totalWin === 0 && !hasFeature
     case 'cascade3':
-      return (result.cascades?.length ?? 0) >= 3
+      return (result.cascades?.length ?? 0) >= 3 || gardenPopSteps(result) >= 3
     case 'orderRound':
       return !isFreeSpin && result.features.some((feature) => feature.type === 'orderRound')
     case 'orderComplete':
@@ -117,11 +144,45 @@ export function matchesDebugPreset(
       if (preset === 'rouletteBig') return roulette.total >= BIG_ROULETTE_MULTIPLIER * totalBet
       return true
     }
+    case 'gardenGrow':
+      return gardenOf(result)?.steps.some((step) => step.grow !== undefined) ?? false
+    case 'gardenGrow8':
+      return gardenOf(result)?.steps.some((step) => step.grow?.to.size === 8) ?? false
+    case 'seedBloom':
+      return gardenOf(result)?.steps.some((step) => step.bloomed.length > 0) ?? false
+    case 'gardenSun':
+      return isFreeSpin && (gardenOf(result)?.sun?.length ?? 0) > 0
+    case 'gardenBig':
+      return gardenOf(result) !== undefined && result.totalWin >= GARDEN_BIG_MULTIPLIER * totalBet
+    case 'gardenTopUp':
+      return isFreeSpin && result.features.some((feature) => feature.type === 'gardenTopUp')
     default: {
       const exhaustive: never = preset
       throw new Error(`[debugSpin] unknown preset: ${String(exhaustive)}`)
     }
   }
+}
+
+type GardenFeature = Extract<SpinResult['features'][number], { type: 'garden' }>
+
+/** 스핀 결과의 정원 피처. 정원 팩이 아니면 undefined. */
+function gardenOf(result: SpinResult): GardenFeature | undefined {
+  for (const feature of result.features) if (feature.type === 'garden') return feature
+  return undefined
+}
+
+/** 당첨이 있었던 정원 단계 수(연쇄 단계에 해당). */
+function gardenPopSteps(result: SpinResult): number {
+  return gardenOf(result)?.steps.filter((step) => step.wins.length > 0).length ?? 0
+}
+
+/** 성장·개화·햇살이 없는 정원 피처. `win`·`lose` 프리셋이 «피처 없는 스핀»으로 본다. */
+function isPlainGarden(feature: SpinResult['features'][number]): boolean {
+  return (
+    feature.type === 'garden' &&
+    feature.sun === undefined &&
+    feature.steps.every((step) => step.grow === undefined && step.bloomed.length === 0)
+  )
 }
 
 /** 스핀 결과의 말판 피처. 말판이 없으면 undefined. */
@@ -171,7 +232,15 @@ export interface DebugSeedSearchResult {
 export function findDebugSeed(params: DebugSeedSearchParams): DebugSeedSearchResult | null {
   const { math, totalBet, state, nonce, preset, createRng } = params
   const isFreeSpin = state !== undefined
-  const maxTries = preset === 'coinRespinFull' ? Math.max(params.maxTries, COIN_RESPIN_FULL_MAX_TRIES) : params.maxTries
+  // 햇살·최저 보장은 프리스핀에서만 나온다. 유료 스핀에서 탐색해 봐야 CPU만 쓴다.
+  if (!isFreeSpin && isGardenRoundOnlyPreset(preset)) return null
+  const rare = preset === 'gardenGrow8' || preset === 'gardenBig' || preset === 'gardenSun'
+  const maxTries =
+    preset === 'coinRespinFull'
+      ? Math.max(params.maxTries, COIN_RESPIN_FULL_MAX_TRIES)
+      : rare
+        ? Math.max(params.maxTries, GARDEN_RARE_MAX_TRIES)
+        : params.maxTries
 
   for (let tries = 1; tries <= maxTries; tries += 1) {
     const seed = createRoundSeed()

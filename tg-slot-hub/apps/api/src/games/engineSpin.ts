@@ -9,6 +9,7 @@ import type {
 import { foldCascades } from '@tgslot/slot-engine'
 import type {
   CascadeStep as EngineCascadeStep,
+  GardenTrigger as EngineGardenTrigger,
   CoinCell as EngineCoinCell,
   ColumnWrap as EngineColumnWrap,
   WinLine as EngineWinLine,
@@ -39,6 +40,8 @@ export function toSharedWinLine(win: EngineWinLine): WinLine {
     ...(win.payKind === undefined ? {} : { payKind: win.payKind }),
     ...(win.cascade === undefined ? {} : { cascade: win.cascade }),
     ...(win.ladder === undefined ? {} : { ladder: win.ladder }),
+    // 자라는 정원만. 씨앗 배율이 붙은 클러스터에만 키가 있다.
+    ...(win.seed === undefined ? {} : { seed: win.seed }),
   }
 }
 
@@ -189,8 +192,66 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       win: feature.win,
     }
   }
+  if (feature.type === 'garden') return toSharedGarden(feature)
+  if (feature.type === 'gardenTopUp') return { type: 'gardenTopUp', amount: feature.amount }
   const exhaustive: never = feature
   throw new Error(`[engineSpin] unknown feature: ${JSON.stringify(exhaustive)}`)
+}
+
+/**
+ * 정원 피처 → shared. 스핀 하나의 정원 진행 전부(단계·성장·씨앗·햇살·라운드 집계)를 싣고 허브는 재생만 한다(서버 권위).
+ * 키 순서 고정: jsonb 왕복 뒤에도 응답 바이트가 같아야 멱등 재전송이 성립한다.
+ */
+function toSharedGarden(feature: EngineGardenTrigger): FeatureTrigger {
+  const bounds = (b: EngineGardenTrigger['start']) => ({ x: b.x, y: b.y, size: b.size })
+  const seeds = (list: EngineGardenTrigger['seeds']) => list.map((seed) => ({ reel: seed.reel, row: seed.row, tier: seed.tier }))
+  const pos = (list: readonly (readonly [number, number])[]): [number, number][] =>
+    list.map(([reel, row]) => [reel, row] as [number, number])
+  return {
+    type: 'garden',
+    start: bounds(feature.start),
+    startSeeds: seeds(feature.startSeeds),
+    startPopped: feature.startPopped,
+    steps: feature.steps.map((step) => ({
+      index: step.index,
+      wins: step.wins.map(toSharedWinLine),
+      removed: pos(step.removed),
+      refill: step.refill.map((column) => [...column]),
+      bloomed: pos(step.bloomed),
+      ...(step.grow === undefined
+        ? {}
+        : {
+            grow: {
+              from: bounds(step.grow.from),
+              to: bounds(step.grow.to),
+              cells: pos(step.grow.cells),
+              seeds: seeds(step.grow.seeds),
+              grown: step.grow.grown,
+            },
+          }),
+      popped: step.popped,
+      stepWin: step.stepWin,
+    })),
+    finalGrid: feature.finalGrid.map((row) => [...row]),
+    final: bounds(feature.final),
+    seeds: seeds(feature.seeds),
+    ...(feature.sun === undefined
+      ? {}
+      : { sun: feature.sun.map((sun) => ({ grown: sun.grown, planted: seeds(sun.planted), seeds: seeds(sun.seeds) })) }),
+    ...(feature.round === undefined
+      ? {}
+      : {
+          round: {
+            maxSize: feature.round.maxSize,
+            bestSeed: feature.round.bestSeed,
+            bestSpinWin: feature.round.bestSpinWin,
+            freeWin: feature.round.freeWin,
+            topUp: feature.round.topUp,
+          },
+        }),
+    capped: feature.capped,
+    hitMaxCascades: feature.hitMaxCascades,
+  }
 }
 
 /** 코인 1개 → shared. 키 순서를 고정해 응답 바이트가 늘 같게 한다. */

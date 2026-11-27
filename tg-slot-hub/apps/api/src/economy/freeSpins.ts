@@ -1,5 +1,26 @@
 import type { FeatureTrigger, FreeSpinsState, RoundCarry as SharedRoundCarry } from '@tgslot/shared'
-import type { RoundCarry, RoundState } from '@tgslot/slot-engine'
+import type { GardenCarry, GardenSeed, RoundCarry, RoundState } from '@tgslot/slot-engine'
+
+/** 씨앗 목록 값 복사. 키 순서 고정(jsonb 왕복 뒤에도 응답 바이트가 같다). */
+function copySeeds(seeds: readonly GardenSeed[]): GardenSeed[] {
+  return seeds.map((seed) => ({ reel: seed.reel, row: seed.row, tier: seed.tier }))
+}
+
+/** 정원 carry 값 복사. 키 순서 고정. */
+function copyGardenCarry(garden: GardenCarry): GardenCarry {
+  return {
+    stage: garden.stage,
+    popped: garden.popped,
+    seeds: copySeeds(garden.seeds),
+    retriggers: garden.retriggers,
+    suns: garden.suns,
+    roundWin: garden.roundWin,
+    freeWin: garden.freeWin,
+    maxStage: garden.maxStage,
+    bestTier: garden.bestTier,
+    bestSpinWin: garden.bestSpinWin,
+  }
+}
 
 /**
  * 저장된 세션의 수명. 이만큼 지나면 없는 것으로 본다.
@@ -27,6 +48,7 @@ export function toSharedCarry(carry: RoundCarry): SharedRoundCarry {
           },
         }
       : {}),
+    ...(carry.garden ? { garden: copyGardenCarry(carry.garden) } : {}),
   }
 }
 
@@ -97,9 +119,27 @@ export function wrapFreeSpinsState(previous: FreeSpinsState | null, input: FreeS
 export function freeSpinsSummary(
   previous: FreeSpinsState | null,
   input: { isFreeSpin: boolean; win: number; ended: boolean; features?: readonly FeatureTrigger[] }
-): { total: number; spins: number; ordersCompleted?: number; orderPrizeTotal?: number } | undefined {
+): {
+  total: number
+  spins: number
+  ordersCompleted?: number
+  orderPrizeTotal?: number
+  garden?: { maxSize: number; bestSeed: number; bestSpinWin: number; topUp: number }
+} | undefined {
   if (!input.ended || !input.isFreeSpin || !previous) return undefined
   const base = { total: previous.accumulatedWin + input.win, spins: previous.total }
+  // 정원 프리스핀: 마지막 스핀의 garden 피처가 이 스핀까지 반영한 라운드 집계(`round`)를 싣는다(엔진이 계산).
+  if (previous.carry?.garden) {
+    const garden = (input.features ?? []).find(
+      (feature): feature is Extract<FeatureTrigger, { type: 'garden' }> => feature.type === 'garden'
+    )
+    const round = garden?.round
+    if (!round) return base
+    return {
+      ...base,
+      garden: { maxSize: round.maxSize, bestSeed: round.bestSeed, bestSpinWin: round.bestSpinWin, topUp: round.topUp },
+    }
+  }
   const orders = previous.carry?.orders
   if (!orders) return base
   // 마지막 스핀은 nextState가 없어 carry가 이미 사라졌다. 이전 carry에 이 스핀의 완료를 더해 맞춘다.
