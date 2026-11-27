@@ -769,3 +769,25 @@ z 는 의도 문구 두 가지 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거�
 - 효과음 스템: `D:/park/tgslot-wt/_qa/new-c-sound/wav/idol_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 룰렛 `idol_<rtick|rland_coin|rland_lit|rland_stepup|rland_encore|rland_grand|rlight|rzoom|rsummary_big|rsummary_small|rentry>.wav`
 - BGM·믹스: `wav/bgm_idol_base.wav`, `bgm_idol_free.wav`, `mix_idol_mix.wav`, `mix_idol_sfx.wav`, `mix_idol_duck.wav`, 룰렛 장면 `rmix_idol_mix.wav`(`_sfx`·`_duck`)
 - 원자료: `final_intent.txt`, `final_measure.txt`, `final_cos.txt`, `final_bgm.txt`, `final_mix.txt`, `final_rmix.txt`, 함성 실험 `exp_*.wav`(저장소 밖)
+
+## 개선안 1번 — 당첨 단계(베팅 대비 배수)별 소리 (2026-11-27, 레인 A)
+
+`playWinBand`(audio.ts, 새 레시피 키 없음). under = 소리 없음, small = 기존 `winSmall`, good = `winSmall` 0.9초 + 3음 오름, great = `winSmall` 1.4초 + 5음 오름 + `tickEnd`, big(10배 이상) = 기존 `playWin(tier)`. 10개 프리셋 전부 가상 시계 오프라인 렌더(`D:/park/tgslot-wt/_qa/improve-A/sound/run.mjs`, 실제 audio.ts 를 그대로 돌림) 후 `earshot measure --light`로 쟀다.
+
+| 프리셋 | under | small 길이 / 피크 dBFS / LUFS | good | great | big(기존) |
+|---|---|---|---|---|---|
+| bell | 디지털 무음(-240 dBFS) | 1.036s / -11.5 / -23.6 | 1.134s / -10.2 / -22.3 | 1.415s / -10.0 / -23.7 | 3.240s / -8.0 / -21.9 |
+| fruit | 디지털 무음(-240 dBFS) | 0.675s / -8.1 / -22.4 | 1.091s / -8.1 / -23.4 | 1.356s / -8.1 / -24.8 | 3.191s / -5.9 / -22.0 |
+| western | 디지털 무음(-240 dBFS) | 1.488s / -13.3 / -24.3 | 1.488s / -12.8 / -24.8 | 1.788s / -12.8 / -23.6 | 3.600s / -7.5 / -22.0 |
+| shrine | 디지털 무음(-240 dBFS) | 2.176s / -9.1 / -23.3 | 2.176s / -8.1 / -23.1 | 2.576s / -8.0 / -21.8 | 3.284s / -6.5 / -19.0 |
+| clockwork | 디지털 무음(-240 dBFS) | 1.236s / -14.0 / -23.1 | 1.236s / -12.5 / -21.9 | 1.546s / -12.3 / -22.0 | 3.261s / -10.4 / -20.0 |
+| candy | 디지털 무음(-240 dBFS) | 0.688s / -12.9 / -23.9 | 1.122s / -12.3 / -23.7 | 1.451s / -11.8 / -25.0 | 3.489s / -7.4 / -22.7 |
+| royal | 디지털 무음(-240 dBFS) | 1.336s / -14.4 / -24.2 | 1.336s / -13.4 / -24.1 | 1.526s / -14.2 / -23.4 | 3.256s / -4.7 / -21.9 |
+| deepsea | 디지털 무음(-240 dBFS) | 1.276s / -10.1 / -22.5 | 1.276s / -10.2 / -22.4 | 1.586s / -10.2 / -20.9 | 3.824s / -6.1 / -24.2 |
+| hanbok | 디지털 무음(-240 dBFS) | 1.476s / -9.8 / -19.7 | 1.476s / -9.5 / -19.5 | 1.476s / -9.0 / -19.9 | 3.141s / -8.0 / -19.7 |
+| idol | 디지털 무음(-240 dBFS) | 0.936s / -9.5 / -21.4 | 1.081s / -9.6 / -21.3 | 1.346s / -9.6 / -19.7 | 4.443s / -4.0 / -20.8 |
+
+- 확인된 것: under 는 10개 프리셋 모두 디지털 무음, 길이는 small ≤ good ≤ great < big 순(모든 프리셋), 피크는 big 이 가장 크다. 단위 테스트(`audio.test.ts`)도 프리셋마다 under·none·big 은 노드 0개, small < good < great 순으로 노드가 늘어남을 검사한다.
+- 한계: western·shrine·clockwork·royal·deepsea·hanbok 은 `winSmall` 꼬리가 길어 small 과 good 길이가 같다(hanbok 은 great 도 같다). 오름 음은 꼬리 안에 들어가서 길이로는 안 갈리고 음 개수로만 갈린다. 귀로 «좋은 당첨»이 «당첨»과 구별되는지 확인할 것.
+- 모든 판정은 참고값이다. **최종 귀 판정은 사용자 몫이다.**
+

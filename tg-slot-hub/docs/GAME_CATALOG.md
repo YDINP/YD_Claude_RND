@@ -89,7 +89,7 @@
 **컨셉·아트** — 스타일: 스타일라이즈드 3D 웨스턴(먼지 낀 무광 금속 + 가죽). 팔레트: 사막 황토 `#c9884a`, 세이지 `#7e9a72`, 선셋 오렌지 `#e2683a`, 밤하늘 `#1b2437`. 프레임: 목재 살룬 간판 + 철제 리벳, 상단 마퀴에 밧줄 레터링, 하단에 편자 몰딩.
 심볼(10): `wild` `scatter` `sheriff` `bandit` `revolver` `dynamite` `horseshoe` `whiskey` `cactus` `boot`
 
-**메커닉** — 트리거: 릴 1·2·3(0부터, 화면상 2·3·4번 릴) 창에 `wild` 1개 이상이면 그 릴 전체 확장(릴당 `q ≈ 0.12`, 스핀당 확장 `≈ 0.30`). 갬블은 `totalWin > 0`일 때만 제안. 상태: `STOP → EXPAND_SCAN(reel∈{1,2,3}) → EVALUATE → (win>0) GAMBLE_OFFER → GAMBLE_FLIP(×2 | 0) →(≤5회) COLLECT`. 수학: 갬블은 `p=0.5, payout=2×`로 기대값 중립이라 RTP를 바꾸지 않고 분산만 키운다. 엣지: `gambleSteps ≤ 5` **그리고** `win × 2^steps ≤ maxWinCap`, 먼저 걸리는 쪽에서 강제 수령 · 갬블 결과는 서버가 결정하고 라운드 레코드에 기록, 재전송은 멱등키로 방어 · 확장은 스캐터 칸을 덮지 않는다(덮으면 프리스핀 RTP가 흔들린다). `RoundState`: `gamble?: { pendingWin: number; steps: number; maxSteps: number }`.
+**메커닉** — 트리거: 릴 1·2·3(0부터, 화면상 2·3·4번 릴) 창에 `wild` 1개 이상이면 그 릴 전체 확장(릴당 `q ≈ 0.12`, 스핀당 확장 `≈ 0.30`). 갬블은 베팅 이상 당첨(`totalWin ≥ totalBet`)일 때만 제안(베팅 미만 당첨은 손실 판이라 권하지 않는다, 2026-11-27). 상태: `STOP → EXPAND_SCAN(reel∈{1,2,3}) → EVALUATE → (win≥bet) GAMBLE_OFFER → GAMBLE_FLIP(×2 | 0) →(≤5회) COLLECT`. 수학: 갬블은 `p=0.5, payout=2×`로 기대값 중립이라 RTP를 바꾸지 않고 분산만 키운다. 엣지: `gambleSteps ≤ 5` **그리고** `win × 2^steps ≤ maxWinCap`, 먼저 걸리는 쪽에서 강제 수령 · 갬블 결과는 서버가 결정하고 라운드 레코드에 기록, 재전송은 멱등키로 방어 · 확장은 스캐터 칸을 덮지 않는다(덮으면 프리스핀 RTP가 흔들린다). `RoundState`: `gamble?: { pendingWin: number; steps: number; maxSteps: number }`.
 
 **UX** — 화면(구현): 와일드 착지 시 그 릴이 황금 기둥으로 차오르며 튕긴다(별도 배너 없음). 당첨 후 동전 던지기 시트 — 앞면/뒷면 고르기, 성공 50%·×2·최대 5단, 제안은 다음 스핀이나 만료 때 자동 회수. 프리스핀을 여는 스핀에는 두 배 도전을 열지 않는다(2026-11-26). 갬블 승리 시 배당 재롤업. 배경: 갬블 모달 동안 딤 α0.6, 상시 배경 교체 없음.
 
