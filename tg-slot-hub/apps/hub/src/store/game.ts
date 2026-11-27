@@ -38,6 +38,7 @@ import {
   canStartSpin,
   ceremonyFor,
   roundFlowReducer,
+  withForgePopup,
   withOrderPopup,
   winHoldMs,
   winPresentationMode,
@@ -447,6 +448,11 @@ export interface GameState {
   betIndex: number
   phase: GamePhase
   lastResult: SpinResponse | null
+  /**
+   * 지금 연출 중인 스핀의 응답(공개 전). 화로 배율 줄처럼 «연쇄 도중에» 서버 값이 필요한 화면이 읽는다.
+   * 스핀 연출이 시작될 때 채우고 다음 스핀 시작 또는 게임 리셋에서 비운다.
+   */
+  playing: SpinResponse | null
   error: string | null
   errorCode: string | null
   /** 실패한(또는 진행 중인) 스핀의 idempotencyKey. 재시도 시 재사용해 서버가 같은 결과를 재생하게 한다 */
@@ -615,6 +621,7 @@ const initialState: GameState = {
   betIndex: 0,
   phase: 'loading',
   lastResult: null,
+  playing: null,
   error: null,
   errorCode: null,
   idempotencyKey: null,
@@ -873,6 +880,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       error: null,
       errorCode: null,
       lastResult: null,
+      playing: null,
       gambleSession: null,
       gambleIdempotencyKey: null,
       // 디버그 프리셋은 원샷 — 요청을 만드는 이 시점에 바로 지운다(성공/실패와 무관하게 다음
@@ -1118,7 +1126,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 무대 룰렛 진입 스핀이면 보이는 것(잔액·lastResult·더블업·빅윈)을 룰렛이 끝난 뒤에 공개한다.
     const rouletteFeature = math.stageRoulette === undefined ? null : findRouletteFeature(result.features)
     const baseCeremony = ceremonyFor(freeSpins, result)
-    const ceremony = baseCeremony ? withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined) : null
+    const ceremony = baseCeremony
+      ? withForgePopup(withOrderPopup(baseCeremony, result, orderLogAfter, get().math?.orderRound !== undefined), result)
+      : null
 
     try {
       let reelStopAt: number | null = null
@@ -1128,6 +1138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // 전에) 이미 건너뛰기가 눌려 있었다면(skipRequested) 시작하자마자 바로 skip()한다.
         // gridBefore/mutations를 함께 넘기면(뮤테이션이 있는 게임) 렌더러가 리빌 연출까지 재생한
         // 뒤에야 이 손잡이가 resolve된다 — 승리 연출은 항상 그 다음이다(아래 흐름 그대로).
+        set({ playing: result })
         const handle = renderer.spinTo(result.stops, buildSpinToOptions(result))
         currentSpinHandle = handle
         if (skipRequested) {

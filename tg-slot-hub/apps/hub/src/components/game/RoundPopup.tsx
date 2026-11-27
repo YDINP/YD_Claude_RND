@@ -210,6 +210,20 @@ export function RoundPopupView({
 
           {!entry && <span className="hub-win__summary">{summary}</span>}
 
+          {popup.kind === 'freeSpinsExit' && popup.forge !== undefined && !noWin && (
+            <span className="hub-round-popup__forge">
+              <span className="hub-round-popup__forge-row hub-round-popup__forge-row--lead">
+                {t('forgeExitBetMultiple', { n: popup.forge.betMultiple.toLocaleString('en-US') })}
+              </span>
+              <span className="hub-round-popup__forge-row">
+                {t('forgeExitHeat', { heat: Math.max(1, popup.forge.heat) })} · {t('forgeExitFulls', { n: popup.forge.fulls })}
+              </span>
+              <span className="hub-round-popup__forge-row">
+                {t('forgeExitBest', { amount: popup.forge.bestSpin.toLocaleString('en-US') })}
+              </span>
+            </span>
+          )}
+
           {popup.kind === 'freeSpinsExit' && popup.orders !== undefined && (
             <span className="hub-round-popup__orders">
               <span className="hub-round-popup__orders-title">{t('orderExitCompleted')}</span>

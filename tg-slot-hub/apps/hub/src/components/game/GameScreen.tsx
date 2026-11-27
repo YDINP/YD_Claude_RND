@@ -4,7 +4,7 @@
  * 코인 소진 시트.
  * 스핀 결과와 잔액은 항상 서버 값(store/game.ts의 spin())을 그대로 반영한다.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   createSlotRenderer,
   resolveCelebrationSkin,
@@ -46,6 +46,7 @@ import {
   playCascadeDrop,
   playCascadePop,
   playFeature,
+  playForgeRetrigger,
   playLadderUp,
   playOrderComplete,
   playOrderDeal,
@@ -80,6 +81,10 @@ import { DebugPanel } from './DebugPanel'
 import { LadderMeter } from './LadderMeter'
 import { OrderBoard, type OrderBoardHandle } from './OrderBoard'
 import { ClusterHelp, OrderRoundHelp } from './ClusterHelp'
+import { ForgeRail } from './ForgeRail'
+import { ForgeHelp } from './ForgeHelp'
+import { useForgeRail } from '../../hooks/useForgeRail'
+import { dominantRemoved } from '../../game/forge'
 import { CoinRespinLayer } from './CoinRespinLayer'
 import { CoinRespinHelp } from './CoinRespinHelp'
 import { useCoinRespinStore } from '../../store/coinRespin'
@@ -196,14 +201,25 @@ type LineLabelSource =
       /** 이긴 칸의 [reel, row] 좌표. 그룹 승리에서 «실제로 이긴 심볼»을 짚는 데 쓴다. */
       positions?: readonly (readonly [number, number])[]
       /** 클러스터면 'cluster'. 좌표가 중간 판의 것이라 최종 그리드를 짚지 않는다. */
-      payKind?: 'line' | 'ways' | 'cluster'
+      payKind?: 'line' | 'ways' | 'cluster' | 'anywhere'
       /** 연쇄 단계(0부터)와 그 단계의 사다리 배수. */
       cascade?: number
       ladder?: number
       key: number
     }
   | { kind: 'cycle'; totalWin: number; key: number }
-  | { kind: 'chain'; n: number; multiplier: number; stepWin: number; key: number }
+  | {
+      kind: 'chain'
+      n: number
+      multiplier: number
+      stepWin: number
+      /** 화로 배율 줄 팩: 이 단계에서 가장 많이 터진 그림과 개수(WinStrip에 «검 ×9»로 그린다). */
+      symbol?: string
+      count?: number
+      key: number
+    }
+  /** 화로 배율 줄 정산: `연쇄 합 × 합계 = 지급`. */
+  | { kind: 'forgeSettle'; base: number; multiplier: number; boosted: number; key: number }
   | { kind: 'order'; order: CompletedOrder; key: number }
   /** 무대 룰렛이 끝난 뒤 «무대 룰렛 +N» 한 줄. */
   | { kind: 'roulette'; total: number; key: number }
@@ -227,7 +243,7 @@ function winCellSymbols(
   grid: readonly (readonly string[])[] | undefined,
 ): string[] | null {
   if (grid === undefined || source.positions === undefined) return null
-  if (source.payKind === 'cluster') return null
+  if (source.payKind === 'cluster' || source.payKind === 'anywhere') return null
   if (source.positions.length !== source.count) return null
 
   const symbols: string[] = []
@@ -273,6 +289,24 @@ function buildOrderIcons(
     srcs: [src],
     ariaLabel: cardText,
     suffix: `${cardText} · +${order.prize.toLocaleString('en-US')}`,
+  }
+}
+
+/** 화로 배율 줄 팩의 연쇄 단계 줄: «연쇄 2 · [검 아이콘] ×9 · 160». 그림이 없으면 문구로 물러난다. */
+function buildChainIcons(
+  math: GameMath,
+  theme: Theme | null,
+  locale: Locale,
+  source: Extract<LineLabelSource, { kind: 'chain' }>,
+  chainText: string,
+): WinStripLineLabel['icons'] | undefined {
+  const src = source.symbol === undefined ? undefined : theme?.symbols[source.symbol]
+  if (!src || source.symbol === undefined) return undefined
+  const name = symbolLabel(math, source.symbol, locale)
+  return {
+    srcs: [src],
+    ariaLabel: `${chainText} · ${name} ×${source.count ?? 0}`,
+    suffix: `×${source.count ?? 0} · ${source.stepWin.toLocaleString('en-US')}`,
   }
 }
 
@@ -332,6 +366,9 @@ function buildWinLineIcons(
 type HelpPage = 'paytable' | 'paylines' | 'features' | 'respin' | 'fairness'
 
 const HELP_PAGE_KEY_PREFIX = 'tgslot.helpPage.'
+
+/** 화로 줄 아래 가장자리와 판 첫 칸 사이 간격(px). 프레임 윗 장식 몫을 포함한다. */
+const FORGE_RAIL_GAP_PX = 22
 
 function readStoredHelpPage(gameId: string): HelpPage | null {
   try {
@@ -615,6 +652,32 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   // 반영한다. 남은 횟수만 바뀌는 같은 모드 안의 변화(재발동 포함 — 커튼이 안 뜬다)는 곧장
   // 반영한다(모드 경계가 아니므로 미룰 이유가 없다).
   const [displayedFreeSpins, setDisplayedFreeSpins] = useState(freeSpins)
+  // 화로 줄은 판 바로 위에 붙인다 — 렌더러가 판을 스테이지 가운데에 놓으므로 첫 칸 좌표로 높이를 잰다.
+  const [railTop, setRailTop] = useState<number | null>(null)
+  // 화로 배율 줄(volcano-forge 전용, 그 밖의 게임에서는 아무것도 하지 않는다).
+  const forge = useForgeRail({
+    math,
+    phase,
+    freeSpins,
+    displayedFreeSpins,
+    slotRendererRef,
+    containerRef,
+    compressedRef,
+    onSettleLabel: (settle) => {
+      lineLabelKeyRef.current += 1
+      setLineLabelSource({
+        kind: 'forgeSettle',
+        base: settle.base,
+        multiplier: settle.multiplier,
+        boosted: settle.boosted,
+        key: lineLabelKeyRef.current,
+      })
+    },
+  })
+  const forgeAnvilNeed =
+    displayedFreeSpins !== null && math?.forgeRail?.retrigger
+      ? math.forgeRail.retrigger.trigger
+      : (math?.scatter?.freeSpins?.trigger ?? 4)
   /** 마지막으로 살펴본 freeSpins의 "활성 여부(null이 아님)" — 이 값과 달라지는 순간이 모드 경계다. */
   const freeSpinsActiveRef = useRef(freeSpins !== null)
   /** 모드 경계를 넘은 새 값 — 커튼이 다 걷힐 때까지 여기 담아두고 표시는 아직 미룬다. */
@@ -746,6 +809,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   }
 
   function handleRendererEvent(event: RendererEvent): void {
+    forge.handleEvent(event)
     // 코인 리스핀: 표시용 진행(HUD·보물 띠)과 효과음. 전환 이벤트는 아래 공용 처리도 그대로 탄다.
     useCoinRespinStore.getState().apply(event)
     playRespinEventSound(event)
@@ -811,6 +875,17 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             n: event.index + 1,
             multiplier: event.multiplier,
             stepWin: event.stepWin,
+            ...(forge.enabled ? dominantRemoved(event.removedSymbols) ?? {} : {}),
+            key: lineLabelKeyRef.current,
+          })
+        } else if (forge.enabled && event.stepWin > 0) {
+          lineLabelKeyRef.current += 1
+          setLineLabelSource({
+            kind: 'chain',
+            n: 1,
+            multiplier: event.multiplier,
+            stepWin: event.stepWin,
+            ...(dominantRemoved(event.removedSymbols) ?? {}),
             key: lineLabelKeyRef.current,
           })
         }
@@ -873,7 +948,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       }
       // 재발동만 여기서 다룬다 — 최초 진입은 세리머니 팝업(store.roundFlow)의 몫이다.
       const feature = event.feature
-      playFeature()
+      if (forge.enabled && feature.type === 'freeSpins' && feature.retrigger) playForgeRetrigger()
+      else playFeature()
       if (feature.type === 'freeSpins' && feature.retrigger) showFreeSpinsRetrigger(feature.spins)
       return
     }
@@ -949,30 +1025,34 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     setWinRollupValue(rollFrom)
     // 코인 리스핀 판은 정산 뒤 빅윈 오버레이에서 큰 당첨 소리를 이미 냈다 — 복귀 뒤 라인 당첨 롤업은 작은 당첨 소리만 낸다.
     const soundTier = respinCelebrationSounded() ? 'none' : event.tier
-    playWin(soundTier, duration)
+    // 화로 배율 줄 팩은 정산(망치)이 끝난 뒤에 롤업을 시작한다. 그 밖의 게임은 곧바로 시작한다.
+    const beginRollup = (): void => {
+      playWin(soundTier, duration)
 
-    // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
-    // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
-    let startTs: number | null = null
-    const step = (ts: number): void => {
-      if (winSkipRef.current) {
-        setWinRollupValue(target)
-        winRafRef.current = null
-        playRollupEnd(soundTier)
-        return
+      // 첫 rAF 틱의 timestamp 자체를 기준점으로 삼는다 (Odometer.tsx와 동일한 패턴) —
+      // 별도로 `performance.now()`를 부르면 환경에 따라 rAF의 timestamp와 기준이 어긋날 수 있다.
+      let startTs: number | null = null
+      const step = (ts: number): void => {
+        if (winSkipRef.current) {
+          setWinRollupValue(target)
+          winRafRef.current = null
+          playRollupEnd(soundTier)
+          return
+        }
+        if (startTs === null) startTs = ts
+        const progress = Math.min(1, (ts - startTs) / duration)
+        setWinRollupValue(Math.max(rollFrom, Math.round(rollFrom + (target - rollFrom) * progress)))
+        if (progress < 1) {
+          playRollupTick(progress)
+          winRafRef.current = requestAnimationFrame(step)
+        } else {
+          winRafRef.current = null
+          playRollupEnd(soundTier)
+        }
       }
-      if (startTs === null) startTs = ts
-      const progress = Math.min(1, (ts - startTs) / duration)
-      setWinRollupValue(Math.max(rollFrom, Math.round(rollFrom + (target - rollFrom) * progress)))
-      if (progress < 1) {
-        playRollupTick(progress)
-        winRafRef.current = requestAnimationFrame(step)
-      } else {
-        winRafRef.current = null
-        playRollupEnd(soundTier)
-      }
+      winRafRef.current = requestAnimationFrame(step)
     }
-    winRafRef.current = requestAnimationFrame(step)
+    if (!forge.settleThen(beginRollup)) beginRollup()
   }
 
   // 무대 룰렛 — WinStrip은 룰렛 동안 «룰렛 합계»만 보여 준다. 클립이 시작되면 기본 지급 롤업을 접고 0에서 다시 쌓는다.
@@ -1017,6 +1097,31 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     resumeTriedRef.current = true
     void resumeRouletteAction()
   }, [rendererInstance, math, phase, resumeRouletteAction])
+
+  // 화로 줄 높이: 판의 첫 칸 위에 붙인다. 창 크기가 바뀌면 다시 잰다.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!forge.enabled || !rendererInstance || container === null) return
+    const measure = (): void => {
+      try {
+        const cell = slotRendererRef.current?.getCellRect(0, 0)
+        // 칸 좌표는 캔버스 안 좌표다. 캔버스가 스테이지 가운데에 놓이므로 스테이지 기준으로 옮긴다.
+        const canvas = container.querySelector('canvas')
+        const stage = container.parentElement
+        if (cell && canvas && stage) {
+          const offset = canvas.getBoundingClientRect().top - stage.getBoundingClientRect().top
+          setRailTop(Math.max(8, Math.round(offset + cell.y - FORGE_RAIL_GAP_PX)))
+        }
+      } catch {
+        /* 렌더러가 아직 준비되지 않았다 — 다음 리사이즈에 다시 잰다 */
+      }
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [forge.enabled, rendererInstance])
 
   // 새 스핀이 시작되면 이전 당첨 롤업/WinStrip 라인 문구를 지운다.
   useEffect(() => {
@@ -1070,6 +1175,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
    * 최종 금액을 잠깐이라도 보도록 목표값으로 점프시킨다.
    */
   const handleSkipWinsAndAdvance = (): void => {
+    // 화로 정산(망치) 대기 중이면 롤업을 바로 시작하고 곧장 목표 금액으로 접는다.
+    if (forge.flushSettle()) winSkipRef.current = true
     if (winRafRef.current !== null) winSkipRef.current = true
     rendererInstance?.skipWins?.()
     autoAdvanceAfterSkipRef.current = true
@@ -1133,6 +1240,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           reducedMotion: useSettingsStore.getState().reducedMotion,
           formatCoin: (amount) => formatCoinAmount(amount, localeRef.current),
           onEvent: handleRendererEvent,
+          cascadeHoldMs: (index, skipped) => forge.cascadeHoldMs(index, skipped),
         })
         await renderer.ready
         if (cancelled) {
@@ -1262,6 +1370,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const isWays = math?.payModel === 'ways'
   // 클러스터 게임은 페이라인도 ways도 없다 — 배당은 총 베팅액의 배수라 "라인당 베팅"을 보여 주지 않는다.
   const isCluster = math?.payModel === 'cluster'
+  // 위치 무관 지불(volcano-forge): 총 베팅 기준이라 «라인당 베팅» 표기를 쓰지 않는다.
+  const isAnywhere = math?.payModel === 'anywhere'
   const isCascade = math?.cascade !== undefined
   const isOrderRound = math?.orderRound !== undefined
   const betPerLine = math
@@ -1435,10 +1545,14 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         text:
           lineLabelSource.kind === 'cycle'
             ? t('winStripCycleTotal', { amount: lineLabelSource.totalWin.toLocaleString('en-US') })
+            : lineLabelSource.kind === 'forgeSettle'
+              ? `${lineLabelSource.base.toLocaleString('en-US')} × ${lineLabelSource.multiplier.toLocaleString('en-US')} = ${lineLabelSource.boosted.toLocaleString('en-US')}`
             : lineLabelSource.kind === 'chain'
               ? [
                   t('chainLabel', { n: lineLabelSource.n }),
-                  `×${lineLabelSource.multiplier}`,
+                  ...(lineLabelSource.symbol !== undefined && math
+                    ? [`${symbolLabel(math, lineLabelSource.symbol, locale)} ×${lineLabelSource.count ?? 0}`]
+                    : [`×${lineLabelSource.multiplier}`]),
                   lineLabelSource.stepWin.toLocaleString('en-US'),
                 ].join(' · ')
               : lineLabelSource.kind === 'roulette'
@@ -1463,7 +1577,9 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             ? buildWinLineIcons(math, theme, locale, lineLabelSource, lastResult?.grid)
             : lineLabelSource.kind === 'order'
               ? buildOrderIcons(theme, lineLabelSource.order, orderCardText(lineLabelSource.order, math, locale, t, true))
-              : undefined,
+              : lineLabelSource.kind === 'chain' && lineLabelSource.symbol !== undefined && math
+                ? buildChainIcons(math, theme, locale, lineLabelSource, t('chainLabel', { n: lineLabelSource.n }))
+                : undefined,
       }
     : null
 
@@ -1880,7 +1996,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         <CoinRespinLayer math={math} bet={currentBet} props={theme?.props} locale={locale} />
       )}
 
-      {isCascade && math?.cascade && (
+      {isCascade && math?.cascade && !forge.enabled && (
         <div className="hub-game-screen__cascade-hud">
           <LadderMeter ladder={math.cascade.multiplierLadder} activeIndex={ladderIndex} />
           {math.orderRound && (
@@ -1907,6 +2023,29 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
         onClick={handleStageTap}
       >
         <div ref={containerRef} className="hub-game-screen__canvas" />
+        {forge.enabled && math?.forgeRail && (
+          <div className="hub-forge-rail-slot" style={{ '--forge-rail-y': `${railTop ?? 0}px` } as CSSProperties} onClick={(e) => e.stopPropagation()}>
+            <ForgeRail
+              ref={forge.railRef}
+              heat={forge.view.heat}
+              filled={forge.view.filled}
+              slots={math.forgeRail.slots}
+              anvil={{
+                count: forge.view.anvilCount,
+                // 프리스핀 안에서는 추가 스핀 조건(forgeRail.retrigger)을 센다
+                need: forgeAnvilNeed,
+                hot: forge.view.anvilCount >= forgeAnvilNeed - 1,
+              }}
+              burning={displayedFreeSpins !== null}
+              tickKey={forge.view.tickKey}
+              fullKey={forge.view.fullKey}
+              slamKey={forge.view.slamKey}
+              settling={forge.view.settling}
+              props={theme?.props}
+              reducedMotion={reducedMotion}
+            />
+          </div>
+        )}
         {phase === 'loading' && <div className="hub-game-screen__loading">{t('loading')}</div>}
         {rendererError && (
           <div className="hub-game-screen__renderer-note" role="status">
@@ -2293,7 +2432,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                       <span className="hub-bet-picker__amount">{level}</span>
                       <span className="hub-bet-picker__per-line">
                         {locked ? '🔒 ' : ''}
-                        {isCluster ? '' : t(isWays ? 'betPerWay' : 'betPerLine', { amount: lineBet.toLocaleString('en-US') })}
+                        {isCluster || isAnywhere ? '' : t(isWays ? 'betPerWay' : 'betPerLine', { amount: lineBet.toLocaleString('en-US') })}
                       </span>
                     </button>
                   </li>
@@ -2345,7 +2484,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 }
                 onClick={() => setHelpPage('paylines')}
               >
-                {isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
+                {isAnywhere ? t('forgeHelpTab') : isCluster ? t('tabCluster') : isWays ? t(math.stageRoulette ? 'stageRouletteTabWays' : 'tabWays') : t('paylinesTitle')}
               </button>
               {hasRespinPage && (
                 <button
@@ -2390,7 +2529,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               {helpPage === 'paytable' && (
                 <>
                   <p className="hub-paytable__bet-per-line">
-                    {isCluster
+                    {isCluster || isAnywhere
                       ? t('clusterHelpBetBasis')
                       : t(isWays ? 'betPerWay' : 'betPerLine', { amount: betPerLine.toLocaleString('en-US') })}
                   </p>
@@ -2518,7 +2657,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 <ClusterHelp math={math} symbols={theme?.symbols} locale={locale} />
               )}
 
-              {helpPage === 'paylines' && !isWays && !isCluster && (
+              {helpPage === 'paylines' && isAnywhere && (
+                <ForgeHelp math={math} symbols={theme?.symbols} locale={locale} />
+              )}
+
+              {helpPage === 'paylines' && !isWays && !isCluster && !isAnywhere && (
                 <div className="hub-paylines__grid-list">
                   {math.paylines.map((line, index) => (
                     <div key={index} className="hub-paylines__item">

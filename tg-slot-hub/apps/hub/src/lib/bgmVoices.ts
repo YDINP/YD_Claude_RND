@@ -379,7 +379,7 @@ const bassPartials =
   (k, t, m, v, _d, out) =>
     partials(k, t, mtof(m), v, out, list, 0.008)
 
-const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol'>, Kit> = {
+const BASE_KITS: Record<Exclude<AudioPreset, 'candy' | 'royal' | 'deepsea' | 'hanbok' | 'idol' | 'forge'>, Kit> = {
   bell: {
     gain: 1.07,
     mix: {
@@ -1093,7 +1093,66 @@ const IDOL_KIT: Kit = {
   },
 }
 
-const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT }
+/** 뮤트된 사각파 플럭: 필터가 빠르게 닫혀 둥근 «뽁». 선율·반주용. */
+function mutedSquare(k: Tools, t: number, midi: number, vel: number, dur: number, out: AudioNode): void {
+  const f = mtof(midi)
+  const lp = k.c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.Q.value = 1.4
+  lp.frequency.setValueAtTime(Math.min(3200, f * 7), t)
+  lp.frequency.setTargetAtTime(f * 1.4, t + 0.004, 0.07)
+  const g = k.c.createGain()
+  const tau = Math.min(0.2, 0.07 + dur * 0.05)
+  g.gain.setValueAtTime(0, t)
+  g.gain.linearRampToValueAtTime(vel, t + 0.004)
+  g.gain.setTargetAtTime(0, t + 0.004, tau)
+  const end = t + 0.004 + tau * 6
+  lp.connect(g).connect(out)
+  for (const detune of [-6, 6]) {
+    const o = k.c.createOscillator()
+    o.type = 'square'
+    o.frequency.value = f
+    o.detune.value = detune
+    const og = k.c.createGain()
+    og.gain.value = 0.5
+    o.connect(og).connect(lp)
+    o.start(t)
+    o.stop(end)
+  }
+  k.track(end)
+}
+
+/** 모루 핑: 비정수 배음(1 : 2.76 : 5.40)이 짧게 울린다. 타악 자리(wood)에 쓴다. */
+const ANVIL_PING: readonly Partial3[] = [[1, 1, 0.16], [2.76, 0.6, 0.11], [5.4, 0.3, 0.06]]
+
+/** 화산 대장간: 따뜻한 패드 위에 뮤트된 사각파 플럭이 뛰고, 둥근 북과 모루 핑이 박을 친다. 프리스핀은 금관풍 톱니 대선율이 얹힌다. */
+const FORGE_KIT: Kit = {
+  gain: 0.68,
+  mix: {
+    pad: [0.13, 0.3],
+    keys: [0.26, 0.25],
+    arp: [0.2, 0.25],
+    lead: [0.34, 0.3],
+    counter: [0.12, 0.3],
+    bass: [0.16, 0.03],
+    kick: [0.2, 0.02],
+    wood: [0.5, 0.3],
+    shaker: [0.14, 0.12],
+  },
+  padCutoff: [900, 2600],
+  voices: {
+    pad: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['triangle', 'sine'], detune: 8, attack: 0.9, release: 1.2 }),
+    keys: (k, t, m, v, d, out) => mutedSquare(k, t, m, v * 0.7, d, out),
+    lead: (k, t, m, v, d, out) => pad(k, t, mtof(m), v * 0.55, Math.min(d, 1.2), out, { types: ['square', 'sawtooth'], detune: 5, attack: 0.025, release: 0.18 }),
+    counter: (k, t, m, v, d, out) => pad(k, t, mtof(m), v, d, out, { types: ['sawtooth', 'sawtooth'], detune: 9, attack: 0.05, release: 0.3 }),
+    bass: bassPartials([[1, 1, 0.45], [2, 0.22, 0.14], [3, 0.06, 0.07]]),
+    kick: (k, t, _m, v, _d, out) => drum(k, t, 105, 52, v, out, 0.1),
+    wood: (k, t, _m, v, _d, out) => partials(k, t, 700, v, out, ANVIL_PING, 0.001),
+    shaker: (k, t, _m, v, _d, out) => hiss(k, t, v, out, { ...SHAKER, freq: 5400, attack: 0.01, tau: 0.03 }),
+  },
+}
+
+const KITS: Record<AudioPreset, Kit> = { ...BASE_KITS, candy: CANDY_KIT, royal: ROYAL_KIT, deepsea: DEEPSEA_KIT, hanbok: HANBOK_KIT, idol: IDOL_KIT, forge: FORGE_KIT }
 
 // ── 조립 ──────────────────────────────────────────────────
 

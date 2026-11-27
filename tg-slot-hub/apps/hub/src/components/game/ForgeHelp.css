@@ -1,0 +1,182 @@
+/* 화로 도움말 — 그림은 전부 정사각 칸(aspect-ratio: 1). 390px에서도 칸이 찌그러지지 않는다. */
+.hub-forge-help__tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.hub-forge-help__tab {
+  flex: 1 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hub-border);
+  background: var(--hub-secondary-bg);
+  color: var(--hub-text-sub);
+  font-size: var(--hub-font-small);
+  white-space: nowrap;
+}
+
+.hub-forge-help__tab--active {
+  background: var(--hub-gold);
+  border-color: var(--hub-gold-light);
+  color: #1b1208;
+  font-weight: 700;
+}
+
+.hub-forge-help__pair {
+  display: flex;
+  gap: var(--hub-space-md);
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.hub-forge-help__figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--hub-font-small);
+  color: var(--hub-text-sub);
+  text-align: center;
+}
+
+.hub-forge-help__board {
+  display: grid;
+  gap: 2px;
+  width: min(100%, 204px);
+}
+
+.hub-forge-help__pair .hub-forge-help__board {
+  width: min(100%, 150px);
+}
+
+.hub-forge-help__slot-wrap {
+  display: block;
+  aspect-ratio: 1;
+  min-width: 0;
+}
+
+.hub-forge-help__cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 4px;
+  background: var(--hub-secondary-bg);
+  border: 1px solid var(--hub-border);
+  overflow: visible;
+}
+
+.hub-forge-help__cell img {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+}
+
+.hub-forge-help__cell--hit {
+  border-color: var(--hub-gold-light);
+  box-shadow: 0 0 6px var(--hub-gold);
+  background: rgba(216, 169, 74, 0.22);
+}
+
+.hub-forge-help__cell--dim img,
+.hub-forge-help__cell--dim .hub-forge-help__letter {
+  opacity: 0.55;
+}
+
+.hub-forge-help__letter {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hub-forge-help__ember {
+  position: absolute;
+  right: -3px;
+  top: -5px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #ff7a1a;
+  color: #2a0e04;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.3;
+  box-shadow: 0 0 6px rgba(255, 140, 30, 0.9);
+}
+
+.hub-forge-help__table-wrap {
+  overflow-x: auto;
+}
+
+.hub-forge-help__table th,
+.hub-forge-help__table td {
+  white-space: nowrap;
+}
+
+.hub-forge-help__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.hub-forge-help__chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #3a2a24;
+  border: 1px solid #ff7a1a;
+  color: #ffd23f;
+  font-weight: 800;
+  font-size: var(--hub-font-small);
+}
+
+.hub-forge-help__rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: #2a1f1c;
+  border: 2px solid #5a443a;
+}
+
+.hub-forge-help__heat {
+  min-width: 52px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #140d0b;
+  color: #ffd23f;
+  font-weight: 900;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.hub-forge-help__dots {
+  display: flex;
+  gap: 5px;
+}
+
+.hub-forge-help__dot {
+  width: 22px;
+  height: 22px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: #1a110e;
+  border: 2px solid #5a443a;
+}
+
+.hub-forge-help__dot--lit {
+  background: radial-gradient(circle at 50% 45%, #ffe27a 0%, #ff9a2e 50%, #c4380f 100%);
+  border-color: #ff7a1a;
+  box-shadow: 0 0 8px rgba(255, 140, 30, 0.9);
+}
+
+/* 화로 줄 그림은 가로로 길어서 둘을 세로로 쌓는다(390px에서 넘치지 않게). */
+.hub-forge-help__pair--stack {
+  flex-direction: column;
+  align-items: center;
+}

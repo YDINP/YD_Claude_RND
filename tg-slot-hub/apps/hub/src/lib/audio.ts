@@ -10,6 +10,7 @@ import type { WinTier } from '@tgslot/renderer'
 import { BGM_STYLES, BgmSequencer, type AudioPreset, type BgmVariant } from './bgm'
 import { createBgmVoices, type BgmVoices } from './bgmVoices'
 import { createDeepseaAudio, type TreasureSize } from './audioDeepsea'
+import { createForgeAudio } from './audioForge'
 
 type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
 
@@ -860,6 +861,10 @@ const CANDY_RECIPE: Recipe = {
 
 /** kraken-cove: 물방울·소나·금화·종. 합성 재료만 넘기고 레시피와 리스핀 전용 소리는 `audioDeepsea.ts`에 있다. */
 const deepsea = createDeepseaAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+
+/** volcano-forge: 풀무·쇠 탁·모루 깡·쇳물 치익. 레시피와 불씨·화로 가득·정산 전용 소리는 `audioForge.ts`에 있다. */
+const forge = createForgeAudio({ tone, noise, live, duck: (seconds) => duckBgmFor(seconds) })
+
 // ── 한복 야시장 (hanbok-night-market) ─────────────────────
 // 평조 오음(G A B D E) 한 옥타브 반. 가야금(명주실 줄)·해금(활)·대금(숨)·장구·꽹과리·징으로 만든다.
 // shrine 의 고토는 미야코부시 음계의 날카로운 뜯는 현이었다 — 여기는 장조 오음의 부드러운 현이고,
@@ -1731,6 +1736,7 @@ const RECIPES: Record<AudioPreset, Recipe> = {
   deepsea: deepsea.recipe,
   hanbok: HANBOK_RECIPE,
   idol: IDOL_RECIPE,
+  forge: forge.recipe,
 }
 
 let preset: AudioPreset = 'bell'
@@ -1889,6 +1895,11 @@ export function playGambleLose(): void {
 export function playCascadePop(step: number): void {
   const c = live()
   if (!c) return
+  if (preset === 'forge') {
+    forge.cues.highlight(c, step)
+    forge.cues.pop(c)
+    return
+  }
   const f = CANDY_SCALE[Math.min(Math.max(0, Math.floor(step)), CANDY_SCALE.length - 1)]!
   candyPopVoice(c, f, 0, 0.5)
   candyPopVoice(c, f * 1.26, 0.04, 0.3)
@@ -1908,6 +1919,10 @@ export function playLadderUp(index: number): void {
 export function playCascadeDrop(): void {
   const c = live()
   if (!c) return
+  if (preset === 'forge') {
+    forge.cues.drop(c)
+    return
+  }
   tone(c, { freq: 900, slideTo: 300, dur: 0.16, vol: 0.12, type: 'sine', attack: 0.004, lp: 3000, lpTo: 600 })
   noise(c, { at: 0.15, dur: 0.035, vol: 0.12, filter: 'bandpass', freq: 900, q: 1 })
   tone(c, { freq: 220, slideTo: 130, at: 0.15, dur: 0.07, vol: 0.14, type: 'sine', attack: 0.002 })
@@ -1995,6 +2010,58 @@ export function playSettleTick(progress: number): void {
 export function playTopTreasure(): void {
   const c = live()
   if (c) deepsea.cues.topTreasure(c)
+}
+
+// ── 화산 대장간 (volcano-forge) ────────────────────────────
+// 음색은 `audioForge.ts`의 forge 프리셋이다. 이 소리들은 화로 줄이 있는 게임에서만 불린다.
+// 연쇄 팝·낙하는 `playCascadePop`·`playCascadeDrop`이 프리셋이 forge일 때 같은 자리에서 대신 낸다.
+
+/** 불씨가 판에서 튀어 오른다: 장작 «탁탁». */
+export function playForgeEmberSpark(): void {
+  const c = live()
+  if (c) forge.cues.emberSpark(c)
+}
+
+/** 불씨가 화로 칸에 닿았다. `slot`은 켜진 칸(0부터, 4단 상한). */
+export function playForgeEmberLand(slot: number): void {
+  const c = live()
+  if (c) forge.cues.emberLand(c, slot)
+}
+
+/** 화로 칸이 3개 켜졌다: 낮은 숨소리. */
+export function playForgeBreath(): void {
+  const c = live()
+  if (c) forge.cues.breath(c)
+}
+
+/** 화로 가득: 합계가 두 배가 된다. 게임의 얼굴 소리. */
+export function playForgeFull(): void {
+  const c = live()
+  if (c) forge.cues.full(c)
+}
+
+/** 정산 `× N`: 망치 세 번. */
+export function playForgeSettle(): void {
+  const c = live()
+  if (c) forge.cues.settle(c)
+}
+
+/** 정산 숫자만 바뀐다: 짧은 쇠 «틱». */
+export function playForgeSettleTick(): void {
+  const c = live()
+  if (c) forge.cues.settleTick(c)
+}
+
+/** 모루 칩이 켜졌다. `count`는 모인 모루 수(3이면 기대감 북). */
+export function playForgeAnvilTease(count: number): void {
+  const c = live()
+  if (c) forge.cues.anvilTease(c, count)
+}
+
+/** 프리스핀이 더해졌다. */
+export function playForgeRetrigger(): void {
+  const c = live()
+  if (c) forge.cues.retrigger(c)
 }
 
 // ── 무대 룰렛 (idol-stage-live) ────────────────────────────

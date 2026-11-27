@@ -1,0 +1,260 @@
+/* 화로 배율 줄 — 판 위 56px(390px에서 52px). 테마 그림이 없어도 CSS로 그린다. */
+.hub-forge-rail {
+  --forge-glow: #ff7a1a;
+  --forge-core: #ffd23f;
+  --forge-iron: #2a1f1c;
+  --forge-iron-edge: #5a443a;
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  margin: 0 8px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #3a2a24 0%, var(--forge-iron) 100%);
+  border: 2px solid var(--forge-iron-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 200, 150, 0.12);
+  color: var(--forge-core);
+  min-width: 0;
+}
+
+@media (max-width: 400px) {
+  .hub-forge-rail {
+    height: 52px;
+    gap: 6px;
+  }
+}
+
+.hub-forge-rail--burning {
+  border-color: var(--forge-glow);
+  animation: hub-forge-burn 1.4s ease-in-out infinite alternate;
+}
+
+.hub-forge-rail--calm.hub-forge-rail--burning {
+  animation: none;
+  box-shadow: 0 0 10px rgba(255, 122, 26, 0.55);
+}
+
+@keyframes hub-forge-burn {
+  from {
+    box-shadow: 0 0 6px rgba(255, 122, 26, 0.45), inset 0 0 8px rgba(255, 90, 20, 0.2);
+  }
+  to {
+    box-shadow: 0 0 16px rgba(255, 150, 40, 0.8), inset 0 0 14px rgba(255, 120, 30, 0.35);
+  }
+}
+
+.hub-forge-rail__total {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  min-width: 66px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #140d0b;
+  border: 1px solid var(--forge-iron-edge);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #b9a79a;
+  transform-origin: center;
+}
+
+.hub-forge-rail__total--hot {
+  color: var(--forge-core);
+  border-color: var(--forge-glow);
+  text-shadow: 0 0 8px rgba(255, 150, 40, 0.8);
+}
+
+.hub-forge-rail__times {
+  font-size: 16px;
+  margin-right: 1px;
+}
+
+.hub-forge-rail__heat {
+  font-size: 26px;
+}
+
+.hub-forge-rail__total--md .hub-forge-rail__heat {
+  font-size: 24px;
+}
+
+.hub-forge-rail__total--sm .hub-forge-rail__heat {
+  font-size: 21px;
+}
+
+.hub-forge-rail__total--tick {
+  animation: hub-forge-tick 220ms ease-out;
+}
+
+.hub-forge-rail__total--full {
+  animation: hub-forge-full 700ms ease-out;
+}
+
+.hub-forge-rail__total--slam {
+  animation: hub-forge-slam 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes hub-forge-tick {
+  0% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes hub-forge-full {
+  0% { transform: scale(1); filter: brightness(1); }
+  30% { transform: scale(1.4); filter: brightness(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* 망치가 내려쳤다: 위에서 쾅 눌리고 튄다. */
+@keyframes hub-forge-slam {
+  0% { transform: translateY(-14px) scale(1.4); filter: brightness(2.2); }
+  40% { transform: translateY(2px) scale(0.9); filter: brightness(1.6); }
+  70% { transform: translateY(-2px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+.hub-forge-rail--settling .hub-forge-rail__total {
+  border-color: var(--forge-core);
+}
+
+.hub-forge-rail--calm .hub-forge-rail__total--tick,
+.hub-forge-rail--calm .hub-forge-rail__total--full,
+.hub-forge-rail--calm .hub-forge-rail__total--slam {
+  animation: none;
+}
+
+.hub-forge-rail__slots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hub-forge-rail__slot {
+  width: 40px;
+  height: 40px;
+  flex: 0 1 40px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: var(--forge-slot-img, radial-gradient(circle at 50% 40%, #1a110e 55%, #0d0807 100%)) center / cover;
+  border: 3px solid var(--forge-iron-edge);
+  transition: box-shadow 120ms, border-color 120ms;
+}
+
+@media (max-width: 400px) {
+  .hub-forge-rail__slot {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+  .hub-forge-rail__slots {
+    gap: 6px;
+  }
+}
+
+.hub-forge-rail__slot--lit {
+  border-color: var(--forge-glow);
+  background-image: var(--forge-ember-img, radial-gradient(circle at 50% 45%, #ffe27a 0%, #ff9a2e 45%, #c4380f 100%));
+  box-shadow: 0 0 12px rgba(255, 140, 30, 0.9);
+  animation: hub-forge-ignite 160ms ease-out;
+}
+
+.hub-forge-rail--calm .hub-forge-rail__slot--lit {
+  animation: none;
+}
+
+@keyframes hub-forge-ignite {
+  0% { transform: scale(0.7); }
+  100% { transform: scale(1); }
+}
+
+.hub-forge-rail__slot--breath:not(.hub-forge-rail__slot--lit) {
+  animation: hub-forge-breath 900ms ease-in-out infinite alternate;
+}
+
+.hub-forge-rail--calm .hub-forge-rail__slot--breath:not(.hub-forge-rail__slot--lit) {
+  animation: none;
+  border-color: var(--forge-glow);
+}
+
+@keyframes hub-forge-breath {
+  from { border-color: var(--forge-iron-edge); box-shadow: none; }
+  to { border-color: var(--forge-glow); box-shadow: 0 0 8px rgba(255, 140, 30, 0.7); }
+}
+
+.hub-forge-rail__anvil {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #1b1412;
+  border: 1px solid var(--forge-iron-edge);
+  color: #8d7c70;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0.6;
+}
+
+.hub-forge-rail__anvil--seen {
+  opacity: 1;
+  color: #d8c6b6;
+}
+
+.hub-forge-rail__anvil--hot {
+  opacity: 1;
+  color: #fff;
+  background: #a2260f;
+  border-color: #ff6a3d;
+  animation: hub-forge-anvil 520ms ease-in-out infinite alternate;
+}
+
+.hub-forge-rail--calm .hub-forge-rail__anvil--hot {
+  animation: none;
+}
+
+@keyframes hub-forge-anvil {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+/* 불씨 비행 토큰 — 뷰포트 기준 fixed. 평소 숨김. */
+.hub-forge-ember {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  display: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--forge-ember-img, radial-gradient(circle at 50% 45%, #ffe27a 0%, #ff9a2e 50%, #c4380f 100%)) center / cover;
+  box-shadow: 0 0 10px rgba(255, 150, 40, 0.95);
+  color: #2a0e04;
+  font-size: 11px;
+  font-weight: 900;
+  text-shadow: 0 0 2px #ffe9b0;
+  will-change: transform;
+}
+
+/* 판 바로 위: 스테이지 안에 띄운다. 아래 가장자리가 `--forge-rail-y`(판 첫 칸 y − 간격)에 오도록 줄 높이만큼 올린다.
+   transform을 쓰지 않는다 — 안쪽 position: fixed 불씨 토큰의 기준이 뷰포트에서 벗어나 버린다. */
+.hub-forge-rail-slot {
+  --forge-rail-h: 56px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--forge-rail-y, 0px) - var(--forge-rail-h));
+  z-index: 5;
+}
+
+@media (max-width: 400px) {
+  .hub-forge-rail-slot {
+    --forge-rail-h: 52px;
+  }
+}
