@@ -70,10 +70,18 @@ export function matchesDebugPreset(
     case 'freeSpins':
       return result.features.some((feature) => feature.type === 'freeSpins')
     case 'gamble':
-      // 프리스핀을 여는 스핀은 더블업을 열지 않는다(isGambleEligible) — 그런 판은 맞추지 않는다.
-      return !isFreeSpin && result.totalWin > 0 && result.nextState === undefined
+      // 프리스핀을 여는 스핀과 베팅 미만 당첨은 더블업을 열지 않는다(isGambleEligible) — 그런 판은 맞추지 않는다.
+      return !isFreeSpin && result.totalWin > 0 && result.totalWin >= totalBet && result.nextState === undefined
     case 'lose':
       return result.totalWin === 0 && !hasFeature
+    case 'winUnder':
+      return !hasFeature && result.totalWin > 0 && result.totalWin < totalBet
+    case 'winSmall':
+      return !hasFeature && result.totalWin >= totalBet && result.totalWin < 2 * totalBet
+    case 'winGood':
+      return !hasFeature && result.totalWin >= 2 * totalBet && result.totalWin < 5 * totalBet
+    case 'winGreat':
+      return !hasFeature && result.totalWin >= 5 * totalBet && result.totalWin < 10 * totalBet
     case 'cascade3':
       return (result.cascades?.length ?? 0) >= 3
     case 'orderRound':

@@ -39,6 +39,11 @@ export function isoWeekKey(date: Date): string {
   return `${year}-W${String(week).padStart(2, '0')}`
 }
 
+/** 지난 ISO 주의 키. 이번 주 월요일 00:00 UTC의 하루 전이 속한 주다. */
+export function previousIsoWeekKey(date: Date): string {
+  return isoWeekKey(new Date(isoWeekStart(date).getTime() - MS_PER_DAY))
+}
+
 /** 이 주가 시작한 월요일 00:00 UTC */
 export function isoWeekStart(date: Date): Date {
   const day = utcDayNumber(date)

@@ -21,6 +21,8 @@ export function findMissionDef(missionId: string): MissionDef | undefined {
 export interface MissionSpin {
   gameId: string
   win: number
+  /** 이 판의 베팅(프리스핀이면 그 라운드를 연 베팅). 베팅보다 적은 당첨은 «당첨»으로 세지 않는다. */
+  totalBet: number
   /** 프리스핀이면 true. "아무 게임 N스핀"류는 이것을 세지 않는다. */
   isFreeSpin: boolean
 }
@@ -37,7 +39,8 @@ export function missionIncrement(def: MissionDef, spin: MissionSpin): number {
     case 'any-spin':
       return spin.isFreeSpin ? 0 : 1
     case 'winning-spin':
-      return spin.win > 0 ? 1 : 0
+      // 베팅 미만 당첨은 실제로는 손실이다. 더블업 제안(isGambleEligible)과 같은 기준으로 세지 않는다.
+      return spin.win > 0 && spin.win >= spin.totalBet ? 1 : 0
     case 'game':
       return spin.gameId === def.scope.gameId ? 1 : 0
   }

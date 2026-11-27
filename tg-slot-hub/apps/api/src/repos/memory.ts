@@ -4,7 +4,7 @@ import type { GambleState, GambleStep, GameState, Locale } from '@tgslot/shared'
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims } from '../economy/bonus.js'
-import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS, leaderboardRewardRefId } from '../economy/config.js'
 import { freeSpinsSummary, isFreeSpinsActive, toRoundState, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import {
   findStepByKey,
@@ -34,6 +34,7 @@ import type {
   GambleOutcome,
   GambleStepRecord,
   ClaimBonusInput,
+  ClaimLeaderboardRewardInput,
   ClaimMissionInput,
   ClaimResult,
   JackpotState,
@@ -306,7 +307,7 @@ export class MemoryRepos implements Repos {
     let gambleAfter: GambleState | null = null
     let gambleOffer: ApplySpinResult['gambleOffer']
     const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
-    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble, opensFreeSpins }) && input.gamble) {
+    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
       // 방어: 방금 당첨금을 넣었으므로 잔액이 모자랄 수 없다. 그래도 확인하고 못 잠그면 제안을 열지 않는다.
       if (wallet.coins + walletDelta >= result.totalWin) {
         stage(-result.totalWin, LEDGER_REASONS.gambleEscrow, gambleEscrowRefId(roundId))
@@ -364,6 +365,7 @@ export class MemoryRepos implements Repos {
     const missions = applySpinToMissions(this.readMissions(input.userId, day), {
       gameId: input.gameId,
       win: result.totalWin,
+      totalBet,
       isFreeSpin,
     })
 
@@ -632,6 +634,22 @@ export class MemoryRepos implements Repos {
       entries: ranked.slice(0, limit),
       me: ranked.find((row) => row.userId === userId) ?? null,
     }
+  }
+
+  async getLeaderboardRewardClaimed(userId: string, week: string): Promise<boolean> {
+    const refId = leaderboardRewardRefId(week, userId)
+    return this.ledger.some(
+      (entry) => entry.userId === userId && entry.reason === LEDGER_REASONS.leaderboardReward && entry.refId === refId
+    )
+  }
+
+  async claimLeaderboardReward(input: ClaimLeaderboardRewardInput): Promise<ClaimResult | null> {
+    const wallet = this.wallets.get(input.userId)
+    if (!wallet) throw new Error('[memory-repo] wallet not found')
+    if (await this.getLeaderboardRewardClaimed(input.userId, input.week)) return null
+
+    this.credit(input.userId, wallet, 'coins', input.amount, input.reason, leaderboardRewardRefId(input.week, input.userId))
+    return { amount: input.amount, wallet: toAppWallet(wallet), streakDay: 1 }
   }
 
   // ---- 미션 ----

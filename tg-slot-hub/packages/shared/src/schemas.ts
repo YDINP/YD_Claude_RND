@@ -18,6 +18,12 @@ export const LevelSchema = z.object({
   /** 다음 레벨에 필요한 누적 xp */
   nextLevelXp: z.number().int().min(0),
   maxBet: z.number().int().min(1),
+  /** 현재 레벨 문턱 xp (레벨 바 구간 진행률의 시작점) */
+  levelStartXp: z.number().int().min(0).optional(),
+  /** 다음 레벨에 도달할 때 받는 보너스 */
+  nextLevelBonus: z.number().int().min(0).optional(),
+  /** 다음 최대 베팅 해금. 더 없으면 null */
+  nextUnlock: z.object({ level: z.number().int().min(1), maxBet: z.number().int().min(1) }).nullable().optional(),
 })
 export type Level = z.infer<typeof LevelSchema>
 
@@ -115,6 +121,8 @@ export type ApiError = z.infer<typeof ApiErrorSchema>
  * `win`: 당첨은 있지만 피처(프리스핀/스캐터 등)는 없음. `bigWin`: 총 베팅의 10배 이상.
  * `freeSpins`: 프리스핀 진입/재발동 피처 발생. `gamble`: 더블업 제안이 열리는 유료 당첨.
  * `lose`: 무당첨에 피처 없음.
+ * 당첨 단계 확인용(피처 없는 판): `winUnder` 총 베팅의 0 초과 1배 미만 · `winSmall` 1배 이상 2배 미만 ·
+ * `winGood` 2배 이상 5배 미만 · `winGreat` 5배 이상 10배 미만.
  * 연쇄 게임 전용: `cascade3`: 연쇄 3단계 이상. `orderRound`: 유료 스핀에 주문 카드 라운드 진입.
  * `orderComplete`: 라운드 중 주문 완료 1건 이상. 해당 피처가 없는 게임은 서버가 거부한다.
  * 말판 게임 전용: `boardBonus`: 말판 진입. `boardGoal`: 결승 도착. `boardTraps`: 함정으로 끝남.
@@ -128,6 +136,10 @@ export const SpinDebugPresetSchema = z.enum([
   'freeSpins',
   'gamble',
   'lose',
+  'winUnder',
+  'winSmall',
+  'winGood',
+  'winGreat',
   'cascade3',
   'orderRound',
   'orderComplete',
@@ -424,6 +436,23 @@ export const LeaderboardEntrySchema = z.object({
 })
 export type LeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>
 
+/** 리더보드 순위 보상 한 줄 (가상 코인) */
+export const LeaderboardRewardTierSchema = z.object({
+  fromRank: z.number().int().min(1),
+  toRank: z.number().int().min(1),
+  coins: z.number().int().min(0),
+})
+export type LeaderboardRewardTier = z.infer<typeof LeaderboardRewardTierSchema>
+
+/** 지난 주 순위 보상 상태. 순위권 밖이면 응답에서 null */
+export const LeaderboardLastWeekSchema = z.object({
+  week: z.string(),
+  rank: z.number().int().min(1),
+  reward: z.number().int().min(0),
+  claimed: z.boolean(),
+})
+export type LeaderboardLastWeek = z.infer<typeof LeaderboardLastWeekSchema>
+
 export const LeaderboardResponseSchema = z.object({
   /** ISO 주차 키. 예: `2026-W36` */
   week: z.string(),
@@ -432,6 +461,10 @@ export const LeaderboardResponseSchema = z.object({
   me: LeaderboardEntrySchema.nullable(),
   /** 이번 주가 끝나는 시각 (ISO 8601, 다음 주 월요일 00:00 UTC) */
   endsAt: z.string(),
+  /** 순위 보상 표 (가상 코인) */
+  rewards: z.array(LeaderboardRewardTierSchema).optional(),
+  /** 지난 주 순위권이었을 때만. 아니면 null */
+  lastWeek: LeaderboardLastWeekSchema.nullable().optional(),
 })
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>
 

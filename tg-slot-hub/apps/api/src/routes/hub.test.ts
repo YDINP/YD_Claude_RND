@@ -525,25 +525,33 @@ describe('레벨', () => {
   it('누적 베팅이 문턱을 넘으면 레벨업 보너스를 지급한다', async () => {
     const harness = await setup()
 
-    // 레벨 2 문턱은 round(2000 * 2^1.6) = 6063 xp. 베팅 100씩이면 61번째 스핀에서 넘는다.
+    // 레벨 2 문턱은 800 xp. 베팅 100씩이면 8번째 스핀에서 넘는다.
     let levelUp: SpinResponse['levelUp']
     let last: SpinResponse | null = null
-    for (let i = 0; i < 61; i += 1) {
+    for (let i = 0; i < 8; i += 1) {
       const res = await spinRequest(harness, `key-level-${String(i).padStart(6, '0')}`)
       expect(res.status).toBe(200)
       last = (await res.json()) as SpinResponse
       if (last.levelUp) levelUp = last.levelUp
     }
 
-    expect(levelUp).toEqual({ from: 1, to: 2, bonus: 400 })
+    expect(levelUp).toEqual({ from: 1, to: 2, bonus: 300 })
     expect(harness.repos.countLedgerEntries(harness.userId, 'level_up')).toBe(1)
     expect(harness.repos.getLedgerSum(harness.userId)).toBe(last?.wallet.coins)
 
     const me = (await (await authed(harness, '/me')).json()) as MeResponse
     expect(me.user.level).toBe(2)
-    expect(me.user.xp).toBe(6100)
-    expect(me.levelInfo).toEqual({ level: 2, xp: 6100, nextLevelXp: 11599, maxBet: 100 })
-    expect(me.jackpot).toBe(JACKPOT_SEED_COINS + 61)
+    expect(me.user.xp).toBe(800)
+    expect(me.levelInfo).toEqual({
+      level: 2,
+      xp: 800,
+      nextLevelXp: 2599,
+      maxBet: 100,
+      levelStartXp: 800,
+      nextLevelBonus: 300,
+      nextUnlock: { level: 5, maxBet: 200 },
+    })
+    expect(me.jackpot).toBe(JACKPOT_SEED_COINS + 8)
   })
 })
 
@@ -588,11 +596,11 @@ describe('확장된 스핀 응답', () => {
   it('레벨업을 만든 스핀을 재전송해도 같은 levelUp을 돌려준다', async () => {
     const harness = await setup()
 
-    // 레벨 2 문턱(6063 xp) 직전까지 xp를 올려 둔 뒤, 마지막 스핀이 레벨업을 만들게 한다.
-    await fixedSpin(harness.repos, harness.userId, { key: 'lvl-pre-0000001', bet: 6000, win: 6000 })
+    // 레벨 2 문턱(800 xp) 직전까지 xp를 올려 둔 뒤, 마지막 스핀이 레벨업을 만들게 한다.
+    await fixedSpin(harness.repos, harness.userId, { key: 'lvl-pre-0000001', bet: 700, win: 700 })
 
     const first = (await (await spinRequest(harness, 'key-replaylv-0001')).json()) as SpinResponse
-    expect(first.levelUp).toEqual({ from: 1, to: 2, bonus: 400 })
+    expect(first.levelUp).toEqual({ from: 1, to: 2, bonus: 300 })
 
     const second = (await (await spinRequest(harness, 'key-replaylv-0001')).json()) as SpinResponse
     expect(second.levelUp).toEqual(first.levelUp)

@@ -154,6 +154,10 @@ describe('POST /games/:id/spin debug presets', () => {
     { gameId: 'classic-777', preset: 'win' },
     { gameId: 'classic-777', preset: 'bigWin', maxTries: 20_000 },
     { gameId: 'classic-777', preset: 'lose' },
+    { gameId: 'classic-777', preset: 'winUnder' },
+    { gameId: 'classic-777', preset: 'winSmall' },
+    { gameId: 'classic-777', preset: 'winGood', maxTries: 20_000 },
+    { gameId: 'classic-777', preset: 'winGreat', maxTries: 20_000 },
     { gameId: 'fruit-fiesta', preset: 'win' },
     { gameId: 'fruit-fiesta', preset: 'bigWin', maxTries: 20_000 },
     { gameId: 'fruit-fiesta', preset: 'freeSpins' },
@@ -209,6 +213,27 @@ describe('POST /games/:id/spin debug presets', () => {
         case 'lose':
           expect(body.totalWin).toBe(0)
           expect(body.features).toHaveLength(0)
+          break
+        // 당첨 단계 프리셋 — 피처 없는 판에서 총 베팅 대비 배수 범위가 맞는다.
+        case 'winUnder':
+          expect(body.features).toHaveLength(0)
+          expect(body.totalWin).toBeGreaterThan(0)
+          expect(body.totalWin).toBeLessThan(totalBet)
+          break
+        case 'winSmall':
+          expect(body.features).toHaveLength(0)
+          expect(body.totalWin).toBeGreaterThanOrEqual(totalBet)
+          expect(body.totalWin).toBeLessThan(2 * totalBet)
+          break
+        case 'winGood':
+          expect(body.features).toHaveLength(0)
+          expect(body.totalWin).toBeGreaterThanOrEqual(2 * totalBet)
+          expect(body.totalWin).toBeLessThan(5 * totalBet)
+          break
+        case 'winGreat':
+          expect(body.features).toHaveLength(0)
+          expect(body.totalWin).toBeGreaterThanOrEqual(5 * totalBet)
+          expect(body.totalWin).toBeLessThan(10 * totalBet)
           break
       }
 

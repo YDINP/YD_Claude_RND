@@ -14,6 +14,8 @@ export const LEDGER_REASONS = {
   jackpotWin: 'jackpot_win',
   missionReward: 'mission_reward',
   levelUp: 'level_up',
+  /** 지난 주 리더보드 보상. refId = `<week>:<userId>` */
+  leaderboardReward: 'leaderboard_reward',
   /** 더블업에 걸린 당첨금을 지갑 밖으로 잠글 때 (음수) */
   gambleEscrow: 'gamble_escrow',
   /** 잠겼던 판돈을 지갑으로 돌려줄 때 (양수). 회수·자동 회수·만료 모두 이 사유다 */
@@ -70,17 +72,46 @@ export const JACKPOT_ODDS_DENOMINATOR = 5_000_000
 
 // ---- 주간 리더보드 ----
 export const LEADERBOARD_TOP_N = 50
+/** 지난 주 순위 보상(가상 코인). 순위 범위는 양 끝 포함. */
+export const LEADERBOARD_REWARDS = [
+  { fromRank: 1, toRank: 1, coins: 10_000 },
+  { fromRank: 2, toRank: 2, coins: 6_000 },
+  { fromRank: 3, toRank: 3, coins: 4_000 },
+  { fromRank: 4, toRank: 10, coins: 2_000 },
+  { fromRank: 11, toRank: 50, coins: 800 },
+] as const
+
+/** 리더보드 보상 원장 refId. 원장 `(reason, ref_id)` 유니크가 이중 지급을 DB에서 막는다. */
+export function leaderboardRewardRefId(week: string, userId: string): string {
+  return `${week}:${userId}`
+}
+
+/** 순위에 해당하는 보상. 범위 밖이면 0. */
+export function leaderboardRewardForRank(rank: number): number {
+  for (const tier of LEADERBOARD_REWARDS) {
+    if (rank >= tier.fromRank && rank <= tier.toRank) return tier.coins
+  }
+  return 0
+}
 
 // ---- 레벨 ----
-/** 레벨 n의 요구 xp = round(BASE * n^EXPONENT). 단 레벨 1은 0이다. */
-export const LEVEL_XP_BASE = 2000
-export const LEVEL_XP_EXPONENT = 1.6
-/** 레벨업 보너스 = 이 값 × 도달 레벨 */
-export const LEVEL_UP_BONUS_PER_LEVEL = 200
+/**
+ * 레벨 n의 요구 xp = min(옛 곡선, 새 곡선). 단 레벨 1은 0이다.
+ * - 옛 곡선: round(LEGACY_BASE * n^LEGACY_EXPONENT)
+ * - 새 곡선: round(BASE * (n-1)^EXPONENT) (첫 레벨업을 첫 세션 안으로)
+ * min을 남겨 어떤 xp에서도 새 레벨이 옛 레벨보다 낮아지지 않게 식으로 보장한다.
+ */
+export const LEVEL_XP_LEGACY_BASE = 2000
+export const LEVEL_XP_LEGACY_EXPONENT = 1.6
+export const LEVEL_XP_BASE = 800
+export const LEVEL_XP_EXPONENT = 1.7
+/** 레벨업 보너스 = max(최소값, 이 값 × 도달 레벨) */
+export const LEVEL_UP_BONUS_PER_LEVEL = 100
+export const LEVEL_UP_BONUS_MIN = 300
 /** 레벨 구간별 해금 최대 베팅. `minLevel` 내림차순으로 평가한다. */
 export const MAX_BET_TIERS = [
-  { minLevel: 6, maxBet: 500 },
-  { minLevel: 3, maxBet: 200 },
+  { minLevel: 10, maxBet: 500 },
+  { minLevel: 5, maxBet: 200 },
   { minLevel: 1, maxBet: 100 },
 ] as const
 
@@ -88,7 +119,7 @@ export const MAX_BET_TIERS = [
 /**
  * 미션 정의. `scope`가 진행도 증가 조건이다.
  * - `any-spin`: 모든 스핀
- * - `winning-spin`: 당첨(win > 0) 스핀
+ * - `winning-spin`: 베팅 이상 당첨(win ≥ 베팅) 스핀. 베팅 미만 당첨은 세지 않는다
  * - `game`: `gameId`가 일치하는 스핀
  */
 export const MISSION_DEFS = [

@@ -27,7 +27,7 @@ import {
 import type { TelegramUser } from '../auth/initData.js'
 import { BONUS_KINDS, emptyBonusClaims } from '../economy/bonus.js'
 import type { BonusClaim, BonusClaims, BonusKind } from '../economy/bonus.js'
-import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS } from '../economy/config.js'
+import { JACKPOT_SEED_HUNDREDTHS, LEDGER_REASONS, leaderboardRewardRefId } from '../economy/config.js'
 import { freeSpinsSummary, isFreeSpinsActive, toRoundState, wrapFreeSpinsState } from '../economy/freeSpins.js'
 import {
   findStepByKey,
@@ -57,6 +57,7 @@ import type {
   GambleOutcome,
   GambleStepRecord,
   ClaimBonusInput,
+  ClaimLeaderboardRewardInput,
   ClaimMissionInput,
   ClaimResult,
   JackpotState,
@@ -412,6 +413,7 @@ export class DrizzleRepos implements Repos {
       const missions = applySpinToMissions(await readMissionRows(tx, input.userId, day), {
         gameId: input.gameId,
         win: result.totalWin,
+        totalBet,
         isFreeSpin,
       })
       for (const mission of missions) {
@@ -456,7 +458,7 @@ export class DrizzleRepos implements Repos {
       let gambleAfter: GambleState | null = null
       let gambleOffer: ApplySpinResult['gambleOffer']
       const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
-      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, config: input.gamble, opensFreeSpins }) && input.gamble) {
+      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
         // 방어: 이번 스핀의 당첨금이 그대로 잠기므로 잔액이 모자랄 수 없다.
         if (locked.coins + walletDelta >= result.totalWin) {
           entries.push({
@@ -894,6 +896,60 @@ export class DrizzleRepos implements Repos {
       )
 
     return { entries, me: { ...mine, rank: (counted?.ahead ?? entries.length) + 1 } }
+  }
+
+  async getLeaderboardRewardClaimed(userId: string, week: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: ledger.id })
+      .from(ledger)
+      .where(
+        and(
+          eq(ledger.reason, LEDGER_REASONS.leaderboardReward),
+          eq(ledger.refId, leaderboardRewardRefId(week, userId))
+        )
+      )
+      .limit(1)
+    return row !== undefined
+  }
+
+  async claimLeaderboardReward(input: ClaimLeaderboardRewardInput): Promise<ClaimResult | null> {
+    const now = this.clock()
+    const refId = leaderboardRewardRefId(input.week, input.userId)
+
+    return this.db.transaction(async (tx) => {
+      // 지갑 행 잠금으로 같은 사용자의 동시 수령을 직렬화한다.
+      const [locked] = await tx
+        .select()
+        .from(wallets)
+        .where(eq(wallets.userId, input.userId))
+        .limit(1)
+        .for('update')
+      if (!locked) throw new Error('[drizzle-repo] wallet not found for leaderboard reward')
+
+      const [existing] = await tx
+        .select({ id: ledger.id })
+        .from(ledger)
+        .where(and(eq(ledger.reason, input.reason), eq(ledger.refId, refId)))
+        .limit(1)
+      if (existing) return null
+
+      await tx.insert(ledger).values({
+        userId: input.userId,
+        delta: input.amount,
+        currency: 'coins',
+        reason: input.reason,
+        refId,
+      })
+
+      const [updated] = await tx
+        .update(wallets)
+        .set({ coins: sql`${wallets.coins} + ${input.amount}`, updatedAt: now })
+        .where(eq(wallets.userId, input.userId))
+        .returning()
+      if (!updated) throw new Error('[drizzle-repo] wallet update failed on leaderboard reward')
+
+      return { amount: input.amount, wallet: toAppWallet(updated), streakDay: 1 }
+    })
   }
 
   // ---- 미션 ----

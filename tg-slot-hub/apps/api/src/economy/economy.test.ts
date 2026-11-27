@@ -5,13 +5,14 @@ import {
   JACKPOT_ODDS_DENOMINATOR,
   JACKPOT_SEED_COINS,
   JACKPOT_SEED_HUNDREDTHS,
+  leaderboardRewardForRank,
 } from './config.js'
 import { hundredthsToCoins, isJackpotHit, jackpotAccrualHundredths } from './jackpot.js'
 import { dailyAmountForStreakDay, decideDaily, decideRescue, decideTimed, projectDaily } from './bonus.js'
 import type { BonusClaim } from './bonus.js'
-import { levelFromXp, levelUpBonus, maxBetForLevel, toLevelState, xpForLevel } from './level.js'
+import { legacyXpForLevel, levelFromXp, levelUpBonus, maxBetForLevel, toLevelState, xpForLevel } from './level.js'
 import { applySpinToMissions, toMissionDtos } from './missions.js'
-import { isoWeekEnd, isoWeekKey, utcDayKey } from './time.js'
+import { isoWeekEnd, isoWeekKey, previousIsoWeekKey, utcDayKey } from './time.js'
 
 function claim(iso: string, streakDay = 1): BonusClaim {
   return { kind: 'daily', claimedAt: new Date(iso), streakDay }
@@ -144,33 +145,119 @@ describe('잭팟 경제', () => {
 })
 
 describe('레벨', () => {
-  it('레벨 1의 요구 xp는 0이고 그 위는 2000 * n^1.6이다', () => {
+  // 곡선을 바꾸기 전 규칙. 기존 사용자의 레벨·최대 베팅이 내려가지 않음을 비교하는 기준이다.
+  const LEGACY_TIERS = [
+    { minLevel: 6, maxBet: 500 },
+    { minLevel: 3, maxBet: 200 },
+    { minLevel: 1, maxBet: 100 },
+  ]
+  function legacyLevelFromXp(xp: number): number {
+    let level = 1
+    while (level < 999 && xp >= legacyXpForLevel(level + 1)) level += 1
+    return level
+  }
+  function legacyMaxBet(level: number): number {
+    return LEGACY_TIERS.find((tier) => level >= tier.minLevel)!.maxBet
+  }
+
+  it('레벨 1의 요구 xp는 0이고 레벨 2는 800이다', () => {
     expect(xpForLevel(1)).toBe(0)
-    expect(xpForLevel(2)).toBe(Math.round(2000 * Math.pow(2, 1.6)))
+    expect(xpForLevel(2)).toBe(800)
     expect(levelFromXp(0)).toBe(1)
-    expect(levelFromXp(xpForLevel(2) - 1)).toBe(1)
-    expect(levelFromXp(xpForLevel(2))).toBe(2)
+    expect(levelFromXp(799)).toBe(1)
+    expect(levelFromXp(800)).toBe(2)
+  })
+
+  it('레벨 L2~L12 문턱이 명세 표와 같다', () => {
+    const expected: Record<number, number> = {
+      2: 800,
+      3: 2599,
+      4: 5178,
+      5: 8445,
+      6: 12341,
+      7: 16825,
+      8: 21865,
+      9: 27437,
+      10: 33520,
+      11: 40095,
+      12: 47147,
+    }
+    for (const [level, xp] of Object.entries(expected)) {
+      expect(xpForLevel(Number(level))).toBe(xp)
+    }
+  })
+
+  it('n=1..999 전부 새 문턱은 옛 문턱 이하다', () => {
+    for (let n = 1; n <= 999; n += 1) {
+      expect(xpForLevel(n)).toBeLessThanOrEqual(legacyXpForLevel(n))
+    }
+  })
+
+  it('xp 0~2,000,000 어디서도 새 레벨 >= 옛 레벨, 새 최대 베팅 >= 옛 최대 베팅', () => {
+    for (let xp = 0; xp <= 2_000_000; xp += 1000) {
+      const next = levelFromXp(xp)
+      const prev = legacyLevelFromXp(xp)
+      expect(next).toBeGreaterThanOrEqual(prev)
+      expect(maxBetForLevel(next)).toBeGreaterThanOrEqual(legacyMaxBet(prev))
+    }
   })
 
   it('xp가 크게 튀면 여러 레벨을 한 번에 건너뛴다', () => {
     expect(levelFromXp(xpForLevel(7))).toBe(7)
-    expect(levelUpBonus(7)).toBe(1400)
+    expect(levelUpBonus(7)).toBe(700)
+  })
+
+  it('레벨업 보너스는 max(300, 100 x 레벨)이다', () => {
+    expect(levelUpBonus(2)).toBe(300)
+    expect(levelUpBonus(4)).toBe(400)
+    expect(levelUpBonus(10)).toBe(1000)
   })
 
   it('베팅 상한은 레벨 구간으로 해금된다', () => {
-    expect([1, 2].map(maxBetForLevel)).toEqual([100, 100])
-    expect([3, 4, 5].map(maxBetForLevel)).toEqual([200, 200, 200])
-    expect([6, 12].map(maxBetForLevel)).toEqual([500, 500])
+    expect([1, 2, 4].map(maxBetForLevel)).toEqual([100, 100, 100])
+    expect([5, 6, 9].map(maxBetForLevel)).toEqual([200, 200, 200])
+    expect([10, 12].map(maxBetForLevel)).toEqual([500, 500])
   })
 
-  it('레벨 상태는 xp에서 파생된다', () => {
-    expect(toLevelState(0)).toEqual({ level: 1, xp: 0, nextLevelXp: xpForLevel(2), maxBet: 100 })
+  it('레벨 상태는 xp에서 파생되고 구간 시작·다음 보상·다음 해금을 채운다', () => {
+    expect(toLevelState(0)).toEqual({
+      level: 1,
+      xp: 0,
+      nextLevelXp: 800,
+      maxBet: 100,
+      levelStartXp: 0,
+      nextLevelBonus: 300,
+      nextUnlock: { level: 5, maxBet: 200 },
+    })
+    expect(toLevelState(9000)).toMatchObject({
+      level: 5,
+      levelStartXp: 8445,
+      nextLevelBonus: 600,
+      maxBet: 200,
+      nextUnlock: { level: 10, maxBet: 500 },
+    })
+    expect(toLevelState(40000).level).toBe(10)
+    expect(toLevelState(40000).nextUnlock).toBeNull()
+  })
+})
+
+describe('리더보드 보상·지난 주 키', () => {
+  it('순위별 보상 표', () => {
+    expect([1, 2, 3, 4, 10, 11, 50, 51].map(leaderboardRewardForRank)).toEqual([
+      10000, 6000, 4000, 2000, 2000, 800, 800, 0,
+    ])
+  })
+
+  it('지난 주 키는 월요일 경계와 연말을 건넌다', () => {
+    expect(previousIsoWeekKey(new Date('2026-09-07T00:00:00Z'))).toBe(isoWeekKey(new Date('2026-09-06T12:00:00Z')))
+    expect(previousIsoWeekKey(new Date('2026-09-13T23:59:59Z'))).toBe(isoWeekKey(new Date('2026-09-06T12:00:00Z')))
+    expect(previousIsoWeekKey(new Date('2027-01-04T00:00:00Z'))).toBe('2026-W53')
   })
 })
 
 describe('미션 진행도', () => {
   it('스핀 1회가 조건에 맞는 미션만 올린다', () => {
-    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 0, isFreeSpin: false })
+    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 0, totalBet: 10, isFreeSpin: false })
     expect(progress).toEqual([
       { missionId: 'spin_50', progress: 1, claimed: false },
       { missionId: 'win_3', progress: 0, claimed: false },
@@ -179,15 +266,27 @@ describe('미션 진행도', () => {
   })
 
   it('당첨 스핀은 win_3을, 다른 게임 스핀은 classic_20을 올리지 않는다', () => {
-    const progress = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 250, isFreeSpin: false })
+    const progress = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 250, totalBet: 10, isFreeSpin: false })
     expect(progress.find((row) => row.missionId === 'win_3')?.progress).toBe(1)
     expect(progress.find((row) => row.missionId === 'classic_20')?.progress).toBe(0)
+  })
+
+  it('베팅보다 적은 당첨은 win_3을 올리지 않고, 베팅과 같은 당첨부터 센다', () => {
+    // 베팅 미만 당첨은 실제로는 손실이다(개선안 1: 손실을 당첨처럼 꾸미지 않는다).
+    const under = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 8, totalBet: 10, isFreeSpin: false })
+    expect(under.find((row) => row.missionId === 'win_3')?.progress).toBe(0)
+    const even = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 10, totalBet: 10, isFreeSpin: false })
+    expect(even.find((row) => row.missionId === 'win_3')?.progress).toBe(1)
+    // 프리스핀은 라운드를 연 베팅과 비교한다.
+    const freeUnder = applySpinToMissions([], { gameId: 'fruit-fiesta', win: 4, totalBet: 10, isFreeSpin: true })
+    expect(freeUnder.find((row) => row.missionId === 'win_3')?.progress).toBe(0)
   })
 
   it('목표를 채운 뒤에는 진행도가 더 오르지 않는다', () => {
     const progress = applySpinToMissions([{ missionId: 'win_3', progress: 3, claimed: false }], {
       gameId: 'classic-777',
       win: 100,
+      totalBet: 10,
       isFreeSpin: false,
     })
     expect(progress.find((row) => row.missionId === 'win_3')?.progress).toBe(3)
@@ -195,7 +294,7 @@ describe('미션 진행도', () => {
 
   it('프리스핀은 "아무 게임 N스핀"을 채우지 않는다', () => {
     // 트리거 한 번으로 10~20칸이 공짜로 채워지면 "오늘 N번 돌기"가 의미를 잃는다.
-    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 250, isFreeSpin: true })
+    const progress = applySpinToMissions([], { gameId: 'classic-777', win: 250, totalBet: 10, isFreeSpin: true })
 
     expect(progress.find((row) => row.missionId === 'spin_50')?.progress).toBe(0)
     // 당첨 조건과 게임 지정 미션은 프리스핀도 센다.

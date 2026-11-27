@@ -310,8 +310,21 @@ export interface LeaderboardSnapshot {
   me: LeaderboardRow | null
 }
 
+export interface ClaimLeaderboardRewardInput {
+  userId: string
+  /** 보상 대상 ISO 주차 키 (지난 주) */
+  week: string
+  amount: number
+  /** 원장 사유. refId는 `<week>:<userId>`로 레포가 만든다. */
+  reason: string
+}
+
 export interface LeaderboardRepo {
   getLeaderboard(week: string, limit: number, userId: string): Promise<LeaderboardSnapshot>
+  /** 이 주 보상을 이미 받았는지. 원장 `(reason, refId)`로 판정한다. */
+  getLeaderboardRewardClaimed(userId: string, week: string): Promise<boolean>
+  /** 이미 받았으면 `null`. 원장 유니크가 이중 지급을 막는다. */
+  claimLeaderboardReward(input: ClaimLeaderboardRewardInput): Promise<ClaimResult | null>
 }
 
 export interface ClaimMissionInput {

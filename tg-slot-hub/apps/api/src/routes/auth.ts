@@ -6,6 +6,7 @@ import type { Repos } from '../repos/types.js'
 import type { JwtService } from '../auth/jwt.js'
 import { validateInitData } from '../auth/initData.js'
 import { tryDevMockAuth } from '../auth/devMock.js'
+import { toLevelState } from '../economy/level.js'
 
 export interface AuthRouteDeps {
   config: Pick<ApiConfig, 'allowDevAuth' | 'telegramBotToken'>
@@ -43,7 +44,8 @@ export function createAuthRoute(deps: AuthRouteDeps): Hono {
     const { user, wallet } = await deps.repos.upsertFromTelegram(authResult.user, locale)
     const token = await deps.jwt.signToken({ sub: user.id, tid: user.telegramId })
 
-    const response: AuthResponse = { token, user, wallet }
+    // level은 xp에서 파생된다 — 저장 값(옛 곡선일 수 있다) 대신 /me와 같은 계산 값을 싣는다.
+    const response: AuthResponse = { token, user: { ...user, level: toLevelState(user.xp).level }, wallet }
     return c.json(response, 200)
   })
 

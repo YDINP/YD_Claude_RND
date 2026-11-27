@@ -122,7 +122,7 @@ describe('POST /games/:id/spin', () => {
       const res = await spinRequest(harness, { idempotencyKey: `key-invariant-${String(i).padStart(6, '0')}` })
       expect(res.status).toBe(200)
       const body = (await res.json()) as SpinResponse
-      expected = expected - BET + body.totalWin
+      expected = expected - BET + body.totalWin + (body.levelUp?.bonus ?? 0)
       expect(body.wallet.coins).toBe(expected)
       expect(body.nonce).toBe(i + 1)
     }
