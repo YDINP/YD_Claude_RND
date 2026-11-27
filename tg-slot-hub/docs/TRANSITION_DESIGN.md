@@ -1597,3 +1597,23 @@ Vertical full-screen game transition effect, glossy 3D toy-like game render, sof
 ```
 Vertical full-screen game transition effect, kawaii chibi cel-shaded game art, thick clean black outlines and flat cel-shaded color fills with a matte ceramic-glaze texture, soft even pastel lighting with a gentle vermilion rim light, sakura pink (#f6c0cf) and night indigo (#243252) color story with torii vermilion (#e05a3c) and mint (#8fd6c0) accents, premium mobile casino game art. A huge vermilion lacquered torii gate with thick black outlines stands at the head of a shrine courtyard under a night-indigo sky, sakura petals drifting around its pillars. One continuous motion repeats: the torii rushes forward toward the viewer with a storm of flat sakura-pink petals sweeping up around it, and the gate keeps coming until its broad lacquered crossbeam passes the lens and fills the entire frame, completely opaque edge to edge and corner to corner in flat vermilion lacquer. While the frame is fully covered the surface never stops moving: sakura petals keep streaming diagonally across the vermilion lacquer, a mint-green highlight slides along the ceramic glaze, and thick black outline seams of the beam drift past — the covered frame is never a flat still color and never freezes. Then the gate falls back into the courtyard and the petals thin out before the next approach. The gate rushing forward and the frame being covered are one single motion, never separate steps. Not photorealistic: no photorealistic photography, no real-world photography, no 3D realism, no film-camera look — this is flat cel-shaded anime-style game art. Each full cycle lasts about three seconds and repeats about four times across the clip, so the clip goes clear, covered, clear again, over and over. Only the objects move; the camera never moves. Camera locked, no camera movement, no zoom, no pan. No text, no letters, no numbers, no logos, no watermark, no signature, no people, no faces, no hands, no arms, no fingers, no animals. No dogs.
 ```
+
+
+### 8-5. volcano-forge — 화산 대장간 (프리스핀 = 화로 가득 두 배 라운드)
+
+팩 컨셉: 밝은 모바일 캐주얼 용암 대장간, 덩어리 점토 3D. 용암 주황 `#ff7a1a`·불꽃 노랑 `#ffd23f`·마그마 빨강 `#e8432e`·쇳빛 남흑 `#2b2f3a`. 프리스핀은 모루 4개(스캐터)로 열리고 화로가 가득 찰 때마다 합계가 두 배가 된다.
+
+**1. 소재.** 진입은 «쇳물이 쏟아져 덮는다», 복귀는 «망치가 식은 쇠판을 깨뜨린다». 방향을 바꿨고(R6, 역재생 아님) 망치는 정산 연출의 망치와 같은 물건이라 라운드 끝이 한 번에 읽힌다.
+
+**2. 규칙 적용.** R1(완전 불투명)·R2(3초 사이클)·R3(`camera_fixed` 미전달, 본문 고정 문구)·R4(손·사람·글자 금지)·R8(붓기 = 덮임, 내려침 = 깨짐이 한 동작)·R11(덮인 뒤에도 쇳물 표면이 흐르고, 새 쇠판의 균열이 맥동)·R12(`stylePrefix`의 클레이 음영·팔레트 hex 가져옴). 프롬프트는 기획서 §10 그대로이며 `D:/park/tgslot-wt/_qa/volcano-forge-clips/{enter,exit}.txt` 에 남겼다.
+
+**3. 결과 (재시도 없음, 2편 $1.86).** 소스는 `D:/park/tgslot-wt/_qa/volcano-forge-clips/enter.mp4`·`exit.mp4`(각 `.json` 에 task·프롬프트). 둘 다 사이클이 약 8초로 나와 요청한 3초가 아니다. 다시 자를 때는 발주 없이 거기서 뽑는다.
+
+| 전환 | 소스 컷 | 스왑 오프셋 | 비고 |
+|---|---|---|---|
+| 진입 `fs-enter.webp` | 1.6 → 4.6 등속 | `opaqueMs 2200` (소스 3.8초에 완전 덮임, 이후 0.8초 쇳물이 계속 흐른다) | 도가니가 기울어 쏟아짐 → 화면 가득 용암. 덮인 구간에 단색 정지 없음 |
+| 복귀 `fs-exit.webp` | 0.0 → 2.8 를 3.0초로 늘림(×1.07) | `opaqueMs 0` | 쇠판 위에서 시작 → 망치 내려침·조각 비산 → 맑은 주황 빛. 소스 2.8초에 새 쇠판이 들어오기 전에 끊었다 |
+
+16fps / q60 / 360×640 / `loop 1`, 48프레임, 최대 프레임 63ms, 정지 0.0%, 진입 672 KiB / 복귀 425 KiB. `check:clips` 통과.
+
+**한계.** 복귀 끝 프레임은 «맑은 주황 빛»이라 `bg.webp` 와 정확히 같지는 않다(이음매 수치는 재지 않았다). 복귀 시작은 쇠판이 화면을 이미 가득 채워 R1 을 지킨다.

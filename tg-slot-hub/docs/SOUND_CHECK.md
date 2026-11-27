@@ -769,3 +769,116 @@ z 는 의도 문구 두 가지 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거�
 - 효과음 스템: `D:/park/tgslot-wt/_qa/new-c-sound/wav/idol_<spin|reelstop|reelstops|winsmall|winbig|feature|mutation|riser|rollup|ui>.wav`, 룰렛 `idol_<rtick|rland_coin|rland_lit|rland_stepup|rland_encore|rland_grand|rlight|rzoom|rsummary_big|rsummary_small|rentry>.wav`
 - BGM·믹스: `wav/bgm_idol_base.wav`, `bgm_idol_free.wav`, `mix_idol_mix.wav`, `mix_idol_sfx.wav`, `mix_idol_duck.wav`, 룰렛 장면 `rmix_idol_mix.wav`(`_sfx`·`_duck`)
 - 원자료: `final_intent.txt`, `final_measure.txt`, `final_cos.txt`, `final_bgm.txt`, `final_mix.txt`, `final_rmix.txt`, 함성 실험 `exp_*.wav`(저장소 밖)
+
+
+## volcano-forge 사운드 (사운드 레인) — 2026-11-27
+
+`forge` 프리셋의 효과음 레시피·화로 줄 전용 소리 11종·배경음을 earshot 으로 듣고 잰 기록. 방법은 위와 같다(실제 `audio.ts`를 헤드리스 Chrome OfflineAudioContext + 가상 시계로 렌더, 하네스 `D:/park/tgslot-wt/_qa/new-a-sound/run-forge.mjs`·`analyze_forge.py`·`intentforge.py`·`mixforge.py`, BGM 40%). **수치는 참고값이고 최종 귀 판정은 사용자 몫이다.** 합성음이 목적이라 realness 는 보지 않았다.
+
+### 무엇을 만들었나
+
+| 파일 | 내용 |
+|---|---|
+| `apps/hub/src/lib/audioForge.ts` | `forge` 레시피(풀무 바람 스핀·쇠 «탁» 릴 정지·모루 «깡» 당첨·화르륵+톱니 화음 큰 당첨/피처·모루 기대감 북 `riserExtra`)와 전용 소리 `ForgeCues`(연쇄 강조·팝·낙하·불씨 튐·불씨 도착·숨쉬기·화로 가득·정산·정산 틱·모루 기대감·프리스핀 추가) |
+| `apps/hub/src/lib/audio.ts` | `forge` 인스턴스·`RECIPES.forge`, `playForgeEmberSpark/EmberLand/Breath/Full/Settle/SettleTick/AnvilTease/Retrigger`. 프리셋이 forge 일 때 `playCascadePop`·`playCascadeDrop` 이 forge 소리로 대신 낸다(캔디 소리 불리지 않음) |
+| `apps/hub/src/lib/bgmForge.ts` · `bgmVoices.ts` · `bgm.ts` | `FORGE`(104bpm, A 믹솔리디안) · `FORGE_KIT`(뮤트 톱니·사각 선율, 둥근 북, 모루 핑, 셰이커) · `BGM_STYLES.forge` |
+| `apps/hub/src/hooks/useForgeRail.ts` · `GameScreen.tsx` | 연출 레인이 임시로 쓰던 캔디 소리(`playLadderUp`·`playFeature`·`playOrderComplete`·`playOrderTick`)를 forge 전용 소리로 교체. 프리스핀 재발동은 `playForgeRetrigger` |
+| `packages/game-sdk/src/theme.ts` · `packages/renderer/src/types.ts` | `sound.preset` 에 `'forge'` 추가 |
+
+기존 프리셋·함수 이름은 그대로다(덧붙임뿐).
+
+### 기획서와 달라진 점
+
+- 모루 «깡»은 기획서의 배음비 1 : 2.76 : 5.40 만으로는 CLAP 이 «kalimba/glass ting»으로 읽어서, 어긋난 비정수 배음(1 : 2.32 : 3.74 : 5.12) + 때리는 순간의 대역 잡음(3.1kHz) + 고역 잡음을 더해 거칠게 했다. 그래도 «anvil/hammer» 문구는 z +2 이하다(아래).
+- 쇠 «탁»(릴 정지)은 90Hz 몸통 대신 78→52Hz 사인 + 2.2kHz 짧은 비정수 핑 + 고역 잡음으로 바꿨다. 90Hz/1.3kHz 안은 shrine 의 공명 나무 정지음과 코사인 0.91~0.94 로 너무 가까웠다.
+- 롤업 틱·마감은 사인 핑 대신 낮은 삼각파 «틱» + 쇠 «탁» + 모루 한 번으로 바꿨다(deepsea 롤업과 0.90 → 0.85).
+- 배경음: 아르페지오 악기를 빼고 패드를 키웠다(candy 기본곡과 0.918 → 0.893). 선율은 사각+톱니 짧은 금관풍으로 썼다.
+
+### 효과음 (최종 렌더, forge)
+
+z 는 의도 문구 중 높은 쪽. 짧은 원샷(<0.5 s)은 태거가 약하다.
+
+| 이벤트 | 레시피 | LUFS / dBTP | 최상위 판독 | 의도 문구 z |
+|---|---|---|---|---|
+| spin | 풀무 바람 + 낮은 쿵 | −41.0 / −19.9 | a digital glitch | −1.06 (불일치) |
+| reelstop | 쇠 «탁» | −25.5 / −3.9 | a wooden block hit +3.2 | 약함 |
+| winsmall | 탁 + 모루 두 번 | −24.8 / −10.1 | a kalimba note | +1.95 |
+| winbig | 화르륵 → 모루 N번 → 톱니 화음 → 불꽃 | −23.8 / −8.7 | a stutter glitch transition | +0.4 (불일치) |
+| feature | 풀무 두 번 → 불길 → 톱니 3화음 스탭 | −28.0 / −10.7 | a wooden block hit | +0.8 |
+| mutation | 쇠 탁 + 낮은 모루 + 장작 | −27.9 / −12.2 | kalimba | +2.0 |
+| riser | 낮은 톱니 상승음 + 북 두 번 반복 | −24.9 / −12.6 | a downlifter | +1.6 |
+| rollup | 쇠 틱 + 마감 모루 | −30.4 / −10.4 | a kalimba note | +1.6 |
+
+- 꼬리 −240 dB, 클리핑 0, 이벤트 전부 true peak −3.3 dBTP 이하(기준 ≤ −1).
+- **earshot 은 합성 모루·풀무를 «anvil»·«bellows»·«furnace»로 읽지 못한다.** 금속 소리는 kalimba/glass ting/success chime, 바람·불길은 glitch/whoosh 로 읽혔다(앞선 프리셋 구간과 같은 한계). 의도 일치 여부는 귀로 판단해야 한다.
+
+### 화로 줄 전용 소리
+
+| 소리 | 내용 | LUFS / dBTP |
+|---|---|---|
+| 연쇄 강조 `hl0~hl5` | 모루 «깡», 단계마다 온음씩 상승(6단) + 팝 «치익» | −23 / −7 |
+| 낙하 | 75Hz «쿵» | −28.8 / −7.5 |
+| 불씨 튐 | 장작 «탁탁» 4알 | −39.4 / −16.8 (짧은 질감이라 작다) |
+| 불씨 도착 | 짧은 «훅» + A 단조 펜타토닉 4단(440·523·587·659Hz) | −26.4 / −9 |
+| 숨쉬기(3칸) | 62Hz 웅웅 3회(1.5Hz) | −27.4 / −12.6 |
+| 화로 가득 | 풀무 2회 → 불길 → 톱니 3화음 스탭(음악 2.4초 덕킹) | −27.8 / −9.3 |
+| 정산 ×N | 망치 3연타 «깡깡깡» 상행 | −21.8 / −5.9 |
+| 정산 틱 | 쇠 «틱» | −31.4 / −8.3 |
+| 모루 2/3개 | 60Hz 북 한 번 / 두 번 + 용암 드론 | −31.1 / −27.1 |
+| 프리스핀 추가 | 모루 «깡» 두 음 + 불길 | −23.8 / −10.1 |
+
+### 기존 프리셋과 구분 (같은 이벤트, CLAP 코사인 — 낮을수록 다름)
+
+기존 9개 프리셋(bell·fruit·western·shrine·clockwork·candy·deepsea·hanbok·idol)과 비교.
+
+| 이벤트 | forge vs 가장 비슷한 프리셋 |
+|---|---|
+| spin | 0.76 (shrine) |
+| reelstop / reelstops | 0.86 (shrine) / 0.86 (shrine) |
+| winsmall | 0.83 (hanbok) |
+| winbig | 0.83 (deepsea) |
+| feature | 0.79 (deepsea) |
+| mutation | 0.81 (hanbok) |
+| riser | 0.89 (hanbok) |
+| rollup | 0.81 (deepsea) |
+
+기준(≤ 0.90) 충족, 최대 0.89(riser). 전용 소리는 기존 대표 소리(승리·피처·변형·릴 정지·빅윈)와 최대 0.86(정산 틱 vs shrine 릴 정지).
+
+### 배경음 (104 bpm, A 믹솔리디안)
+
+| 항목 | forge |
+|---|---|
+| 기본 LUFS (20~50초) | −30.8 (목표 −30~−32) / 프리스핀 −30.0 |
+| true peak | −18.8 / −19.1 dBTP, 클리핑 0 |
+| 가장 비슷한 기존 곡 (CLAP 코사인) | candy_base 0.893, shrine_base 0.896(기준 ≤ 0.90 충족) |
+| 기본 ↔ 프리스핀 | 0.82 |
+| 프리스핀 변주 | +2반음, 4% 빠르게(공용 테스트가 프리스핀 변주는 더 빨라야 한다고 요구), 16분 셰이커 + 모루 핑 8분 + 톱니 대선율 |
+
+### 믹스 균형 (30초 장면, BGM 40%)
+
+| 항목 | 결과 |
+|---|---|
+| 일반 장면 | −28.4 LUFS, true peak −2.3 dBTP, 클리핑 0. SFX−BGM: 릴 정지 +4.7 / 작은 당첨 +6.5 / 기대감 +13.2 / 큰 당첨 +14.5 / 피처 +14.9 |
+| 덕킹 | 기대감 −6.7, 큰 당첨 −7.8, 피처 −11.8 dB |
+| 화로 줄 한 판(20초) | −25.9 LUFS, true peak −2.9 dBTP. SFX−BGM: 릴 정지 +2.0 / 팝·낙하 +4.2 / 불씨 +6.4~+11.1 / 숨쉬기 +3.4 / 화로 가득 +10.4 / 정산 +14.6 / 큰 당첨 +10.2 |
+
+릴 정지(+2.0)와 숨쉬기(+3.4)는 BGM 에 가까워 묻힐 수 있다. 귀로 확인할 것.
+
+### 브라우저 확인 (개발 스택, 헤드리스 Chrome 390×844)
+
+프리스핀 진입(모루 4개 → «프리스핀 8회» 팝업 → 쇳물 클립 → 프리스핀 배경), 라운드 진행(불씨·화로 줄), 종료 팝업(획득·베팅의 ×N·최종 화로·화로 가득 횟수·최고 한 판)과 forge 빅윈 스킨(망치·검 파티클, 불꽃 빛줄기)을 확인했다.
+
+### 남은 문제 · 귀로 확인할 것
+
+1. earshot 이 모루·풀무·불길을 의도대로 읽지 못한다. «깡»이 종처럼 맑게 들리는지, 충분히 거친 쇠로 들리는지.
+2. 스핀 시작(풀무 바람)이 −41 LUFS 로 작다. 릴 회전 루프에 묻히지 않는지.
+3. 불씨 튐(장작 탁탁)은 매우 작은 질감이다. 안 들려도 연출에는 영향이 없다.
+4. 릴 정지가 5연속에서 날카롭지 않은지(밝기 약 3.7kHz).
+5. 기대감 북(60Hz)이 작은 스피커에서 들리는지.
+
+### 들어볼 파일
+
+- 화로 가득 `wav/forge_full.wav`, 정산 망치 `wav/forge_settle.wav`, 연쇄 강조 `wav/forge_hls.wav`, 한 판 전체 `wav/forge_round.wav`
+- 배경음 `wav/bgm_forge_base.wav`, `wav/bgm_forge_free.wav`
+- 믹스 `wav/mix_forge_mix.wav`, 화로 줄 장면 `wav/rmix_forge_mix.wav`
+- 위치: `D:/park/tgslot-wt/_qa/new-a-sound/wav/` (저장소 밖)
