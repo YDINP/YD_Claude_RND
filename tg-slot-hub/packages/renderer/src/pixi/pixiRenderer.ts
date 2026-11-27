@@ -1294,6 +1294,11 @@ class PixiRenderer implements RendererCore {
       // start를 냈으면 end도 반드시 낸다. 끼어들어도 화면은 이미 gridAfter로 확정됐다.
       this.emitCascadeStep(planned, plan.steps.length, 'end')
       if (this.destroyed || token !== this.spinToken) return
+      const holdMs = this.options.cascadeHoldMs?.(planned.index, this.skipRequestedToken === token) ?? 0
+      if (holdMs > 0) {
+        await this.holdUnlessSkipped(holdMs, token)
+        if (this.destroyed || token !== this.spinToken) return
+      }
     }
     this.applyGridOverride(plan.finalGrid)
   }
@@ -1874,6 +1879,16 @@ class PixiRenderer implements RendererCore {
    * 기다리므로, 매달린 약속 하나가 그 바퀴의 클로저를 통째로 붙잡는다. 깨워서 내보내면
    * 다음 줄의 취소 검사가 순환을 정상적으로 끝낸다.
    */
+  /** `ms`만큼 멈추되 STOP이 오면 바로 푼다. 50ms 간격으로 확인한다. */
+  private async holdUnlessSkipped(ms: number, token: number): Promise<void> {
+    let left = ms
+    while (left > 0 && !this.destroyed && this.skipRequestedToken !== token) {
+      const slice = Math.min(50, left)
+      await this.wait(slice)
+      left -= slice
+    }
+  }
+
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => {
       const id = setTimeout(() => {

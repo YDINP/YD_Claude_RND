@@ -80,6 +80,8 @@ export const GameSummarySchema = z.object({
   minBet: z.number().int().min(1),
   maxBet: z.number().int().min(1),
   sort: z.number().int().default(0),
+  /** 위치 무관 지불 게임만 실린다(로비 카드가 «클러스터»로 오해하지 않게). 없으면 lines로 짐작한다 */
+  payModel: z.literal('anywhere').optional(),
 })
 export type GameSummary = z.infer<typeof GameSummarySchema>
 
@@ -158,6 +160,11 @@ export const SpinDebugPresetSchema = z.enum([
   'roulette4',
   'rouletteGrand',
   'rouletteBig',
+  // 화로 배율 줄 게임 전용(volcano-forge): 불씨 2개+ / 화로 가득 / 프리스핀 추가 / 배율 10+ 연쇄 지급 50배+
+  'forgeEmbers',
+  'forgeFull',
+  'forgeRetrigger',
+  'forgeBig',
 ])
 export type SpinDebugPreset = z.infer<typeof SpinDebugPresetSchema>
 
@@ -204,8 +211,8 @@ const WinLineObjectSchema = z
     direction: z.enum(['ltr', 'rtl']).optional(),
     /** [reel, row] 좌표 목록 */
     positions: z.array(GridPositionSchema),
-    /** 지급 종류. 파싱하면 항상 채워진다(없던 라운드는 line/ways에서 되짚는다) */
-    payKind: z.enum(['line', 'ways', 'cluster']).optional(),
+    /** 지급 종류. 파싱하면 항상 채워진다(없던 라운드는 line/ways에서 되짚는다). `anywhere`는 위치 무관(판 전체 개수) */
+    payKind: z.enum(['line', 'ways', 'cluster', 'anywhere']).optional(),
     /** 연쇄 단계 인덱스(0부터). 연쇄 게임만 */
     cascade: z.number().int().min(0).optional(),
     /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만 */
@@ -261,8 +268,24 @@ export const OrderRoundCarrySchema = z.object({
 export type OrderRoundCarry = z.infer<typeof OrderRoundCarrySchema>
 
 /** 스핀 사이에 이월되는 피처 상태. 게임마다 필드를 더한다 */
+/** 화로 배율 줄 프리스핀 라운드의 스핀 간 상태(volcano-forge). 서버 값만이 정본이다 */
+export const ForgeCarrySchema = z.object({
+  /** 화로 합계(배율) */
+  heat: z.number().int().min(0),
+  /** 켜진 화로 칸 수 */
+  filled: z.number().int().min(0),
+  /** 라운드 누적 지급 코인(진입 스핀 포함). 라운드 지급 상한에 쓴다 */
+  paid: z.number().int().min(0),
+  /** 라운드에서 «화로 가득» 두 배가 난 횟수 */
+  fulls: z.number().int().min(0),
+  /** 프리스핀 한 판 최고 지급 코인 */
+  bestSpin: z.number().int().min(0),
+})
+export type ForgeCarry = z.infer<typeof ForgeCarrySchema>
+
 export const RoundCarrySchema = z.object({
   orders: OrderRoundCarrySchema.optional(),
+  forge: ForgeCarrySchema.optional(),
 })
 export type RoundCarry = z.infer<typeof RoundCarrySchema>
 
@@ -358,6 +381,12 @@ export const SpinResponseSchema = z.object({
       ordersCompleted: z.number().int().min(0).optional(),
       /** 주문 카드 라운드만. 상품 합계 코인 */
       orderPrizeTotal: z.number().int().min(0).optional(),
+      /** 화로 배율 줄 라운드만. 끝났을 때의 화로 합계 */
+      forgeHeat: z.number().int().min(0).optional(),
+      /** 화로 배율 줄 라운드만. «화로 가득» 두 배 횟수 */
+      forgeFulls: z.number().int().min(0).optional(),
+      /** 화로 배율 줄 라운드만. 프리스핀 한 판 최고 지급 코인 */
+      bestSpin: z.number().int().min(0).optional(),
     })
     .optional(),
   /**
@@ -555,6 +584,42 @@ export const StageRouletteFeatureSchema = z.object({
 })
 export type StageRouletteFeature = z.infer<typeof StageRouletteFeatureSchema>
 
+/** 불씨 1개. 연쇄 단계 `step`의 리필 칸 `position`([reel, row], 릴 위쪽)에서 솟았다. `value`는 배율 */
+export const EmberDropSchema = z.object({
+  step: z.number().int().min(0),
+  position: GridPositionSchema,
+  value: z.number().int().min(1),
+})
+export type EmberDrop = z.infer<typeof EmberDropSchema>
+
+/**
+ * 화로 배율 줄 한 스핀(volcano-forge). 기본 게임은 불씨가 있을 때만, 프리스핀은 항상 실린다.
+ * 불씨는 생긴 순서(단계 → 릴 → 위→아래). 허브의 줄 애니메이션은 표시용이고 `heatAfter`·`filledAfter`가 정본이다.
+ * `boostedWin`은 연쇄 지급 × `multiplier`(상한 적용 후) 코인이고 `totalWin = boostedWin + 모루 지급`이다
+ */
+export const ForgeRailFeatureSchema = z.object({
+  type: z.literal('forgeRail'),
+  embers: z.array(EmberDropSchema),
+  heatBefore: z.number().int().min(0),
+  filledBefore: z.number().int().min(0),
+  heatAfter: z.number().int().min(0),
+  filledAfter: z.number().int().min(0),
+  /** «화로 가득» 사건. `afterEmber`번째(0부터) 불씨 직후에 합계가 heatBefore → heatAfter */
+  fulls: z.array(
+    z.object({
+      afterEmber: z.number().int().min(0),
+      heatBefore: z.number().int().min(0),
+      heatAfter: z.number().int().min(0),
+    }),
+  ),
+  /** 이번 스핀 연쇄 지급에 곱한 배율. 1이면 미적용 */
+  multiplier: z.number().int().min(1),
+  /** 연쇄 지급 합(배율 전) */
+  baseWin: z.number().int().min(0),
+  boostedWin: z.number().int().min(0),
+})
+export type ForgeRailFeature = z.infer<typeof ForgeRailFeatureSchema>
+
 export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('freeSpins'), spins: z.number().int().min(1), multiplier: z.number().min(1), retrigger: z.boolean() }),
   z.object({
@@ -607,6 +672,7 @@ export const FeatureTriggerSchema = z.discriminatedUnion('type', [
   /** 말판 보너스 전체(던지기 기록·종료 사유·지급). 트리거 스핀에만 실린다 */
   BoardBonusFeatureSchema,
   StageRouletteFeatureSchema,
+  ForgeRailFeatureSchema,
 ])
 export type FeatureTrigger = z.infer<typeof FeatureTriggerSchema>
 

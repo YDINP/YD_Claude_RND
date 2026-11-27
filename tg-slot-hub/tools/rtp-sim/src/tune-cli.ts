@@ -15,6 +15,8 @@ import { boardExpectation, computeBoardRtp, parseGameMath } from '@tgslot/slot-e
 import type { GameMath } from '@tgslot/slot-engine'
 import { buildBoardReport, buildCascadeReport, buildCoinRespinReport, buildRouletteReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
 import type { BoardReport, CascadeReport, CoinRespinReport, RouletteReport } from './audit/index.js'
+import { buildForgeReport } from './audit/forgeStats.js'
+import type { ForgeReport } from './audit/forgeStats.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
@@ -221,6 +223,8 @@ export interface TuneSummary {
   coinRespin: CoinRespinReport | null
   /** 무대 룰렛 팩만. */
   roulette?: RouletteReport
+  /** 화로 배율 줄 팩만. */
+  forge?: ForgeReport
 }
 
 export function summarize(math: GameMath, state: SampleState): TuneSummary {
@@ -247,6 +251,7 @@ export function summarize(math: GameMath, state: SampleState): TuneSummary {
     cascade: cascade === null ? null : buildCascadeReport(math, cascade, state.totalBet),
     coinRespin: coinRespin === null ? null : buildCoinRespinReport(math, coinRespin, state.totalBet),
     ...(roulette === null ? {} : { roulette: buildRouletteReport(math, roulette, state.totalBet, rtp) }),
+    ...(state.forge == null ? {} : { forge: buildForgeReport(state.forge, state.totalBet) }),
   }
 }
 
@@ -279,8 +284,22 @@ function formatRouletteSummary(math: GameMath, summary: TuneSummary, r: Roulette
   ].join('\n')
 }
 
+function formatForge(math: GameMath, summary: TuneSummary, f: ForgeReport, c: CascadeReport): string {
+  const b = f.breakdown
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
+    `RTP ${p(summary.rtp, 3)} (목표 ${p(math.rtpTarget)}) = 연쇄 ×1 ${p(b.baseLines, 3)} + 불씨 ${p(b.emberBoost, 3)} + 모루 ${p(b.baseScatter, 3)} + 프리스핀 ${p(b.freeSpins, 3)}`,
+    `  프리스핀 = 연쇄 ×1 ${p(b.freeLines, 3)} + 화로 ${p(b.freeBoost, 3)} + 모루 ${p(b.freeScatter, 3)}`,
+    `적중률 ${p(summary.hitRate)}  베팅 미만 ${p(f.subBetWinShare, 1)}  평균 연쇄 ${c.meanCascades.toFixed(3)}  P(지속) ${c.continueProbability.toFixed(3)}  maxCascades ${c.maxCascadesHits}`,
+    `기본 불씨 ${p(f.baseEmberRate, 2)}(당첨 대비)  진입 1/${f.entryRate > 0 ? (1 / f.entryRate).toFixed(1) : '-'} (${f.rounds})  라운드 평균 ${f.roundMean.toFixed(2)}x σ ${f.roundSigma.toFixed(1)}  최대 ${f.maxRound.toFixed(0)}x`,
+    `라운드당 불씨 ${f.embersPerRound.toFixed(2)}  가득 1회+ ${p(f.fullRoundRate, 1)}  당첨≤1 라운드 ${p(f.dryRoundRate, 1)}  추가 1/${f.retriggerRate > 0 ? (1 / f.retriggerRate).toFixed(0) : '-'}  평균 길이 ${f.meanLength.toFixed(2)}  합계${f.heatCap} ${p(f.heatCapRate, 4)}  캡 ${f.winCappedSpins}`,
+    `σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})  최대 ${summary.maxWinMultiplier.toFixed(1)}x`,
+  ].join('\n')
+}
+
 export function formatSummary(math: GameMath, summary: TuneSummary): string {
   if (summary.coinRespin !== null) return formatCoinRespin(math, summary, summary.coinRespin)
+  if (summary.forge !== undefined && summary.cascade !== null) return formatForge(math, summary, summary.forge, summary.cascade)
   if (summary.roulette !== undefined) return formatRouletteSummary(math, summary, summary.roulette)
   const c = summary.cascade
   if (c === null) throw new Error('요약할 연쇄 통계가 없다')

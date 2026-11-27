@@ -27,6 +27,7 @@ export function winBetMultiple(wins: readonly WinLine[], math: GameMath, totalBe
   if (math.payModel === 'cluster') {
     return wins.reduce((sum, win) => sum + win.multiplier * (win.ladder ?? 1), 0) / units
   }
+  // 위치 무관 지불도 총 베팅액 배수이고 사다리가 없다(1배). 화로 배율은 정산에서 곱하므로 여기엔 없다.
   return wins.reduce((sum, win) => sum + win.multiplier, 0) / units
 }
 

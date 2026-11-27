@@ -17,7 +17,7 @@ export const GameManifestSchema = z.object({
   /** 페이라인 수 또는 ways 수. 클러스터 게임은 0이다. */
   lines: z.number().int().min(0),
   /** 로비 표기용 배당 방식. 있으면 math.json의 payModel과 같아야 한다. */
-  payModel: z.enum(['lines', 'ways', 'cluster']).optional(),
+  payModel: z.enum(['lines', 'ways', 'cluster', 'anywhere']).optional(),
   betLevels: z.array(z.number().int().positive()).min(1),
   /** 기본 게임만의 목표 RTP. math.json의 rtpTarget과 같아야 한다. */
   rtpTarget: z.number().gt(0).max(1),
@@ -64,5 +64,6 @@ export function toGameSummary(manifest: GameManifest): GameSummary {
     minBet,
     maxBet,
     sort: manifest.sort,
+    ...(manifest.payModel === 'anywhere' ? { payModel: 'anywhere' as const } : {}),
   }
 }

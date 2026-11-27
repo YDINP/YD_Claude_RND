@@ -70,6 +70,10 @@ export interface FreeSpinsSummaryRecord {
   spins: number
   ordersCompleted?: number
   orderPrizeTotal?: number
+  /** 화로 배율 줄 라운드만. 끝났을 때의 화로 합계 · 가득 횟수 · 프리스핀 한 판 최고 지급 */
+  forgeHeat?: number
+  forgeFulls?: number
+  bestSpin?: number
 }
 
 /** 저장된 스핀 1회. `grid`는 math.json + stops로 재구성하므로 저장하지 않는다. */

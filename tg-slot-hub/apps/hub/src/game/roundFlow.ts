@@ -41,6 +41,13 @@ export type RoundPopup =
         /** 서버가 센 완료 장수. 새로고침으로 화면 기록(`items`)이 비어도 이 값은 남는다. */
         readonly completed: number
       }
+      /** 화로 배율 줄 라운드 종료 요약: 최종 화로 합계·«화로 가득» 횟수·한 판 최고 지급·베팅 대비 배수. */
+      readonly forge?: {
+        readonly heat: number
+        readonly fulls: number
+        readonly bestSpin: number
+        readonly betMultiple: number
+      }
     }
 
 export type RoundFlowState =
@@ -243,6 +250,27 @@ export function withOrderPopup(
   const prizeTotal = result.freeSpinsSummary?.orderPrizeTotal ?? log.reduce((sum, item) => sum + item.prize, 0)
   const completed = Math.max(log.length, result.freeSpinsSummary?.ordersCompleted ?? 0)
   return { ...ceremony, popup: { ...popup, orders: { items: log, prizeTotal, completed } } }
+}
+
+/**
+ * 화로 배율 줄 라운드의 종료 팝업에 요약(최종 화로·가득 횟수·최고 한 판·베팅 대비 배수)을 얹는다.
+ * 값은 전부 서버 `freeSpinsSummary`다. 요약이 없거나 종료 팝업이 아니면 그대로 돌려준다.
+ */
+export function withForgePopup(
+  ceremony: { popup: RoundPopup; to: CurtainTarget },
+  result: Pick<SpinResponse, 'totalBet'> & Partial<Pick<SpinResponse, 'freeSpinsSummary'>>,
+): { popup: RoundPopup; to: CurtainTarget } {
+  const { popup } = ceremony
+  const summary = result.freeSpinsSummary
+  if (popup.kind !== 'freeSpinsExit' || summary === undefined || summary.forgeHeat === undefined) return ceremony
+  const betMultiple = result.totalBet > 0 ? Math.round(summary.total / result.totalBet) : 0
+  return {
+    ...ceremony,
+    popup: {
+      ...popup,
+      forge: { heat: summary.forgeHeat, fulls: summary.forgeFulls ?? 0, bestSpin: summary.bestSpin ?? 0, betMultiple },
+    },
+  }
 }
 
 // ---- 승리 연출 분량 결정 (순수) ----

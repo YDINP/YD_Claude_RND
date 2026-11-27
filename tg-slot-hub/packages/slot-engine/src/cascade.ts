@@ -1,4 +1,5 @@
 import { evaluateClusters } from './cluster.js'
+import { evaluateAnywhere } from './anywhere.js'
 import type { GameMath } from './schema.js'
 import type { CascadeOutcome, CascadeStep, GridPosition, SymbolId, WinLine } from './types.js'
 
@@ -87,7 +88,7 @@ export function runCascades(
   for (;;) {
     const index = steps.length
     const multiplier = ladder[Math.min(index, ladder.length - 1)] as number
-    const evaluated = evaluateClusters(current, math, totalBet, multiplier)
+    const evaluated = (math.payModel === 'anywhere' ? evaluateAnywhere : evaluateClusters)(current, math, totalBet, multiplier)
     if (evaluated.wins.length === 0) break
     if (index >= config.maxCascades) {
       hitMaxCascades = true

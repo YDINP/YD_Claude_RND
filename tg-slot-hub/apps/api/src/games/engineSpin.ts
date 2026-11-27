@@ -189,6 +189,25 @@ export function toSharedFeature(feature: EngineFeatureTrigger): FeatureTrigger {
       win: feature.win,
     }
   }
+  if (feature.type === 'forgeRail') {
+    // 화로 배율 줄. 불씨·화로 가득·배율은 엔진이 정했고 허브는 재생만 한다. 키 순서를 고정해 jsonb 왕복 뒤에도 바이트가 같다.
+    return {
+      type: 'forgeRail',
+      embers: feature.embers.map((ember) => ({
+        step: ember.step,
+        position: [ember.position[0], ember.position[1]] as [number, number],
+        value: ember.value,
+      })),
+      heatBefore: feature.heatBefore,
+      filledBefore: feature.filledBefore,
+      heatAfter: feature.heatAfter,
+      filledAfter: feature.filledAfter,
+      fulls: feature.fulls.map((full) => ({ afterEmber: full.afterEmber, heatBefore: full.heatBefore, heatAfter: full.heatAfter })),
+      multiplier: feature.multiplier,
+      baseWin: feature.baseWin,
+      boostedWin: feature.boostedWin,
+    }
+  }
   const exhaustive: never = feature
   throw new Error(`[engineSpin] unknown feature: ${JSON.stringify(exhaustive)}`)
 }

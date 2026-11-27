@@ -6,6 +6,7 @@ import { applyMutations } from './mutations.js'
 import { drawOrderCards, tallyOrders } from './orders.js'
 import { applyBoardBonus } from './board.js'
 import { resolveRouletteSpin } from './stageRoulette.js'
+import { resolveForgeSpin } from './forge.js'
 import { evaluateWays, getBetPerWay } from './ways.js'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import type {
@@ -55,7 +56,7 @@ export function buildGrid(math: GameMath, stops: number[]): SymbolId[][] {
  * 어느 쪽이든 `단위 x 단위 수 = 총 베팅액`이 성립하도록 스키마가 강제한다.
  */
 export function getBetUnit(math: GameMath, totalBet: number): number {
-  if (math.payModel === 'cluster') return totalBet
+  if (math.payModel === 'cluster' || math.payModel === 'anywhere') return totalBet
   return math.payModel === 'ways' ? getBetPerWay(math, totalBet) : getBetPerLine(math, totalBet)
 }
 
@@ -110,6 +111,10 @@ export function resolveSpin(
   mutations: MutationEvent[] = [],
   rng?: Rng,
 ): SpinResult {
+  // 화로 배율 줄 팩만. 없으면 아래 기존 경로가 한 글자도 다르지 않게 돈다(골든 게이트).
+  if (math.forgeRail !== undefined) {
+    return resolveForgeSpin(math, grid, stops, totalBet, state, gridBefore, mutations, rng)
+  }
   if (math.stageRoulette !== undefined) {
     return resolveRouletteSpin(math, grid, stops, totalBet, betUnit, gridBefore, mutations, rng, state === undefined)
   }

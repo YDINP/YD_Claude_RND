@@ -1,4 +1,4 @@
-import { evaluateClusters } from '@tgslot/slot-engine'
+import { evaluateAnywhere, evaluateClusters } from '@tgslot/slot-engine'
 import type { GameMath, OrderCard } from '@tgslot/slot-engine'
 import { mergeBuckets } from './contributions.js'
 import type { Bucket } from './contributions.js'
@@ -111,7 +111,8 @@ export class CascadeAccumulator {
       }
       // 상한에서 멈췄는지는 끝난 판에 클러스터가 남았는지로만 알 수 있다. 드물어서 다시 평가해도 싸다.
       if (steps.length >= this.maxCascades && spin.finalGrid !== undefined) {
-        if (evaluateClusters(spin.finalGrid, this.math, totalBet, 1).wins.length > 0) this.maxCascadesHits += 1
+        const evaluator = this.math.payModel === 'anywhere' ? evaluateAnywhere : evaluateClusters
+        if (evaluator(spin.finalGrid, this.math, totalBet, 1).wins.length > 0) this.maxCascadesHits += 1
       }
 
       const completedIds: string[] = []

@@ -18,11 +18,12 @@ interface GameCardProps {
  * 요약에 `payModel`/`minCluster`가 실려 오면 그 값이 우선이다. 단위는 로케일 사전을 따른다(ko «20라인»).
  */
 export function specLabel(
-  game: GameSummary & { payModel?: 'lines' | 'ways' | 'cluster'; minCluster?: number },
+  game: GameSummary & { payModel?: 'lines' | 'ways' | 'cluster' | 'anywhere'; minCluster?: number },
   locale: Locale = 'en',
 ): string {
   const grid = `${game.reels}×${game.rows}`
   const model = game.payModel ?? (game.lines === 0 ? 'cluster' : game.lines >= 100 ? 'ways' : 'lines')
+  if (model === 'anywhere') return `${grid} · ${t(locale, 'specAnywhere', { n: game.minCluster ?? 8 })}`
   if (model === 'cluster') return `${grid} · ${t(locale, 'specCluster', { n: game.minCluster ?? 5 })}`
   if (model === 'ways') return `${grid} · ${t(locale, 'specWays', { n: game.lines })}`
   return `${grid} · ${t(locale, 'specLines', { n: game.lines })}`

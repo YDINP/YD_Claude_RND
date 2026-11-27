@@ -1,0 +1,35 @@
+{
+  "id": "volcano-forge",
+  "name": {
+    "en": "Volcano Forge",
+    "ko": "화산 대장간"
+  },
+  "version": "0.0.0",
+  "thumbnail": "/games/volcano-forge/thumb.webp",
+  "status": "live",
+  "reels": 6,
+  "rows": 5,
+  "lines": 0,
+  "payModel": "anywhere",
+  "betLevels": [
+    20,
+    40,
+    100,
+    200,
+    500,
+    1000
+  ],
+  "rtpTarget": 0.945,
+  "rtpTotalTarget": 0.96,
+  "jackpotContribution": 0.015,
+  "auditSpins": 220000000,
+  "volatility": "high",
+  "features": [
+    "anywhere",
+    "cascade",
+    "forgeRail",
+    "scatter",
+    "freespins"
+  ],
+  "sort": 12
+}

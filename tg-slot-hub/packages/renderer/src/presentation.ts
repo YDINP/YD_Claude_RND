@@ -146,6 +146,8 @@ function featurePayout(features: readonly FeatureTrigger[]): number {
   for (const feature of features) {
     if (feature.type === 'scatterWin') sum += feature.win
     else if (feature.type === 'orderComplete') sum += feature.prize
+    // 화로 배율 줄: 연쇄 지급은 배율 전 값이라 배율·상한이 만든 차이를 더한다(= boostedWin + 모루 지급이 총합).
+    else if (feature.type === 'forgeRail') sum += feature.boostedWin - feature.baseWin
   }
   return sum
 }

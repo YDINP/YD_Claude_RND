@@ -959,3 +959,55 @@ describe('runPresentation firstPassAfter', () => {
     expect(rendered.length).toBeLessThanOrEqual(1)
   })
 })
+
+describe('화로 배율 줄(forgeRail) 연쇄 모드 합계', () => {
+  const anywhereWin: WinLine = {
+    line: -1,
+    symbol: 'seven',
+    count: 9,
+    multiplier: 8,
+    win: 160,
+    positions: [],
+    payKind: 'anywhere',
+    cascade: 0,
+  } as WinLine
+
+  function forge(baseWin: number, boostedWin: number): FeatureTrigger {
+    return {
+      type: 'forgeRail',
+      embers: [{ step: 0, position: [0, 0], value: 12 }],
+      heatBefore: 0,
+      filledBefore: 0,
+      heatAfter: 12,
+      filledAfter: 1,
+      fulls: [],
+      multiplier: 12,
+      baseWin,
+      boostedWin,
+    } as FeatureTrigger
+  }
+
+  it('총합은 배율·상한이 적용된 boostedWin이고 롤업은 연쇄 합(배율 전)에서 시작한다', () => {
+    const steps = buildPresentation([anywhereWin], math, { totalBet: 20, mode: 'cascade', features: [forge(160, 1920)] })
+    const first = steps[0]
+    expect(first?.phase).toBe('all')
+    if (first?.phase !== 'all') return
+    expect(first.totalWin).toBe(1920)
+    expect(first.fromAmount).toBe(160)
+  })
+
+  it('모루 지급은 배율 없이 더해진다', () => {
+    const scatter = { type: 'scatterWin', symbol: 'seven', count: 4, win: 55, positions: [] } as FeatureTrigger
+    const steps = buildPresentation([anywhereWin], math, { totalBet: 20, mode: 'cascade', features: [forge(160, 1920), scatter] })
+    const first = steps[0]
+    if (first?.phase !== 'all') throw new Error('A단계가 없다')
+    expect(first.totalWin).toBe(1975)
+  })
+
+  it('불씨 없는 스핀(forgeRail 없음)은 배율 없이 연쇄 합 그대로', () => {
+    const steps = buildPresentation([anywhereWin], math, { totalBet: 20, mode: 'cascade', features: [] })
+    const first = steps[0]
+    if (first?.phase !== 'all') throw new Error('A단계가 없다')
+    expect(first.totalWin).toBe(160)
+  })
+})

@@ -18,6 +18,16 @@ export { pickIdleStops } from './idle.js'
 export { pickWeighted } from './random.js'
 export { applyCascadeStep, foldCascades, runCascades } from './cascade.js'
 export { evaluateClusters } from './cluster.js'
+export { evaluateAnywhere } from './anywhere.js'
+export { EMBER_CHANCE_SCALE, heatRail, resolveForgeSpin, rollEmbers, startHeatFor, type RailOutcome, type RailState } from './forge.js'
+export {
+  AnywhereConfigSchema,
+  ForgeRailConfigSchema,
+  checkAnywhere,
+  checkForgeRail,
+  type AnywhereConfig,
+  type ForgeRailConfig,
+} from './forgeSchema.js'
 export { drawOrderCards, tallyOrders } from './orders.js'
 export {
   applyColumnWraps,

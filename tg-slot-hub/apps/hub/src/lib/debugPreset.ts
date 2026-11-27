@@ -27,7 +27,7 @@ export const DEBUG_PRESETS: readonly DebugPreset[] = [
  * - 라운드(프리스핀·주문 카드 라운드)가 이미 도는 중이면 진입 프리셋(`freeSpins`·`orderRound`)은 맞출 수 없다.
  */
 export function presetsFor(
-  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette'>> | null,
+  math: Pick<GameMath, 'cascade' | 'orderRound' | 'scatter' | 'gamble' | 'coinRespin' | 'boardBonus'> & Partial<Pick<GameMath, 'stageRoulette' | 'forgeRail'>> | null,
   options: { inRound?: boolean } = {},
 ): readonly DebugPreset[] {
   if (math === null) return DEBUG_PRESETS
@@ -49,8 +49,13 @@ export function presetsFor(
     ...(hasCoins ? (['coinRespin', 'columnWrap', 'treasure', 'coinRespinFull'] as const) : []),
     ...(hasBoard ? (['boardBonus', 'boardGoal', 'boardTraps', 'boardFork', 'boardBig'] as const) : []),
     ...(hasRoulette ? STAGE_ROULETTE_PRESETS : []),
+    // 화로 배율 줄 팩만. 화로 가득·추가 스핀은 프리스핀 안에서만 맞출 수 있다.
+    ...(math.forgeRail !== undefined ? (inRound ? FORGE_PRESETS : (['forgeEmbers', 'forgeBig'] as const)) : []),
   ]
 }
+
+/** 화로 배율 줄 팩 전용 프리셋. 서버도 forgeRail이 없는 게임에는 409. 서버가 탐색 상한을 200,000으로 올린다. */
+export const FORGE_PRESETS = ['forgeEmbers', 'forgeFull', 'forgeRetrigger', 'forgeBig'] as const
 
 /** 무대 룰렛 팩 전용 프리셋. 서버도 룰렛이 없는 게임에는 409. */
 export const STAGE_ROULETTE_PRESETS = ['roulette', 'rouletteInner', 'roulette4', 'rouletteGrand', 'rouletteBig'] as const

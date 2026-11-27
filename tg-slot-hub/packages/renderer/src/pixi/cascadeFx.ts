@@ -10,6 +10,7 @@ import {
 } from '../constants.js'
 import type { CascadePlanStep, CascadeStepDurations } from '../cascade.js'
 import { symbolCenter, type Layout } from '../layout.js'
+import { drawCellRings } from './cellRings.js'
 import { drawClusterOutlines } from './clusterOutline.js'
 import { LayerSpritePool } from './spritePool.js'
 
@@ -79,7 +80,9 @@ export function playCascadeFx(
   // 길이를 계획 그대로 못 박는다. 마지막 트윈이 짧게 끝나도 단계는 계획만큼 간다.
   timeline.to({}, { duration: s(totalMs) }, 0)
 
-  drawClusterOutlines(context.outline, step.groups, layout, context.color)
+  // 위치 무관 지불(payKind 'anywhere')은 흩어진 칸이라 합집합 테두리 대신 칸마다 빛 고리를 둘러 당첨 경로를 보인다.
+  if (step.step.wins.some((win) => win.payKind === 'anywhere')) drawCellRings(context.outline, step.groups, layout, context.color)
+  else drawClusterOutlines(context.outline, step.groups, layout, context.color)
   context.outline.alpha = 0
   timeline.to(context.outline, { alpha: 1, duration: s(highlightMs * 0.4), ease: 'power1.out' }, 0)
   timeline.to(context.outline, { alpha: 0, duration: s(Math.max(popMs, 1)), ease: 'power1.in' }, s(highlightMs))

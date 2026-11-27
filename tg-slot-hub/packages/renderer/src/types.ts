@@ -11,7 +11,7 @@ import type { SpinSpeed } from './timing.js'
 
 /** 테마가 선택적으로 선언할 수 있는 효과음 키. 파일이 없으면 키를 빼면 된다. */
 export type SfxKey = 'spin' | 'stop' | 'win' | 'bigwin'
-export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol'
+export type SoundPreset = 'bell' | 'fruit' | 'western' | 'shrine' | 'clockwork' | 'candy' | 'deepsea' | 'hanbok' | 'idol' | 'forge'
 
 /** 프레임 아트의 배치 정보. 값은 프레임 이미지 크기에 대한 분수다. */
 export interface FrameLayout {
@@ -152,7 +152,7 @@ export type RendererEvent =
       direction?: 'ltr' | 'rtl'
       positions?: readonly (readonly [number, number])[]
       /** `WinLine.payKind`. 없으면 line/ways로 짐작한다. */
-      payKind?: 'line' | 'ways' | 'cluster'
+      payKind?: 'line' | 'ways' | 'cluster' | 'anywhere'
       /** 연쇄 단계 인덱스(0부터). 연쇄 게임만. */
       cascade?: number
       /** 이 승리에 곱해진 사다리 배수. 연쇄 게임만. */
@@ -266,6 +266,11 @@ export interface RendererOptions {
   /** 첫 화면에 보일 정지 위치. 없으면 전부 0. */
   initialStops?: number[]
   onEvent?: (e: RendererEvent) => void
+  /**
+   * 연쇄 단계 `index`가 끝난 뒤 다음 단계 전에 멈출 시간(ms). 0이면 안 멈춘다. 화로 «가득» 연출처럼 허브가
+   * 연쇄를 잠깐 세워야 할 때 쓴다. STOP(`skipped`)이면 허브가 압축 값을 돌려주고, 멈추는 도중 STOP이 오면 바로 풀린다.
+   */
+  cascadeHoldMs?: (index: number, skipped: boolean) => number
   /** true면 긴 애니메이션을 건너뛴다. 미지정 시 `prefers-reduced-motion`을 따른다. */
   reducedMotion?: boolean
   /** 프레임을 맞추는 방식. 기본 `'window'`. */

@@ -220,11 +220,26 @@ export function RoundPopupView({
             </span>
           )}
 
-          {!entry && showMultiple && (
+          {/* 화로 요약은 맨 윗줄에 «베팅의 ×N»을 이미 보인다 — 같은 줄을 두 번 쓰지 않는다. */}
+          {!entry && showMultiple && !(popup.kind === 'freeSpinsExit' && popup.forge !== undefined) && (
             <span className="hub-round-popup__multiple">{t('winBandMultiple', { x: multipleText })}</span>
           )}
 
           {!entry && <span className="hub-win__summary">{summary}</span>}
+
+          {popup.kind === 'freeSpinsExit' && popup.forge !== undefined && !noWin && (
+            <span className="hub-round-popup__forge">
+              <span className="hub-round-popup__forge-row hub-round-popup__forge-row--lead">
+                {t('forgeExitBetMultiple', { n: popup.forge.betMultiple.toLocaleString('en-US') })}
+              </span>
+              <span className="hub-round-popup__forge-row">
+                {t('forgeExitHeat', { heat: Math.max(1, popup.forge.heat) })} · {t('forgeExitFulls', { n: popup.forge.fulls })}
+              </span>
+              <span className="hub-round-popup__forge-row">
+                {t('forgeExitBest', { amount: popup.forge.bestSpin.toLocaleString('en-US') })}
+              </span>
+            </span>
+          )}
 
           {popup.kind === 'freeSpinsExit' && popup.orders !== undefined && (
             <span className="hub-round-popup__orders">
