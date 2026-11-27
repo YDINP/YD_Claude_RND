@@ -1,6 +1,15 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { applyMutations, buildGrid, createSeededRng, getBetUnit, parseGameMath, resolveSpin } from '@tgslot/slot-engine'
+import {
+  applyMutations,
+  buildGrid,
+  buildShapeGrid,
+  createSeededRng,
+  frostReelStrips,
+  getBetUnit,
+  parseGameMath,
+  resolveSpin,
+} from '@tgslot/slot-engine'
 import type { GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
 import { gamesDir, listGamePackDirs, readJson } from '../paths.js'
 import { pickAuditSpins } from './compute.js'
@@ -31,8 +40,10 @@ const candy = load('candy-cluster-pop')
 
 /** T1 이전 `drawSpin`이 하던 조립. 연쇄 팩은 주문 추첨에 rng가 필요해 마지막 인자로 넘긴다. */
 function legacyDraw(math: GameMath, totalBet: number, rng: Rng, state?: RoundState): SpinResult {
-  const stops = math.strips.map((strip) => rng.nextInt(strip.length))
-  const gridBefore = buildGrid(math, stops)
+  // 얼림 팩만 프리스핀 판이 freeStrips로 멈춘다. 다른 팩은 frostReelStrips가 math.strips 그대로다.
+  const strips = frostReelStrips(math, state !== undefined)
+  const stops = strips.map((strip) => rng.nextInt(strip.length))
+  const gridBefore = math.frostRespin === undefined ? buildGrid(math, stops) : buildShapeGrid(math, strips, stops)
   const mutated = applyMutations(math, gridBefore, rng)
   return resolveSpin(
     math,

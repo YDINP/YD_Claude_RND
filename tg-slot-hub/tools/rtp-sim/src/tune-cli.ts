@@ -3,6 +3,7 @@
  * 주문 완료율·σ·n*를 한 화면에 낸다. 밀도표로 스트립을 다시 만들고 배율을 걸어 볼 수 있다.
  * 말판 팩(`boardBonus`)은 라인·스캐터 해석식 + 말판 DP로 정확 RTP를 먼저 내고, 표본으로 적중률·σ를 잰다.
  * 무대 룰렛 팩(`stageRoulette`)은 진입률·룰렛 평균·15× 미만 비율을 낸다(룰렛 판 값은 `--roulette-scale`).
+ * 얼려 두기 프리스핀 팩(`frostRespin`)은 진입률·피처 평균·얼림 등급·칸 분포·오로라를 낸다(얼음 보너스표는 `--bonus-scale`).
  *
  * ```
  * pnpm --filter @tgslot/rtp-sim run tune candy-cluster-pop --spins 1000000 --shards 4 \
@@ -15,6 +16,8 @@ import { boardExpectation, computeBoardRtp, parseGameMath } from '@tgslot/slot-e
 import type { GameMath } from '@tgslot/slot-engine'
 import { buildBoardReport, buildCascadeReport, buildCoinRespinReport, buildRouletteReport, requiredAuditSpins, roundAuditSpins } from './audit/index.js'
 import type { BoardReport, CascadeReport, CoinRespinReport, RouletteReport } from './audit/index.js'
+import { buildFrostReport } from './audit/frostStats.js'
+import type { FrostReport } from './audit/frostStats.js'
 import type { SampleState } from './audit/index.js'
 import { runShardedSample } from './audit/shards.js'
 import { readJson, resolveMathPath } from './paths.js'
@@ -33,6 +36,8 @@ export interface TuneOptions {
   prizeScale: number
   boardScale: number
   rouletteScale: number
+  /** 얼음 보너스표 선형 배율(0.02 눈금 반올림). 얼려 두기 팩만. 없으면 1. */
+  bonusScale?: number
   write: boolean
   json: boolean
 }
@@ -50,6 +55,7 @@ const USAGE = `사용법: pnpm --filter @tgslot/rtp-sim run tune <게임폴더|m
   --prize-scale <x>  주문 카드 상품 선형 배율 (0.05 눈금으로 반올림)
   --board-scale <k>  말판 코인·큰 상·최소 지급 선형 배율 (정수 반올림, maxWin은 DP 최대로 다시 맞춤)
   --roulette-scale <x> 무대 룰렛 판 값 선형 배율 (정수로 반올림)
+  --bonus-scale <x>  얼음 보너스표 선형 배율 (0.02 눈금으로 반올림, 얼려 두기 팩)
   --write            바꾼 수학을 math.json에 쓴다
   --json             요약을 JSON으로 낸다
   -h, --help         도움말`
@@ -110,6 +116,10 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
       case '--roulette-scale':
         options.rouletteScale = Number(takeValue())
         break
+      case '--bonus-scale':
+        options.bonusScale = Number(takeValue())
+        if (!(options.bonusScale > 0)) throw new Error('배율은 양수여야 한다')
+        break
       case '--write':
         options.write = true
         break
@@ -144,7 +154,7 @@ export function parseTuneArgs(argv: string[]): TuneOptions {
  */
 export function applyTuning(
   raw: Record<string, unknown>,
-  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number; boardScale?: number; rouletteScale?: number },
+  knobs: { densities?: DensityTable; stripSeed?: string; payScale?: number; prizeScale?: number; boardScale?: number; rouletteScale?: number; bonusScale?: number },
 ): { raw: Record<string, unknown>; math: GameMath } {
   const base = parseGameMath(raw)
   const next: Record<string, unknown> = { ...raw }
@@ -158,6 +168,15 @@ export function applyTuning(
   }
   if (knobs.rouletteScale !== undefined && knobs.rouletteScale !== 1 && base.stageRoulette !== undefined) {
     next['stageRoulette'] = scaleRoulette(raw, knobs.rouletteScale)
+  }
+  if (knobs.bonusScale !== undefined && knobs.bonusScale !== 1 && base.frostRespin !== undefined) {
+    // 얼음 보너스표는 RTP에 정확히 선형이다(기획서 §5-3 7번). 값마다 0.02 눈금으로 반올림해 코인 정수를 지킨다.
+    const scale = (row: number[]): number[] => row.map((value) => Math.round(value * (knobs.bonusScale ?? 1) * 50) / 50)
+    const bonus = base.frostRespin.bonus
+    next['frostRespin'] = {
+      ...(raw['frostRespin'] as Record<string, unknown>),
+      bonus: { high: scale(bonus.high), mid: scale(bonus.mid), low: scale(bonus.low) },
+    }
   }
   return { raw: next, math: parseGameMath(next) }
 }
@@ -221,14 +240,17 @@ export interface TuneSummary {
   coinRespin: CoinRespinReport | null
   /** 무대 룰렛 팩만. */
   roulette?: RouletteReport
+  /** 얼려 두기 프리스핀 팩만. */
+  frost?: FrostReport
 }
 
 export function summarize(math: GameMath, state: SampleState): TuneSummary {
   const cascade = state.cascade
   const coinRespin = state.coinRespin ?? null
   const roulette = state.roulette ?? null
-  if (cascade === null && coinRespin === null && roulette === null) {
-    throw new Error('연쇄·코인 리스핀·무대 룰렛 팩이 아니다. tune은 cascade·coinRespin·stageRoulette 설정이 있는 팩 전용이다')
+  const frost = state.frost ?? null
+  if (cascade === null && coinRespin === null && roulette === null && frost === null) {
+    throw new Error('연쇄·코인 리스핀·무대 룰렛·얼림 팩이 아니다. tune은 cascade·coinRespin·stageRoulette·frostRespin 설정이 있는 팩 전용이다')
   }
   const n = state.spins
   const rtp = state.multiplierSum / n
@@ -247,7 +269,24 @@ export function summarize(math: GameMath, state: SampleState): TuneSummary {
     cascade: cascade === null ? null : buildCascadeReport(math, cascade, state.totalBet),
     coinRespin: coinRespin === null ? null : buildCoinRespinReport(math, coinRespin, state.totalBet),
     ...(roulette === null ? {} : { roulette: buildRouletteReport(math, roulette, state.totalBet, rtp) }),
+    ...(frost === null ? {} : { frost: buildFrostReport(math, frost, state.totalBet) }),
   }
+}
+
+/** 얼려 두기 팩 요약. 손잡이 순서(기획서 §5-3): 기본 스트립 → 3릴 배당 → 배당 배율 → 구슬 → freeStrips → respinStrips → 보너스표. */
+function formatFrost(math: GameMath, summary: TuneSummary, r: FrostReport): string {
+  const b = r.breakdown
+  const odds = r.entryRate > 0 ? (1 / r.entryRate).toFixed(1) : '-'
+  return [
+    `${math.id}  ${summary.spins.toLocaleString('en-US')} 스핀, 스트립 ${summary.stripLengths.join('/')}`,
+    `RTP ${p(summary.rtp, 3)} (목표 ${p(math.rtpTarget)}) = 기본 길 ${p(b.baseLine, 3)} + 구슬 ${p(b.baseScatter, 3)} + 프리스핀 길 ${p(b.freeLine, 3)} + 프리스핀 구슬 ${p(b.freeScatter, 3)} + 얼음 보너스 ${p(b.bonus, 3)}`,
+    `[1·2] 적중률 ${p(summary.hitRate)}  베팅 미만 당첨 ${p(r.paidBelowBetShare)}  [3] 기본 길 해석식 ${r.baseCheck.analytic === null ? '-' : p(r.baseCheck.analytic, 3)}`,
+    `[4] 진입 1/${odds}  [5] 프리스핀 당첨률 ${p(r.freeHitRate)}  등급 상 ${p(r.tierRates.high)} · 중 ${p(r.tierRates.mid)} · 하 ${p(r.tierRates.low)}`,
+    `[6] 얼린 칸 ${r.counts.map((row) => `${row.count}:${p(row.probability, 1)}`).join(' ')}  평균 단계 ${r.meanSteps.toFixed(2)} (최장 ${r.maxSteps})`,
+    `[7] 피처 평균 ${r.meanFeatureMultiplier.toFixed(2)}x  중앙값 ${r.medianFeatureMultiplier}x대  10배 미만 ${p(r.featureUnder10)}  100배+ ${p(r.featureOver100)}  1배 미만 보너스 ${p(r.belowBetBonusRate)}`,
+    `오로라 끝 단계 ${r.auroraEnd.map((row) => `${row.level}:${p(row.probability, 1)}`).join(' ')}  winCapped ${r.cappedSpins}  최대 ${summary.maxWinMultiplier.toFixed(1)}x`,
+    `σ ${summary.sigma.toFixed(3)}  n* ${summary.nStar.toLocaleString('en-US')} (올림 ${summary.nStarRounded.toLocaleString('en-US')})`,
+  ].join('\n')
 }
 
 const p = (value: number, digits = 2): string => `${(value * 100).toFixed(digits)}%`
@@ -282,6 +321,7 @@ function formatRouletteSummary(math: GameMath, summary: TuneSummary, r: Roulette
 export function formatSummary(math: GameMath, summary: TuneSummary): string {
   if (summary.coinRespin !== null) return formatCoinRespin(math, summary, summary.coinRespin)
   if (summary.roulette !== undefined) return formatRouletteSummary(math, summary, summary.roulette)
+  if (summary.frost !== undefined) return formatFrost(math, summary, summary.frost)
   const c = summary.cascade
   if (c === null) throw new Error('요약할 연쇄 통계가 없다')
   const b = c.breakdown
@@ -366,6 +406,7 @@ async function main(): Promise<void> {
     prizeScale: options.prizeScale,
     boardScale: options.boardScale,
     rouletteScale: options.rouletteScale,
+    ...(options.bonusScale === undefined ? {} : { bonusScale: options.bonusScale }),
   })
   const short = tuned.math.strips.filter((strip) => strip.length < MIN_STRIP_LENGTH).length
   if (short > 0) process.stderr.write(`[tune] 경고: 길이 ${MIN_STRIP_LENGTH} 미만 스트립 ${short}개\n`)

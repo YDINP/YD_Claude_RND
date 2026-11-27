@@ -58,6 +58,10 @@ export type { BoardAccumulatorData } from './boardStats.js'
 export type { CascadeAccumulatorData } from './cascadeStats.js'
 export { CoinRespinAccumulator, buildCoinRespinReport, coinRespinGates } from './coinRespinStats.js'
 export type { CoinRespinAccumulatorData } from './coinRespinStats.js'
+export { FrostAccumulator, buildFrostReport, frostGates, frostSections } from './frostStats.js'
+export type { FrostAccumulatorData, FrostReport } from './frostStats.js'
+export { centerWaysAnalytic } from '../centerWaysAnalytic.js'
+export type { CenterWaysAnalytic } from '../centerWaysAnalytic.js'
 export {
   ROULETTE_BUCKETS,
   ROULETTE_GATES,

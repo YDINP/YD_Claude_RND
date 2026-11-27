@@ -4,6 +4,7 @@ import { analyzeDistribution, buildFeatureReport, canEnumerate, resolveMethod } 
 import { runMonteCarlo } from './mc.js'
 import { coinRespinGates } from './coinRespinStats.js'
 import { rouletteGates } from './rouletteStats.js'
+import { frostGates } from './frostStats.js'
 import { Z95 } from './stats.js'
 import { readGroups } from './groups.js'
 import { jackpotAccounting, readManifestExtras } from './jackpot.js'
@@ -363,6 +364,7 @@ export function buildGates(input: GateInput): GateRow[] {
   if (distribution.coinRespin !== undefined) gates.push(...coinRespinGates(distribution.coinRespin))
   if (distribution.board !== undefined) gates.push(...boardGates(distribution.board))
   if (distribution.roulette !== undefined) gates.push(...rouletteGates(distribution.roulette))
+  if (distribution.frost !== undefined) gates.push(...frostGates(distribution.frost))
 
   if (jackpot !== null) {
     gates.push({

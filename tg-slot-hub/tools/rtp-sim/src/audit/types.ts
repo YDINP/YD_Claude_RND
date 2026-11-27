@@ -4,6 +4,7 @@
  */
 import type { GameMath, GridPosition, RtpBreakdown, SymbolId, WinLine } from '@tgslot/slot-engine'
 import type { RouletteReport } from './rouletteStats.js'
+import type { FrostReport } from './frostStats.js'
 
 /** 심볼 또는 그룹 하나가 RTP에 기여하는 몫. */
 export interface ContributionRow {
@@ -46,7 +47,7 @@ export interface WaysContributionRow {
   /** 이 지급이 커버한 경로 수 (`WinLine.ways`). */
   ways: number
   /** 방향별로 나눠 본다. bothWays가 아니면 전부 ltr이다. */
-  direction: 'ltr' | 'rtl'
+  direction: 'ltr' | 'rtl' | 'center'
   win: number
   rtp: number
   share: number
@@ -182,6 +183,8 @@ export interface DistributionReport {
   board?: BoardReport
   /** 무대 룰렛 팩의 진입·고리·칸·회전 통계. 룰렛이 없으면 없다. */
   roulette?: RouletteReport
+  /** 얼려 두기 프리스핀 팩의 진입·얼림·보너스·오로라 통계. 없으면 없다. */
+  frost?: FrostReport
 }
 
 /** 코인 리스핀 통계(표본). 비율의 분모는 따로 적지 않으면 리스핀 라운드 수다. */

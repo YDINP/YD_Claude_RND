@@ -1,5 +1,6 @@
 import { pp, requiredAuditSpins, roundAuditSpins } from './stats.js'
 import { rouletteSections } from './rouletteStats.js'
+import { frostSections } from './frostStats.js'
 import type {
   AuditResult,
   BoardReport,
@@ -661,6 +662,34 @@ export function buildAuditMarkdown(result: AuditResult): string {
       ),
       '',
     )
+  } else if (features !== null && dist.frost !== undefined) {
+    // 얼려 두기 프리스핀 팩은 진입·횟수가 `scatter.freeSpins`가 아니라 `frostRespin.freeSpins`에 있다 — 분석 값(0%)은 이 팩에 맞지 않아
+    // 표본 실측만 싣는다. 자세한 분포는 5-3.
+    const frost = dist.frost
+    sections.push(
+      '## 5-1. 스캐터와 프리스핀',
+      '',
+      '이 팩의 구슬은 **얼려 두기 프리스핀**을 연다. 진입·리트리거 값은 표본 실측이고, 얼림·보너스 분포는 5-3에 있다.',
+      '',
+      table(
+        ['항목', '값'],
+        [
+          ['스캐터 심볼', `\`${features.scatterSymbol ?? '없음'}\``],
+          ['프리스핀 진입 (표본)', `1/${triggerOdds(frost.entryRate)} (${pct(frost.entryRate)})`],
+          ['리트리거 (라운드당, 표본)', frost.retriggerPerRound.toFixed(4)],
+          ['스캐터 배당 몫', `${pct(features.scatterShare, 2)} of RTP`],
+          ['프리스핀 몫', `${pct(features.freeSpinsShare, 2)} of RTP`],
+          [
+            '유료 스핀당 프리스핀',
+            features.observedFreeSpinsPerPaidSpin === null
+              ? '전수 조사 (표본 없음)'
+              : features.observedFreeSpinsPerPaidSpin.toFixed(4),
+          ],
+          ['몬테카를로 프리스핀 수', num(mc.freeSpinsPlayed)],
+        ],
+      ),
+      '',
+    )
   } else if (features !== null) {
     sections.push(
       '## 5-1. 스캐터와 프리스핀',
@@ -710,6 +739,7 @@ export function buildAuditMarkdown(result: AuditResult): string {
     if (dist.cascade.orders !== null) sections.push(...orderSections(dist.cascade.orders, dist.cascade.breakdown))
   }
   if (dist.roulette !== undefined) sections.push(...rouletteSections(dist.roulette))
+  if (dist.frost !== undefined) sections.push(...frostSections(dist.frost))
 
   if (dist.precision !== null) {
     const sigma = dist.precision.stdErr * Math.sqrt(dist.precision.spins)
