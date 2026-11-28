@@ -28,6 +28,8 @@ let riser: { gain: GainNode; nodes: AudioScheduledSourceNode[] } | null = null
 let countUp: { bus: GainNode; timer: ReturnType<typeof setTimeout> } | null = null
 let riserStep = 0
 let riserExtraStop: (() => void) | null = null
+/** 기대감 심장박동 층의 버스. 끝날 때 버스째 사그라든다. */
+let heartbeat: GainNode | null = null
 let lastStopAt = 0
 let lastTickAt = 0
 /** 지금 소리를 몇 초 뒤로 예약할지. `playCountUp`처럼 한꺼번에 여러 소리를 미리 깔 때만 잠깐 0이 아니다. */
@@ -2290,7 +2292,7 @@ export function playRouletteSummary(big: boolean): void {
  * 기대감 시작: 천천히 오르는 긴장음. 연속된 기대감 릴에서는 끝나자마자 다시 시작되며
  * 시작음이 한 단계씩 높아진다. 스핀 루프는 잠깐 낮춘다.
  */
-export function startAnticipation(): void {
+export function startAnticipation(durationMs = 0): void {
   const c = live()
   if (!c || !master) return
   stopAnticipation()
@@ -2298,6 +2300,9 @@ export function startAnticipation(): void {
   const lift = 1 + riserStep * 0.18
   riserStep += 1
   const t = c.currentTime
+  // 기대 창이 길면 상승음도 그만큼 길게 끌어 올린다(1~2.2초). 창을 모르면 예전 길이(1.4초).
+  const ramp = durationMs > 0 ? Math.min(2.2, Math.max(1, (durationMs / 1000) * 0.9)) : 1.4
+  startHeartbeat(c, durationMs > 0 ? durationMs / 1000 : 1.6, lift)
   if (recipe.anticipate) {
     const bus = c.createGain()
     bus.connect(master)
@@ -2316,11 +2321,11 @@ export function startAnticipation(): void {
   const osc = c.createOscillator()
   osc.type = spec.wave
   osc.frequency.setValueAtTime(spec.from * lift, t)
-  osc.frequency.exponentialRampToValueAtTime(spec.to * lift, t + 1.4)
+  osc.frequency.exponentialRampToValueAtTime(spec.to * lift, t + ramp)
   const lp = c.createBiquadFilter()
   lp.type = 'lowpass'
   lp.frequency.setValueAtTime(spec.lp * 0.4, t)
-  lp.frequency.exponentialRampToValueAtTime(spec.lp, t + 1.4)
+  lp.frequency.exponentialRampToValueAtTime(spec.lp, t + ramp)
   const gain = c.createGain()
   gain.gain.value = 0
   gain.gain.setValueAtTime(0.0001, t)
@@ -2334,7 +2339,7 @@ export function startAnticipation(): void {
   const fifth = c.createOscillator()
   fifth.type = spec.wave
   fifth.frequency.setValueAtTime(spec.from * lift * 1.5, t)
-  fifth.frequency.exponentialRampToValueAtTime(spec.to * lift * 1.5, t + 1.4)
+  fifth.frequency.exponentialRampToValueAtTime(spec.to * lift * 1.5, t + ramp)
   const fifthGain = c.createGain()
   fifthGain.gain.value = 0.4
   fifth.connect(fifthGain).connect(lp)
@@ -2348,11 +2353,11 @@ export function startAnticipation(): void {
     bp.type = 'bandpass'
     bp.Q.value = 1.2
     bp.frequency.setValueAtTime(spec.lp * 0.5, t)
-    bp.frequency.exponentialRampToValueAtTime(spec.lp * 2.5, t + 1.4)
+    bp.frequency.exponentialRampToValueAtTime(spec.lp * 2.5, t + ramp)
     const washGain = c.createGain()
     washGain.gain.value = 0
     washGain.gain.setValueAtTime(0.0001, t)
-    washGain.gain.exponentialRampToValueAtTime(1.2, t + 1.4)
+    washGain.gain.exponentialRampToValueAtTime(1.2, t + ramp)
     wash.connect(bp).connect(washGain).connect(gain)
     wash.start(t)
     extra.push(wash)
@@ -2366,7 +2371,11 @@ export function startAnticipation(): void {
   refreshDuck()
 }
 
-export function stopAnticipation(): void {
+/**
+ * 기대감 끝. `gentle`이면 긴장음이 천천히 사그라든다(빗나갔을 때 — 과장된 «아깝다» 소리 없이 조용히 꺼진다).
+ */
+export function stopAnticipation(gentle = false): void {
+  stopHeartbeat(gentle)
   if (riserExtraStop) {
     riserExtraStop()
     riserExtraStop = null
@@ -2380,9 +2389,82 @@ export function stopAnticipation(): void {
   riser = null
   const t = ctx.currentTime
   gain.gain.cancelScheduledValues(t)
-  gain.gain.setTargetAtTime(0.0001, t, 0.03)
-  for (const n of nodes) n.stop(t + 0.15)
+  gain.gain.setTargetAtTime(0.0001, t, gentle ? 0.12 : 0.03)
+  for (const n of nodes) n.stop(t + (gentle ? 0.6 : 0.15))
 }
+
+/**
+ * 심장박동 층: «쿵-쿵» 낮은 두 박이 창이 끝날수록 빨라지고 커진다. 모든 소리 세트에 공통으로 얹는다.
+ * 자기 버스로 보내 기대감이 끝나면 버스째 사그라든다(미리 깔아 둔 박도 함께 묻힌다).
+ */
+function startHeartbeat(c: AudioContext, seconds: number, lift: number): void {
+  stopHeartbeat(false)
+  if (!master) return
+  const bus = c.createGain()
+  bus.connect(master)
+  const dur = Math.min(4.5, Math.max(0.6, seconds))
+  busOverride = bus
+  try {
+    let at = 0.05
+    let gap = 0.6
+    while (at < dur - 0.08) {
+      const p = at / dur
+      const vol = 0.32 + p * 0.3
+      const f = 64 * Math.min(1.25, lift)
+      tone(c, { freq: f, slideTo: f * 0.68, at, dur: 0.14, vol, type: 'sine', attack: 0.003 })
+      tone(c, { freq: f * 0.72, slideTo: f * 0.5, at: at + 0.15, dur: 0.12, vol: vol * 0.7, type: 'sine', attack: 0.003 })
+      // 박마다 아주 짧은 바닥 잡음 — 스피커가 작은 폰에서도 «쿵»이 들리게 한다.
+      noise(c, { at, dur: 0.04, vol: vol * 0.25, filter: 'lowpass', freq: 380 })
+      at += gap
+      gap = Math.max(0.3, gap * 0.86)
+    }
+  } finally {
+    busOverride = null
+  }
+  heartbeat = bus
+}
+
+function stopHeartbeat(gentle: boolean): void {
+  const bus = heartbeat
+  if (!bus) return
+  heartbeat = null
+  if (ctx) {
+    const t = ctx.currentTime
+    bus.gain.cancelScheduledValues(t)
+    bus.gain.setTargetAtTime(0.0001, t, gentle ? 0.12 : 0.03)
+  }
+  setTimeout(() => bus.disconnect(), gentle ? 900 : 300)
+}
+
+/**
+ * 크롤 구간에서 심볼이 한 칸 넘어갈 때의 «틱». 칸이 갈수록 반음 남짓 올라가 긴장이 조여 온다.
+ * 나무 딱 소리(좁은 잡음) + 짧은 음 + 낮은 노크.
+ */
+export function playAnticipationTick(step: number, steps: number): void {
+  const c = live()
+  if (!c) return
+  const k = Math.max(0, Math.min(steps - 1, step))
+  const f = 1050 * Math.pow(1.07, k)
+  noise(c, { dur: 0.028, vol: 0.32, filter: 'bandpass', freq: 2600, q: 4 })
+  tone(c, { freq: f, dur: 0.05, vol: 0.16, type: 'triangle', attack: 0.001, lp: 4000, lpTo: 900 })
+  tone(c, { freq: 190, slideTo: 120, dur: 0.06, vol: 0.22, type: 'sine', attack: 0.001 })
+}
+
+/**
+ * 기대 릴이 서며 트리거가 완성됐다: 짧게 «팡» 터진다. 피처 발동음(`playFeature`)이 곧 뒤따르므로 0.5초 안에 끝낸다.
+ */
+export function playAnticipationHit(): void {
+  const c = live()
+  if (!c) return
+  const scale = recipe.scale
+  noise(c, { dur: 0.32, vol: 0.2, filter: 'bandpass', freq: 1800, sweepTo: 9000, q: 1.1 })
+  tone(c, { freq: 110, slideTo: 52, dur: 0.32, vol: 0.38, type: 'sine', attack: 0.002 })
+  ;[4, 6, 8].forEach((n, i) => {
+    const f = scale[Math.min(n, scale.length - 1)]
+    if (f !== undefined) tone(c, { freq: f, at: 0.03 + i * 0.045, dur: 0.3, vol: 0.13, type: 'triangle', attack: 0.004 })
+  })
+}
+
 
 // ── 롤업 틱 ───────────────────────────────────────────────
 

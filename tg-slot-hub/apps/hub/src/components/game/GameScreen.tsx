@@ -74,6 +74,8 @@ import {
   setBgmMode,
   setSfxOverrides,
   setSoundPreset,
+  playAnticipationHit,
+  playAnticipationTick,
   startAnticipation,
   startBgm,
   stopAnticipation,
@@ -948,8 +950,15 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
       return
     }
     if (event.type === 'anticipation') {
-      if (event.phase === 'start') startAnticipation()
-      else stopAnticipation()
+      if (event.phase === 'start') startAnticipation(event.durationMs)
+      else {
+        stopAnticipation(event.outcome === 'miss')
+        if (event.outcome === 'hit') playAnticipationHit()
+      }
+      return
+    }
+    if (event.type === 'anticipationStep') {
+      playAnticipationTick(event.step, event.steps)
       return
     }
     if (event.type === 'spinEnd') {
