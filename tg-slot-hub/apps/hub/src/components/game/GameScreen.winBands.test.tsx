@@ -52,6 +52,8 @@ vi.mock('../../sdk/api', async () => {
     getGameMath: vi.fn(),
     spin: vi.fn(),
     getGameState: vi.fn(),
+    // 게임 진입(load)이 레벨 정보가 없으면 /me를 받는다. 실제 요청이 나가면 테스트 토큰이 거절돼 세션이 지워진다.
+    getMe: vi.fn(),
     getRoundSeed: vi.fn(),
     gamble: vi.fn(),
     collectGamble: vi.fn(),

@@ -9,7 +9,7 @@ vi.mock('../sdk/api', async () => {
   return { ...actual, getGameMath: vi.fn(), spin: vi.fn(), getMe: vi.fn(), getGameState: vi.fn() }
 })
 
-import { getGameMath, spin as apiSpin, getGameState, ApiClientError } from '../sdk/api'
+import { getGameMath, spin as apiSpin, getGameState, getMe, ApiClientError } from '../sdk/api'
 import { useGameStore } from './game'
 import { useSessionStore } from './session'
 import { useHubStore } from './hub'
@@ -64,6 +64,41 @@ describe('game store — 기본 베팅', () => {
       errorMessage: null,
       refreshError: null,
     })
+  })
+
+  it('게임 주소로 바로 들어와 레벨 정보가 없으면 /me로 상한을 받아 규칙을 적용한다(로비를 거친 것과 같다)', async () => {
+    // 레벨 5+(상한 200)·잔액 6만: 0.2~0.5% = 120~300 안에서 0.3%(180)에 가까운 200. 상한을 100으로 가정하면 100이 나왔다.
+    const levelInfo = { level: 6, xp: 200_000, nextLevelXp: 300_000, maxBet: 200 }
+    vi.mocked(getMe).mockResolvedValue({
+      user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 6, xp: 200_000 },
+      wallet: { coins: 60_000, gems: 0 },
+      levelInfo,
+      jackpot: 25_000,
+    })
+    const wideMath = { ...rawMath, betLevels: [10, 20, 50, 100, 200, 500] }
+    setCoins(60_000)
+    vi.mocked(getGameMath).mockResolvedValue(wideMath)
+    await useGameStore.getState().load('classic-777')
+    expect(getMe).toHaveBeenCalledTimes(1)
+    expect(useGameStore.getState().betIndex).toBe(4)
+
+    // 로비를 거친 경우(레벨 정보가 이미 있음)와 같은 값이고, /me를 다시 부르지 않는다.
+    useGameStore.getState().reset()
+    vi.mocked(getMe).mockClear()
+    useHubStore.setState({ levelInfo })
+    await useGameStore.getState().load('classic-777')
+    expect(getMe).not.toHaveBeenCalled()
+    expect(useGameStore.getState().betIndex).toBe(4)
+  })
+
+  it('레벨 정보 요청이 실패해도 진입은 막히지 않고 보수적 상한(100)으로 고른다', async () => {
+    vi.mocked(getMe).mockRejectedValue(new Error('network'))
+    const wideMath = { ...rawMath, betLevels: [10, 20, 50, 100, 200, 500] }
+    setCoins(60_000)
+    vi.mocked(getGameMath).mockResolvedValue(wideMath)
+    await useGameStore.getState().load('classic-777')
+    expect(useGameStore.getState().phase).toBe('idle')
+    expect(useGameStore.getState().betIndex).toBe(3)
   })
 
   it('저장이 없으면 규칙 값(10,000의 0.3% 근처 → 20)', async () => {

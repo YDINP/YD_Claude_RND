@@ -593,6 +593,8 @@ describe('game store', () => {
 
     it('adds totalBet to the hub levelInfo xp on every successful spin, not only on levelUp', async () => {
       await loadGame()
+      // 진입(load)이 레벨 정보가 없어 /me를 한 번 받는다. 여기서 보는 것은 «스핀이» /me를 부르지 않는다는 것이다.
+      mockedGetMe.mockClear()
       useHubStore.setState({ levelInfo: { level: 1, xp: 40, nextLevelXp: 100, maxBet: 100 } })
       mockedApiSpin.mockResolvedValue(baseSpinResponse({ roundId: 'r10', nonce: 10 }))
 
@@ -659,7 +661,8 @@ describe('game store', () => {
     it('refreshes levelInfo before clamping when entering the game screen directly (levelInfo is null)', async () => {
       await loadGame()
       useGameStore.getState().setBet(2) // bet 50
-      expect(useHubStore.getState().levelInfo).toBeNull()
+      // 진입 때 /me가 실패했다고 치고(레벨 정보 없음) 스핀이 BET_LOCKED를 받는 경로를 본다.
+      useHubStore.setState({ levelInfo: null })
       mockedGetMe.mockResolvedValue({
         user: { id: 'u1', telegramId: 1, firstName: 'Dev', locale: 'en', level: 1, xp: 0 },
         wallet: { coins: 1000, gems: 0 },
@@ -1966,6 +1969,8 @@ describe('game store', () => {
 
     it('syncGambleExpiry(): keeps the session (and does not refresh /me) when the server still reports it open', async () => {
       await loadGameWithGambleOffer()
+      // 진입(load)이 레벨 정보가 없어 받은 /me는 이 검사와 무관하다.
+      mockedGetMe.mockClear()
       mockedGetGameState.mockResolvedValueOnce({
         freeSpins: null,
         state: {

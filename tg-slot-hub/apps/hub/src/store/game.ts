@@ -865,26 +865,44 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   async load(gameId) {
     set({ ...initialState, gameId, phase: 'loading' })
+    // 게임 주소로 바로 들어오면(새로고침 등) 허브 레벨 정보(베팅 상한)가 아직 없다. 상한을 모른 채 고르면
+    // 기본 베팅 규칙이 «상한 100» 가정으로 계산돼 로비를 거쳤을 때와 다른 값이 나온다(예: 레벨 5+·잔액 6만 → 200 대신 100).
+    // math와 함께 /me를 받기 시작하고, 진입은 기다리지 않는다(아래에서 도착하면 기본 베팅만 다시 고른다).
+    const levelInfoReady =
+      useHubStore.getState().levelInfo === null ? useHubStore.getState().refreshLevelInfo() : null
     try {
       const raw = await getGameMath(gameId)
       const math = parseGameMath(raw)
       // 기본 베팅 — 사용자가 고른 금액(저장)이 아직 쓸 수 있으면 그대로, 아니면 잔액의 0.2~0.5% 규칙.
       // 저장된 선택은 지우지 않는다(잔액이 회복되면 다시 쓴다).
-      // 게임 화면으로 바로 들어온(새로고침 등) 경우 허브 레벨 정보가 아직 없을 수 있다. 상한을 모르는데 100으로 가정하면
-      // 높은 레벨 사용자가 고른 베팅을 «상한 초과»로 잘못 버리므로, 저장된 선택은 상한을 모를 때 그대로 쓰고
-      // (잘못이면 서버 BET_LOCKED가 바로잡는다) 규칙 값만 보수적으로 100을 상한으로 가정한다.
-      const balance = useSessionStore.getState().wallet?.coins ?? 0
-      const knownMaxBet = useHubStore.getState().levelInfo?.maxBet
-      const storedIndex = storedBetIndex(
-        math.betLevels,
-        readStoredBetAmount(gameId, math.betLevels),
-        balance,
-        knownMaxBet ?? Number.POSITIVE_INFINITY,
-      )
-      const betIndex = storedIndex >= 0 ? storedIndex : pickDefaultBetIndex(math.betLevels, balance, knownMaxBet ?? 100)
+      // 레벨 정보가 아직 없으면, 상한을 100으로 가정했을 때 높은 레벨 사용자가 고른 베팅을 «상한 초과»로 잘못 버리므로
+      // 저장된 선택은 그대로 쓰고(잘못이면 서버 BET_LOCKED가 바로잡는다) 규칙 값만 잠정적으로 100을 상한으로 가정한다.
+      const pickBet = (maxBet: number | undefined): number => {
+        const balance = useSessionStore.getState().wallet?.coins ?? 0
+        const storedIndex = storedBetIndex(
+          math.betLevels,
+          readStoredBetAmount(gameId, math.betLevels),
+          balance,
+          maxBet ?? Number.POSITIVE_INFINITY,
+        )
+        return storedIndex >= 0 ? storedIndex : pickDefaultBetIndex(math.betLevels, balance, maxBet ?? 100)
+      }
+      const betIndex = pickBet(useHubStore.getState().levelInfo?.maxBet)
       // load()가 재호출됐을 수 있으므로(재시도), 여전히 같은 게임을 보고 있을 때만 반영한다.
       if (get().gameId !== gameId) return
       set({ math, betIndex, phase: 'idle', error: null, errorCode: null })
+      if (levelInfoReady) {
+        void levelInfoReady.then(() => {
+          const maxBet = useHubStore.getState().levelInfo?.maxBet
+          const now = get()
+          // 상한을 받았을 때 아직 잠정 값 그대로 쉬고 있을 때만 다시 고른다. 그 사이 사용자가 베팅을 바꿨거나,
+          // 판이 시작됐거나, 프리스핀을 이어받았거나, 실패한 판의 재시도 키가 남아 있으면 손대지 않는다.
+          if (maxBet === undefined || now.gameId !== gameId || now.math !== math) return
+          if (now.betIndex !== betIndex || now.phase !== 'idle' || now.freeSpins !== null || now.idempotencyKey !== null) return
+          const next = pickBet(maxBet)
+          if (next !== betIndex) set({ betIndex: next })
+        })
+      }
 
       // 진행 중인 프리스핀/더블업 재개 — 화면을 나갔다 돌아오거나 새로고침해도 서버에 남은 상태를
       // 그대로 잇는다. 실패해도(네트워크 등) 게임 자체는 계속 플레이할 수 있어야 하므로 감싸 무시한다.

@@ -30,7 +30,8 @@ vi.mock('@tgslot/renderer', async (importOriginal) => ({
 
 vi.mock('../../sdk/api', async () => {
   const actual = await vi.importActual<typeof import('../../sdk/api')>('../../sdk/api')
-  return { ...actual, getGameMath: vi.fn(), spin: vi.fn(), getGameState: vi.fn(), getRoundSeed: vi.fn() }
+  // 게임 진입(load)이 레벨 정보가 없으면 /me를 받는다. 실제 요청이 나가면 테스트 토큰이 거절돼 세션이 지워진다.
+  return { ...actual, getGameMath: vi.fn(), spin: vi.fn(), getGameState: vi.fn(), getRoundSeed: vi.fn(), getMe: vi.fn() }
 })
 
 import { getGameMath, getGameState, spin as apiSpin } from '../../sdk/api'
