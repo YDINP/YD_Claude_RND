@@ -643,6 +643,229 @@
   }
 }
 
+/* ---- 단계 승격 (빅윈 오버레이) ----
+
+   롤업이 문턱(20·50·100×)을 넘을 때마다 카드가 key 교체로 다시 들어온다. 첫 등장(큰 당첨)은 위의
+   등급별 진입 결을 그대로 쓰고, 승격한 카드만 «펀치 스케일 + 짧은 흔들림»으로 덮는다. 섬광은 카드
+   밖(오버레이 위)에 한 번. 화면을 통째로 흔들지 않는 이유: 배경 레이어가 fixed라 부모에 transform을
+   걸면 위치 기준이 바뀌어 광선·동전이 어긋난다 — 카드와 섬광만 흔든다. */
+.hub-win-stage {
+  display: contents;
+}
+
+.hub-win-stage--promoted {
+  display: block;
+  animation: hub-win-promote-shake 360ms ease-in-out 60ms 1 both;
+}
+
+.hub-win-stage--promoted .hub-win:not(.hub-win--still) {
+  animation: hub-win-promote 560ms cubic-bezier(0.22, 1.5, 0.36, 1) both;
+}
+
+@keyframes hub-win-promote {
+  0% {
+    transform: scale(1.42);
+    filter: brightness(1.8);
+  }
+  45% {
+    transform: scale(0.93);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: scale(1);
+    filter: none;
+  }
+}
+
+@keyframes hub-win-promote-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-7px, 3px, 0);
+  }
+  40% {
+    transform: translate3d(6px, -4px, 0);
+  }
+  60% {
+    transform: translate3d(-4px, -2px, 0);
+  }
+  80% {
+    transform: translate3d(3px, 2px, 0);
+  }
+}
+
+.hub-win-overlay__promote {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 46%, #ffffff 0%, var(--tier-glow, rgba(255, 220, 140, 0.6)) 22%, transparent 64%);
+  animation: hub-win-promote-flash 520ms ease-out forwards;
+}
+
+@keyframes hub-win-promote-flash {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 오버레이 제목은 크게, 단계가 오를수록 더 크게. 빛 한 줄이 글자 위를 훑고 지나간다(반짝임). */
+.hub-win-overlay .hub-win__title {
+  position: relative;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+}
+
+.hub-win-overlay .hub-win--blast .hub-win__title {
+  font-size: 27px;
+}
+
+.hub-win-overlay .hub-win--storm .hub-win__title {
+  font-size: 30px;
+}
+
+.hub-win-overlay .hub-win--cataclysm .hub-win__title {
+  font-size: 33px;
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .hub-win-overlay .hub-win:not(.hub-win--still) .hub-win__title {
+    background: linear-gradient(
+      100deg,
+      var(--tier-core) 0 38%,
+      #ffffff 48%,
+      #fffbe6 52%,
+      var(--tier-core) 62% 100%
+    );
+    background-size: 260% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px var(--tier-glow));
+    animation: hub-win-title-sheen 1700ms linear 400ms infinite;
+  }
+}
+
+@keyframes hub-win-title-sheen {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+/* 제목 양끝의 네 갈래 반짝임 둘 — 번갈아 깜빡인다. */
+.hub-win-overlay .hub-win:not(.hub-win--still) .hub-win__title::before,
+.hub-win-overlay .hub-win:not(.hub-win--still) .hub-win__title::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  filter: drop-shadow(0 0 6px var(--tier-core));
+  animation: hub-win-glint 1200ms ease-in-out infinite;
+}
+
+.hub-win-overlay .hub-win:not(.hub-win--still) .hub-win__title::before {
+  left: -16px;
+}
+
+.hub-win-overlay .hub-win:not(.hub-win--still) .hub-win__title::after {
+  right: -16px;
+  top: 12px;
+  animation-delay: 600ms;
+}
+
+@keyframes hub-win-glint {
+  0%,
+  100% {
+    transform: scale(0.2) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1) rotate(45deg);
+    opacity: 1;
+  }
+}
+
+/* 동전 분수 — 화면 바닥 가운데서 솟구쳤다 떨어진다. 바깥 span이 가로(등속), 안쪽 i가 세로(솟고 떨어짐)라
+   두 움직임이 합쳐져 포물선이 된다. 개수는 등급이 정한다(winTiers.ts `FOUNTAIN_COUNT_BY_TIER`). */
+.hub-win-fx__fountain {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  z-index: 1;
+  pointer-events: none;
+  animation: hub-win-fx-in 1ms linear 320ms backwards;
+}
+
+.hub-win-fx__drop {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  animation: hub-win-drop-x var(--drop-duration) linear calc(var(--drop-delay) + 320ms) infinite;
+  will-change: transform;
+}
+
+.hub-win-fx__drop-coin {
+  display: block;
+  width: var(--drop-size);
+  height: var(--drop-size);
+  margin-left: calc(var(--drop-size) / -2);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 34% 30%,
+    #fff8e2 0 12%,
+    var(--tier-core) 40%,
+    var(--tier-edge) 80%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+  box-shadow: 0 0 10px var(--tier-glow);
+  animation: hub-win-drop-y var(--drop-duration) linear calc(var(--drop-delay) + 320ms) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes hub-win-drop-x {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(var(--drop-dx), 0, 0);
+  }
+}
+
+@keyframes hub-win-drop-y {
+  0% {
+    transform: translate3d(0, 0, 0) rotateY(0deg);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  6% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate3d(0, calc(var(--drop-rise) * -1), 0) rotateY(360deg);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.8, 0.4);
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 6vh, 0) rotateY(720deg);
+    opacity: 0;
+  }
+}
+
 /* ---- 모션 줄이기 ---- */
 
 /* 설정(settings.reducedMotion)으로 끈 경우 — 배경 레이어는 컴포넌트가 아예 렌더하지 않고,
@@ -659,6 +882,10 @@
   display: none;
 }
 
+.hub-win-overlay--still .hub-win-stage--promoted {
+  animation: none;
+}
+
 .hub-win-overlay--still .hub-win-overlay__hint {
   animation: none;
 }
@@ -668,8 +895,16 @@
   .hub-win-fx__rays,
   .hub-win-fx__waves,
   .hub-win-fx__shower,
+  .hub-win-fx__fountain,
+  .hub-win-overlay__promote,
   .hub-win-overlay[data-beat='emphasis']::after {
     display: none;
+  }
+
+  .hub-win-stage--promoted,
+  .hub-win-stage--promoted .hub-win,
+  .hub-win-overlay .hub-win__title {
+    animation: none;
   }
 
   .hub-win,

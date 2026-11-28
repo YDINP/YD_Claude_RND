@@ -18,12 +18,21 @@
  *   닫혔다). 오토스핀·프리스핀이 도는 동안(`hurried`)에는 붙드는 시간이 짧다 — 판 사이를
  *   막지 않기 위해서다(winTiers.ts의 `BIG_WIN_HURRIED_HOLD_MS`).
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useDialog } from '../../hooks/useDialog'
 import { useT } from '../../i18n'
 import { useSettingsStore } from '../../store/settings'
 import { WinCelebration, WinCelebrationFx, useWinRollup } from './WinCelebration'
-import { bigWinTimeline, celebrationTier, type CelebrationTier, type WinTierLabels } from './winTiers'
+import {
+  bigWinStages,
+  bigWinTimeline,
+  celebrationTier,
+  stageIndexForValue,
+  stagedRollupValue,
+  type CelebrationTier,
+  type NamedTier,
+  type WinTierLabels,
+} from './winTiers'
 import type { ResolvedCelebrationSkin } from '@tgslot/renderer'
 import './WinCelebration.css'
 
@@ -53,6 +62,11 @@ interface WinCelebrationOverlayProps {
    * 이 오버레이는 스스로 소리를 내지 않는다 — 소리가 필요한 화면(코인 리스핀 정산 뒤)만 이걸로 소리를 붙인다.
    */
   onRollPhase?: (phase: 'rolling' | 'settled', info: { tier: CelebrationTier; rollupMs: number }) => void
+  /**
+   * 롤업 도중 문턱을 넘어 단계가 한 칸 올랐을 때(탭 건너뛰기로 곧장 최종 단계에 닿을 때도 한 번).
+   * `remainingMs`는 남은 롤업 시간 — 승격 팡파르·동전 소리 길이를 맞추는 데 쓴다.
+   */
+  onPromote?: (tier: NamedTier, info: { index: number; remainingMs: number }) => void
 }
 
 export function WinCelebrationOverlay({
@@ -63,14 +77,25 @@ export function WinCelebrationOverlay({
   skin,
   onDismiss,
   onRollPhase,
+  onPromote,
 }: WinCelebrationOverlayProps): ReactNode {
   const t = useT()
   // 스토어의 reducedMotion은 초기값 자체가 OS의 prefers-reduced-motion을 반영한다(store/settings.ts).
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
+  const speed = useSettingsStore((s) => s.spinSpeed)
 
   const tier = celebrationTier(totalWin, totalBet)
-  const timing = bigWinTimeline(totalWin, totalBet ?? 0, { hurried, reducedMotion })
-  const roll = useWinRollup(totalWin, timing.rollupMs)
+  const timingInput = { hurried, reducedMotion, speed }
+  const timing = bigWinTimeline(totalWin, totalBet ?? 0, timingInput)
+  // 단계 구간표 — 롤업이 문턱을 넘을 때마다 한 칸씩 승격한다(큰 → 엄청난 → 전설 → 최고).
+  const stages = useMemo(
+    () => bigWinStages(totalWin, totalBet ?? 0, { hurried, reducedMotion, speed }),
+    [totalWin, totalBet, hurried, reducedMotion, speed],
+  )
+  const valueAt = useCallback((elapsed: number) => stagedRollupValue(stages, elapsed), [stages])
+  const roll = useWinRollup(totalWin, timing.rollupMs, valueAt)
+  const stageIndex = stageIndexForValue(stages, roll.value)
+  const stageTier: CelebrationTier = stages[stageIndex]?.tier ?? tier
 
   /** 강조 비트가 지났는가. 숫자가 앉은 뒤에만 의미가 있다(그 전에는 항상 false에서 다시 시작한다). */
   const [emphasisDone, setEmphasisDone] = useState(false)
@@ -82,11 +107,28 @@ export function WinCelebrationOverlay({
   dismissRef.current = onDismiss
   const rollPhaseRef = useRef(onRollPhase)
   rollPhaseRef.current = onRollPhase
+  const promoteRef = useRef(onPromote)
+  promoteRef.current = onPromote
+  const startedAt = useRef(0)
 
   useEffect(() => {
     if (tier === 'none') return
-    rollPhaseRef.current?.(roll.phase, { tier, rollupMs: timing.rollupMs })
+    if (roll.phase === 'rolling') startedAt.current = performance.now()
+    // 굴리기 시작할 때는 «지금 보이는» 단계(보통 큰 당첨)의 소리로 연다. 승격마다 `onPromote`가 덧붙인다.
+    rollPhaseRef.current?.(roll.phase, { tier: roll.phase === 'rolling' ? (stages[0]?.tier ?? tier) : tier, rollupMs: timing.rollupMs })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 박자가 바뀔 때만 알린다.
   }, [roll.phase, tier, timing.rollupMs])
+
+  // 승격: 단계 번호가 오를 때마다 한 번. 건너뛰기로 여러 칸을 한 번에 넘어도 한 번만(최종 단계로).
+  const shownStage = useRef(0)
+  useEffect(() => {
+    if (stageIndex <= shownStage.current) return
+    shownStage.current = stageIndex
+    const stage = stages[stageIndex]
+    if (stage === undefined) return
+    const elapsed = performance.now() - startedAt.current
+    promoteRef.current?.(stage.tier, { index: stageIndex, remainingMs: Math.max(0, timing.rollupMs - elapsed) })
+  }, [stageIndex, stages, timing.rollupMs])
 
   // 강조 비트 — 숫자가 **앉는 순간**부터 잰다. 탭으로 감아 앉혔어도 똑같이 여기서 시작하므로
   // 건너뛴 사용자도 강조를 온전히 본다.
@@ -130,28 +172,34 @@ export function WinCelebrationOverlay({
       aria-modal="true"
       aria-labelledby={TITLE_ID}
       data-beat={beat}
+      data-stage={stageTier}
       tabIndex={-1}
     >
-      <WinCelebrationFx tier={tier} reducedMotion={reducedMotion} skin={skin} />
+      <WinCelebrationFx tier={stageTier} reducedMotion={reducedMotion} skin={skin} fountain />
+      {/* 승격 섬광 — 단계가 오를 때마다 key가 바뀌어 한 번 번쩍인다. 첫 단계(등장)에는 없다. */}
+      {stageIndex > 0 && !reducedMotion && <span key={stageIndex} className="hub-win-overlay__promote" aria-hidden="true" />}
       {/* 화면 전체가 하나의 탭 영역이다 — 탭/클릭은 물론 키보드(Enter/Space)로도 같은 뜻이고,
           다이얼로그가 열릴 때 포커스가 여기로 온다(useDialog가 첫 포커스 가능 요소를 찾는다). */}
       <button type="button" className="hub-win-overlay__tap" onClick={handleTap}>
-        <WinCelebration
-          tier={tier}
-          value={roll.value}
-          labels={labels}
-          skin={skin}
-          titleId={TITLE_ID}
-          reducedMotion={reducedMotion}
-        >
-          {/* 중간값이 아니라 최종 문장만, 한 번만 읽힌다. 등급이 붙었다는 건 금액이 0보다
-              크다는 뜻이라 롤업은 항상 'rolling'에서 시작한다 — 그래서 이 영역은 빈 채로
-              마운트됐다가 값이 **바뀌면서** 읽힌다(처음부터 차 있으면 읽히지 않는다).
-              문구는 프리스핀 종료 팝업과 같은 문장을 쓴다(키 이름만 프리스핀 시절 것이다). */}
-          <span className="hub-win__live" aria-live="polite">
-            {roll.phase === 'settled' ? t('freeSpinsPopupTotal', { amount: totalWin.toLocaleString('en-US') }) : ''}
-          </span>
-        </WinCelebration>
+        {/* 단계가 오르면 key가 바뀌어 카드가 펀치 스케일·흔들림으로 다시 들어온다(타이틀 교체). */}
+        <span key={stageIndex} className={stageIndex > 0 ? 'hub-win-stage hub-win-stage--promoted' : 'hub-win-stage'}>
+          <WinCelebration
+            tier={stageTier}
+            value={roll.value}
+            labels={labels}
+            skin={skin}
+            titleId={TITLE_ID}
+            reducedMotion={reducedMotion}
+          />
+        </span>
+        {/* 단계 승격으로 카드가 다시 붙어도 이 영역은 그대로 남도록 카드 밖에 둔다.
+            중간값이 아니라 최종 문장만, 한 번만 읽힌다. 등급이 붙었다는 건 금액이 0보다
+            크다는 뜻이라 롤업은 항상 'rolling'에서 시작한다 — 그래서 이 영역은 빈 채로
+            마운트됐다가 값이 **바뀌면서** 읽힌다(처음부터 차 있으면 읽히지 않는다).
+            문구는 프리스핀 종료 팝업과 같은 문장을 쓴다(키 이름만 프리스핀 시절 것이다). */}
+        <span className="hub-win__live" aria-live="polite">
+          {roll.phase === 'settled' ? t('freeSpinsPopupTotal', { amount: totalWin.toLocaleString('en-US') }) : ''}
+        </span>
         {/* 탭의 뜻이 박자마다 다르니 힌트도 그대로 따라간다. 카드 안(숫자 바로 밑)이 아니라
             화면 바닥에 두는 이유는 CSS에 적어 두었다 — 게임 프레임 아트와 부딪치는 자리였다.
             프리스핀 종료 팝업은 자기 카드 안에 그대로 둔다(그쪽은 부딪칠 아트가 없다). */}

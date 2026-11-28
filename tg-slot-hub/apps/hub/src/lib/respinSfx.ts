@@ -21,6 +21,7 @@ import {
   playTopTreasure,
   playTreasure,
   playWin,
+  playWinPromote,
 } from './audio'
 import { DEEPSEA_PIN_STEPS } from './audioDeepsea'
 
@@ -55,9 +56,9 @@ export function resetRespinSfx(): void {
   celebrationSounded = false
 }
 
-// ── 정산 뒤 빅윈 축하 ─────────────────────────────────────
-// 일반 판의 큰 당첨 소리는 렌더러의 winTotal에서 난다. 코인 리스핀은 그 이벤트 없이 곧장 빅윈 오버레이가 뜨므로
-// 오버레이의 롤업 박자(굴리기 시작 → 앉음)에 맞춰 같은 소리(큰 당첨 → 롤업 틱 → 마감음)를 여기서 낸다.
+// ── 빅윈 오버레이 축하 소리 ───────────────────────────────
+// 빅윈 오버레이(일반 판·코인 리스핀 정산 뒤 모두)의 롤업 박자(굴리기 시작 → 승격 → 앉음)에 맞춰
+// 큰 당첨 → 롤업 틱 → 승격 스팅·팡파르 → 마감음을 여기서 낸다. 이미 냈으면 뒤따르는 winTotal 롤업은 작은 당첨 소리만 낸다.
 
 /** 축하 등급 → 효과음 등급. 문턱(베팅의 10·20·50·100배)이 같다. */
 export const CELEBRATION_SOUND_TIER: Readonly<Record<NamedTier, Exclude<WinTier, 'none'>>> = {
@@ -102,6 +103,13 @@ export function playRespinCelebration(phase: 'rolling' | 'settled', tier: NamedT
   if (celebrationTier === null) return
   playRollupEnd(celebrationTier)
   celebrationTier = null
+}
+
+/** 빅윈 오버레이 단계 승격 — 승격 스팅과 그 단계 팡파르를 내고, 마감음 등급도 새 단계로 올린다. */
+export function playCelebrationPromote(tier: NamedTier, remainingMs: number): void {
+  const soundTier = CELEBRATION_SOUND_TIER[tier]
+  if (celebrationTier !== null) celebrationTier = soundTier
+  playWinPromote(soundTier, remainingMs)
 }
 
 /** 오버레이가 굴리는 도중 닫히거나 화면을 떠날 때 — 틱만 멈춘다(마감음은 내지 않는다). */

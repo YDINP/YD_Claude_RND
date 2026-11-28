@@ -17,8 +17,9 @@ import { DEFAULT_CELEBRATION_SKIN, resolveCelebrationSkin } from '@tgslot/render
 import {
   BIG_WIN_EMPHASIS_MS,
   BIG_WIN_HURRIED_HOLD_MS,
-  BIG_WIN_ROLLUP_MAX_MS,
-  BIG_WIN_ROLLUP_MIN_MS,
+  BIG_WIN_HOLD_MS,
+  BIG_WIN_STAGE_MS,
+  FOUNTAIN_COUNT_BY_TIER,
   CELEBRATION_TIER_MULTIPLIERS,
   COUNT_UP_MS,
   ENTRY_SPARKLES,
@@ -29,8 +30,11 @@ import {
   SHOCKWAVE_COUNT_BY_TIER,
   SHOWER_COUNT_BY_TIER,
   SPARKLE_COUNT,
-  bigWinRollupMs,
+  bigWinStages,
   bigWinTimeline,
+  fountainCoins,
+  stageIndexForValue,
+  stagedRollupValue,
   celebrationTier,
   celebrationTiming,
   countUpMs,
@@ -43,7 +47,6 @@ import {
   shockwaveDelaysFor,
   showerParticles,
 } from './winTiers'
-import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import { useSettingsStore } from '../../store/settings'
 
 function amountText(): string {
@@ -103,43 +106,69 @@ describe('winTiers (pure)', () => {
     })
   })
 
-  describe('bigWinTimeline (빅윈 오버레이 — 금액이 길이를 정한다)', () => {
+  describe('bigWinStages / bigWinTimeline (빅윈 오버레이 — 단계가 승격하며 길어진다)', () => {
     const bet = 100
 
-    it('makes a 10× and a 200× win take visibly different lengths — the whole point of the change', () => {
-      const small = bigWinTimeline(10 * bet, bet).rollupMs
-      const large = bigWinTimeline(200 * bet, bet).rollupMs
-      expect(small).toBe(BIG_WIN_ROLLUP_MIN_MS)
-      expect(large).toBeGreaterThan(small * 2)
-      // 등급이 아니라 «금액»이 길이를 정한다 — 같은 CATACLYSM(≥100×) 안에서도 갈린다.
-      expect(celebrationTier(200 * bet, bet)).toBe(celebrationTier(400 * bet, bet))
-      expect(bigWinTimeline(400 * bet, bet).rollupMs).toBeGreaterThan(large)
+    it('climbs one tier per threshold — 큰 → 엄청난 → 전설 → 최고, in order', () => {
+      const stages = bigWinStages(120 * bet, bet)
+      expect(stages.map((s) => s.tier)).toEqual(['surge', 'blast', 'storm', 'cataclysm'])
+      // 각 구간의 끝이 다음 단계의 문턱이다.
+      expect(stages.map((s) => s.from)).toEqual([0, 20 * bet, 50 * bet, 100 * bet])
+      expect(stages.map((s) => s.to)).toEqual([20 * bet, 50 * bet, 100 * bet, 120 * bet])
+      for (let i = 1; i < stages.length; i += 1) expect(stages[i]!.startMs).toBe(stages[i - 1]!.endMs)
+      expect(bigWinStages(12 * bet, bet).map((s) => s.tier)).toEqual(['surge'])
+      expect(bigWinStages(30 * bet, bet).map((s) => s.tier)).toEqual(['surge', 'blast'])
+      expect(bigWinStages(9 * bet, bet)).toEqual([])
+      expect(bigWinStages(999_999, 0)).toEqual([])
     })
 
-    it('rises monotonically with the multiple and is bounded at both ends', () => {
-      const multiples = [10, 20, 50, 100, 200, 500, 1000, 5000]
-      const lengths = multiples.map((m) => bigWinTimeline(m * bet, bet).rollupMs)
-      expect([...lengths].sort((a, b) => a - b)).toEqual(lengths)
-      expect(lengths[0]).toBe(BIG_WIN_ROLLUP_MIN_MS)
-      // 500× 이상은 전부 상한을 나눠 갖는다 — 한 판이 오버레이만 1분 붙드는 일은 없다.
-      expect(bigWinTimeline(500 * bet, bet).rollupMs).toBe(BIG_WIN_ROLLUP_MAX_MS)
-      expect(bigWinTimeline(5000 * bet, bet).rollupMs).toBe(BIG_WIN_ROLLUP_MAX_MS)
+    it('promotes exactly when the rolled value crosses each threshold, never backwards', () => {
+      const stages = bigWinStages(150 * bet, bet)
+      let last = 0
+      const seen: number[] = []
+      for (let t = 0; t <= stages[stages.length - 1]!.endMs; t += 10) {
+        const value = stagedRollupValue(stages, t)
+        const index = stageIndexForValue(stages, value)
+        expect(index).toBeGreaterThanOrEqual(last)
+        if (index !== last) seen.push(index)
+        last = index
+      }
+      expect(seen).toEqual([1, 2, 3])
+      expect(stagedRollupValue(stages, 0)).toBe(0)
+      expect(stagedRollupValue(stages, 99_999)).toBe(150 * bet)
     })
 
-    it('never guesses a denominator — an unknown or zero bet falls back to the shortest roll-up', () => {
-      expect(bigWinTimeline(999_999, 0).rollupMs).toBe(BIG_WIN_ROLLUP_MIN_MS)
-      expect(bigWinRollupMs(999_999, -1)).toBe(BIG_WIN_ROLLUP_MIN_MS)
+    it('normal lengths: 큰 3s / 엄청난 4.5s / 전설 6s / 최고 7.5s (roll-up + emphasis)', () => {
+      const total = (m: number): number => {
+        const t = bigWinTimeline(m * bet, bet)
+        return t.rollupMs + t.emphasisMs
+      }
+      expect(total(12)).toBe(3000)
+      expect(total(30)).toBe(4500)
+      expect(total(70)).toBe(6000)
+      expect(total(300)).toBe(7500)
+      expect(BIG_WIN_STAGE_MS.surge).toBeGreaterThan(BIG_WIN_STAGE_MS.blast)
     })
 
-    it('holds the result for the same 10s the free-spins ceremony popup uses', () => {
-      expect(bigWinTimeline(50 * bet, bet)).toEqual({
-        rollupMs: bigWinRollupMs(50 * bet, bet),
+    it('closes by itself shortly after the stage length — no 20s linger without a tap', () => {
+      const t = bigWinTimeline(50 * bet, bet)
+      expect(t).toEqual({
+        rollupMs: bigWinStages(50 * bet, bet).at(-1)!.endMs,
         emphasisMs: BIG_WIN_EMPHASIS_MS,
-        holdMs: ROUND_POPUP_AUTO_CLOSE_MS,
+        holdMs: BIG_WIN_HOLD_MS,
       })
-      // 강조는 사용자가 요구한 "2~3초" 안에 있다.
-      expect(BIG_WIN_EMPHASIS_MS).toBeGreaterThanOrEqual(2000)
-      expect(BIG_WIN_EMPHASIS_MS).toBeLessThanOrEqual(3000)
+      // 최고 단계도 롤업 + 강조 + 유지가 10초 안이다.
+      const top = bigWinTimeline(500 * bet, bet)
+      expect(top.rollupMs + top.emphasisMs + top.holdMs).toBeLessThan(10_000)
+    })
+
+    it('shrinks for quick and turbo', () => {
+      const normal = bigWinTimeline(300 * bet, bet)
+      const quick = bigWinTimeline(300 * bet, bet, { speed: 'quick' })
+      const turbo = bigWinTimeline(300 * bet, bet, { speed: 'turbo' })
+      expect(quick.rollupMs).toBeLessThan(normal.rollupMs)
+      expect(turbo.rollupMs).toBeLessThan(quick.rollupMs)
+      expect(turbo.rollupMs).toBe(Math.round(normal.rollupMs * 0.5))
     })
 
     it('never stalls an autospin run — hurried shrinks the roll-up/emphasis and swaps the 10s hold for a short one', () => {
@@ -148,13 +177,25 @@ describe('winTiers (pure)', () => {
       expect(hurried.rollupMs).toBe(Math.round(normal.rollupMs * HURRIED_SCALE))
       expect(hurried.emphasisMs).toBe(Math.round(normal.emphasisMs * HURRIED_SCALE))
       expect(hurried.holdMs).toBe(BIG_WIN_HURRIED_HOLD_MS)
-      // 최악의 경우(500× + 서두름)에도 한 판이 오버레이에 붙들리는 시간은 6초를 넘지 않는다 —
-      // "판 간격이 20초를 넘겨 멈춘 것처럼 보인다"는 예전 결함으로 되돌아가지 않는다.
+      // 최악의 경우(최고 단계 + 서두름)에도 한 판이 오버레이에 붙들리는 시간은 6초를 넘지 않는다.
       expect(hurried.rollupMs + hurried.emphasisMs + hurried.holdMs).toBeLessThan(6000)
     })
 
-    it('collapses the roll-up under reduced motion — length can no longer carry the amount', () => {
+    it('reduced motion: one short stage, no promotions — numbers only', () => {
+      const stages = bigWinStages(500 * bet, bet, { reducedMotion: true })
+      expect(stages).toHaveLength(1)
+      expect(stages[0]!.tier).toBe('cataclysm')
       expect(bigWinTimeline(500 * bet, bet, { reducedMotion: true }).rollupMs).toBe(REDUCED_ROLLUP_MS)
+    })
+  })
+
+  describe('fountainCoins', () => {
+    it('thickens with the tier and reuses one array per tier', () => {
+      expect(fountainCoins('none')).toHaveLength(0)
+      expect(fountainCoins('surge')).toHaveLength(FOUNTAIN_COUNT_BY_TIER.surge)
+      expect(fountainCoins('cataclysm')).toHaveLength(FOUNTAIN_COUNT_BY_TIER.cataclysm)
+      expect(fountainCoins('blast')).toBe(fountainCoins('blast'))
+      expect(fountainCoins('surge')[0]).toBe(fountainCoins('cataclysm')[0])
     })
   })
 
@@ -264,7 +305,7 @@ describe('WinCelebrationFx', () => {
 describe('WinCelebration', () => {
   it('uses the hub tier name by default and the game pack override when given', () => {
     const { rerender } = render(<WinCelebration tier="storm" value={0} reducedMotion={false} />)
-    expect(screen.getByText('STORM')).toBeInTheDocument()
+    expect(screen.getByText('LEGENDARY WIN')).toBeInTheDocument()
 
     rerender(
       <WinCelebration
@@ -275,7 +316,7 @@ describe('WinCelebration', () => {
       />,
     )
     expect(screen.getByText('STAMPEDE')).toBeInTheDocument()
-    expect(screen.queryByText('STORM')).not.toBeInTheDocument()
+    expect(screen.queryByText('LEGENDARY WIN')).not.toBeInTheDocument()
   })
 
   it('falls back to the plain title when there is no tier, and omits the title if none is given', () => {
@@ -316,19 +357,50 @@ describe('WinCelebrationOverlay', () => {
     expect(container.innerHTML).toBe('')
   })
 
-  it('rolls the amount up, names the tier, and announces the final amount once', async () => {
-    const { container } = render(<WinCelebrationOverlay {...baseProps} />)
+  it('rolls the amount up, promotes the tier on the way, and announces the final amount once', async () => {
+    const onPromote = vi.fn()
+    const { container } = render(<WinCelebrationOverlay {...baseProps} onPromote={onPromote} />)
 
-    // 4820 / 100 = 48.2× → BLAST
-    expect(screen.getByText('BLAST')).toBeInTheDocument()
-    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.blast)
+    // 처음엔 큰 당첨으로 들어와 20×를 넘는 순간 엄청난 당첨으로 승격한다(4820 / 100 = 48.2×).
+    expect(screen.getByText('BIG WIN')).toBeInTheDocument()
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.surge)
+    expect(container.querySelectorAll('.hub-win-fx__drop')).toHaveLength(FOUNTAIN_COUNT_BY_TIER.surge)
 
     const regions = container.querySelectorAll('[aria-live]')
     expect(regions).toHaveLength(1)
     expect(regions[0]?.textContent).toBe('')
 
-    await waitFor(() => expect(amountText()).toBe('4,820'), { timeout: 4000 })
-    await waitFor(() => expect(regions[0]?.textContent).toBe('Total win 4,820'), { timeout: 4000 })
+    await waitFor(() => expect(amountText()).toBe('4,820'), { timeout: 5000 })
+    await waitFor(() => expect(regions[0]?.textContent).toBe('Total win 4,820'), { timeout: 5000 })
+    expect(screen.getByText('HUGE WIN')).toBeInTheDocument()
+    expect(container.querySelectorAll('.hub-win-fx__coin')).toHaveLength(SHOWER_COUNT_BY_TIER.blast)
+    expect(onPromote).toHaveBeenCalledTimes(1)
+    expect(onPromote.mock.calls[0]?.[0]).toBe('blast')
+    expect(container.querySelector('.hub-win-stage--promoted')).toBeInTheDocument()
+  }, 10_000)
+
+  it('a tap while rolling jumps straight to the final tier and promotes once', () => {
+    const onPromote = vi.fn()
+    render(<WinCelebrationOverlay totalWin={50_000} totalBet={100} onDismiss={() => {}} onPromote={onPromote} />)
+    expect(screen.getByText('BIG WIN')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByText('TOP WIN')).toBeInTheDocument()
+    expect(onPromote).toHaveBeenCalledTimes(1)
+    expect(onPromote.mock.calls[0]?.[0]).toBe('cataclysm')
+  })
+
+  it('leaves no timers behind after unmount (no leaked intervals or backstops)', () => {
+    vi.useFakeTimers()
+    try {
+      const { unmount } = render(<WinCelebrationOverlay totalWin={50_000} totalBet={100} onDismiss={() => {}} />)
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      unmount()
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('jumps to the result on a tap while rolling — it does not close — and closes on the next tap', async () => {
@@ -349,11 +421,11 @@ describe('WinCelebrationOverlay', () => {
     await waitFor(() => expect(amountText()).toBe('4,820'))
   })
 
-  it('runs the emphasis beat and only then starts the 10s hold', () => {
+  it('runs the emphasis beat and only then starts the short hold', () => {
     vi.useFakeTimers()
     try {
       const onDismiss = vi.fn()
-      // 12000 / 100 = 120× → CATACLYSM. 롤업은 금액이 정하고, 그 뒤가 강조 → 유지다.
+      // 12000 / 100 = 120× → 최고 당첨. 롤업(단계 승격 네 구간) 뒤가 강조 → 유지다.
       const timing = bigWinTimeline(12_000, 100)
       const { container } = render(
         <WinCelebrationOverlay totalWin={12_000} totalBet={100} onDismiss={onDismiss} />,
@@ -372,7 +444,7 @@ describe('WinCelebrationOverlay', () => {
       expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'hold')
 
       act(() => {
-        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
+        vi.advanceTimersByTime(BIG_WIN_HOLD_MS - 1)
       })
       expect(onDismiss).not.toHaveBeenCalled()
 
@@ -389,7 +461,7 @@ describe('WinCelebrationOverlay', () => {
     vi.useFakeTimers()
     try {
       const onDismiss = vi.fn()
-      // 500× — 그냥 두면 6초를 굴러야 하는 판을 곧장 감는다.
+      // 500× — 그냥 두면 6.3초를 굴러야 하는 판을 곧장 감는다.
       render(<WinCelebrationOverlay totalWin={50_000} totalBet={100} onDismiss={onDismiss} />)
 
       act(() => {
@@ -402,7 +474,7 @@ describe('WinCelebrationOverlay', () => {
       })
       // 마운트에서 한 번 걸어 둔 시계였다면 여기(마운트 + 12.4초)서 이미 닫혔을 것이다(예전 결함).
       act(() => {
-        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
+        vi.advanceTimersByTime(BIG_WIN_HOLD_MS - 1)
       })
       expect(onDismiss).not.toHaveBeenCalled()
 

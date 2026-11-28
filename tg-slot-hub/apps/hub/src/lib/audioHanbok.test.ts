@@ -128,7 +128,8 @@ describe('hanbok sound preset', () => {
     const before = lastContext!.oscillators
     audio.startAnticipation()
     // 기본 상승음은 오실레이터 3개(주음·5도·떨림)이고 징 저음이 둘 더 얹힌다.
-    expect(lastContext!.oscillators - before).toBe(5)
+    // 공통 심장박동 층(창을 모르면 1.6초 — 세 박 × 두 음)이 6개를 더한다.
+    expect(lastContext!.oscillators - before).toBe(5 + 6)
     expect(() => audio.stopAnticipation()).not.toThrow()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()

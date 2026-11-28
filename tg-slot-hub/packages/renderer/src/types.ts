@@ -105,11 +105,22 @@ export type RendererEvent =
   /** 릴 하나가 정확한 정지 위치에 닿았다. */
   | { type: 'reelStop'; reel: number }
   /**
-   * 기대감 연출. 스캐터가 트리거 직전 개수까지 떨어져 `reel`이 늘어난 시간 동안 천천히 선다.
+   * 기대감 연출. 스캐터가 트리거 직전 개수까지 떨어져 `reel`이 늘어난 시간 동안 감속·크롤하며 선다.
    * `start`는 앞 릴이 멈춘 순간, `end`는 그 릴이 멈추는 순간(스킵하면 그 즉시)에 온다.
    * 결과는 바뀌지 않는다 — 연출 시간만 늘어난다.
+   *
+   * - `durationMs`(start): 이 릴이 서기까지 남은 기대 창 길이. 긴장음 길이를 맞추는 데 쓴다.
+   * - `outcome`(end): 이 릴이 서며 트리거가 완성됐으면 `hit`, 빗나갔으면 `miss`. 스킵·끊김이면 없다.
    */
-  | { type: 'anticipation'; phase: 'start' | 'end'; reel: number }
+  | {
+      type: 'anticipation'
+      phase: 'start' | 'end'
+      reel: number
+      durationMs?: number
+      outcome?: 'hit' | 'miss'
+    }
+  /** 기대 릴의 크롤 구간에서 심볼이 한 칸 넘어갔다(`step`은 0부터, 모두 `steps`칸). 틱 소리용. */
+  | { type: 'anticipationStep'; reel: number; step: number; steps: number }
   /** 모든 릴이 멈췄다. */
   | { type: 'spinEnd' }
   /**

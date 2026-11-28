@@ -97,7 +97,8 @@ export {
   type SpinPlanInput,
   type SpinSpeed,
 } from './timing.js'
-export { anticipatedReels, scatterCountsByReel } from './anticipation.js'
+export { anticipatedReels, anticipationOutcome, scatterCountsByReel } from './anticipation.js'
+export { crawlStepAt, crawlTravel, planCrawl, planCrawlCurve, type CrawlCurve } from './reelCrawl.js'
 export { isChromaGreen, keyOutGreen } from './chromaKey.js'
 export {
   atlasUrlFor,

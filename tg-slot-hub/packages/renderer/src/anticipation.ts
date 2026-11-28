@@ -53,3 +53,23 @@ export function anticipatedReels(math: AnticipationMath, stops: readonly number[
   }
   return result
 }
+
+/**
+ * 기대 릴이 설 때 트리거가 완성됐는지. 그 릴이 서는 시각까지(같은 시각에 서는 묶음 포함) 선 릴의 개수를 모두 더한다.
+ * 결과는 이미 정해져 있고 이 값은 «터질지, 조용히 꺼질지»만 고른다.
+ */
+export function anticipationOutcome(
+  counts: readonly number[],
+  endMsByReel: readonly number[],
+  reel: number,
+  trigger: number,
+): 'hit' | 'miss' {
+  const end = endMsByReel[reel]
+  if (end === undefined) return 'miss'
+  let landed = 0
+  counts.forEach((count, r) => {
+    const e = endMsByReel[r]
+    if (e !== undefined && e <= end) landed += count
+  })
+  return landed >= trigger ? 'hit' : 'miss'
+}

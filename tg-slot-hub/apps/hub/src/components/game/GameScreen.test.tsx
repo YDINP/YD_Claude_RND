@@ -2014,7 +2014,7 @@ describe('GameScreen', () => {
 
       await spinAndSettle(baseSpinResponse({ roundId: 'big-win', totalWin: 100, totalBet: 10 }))
 
-      expect(await screen.findByText('SURGE')).toBeInTheDocument()
+      expect(await screen.findByText('BIG WIN')).toBeInTheDocument()
 
       // 오버레이가 떠 있는 동안은 스핀 버튼도 스테이지 탭도 새 스핀을 걸지 않는다.
       mockedApiSpin.mockResolvedValueOnce(baseSpinResponse({ roundId: 'should-not-fire' }))
@@ -2024,7 +2024,7 @@ describe('GameScreen', () => {
       expect(mockedApiSpin).toHaveBeenCalledTimes(1)
 
       dismissWinOverlay()
-      expect(screen.queryByText('SURGE')).not.toBeInTheDocument()
+      expect(screen.queryByText('BIG WIN')).not.toBeInTheDocument()
 
       // 닫힌 뒤에는 예약해 둔 응답으로 다시 스핀된다.
       await act(async () => {
@@ -2074,7 +2074,7 @@ describe('GameScreen', () => {
       // 그 큰 판들은 프리스핀 도중에 각자 오버레이로 이미 축하했다(사용자 지시).
       // ('WIN'은 WinStrip 라벨에도 있어 팝업 카드 안으로 좁혀서 본다.)
       expect(document.querySelector('.hub-round-popup .hub-win__title')).toHaveTextContent('WIN')
-      for (const tierName of ['SURGE', 'BLAST', 'STORM', 'CATACLYSM']) {
+      for (const tierName of ['BIG WIN', 'HUGE WIN', 'LEGENDARY WIN', 'TOP WIN']) {
         expect(screen.queryByText(tierName)).not.toBeInTheDocument()
       }
     })

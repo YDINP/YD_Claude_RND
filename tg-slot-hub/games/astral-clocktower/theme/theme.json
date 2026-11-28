@@ -211,10 +211,10 @@
       "tracking": 0.02
     },
     "labels": {
-      "surge": { "ko": "큰 당첨", "en": "SURGE" },
-      "blast": { "ko": "대박 당첨", "en": "BLAST" },
-      "storm": { "ko": "초대박 당첨", "en": "STORM" },
-      "cataclysm": { "ko": "시계탑의 기적", "en": "CATACLYSM" }
+      "surge": { "ko": "큰 당첨", "en": "BIG WIN" },
+      "blast": { "ko": "엄청난 당첨", "en": "HUGE WIN" },
+      "storm": { "ko": "전설 당첨", "en": "LEGENDARY WIN" },
+      "cataclysm": { "ko": "시계탑의 기적", "en": "CLOCKTOWER MIRACLE" }
     },
     "tiers": {
       "surge": {

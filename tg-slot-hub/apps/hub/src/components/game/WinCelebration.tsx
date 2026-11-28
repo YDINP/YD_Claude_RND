@@ -13,7 +13,7 @@
  *
  * 계산은 전부 `winCelebration.ts`(순수)에 있고 여기서는 rAF/타이머로 재생만 한다.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   DEFAULT_CELEBRATION_SKIN,
   celebrationRayGeometry,
@@ -24,6 +24,7 @@ import { useEffectiveLocale, useT, type TranslationKey } from '../../i18n'
 import {
   ROLLUP_BACKSTOP_MS,
   digitCount,
+  fountainCoins,
   overrideLabel,
   rollupValue,
   shockwaveDelaysFor,
@@ -60,7 +61,14 @@ export interface WinRollup {
  * 값 계산은 순수 함수가 하고 여기서는 프레임마다 물어보기만 한다. rAF가 멈춘 탭/환경에서도
  * 최종 값에는 반드시 도달하도록 안전장치 타이머를 함께 건다.
  */
-export function useWinRollup(target: number, durationMs: number): WinRollup {
+export function useWinRollup(
+  target: number,
+  durationMs: number,
+  /** 경과 시간(ms) → 금액. 주면 기본 감속 곡선 대신 이것을 쓴다(빅윈 단계 승격 롤업). */
+  valueAt?: (elapsedMs: number) => number,
+): WinRollup {
+  const valueAtRef = useRef(valueAt)
+  valueAtRef.current = valueAt
   const [phase, setPhase] = useState<RollPhase>(() => (target > 0 ? 'rolling' : 'settled'))
   const [value, setValue] = useState(0)
 
@@ -77,7 +85,8 @@ export function useWinRollup(target: number, durationMs: number): WinRollup {
     const step = (now: number): void => {
       if (start === 0) start = now
       const progress = (now - start) / durationMs
-      setValue(rollupValue(target, progress))
+      const curve = valueAtRef.current
+      setValue(curve === undefined ? rollupValue(target, progress) : Math.min(target, curve(now - start)))
       if (progress < 1) raf = requestAnimationFrame(step)
       else setPhase('settled')
     }
@@ -162,6 +171,8 @@ interface WinCelebrationFxProps {
   reducedMotion: boolean
   /** 코인 샤워를 그릴지. 진입 팝업처럼 반짝임으로 대신하는 화면은 false. */
   shower?: boolean
+  /** 바닥 가운데서 솟는 동전 분수(빅윈 오버레이만). 등급이 오를수록 빽빽해진다. */
+  fountain?: boolean
   /** 게임 스킨(`theme.json`의 `celebration`). 없으면 허브 기본 연출. */
   skin?: ResolvedCelebrationSkin
 }
@@ -176,6 +187,7 @@ export function WinCelebrationFx({
   tier,
   reducedMotion,
   shower = true,
+  fountain = false,
   skin = DEFAULT_CELEBRATION_SKIN,
 }: WinCelebrationFxProps): ReactNode {
   if (reducedMotion) return null
@@ -201,6 +213,27 @@ export function WinCelebrationFx({
               className="hub-win-fx__wave"
               style={{ '--hub-wave-delay': `${delay}ms` } as CSSProperties}
             />
+          ))}
+        </div>
+      )}
+      {fountain && (
+        <div className="hub-win-fx__fountain">
+          {fountainCoins(tier).map((coin, i) => (
+            <span
+              key={i}
+              className="hub-win-fx__drop"
+              style={
+                {
+                  '--drop-dx': `${coin.dx}vw`,
+                  '--drop-rise': `${coin.rise}vh`,
+                  '--drop-delay': `${coin.delay}ms`,
+                  '--drop-duration': `${coin.duration}ms`,
+                  '--drop-size': `${coin.size}px`,
+                } as CSSProperties
+              }
+            >
+              <i className="hub-win-fx__drop-coin" />
+            </span>
           ))}
         </div>
       )}
