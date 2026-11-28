@@ -1,0 +1,350 @@
+[
+  {
+    "id": "astral-clocktower",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 100 × 21.2배 = 2,120",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 2120,
+    "savedCost": 2120,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 196,
+    "walletDelta": -1624,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -2120
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 25,
+    "roundsAfter": 11,
+    "endCoins": 9264,
+    "displayCoins": "9264",
+    "helpText": "피처 구매베팅의 21.2배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "aurora-ice-palace",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 50 × 45.2배 = 2,260",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 2260,
+    "savedCost": 2260,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 125,
+    "walletDelta": -1835,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -2260
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 28,
+    "roundsAfter": 9,
+    "endCoins": 8770,
+    "displayCoins": "8770",
+    "helpText": "피처 구매베팅의 45.2배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "candy-cluster-pop",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 25.9배 = 518",
+    "whatText": "스캐터 4개 이상이 떨어진 판으로 시작해요. 주문 카드 라운드가 바로 열려요.",
+    "cost": 518,
+    "savedCost": 518,
+    "trigger": "orderRound",
+    "entered": true,
+    "entryWin": 77,
+    "walletDelta": -441,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -518
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 22,
+    "roundsAfter": 9,
+    "endCoins": 9604,
+    "displayCoins": "9604",
+    "helpText": "피처 구매베팅의 25.9배를 내면 바로 보너스로 들어가요. 스캐터 4개 이상이 떨어진 판으로 시작해요. 주문 카드 라운드가 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "fruit-fiesta",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 20배 = 400",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 400,
+    "savedCost": 400,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 40,
+    "walletDelta": -360,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -400
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 21,
+    "roundsAfter": 11,
+    "endCoins": 9650,
+    "displayCoins": "9650",
+    "helpText": "피처 구매베팅의 20배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "greenhouse-garden",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 63배 = 1,260",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 1260,
+    "savedCost": 1260,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 30,
+    "walletDelta": -930,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -1260
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 29,
+    "roundsAfter": 11,
+    "endCoins": 9557,
+    "displayCoins": "9557",
+    "helpText": "피처 구매베팅의 63배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "hanbok-night-market",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 25 × 43배 = 1,075",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 말판 보너스가 바로 열려요.",
+    "cost": 1075,
+    "savedCost": 1075,
+    "trigger": "boardBonus",
+    "entered": true,
+    "entryWin": 175,
+    "walletDelta": -600,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -1075
+      ]
+    ],
+    "blockedNotice": "스핀이 끝난 뒤에 살 수 있어요",
+    "finishedSec": 10,
+    "roundsAfter": 1,
+    "endCoins": 9400,
+    "displayCoins": "9400",
+    "helpText": "피처 구매베팅의 43배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 말판 보너스가 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "idol-stage-live",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 50 × 46.5배 = 2,325",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 무대 룰렛이 바로 돌아가요.",
+    "cost": 2325,
+    "savedCost": 2325,
+    "trigger": "stageRoulette",
+    "entered": true,
+    "entryWin": 10450,
+    "walletDelta": 8425,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -2325
+      ]
+    ],
+    "blockedNotice": "스핀이 끝난 뒤에 살 수 있어요",
+    "finishedSec": 15,
+    "roundsAfter": 1,
+    "endCoins": 18425,
+    "displayCoins": "18425",
+    "helpText": "피처 구매베팅의 46.5배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 무대 룰렛이 바로 돌아가요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "kraken-cove",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 54.4배 = 1,088",
+    "whatText": "코인 6개 이상이 떨어진 판으로 시작해요. 코인 리스핀이 바로 열려요.",
+    "cost": 1088,
+    "savedCost": 1088,
+    "trigger": "coinRespin",
+    "entered": true,
+    "entryWin": 1740,
+    "walletDelta": 952,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -1088
+      ]
+    ],
+    "blockedNotice": "스핀이 끝난 뒤에 살 수 있어요",
+    "finishedSec": 17,
+    "roundsAfter": 1,
+    "endCoins": 10952,
+    "displayCoins": "10952",
+    "helpText": "피처 구매베팅의 54.4배를 내면 바로 보너스로 들어가요. 코인 6개 이상이 떨어진 판으로 시작해요. 코인 리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "royal-diamond-777",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 17.7배 = 354",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 354,
+    "savedCost": 354,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 40,
+    "walletDelta": -314,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -354
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 23,
+    "roundsAfter": 9,
+    "endCoins": 10366,
+    "displayCoins": "10366",
+    "helpText": "피처 구매베팅의 17.7배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "sheriff-sixgun",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 17배 = 340",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 340,
+    "savedCost": 340,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 41,
+    "walletDelta": -299,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -340
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 21,
+    "roundsAfter": 9,
+    "endCoins": 9847,
+    "displayCoins": "9847",
+    "helpText": "피처 구매베팅의 17배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "shiba-shrine",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 25 × 16.8배 = 420",
+    "whatText": "스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 420,
+    "savedCost": 420,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 200,
+    "walletDelta": -220,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -420
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 22,
+    "roundsAfter": 9,
+    "endCoins": 10096,
+    "displayCoins": "10096",
+    "helpText": "피처 구매베팅의 16.8배를 내면 바로 보너스로 들어가요. 스캐터 3개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  },
+  {
+    "id": "volcano-forge",
+    "ok": true,
+    "notes": [],
+    "overlap": false,
+    "pageWidthOk": true,
+    "costText": "베팅 20 × 81.5배 = 1,630",
+    "whatText": "스캐터 4개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+    "cost": 1630,
+    "savedCost": 1630,
+    "trigger": "freeSpins",
+    "entered": true,
+    "entryWin": 70,
+    "walletDelta": -1260,
+    "walletOk": true,
+    "ledger": [
+      [
+        "feature_buy",
+        -1630
+      ]
+    ],
+    "blockedNotice": "보너스가 끝난 뒤에 살 수 있어요",
+    "finishedSec": 37,
+    "roundsAfter": 16,
+    "endCoins": 9020,
+    "displayCoins": "9020",
+    "helpText": "피처 구매베팅의 81.5배를 내면 바로 보너스로 들어가요. 스캐터 4개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요. 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 94.5%).",
+    "consoleErrors": []
+  }
+]
