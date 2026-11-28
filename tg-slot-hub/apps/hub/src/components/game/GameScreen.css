@@ -401,6 +401,7 @@
 }
 
 .hub-game-screen__controls {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--hub-space-sm);
@@ -514,7 +515,16 @@
 /* 스핀 속도 [보통|빠름|터보] — 베팅/스핀 줄 위 자체 줄을 통째로 쓴다. 예전 ⚡ 순환 버튼
    자리(44px)에 세 칸을 욱여넣으면 390px에서 스핀 버튼이 눌리기 힘들 만큼 좁아진다.
    모양은 설정 모달의 세그먼트(.hub-settings__segmented)와 같은 규칙을 따른다. */
+/* 속도 세그먼트 + (있으면) 피처 구매 버튼. 피처 구매가 없는 팩은 세그먼트가 줄을 다 쓴다. */
+.hub-game-screen__controls-top {
+  display: flex;
+  align-items: stretch;
+  gap: var(--hub-space-sm);
+}
+
 .hub-game-screen__speed-seg {
+  flex: 1;
+  min-width: 0;
   display: flex;
   border-radius: var(--hub-radius-sm);
   background: var(--hub-card-bg);

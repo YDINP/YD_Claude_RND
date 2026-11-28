@@ -695,6 +695,28 @@ const ko: Record<TranslationKey, string> = {
   auroraHelpTarget: '얼리는 그림은 그 판 당첨 중 당첨금이 가장 큰 그림이에요(같으면 배당표 위쪽 그림). {wild} 칸도 함께 얼어요.',
   auroraHelpBonusNote: '표의 칸 수 «이상» 얼리면 그 칸 값을 받아요. 예) 8칸 → 6칸 값, 13칸 → 12칸 값. {min}칸보다 적으면 얼음 보너스가 없어요.',
   auroraRoundTotalLabel: '프리스핀 합계',
+  // ---- 피처 구매(보너스 바로 사기) ----
+  featureBuy: "피처 구매",
+  featureBuyPriceShort: "베팅 ×{price}",
+  featureBuyCostLabel: "비용",
+  featureBuyCostFormula: "베팅 {bet} × {price}배 = {cost}",
+  featureBuyBalanceLabel: "잔액",
+  featureBuyConfirm: "구매",
+  featureBuyCancel: "취소",
+  featureBuyBlockedAutoSpin: "오토스핀 중에는 살 수 없어요",
+  featureBuyBlockedRound: "보너스가 끝난 뒤에 살 수 있어요",
+  featureBuyBlockedSpinning: "스핀이 끝난 뒤에 살 수 있어요",
+  featureBuyBlockedGamble: "더블업을 끝낸 뒤에 살 수 있어요",
+  featureBuyBlockedFunds: "코인이 모자라요 (필요 {cost})",
+  featureBuyWhatFreeSpins: "스캐터 {n}개 이상이 떨어진 판으로 시작해요. 프리스핀이 바로 열려요.",
+  featureBuyWhatOrderRound: "스캐터 {n}개 이상이 떨어진 판으로 시작해요. 주문 카드 라운드가 바로 열려요.",
+  featureBuyWhatCoinRespin: "코인 {n}개 이상이 떨어진 판으로 시작해요. 코인 리스핀이 바로 열려요.",
+  featureBuyWhatBoard: "스캐터 {n}개 이상이 떨어진 판으로 시작해요. 말판 보너스가 바로 열려요.",
+  featureBuyWhatRoulette: "스캐터 {n}개 이상이 떨어진 판으로 시작해요. 무대 룰렛이 바로 돌아가요.",
+  featureBuyRejectedBlocked: "지금은 살 수 없어요. 보너스나 더블업이 끝난 뒤에 다시 눌러 주세요.",
+  featureBuyRejectedRetry: "구매하지 못했어요. 코인은 빠지지 않았어요. 잠시 뒤 다시 해 보세요.",
+  featureBuyHelpTitle: "피처 구매",
+  featureBuyHelpRule: "베팅의 {price}배를 내면 바로 보너스로 들어가요. {start} 판의 결과는 그런 판들 가운데서 무작위로 정해지고, 평균 환수율은 평소 스핀과 같아요(약 {rtp}%).",
 }
 
 export default ko

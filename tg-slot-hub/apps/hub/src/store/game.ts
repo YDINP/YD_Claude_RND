@@ -559,6 +559,11 @@ export interface GameState {
    * 만들자마자(성공/실패와 무관하게) null로 되돌린다.
    */
   debugPreset: DebugPreset | null
+  /**
+   * 다음 한 판을 피처 구매로 보낸다. 원샷이다 — spin()이 요청을 만들자마자 false로 되돌린다.
+   * buyFeature()만 켠다(시트에서 [구매]를 눌렀을 때).
+   */
+  featureBuyArmed: boolean
   /** 디버그 프리셋 요청이 거절됐을 때(DEBUG_DISABLED/DEBUG_NO_MATCH) 비차단으로 보여줄 메시지. */
   debugMessage: { code: string; message: string } | null
   /** 마지막 스핀의 개발용 타이밍(디버그 패널). */
@@ -617,6 +622,11 @@ export interface GameActions {
   setBet: (index: number) => void
   setRenderer: (renderer: SpinRenderer | null) => void
   spin: () => Promise<void>
+  /**
+   * 피처 구매 한 판. 비용 = math.featureBuy.price × 현재 베팅. 프리스핀·오토스핀·스핀 중이면 아무 일도 하지 않는다
+   * (화면이 이미 버튼을 막고 이유를 보여 준다). 그 뒤는 평소 스핀과 같은 흐름(보너스 진입 연출 포함)을 탄다.
+   */
+  buyFeature: () => Promise<void>
   /**
    * 스핀 연출 중(phase === 'spinning') 탭/스페이스로 "결과로 건너뛰기"를 요청한다.
    * 이미 spinTo 손잡이가 있으면 바로 skip()하고, 서버 결과가 아직 안 왔으면 플래그만 세워
@@ -712,6 +722,7 @@ const initialState: GameState = {
   autoSpin: null,
   autoSpinNotice: null,
   debugPreset: null,
+  featureBuyArmed: false,
   debugMessage: null,
   lastSpinTiming: null,
   lastSpinDebug: null,
@@ -959,7 +970,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 자동 스핀 타이머는 취소한다 — 안 그러면 나중에 중복으로 또 스핀이 걸린다.
     cancelAutoSpin()
 
-    const { gameId, math, betIndex, phase, renderer, freeSpins, debugPreset } = get()
+    const { gameId, math, betIndex, phase, renderer, freeSpins, debugPreset, featureBuyArmed } = get()
     if (!gameId || !math) return
     if (phase === 'spinning' || phase === 'showingWin') return
 
@@ -1001,9 +1012,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 스핀에 새어 들어가면 안 된다). 남은 비차단 디버그 메시지도 새 스핀에서는 지운다.
       debugPreset: null,
       debugMessage: null,
+      featureBuyArmed: false,
     })
 
     const requestBody: SpinRequest = { totalBet, idempotencyKey }
+    // 피처 구매는 프리스핀이 아닌 판에만 싣는다(서버도 프리스핀 중이면 거절한다).
+    if (featureBuyArmed && !freeSpins) requestBody.buyFeature = true
     // preset이 무장돼 있으면 이번 요청에만 실어 보낸다 — maxTries는 서버 기본값을 그대로 쓴다.
     if (debugPreset) requestBody.debug = { preset: debugPreset, maxTries: debugMaxTries(debugPreset) }
 
@@ -1027,6 +1041,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
           idempotencyKey: null,
           debugMessage: { code: err.code, message: err.message },
         })
+        return
+      }
+
+      // 피처 구매가 거절된 경우(프리스핀·더블업이 열려 있음, 구매 없는 게임, 탐색 실패) — 아무것도 차감되지 않았다.
+      // 화면은 막지 않고 안내만 남긴다.
+      if (
+        err instanceof ApiClientError &&
+        (err.code === 'FEATURE_BUY_BLOCKED' || err.code === 'FEATURE_BUY_UNAVAILABLE' || err.code === 'FEATURE_BUY_SEARCH_FAILED')
+      ) {
+        set({ phase: 'idle', error: err.message, errorCode: err.code, idempotencyKey: null })
         return
       }
 
@@ -1185,16 +1209,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       boardHeld = holdNow
       useSessionStore.setState({ wallet: withHeldCoins(result.wallet, holdNow) })
       useHubStore.getState().setJackpotPool(result.jackpot)
+      // 피처 구매 판은 비용이 곧 이 판에 건 돈이다(세션 손익·XP 모두 서버와 같은 기준).
+      const stake = result.featureBuy?.cost ?? result.totalBet
       const spinNet = spinNetOf({
         totalWin: result.totalWin,
         jackpotWin: result.jackpotWin,
-        totalBet: result.totalBet,
+        totalBet: stake,
         isFreeSpin: result.isFreeSpin,
       })
       usePlaySessionStore.getState().recordSpin({
         totalWin: result.totalWin,
         jackpotWin: result.jackpotWin,
-        totalBet: result.totalBet,
+        totalBet: stake,
         isFreeSpin: result.isFreeSpin,
       })
       const armedNow = get().autoSpin
@@ -1205,7 +1231,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // xp는 누적 베팅액이라 결과를 누설하지 않지만(이 판의 승패와 무관), 레벨 바가 판의 끝에
       // 한 번에 차오르도록 다른 것들과 같은 시각에 반영한다.
       // levelUp에는 from/to/bonus만 있고 새 xp/maxBet은 없으므로, 레벨이 오른 스핀은 /me로 확정값을 덮어쓴다.
-      useHubStore.getState().addXp(result.totalBet)
+      useHubStore.getState().addXp(stake)
       if (result.levelUp) {
         void useHubStore.getState().refreshLevelInfo()
       }
@@ -1773,6 +1799,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setDebugPreset(preset) {
     set({ debugPreset: preset })
+  },
+
+  async buyFeature() {
+    const { math, freeSpins, autoSpin, phase } = get()
+    if (!math?.featureBuy || freeSpins !== null || autoSpin !== null) return
+    if (phase === 'spinning' || phase === 'showingWin') return
+    set({ featureBuyArmed: true })
+    await get().spin()
+    // spin()이 시작 조건(연출 중 등)에 막혀 요청을 만들지 않았으면 다음 평범한 스핀으로 새지 않게 끈다.
+    if (get().featureBuyArmed) set({ featureBuyArmed: false })
   },
 
   dismissDebugMessage() {

@@ -131,6 +131,8 @@ import {
 } from '../../store/garden'
 import { playGardenEventSound } from '../../lib/gardenSfx'
 import { playRouletteCue } from '../../lib/rouletteCues'
+import { FeatureBuy, FEATURE_BUY_WHAT_KEY } from './FeatureBuy'
+import { featureBuyBlockReason, featureBuyCost, featureBuyTriggerCount } from '../../lib/featureBuy'
 import './GameScreen.css'
 
 /** 하단 컨트롤의 스핀 속도 세그먼트가 보여주는 순서(느린 → 빠른). */
@@ -465,6 +467,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const setBet = useGameStore((s) => s.setBet)
   const setRenderer = useGameStore((s) => s.setRenderer)
   const spinAction = useGameStore((s) => s.spin)
+  const buyFeatureAction = useGameStore((s) => s.buyFeature)
   const startAutoSpinAction = useGameStore((s) => s.startAutoSpin)
   const stopAutoSpinAction = useGameStore((s) => s.stopAutoSpin)
   const gambleAction = useGameStore((s) => s.gamble)
@@ -1827,6 +1830,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   /** 오토스핀이 돌고 있는 동안 메인 버튼은 "중지 (남은 수)"로 바뀐다. */
   const autoSpinning = autoSpin !== null
 
+  // 피처 구매 — 대표 보너스가 있는 팩만 버튼을 띄운다. 비용은 지금 베팅 기준이고 막힌 이유는 하나만 보여 준다.
+  const featureBuyConfig = math?.featureBuy
+  const featureBuyPrice = featureBuyConfig ? featureBuyCost(featureBuyConfig.price, currentBet) : 0
+  const featureBuyBlock = featureBuyConfig
+    ? featureBuyBlockReason({
+        autoSpinning,
+        inRound: freeSpins !== null,
+        busy: isBusy || roulette !== null || curtainUp,
+        gambleOpen: gambleSession !== null,
+        balance: wallet?.coins ?? 0,
+        cost: featureBuyPrice,
+      })
+    : null
+
   /** 오토스핀 시트의 [오토스핀 시작] — 고른 값을 기억하고 시트를 닫은 뒤 무장한다(첫 판은 store가 건다). */
   const handleAutoSpinStart = (): void => {
     writeAutoSpinPrefs(autoPrefs)
@@ -2507,6 +2524,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             고른 칸은 그대로 켜 둔 채(aria-checked는 저장된 선호 그대로다: 실제로 바뀐 건 없다)
             터보 칸에 점선 테두리만 덧입힌다. 안 그러면 "보통"이 켜져 있는데 릴은 터보로 도는
             것처럼 보여 사용자가 고장으로 읽는다. */}
+        <div className="hub-game-screen__controls-top">
         <div
           className="hub-game-screen__speed-seg"
           role="radiogroup"
@@ -2530,6 +2548,22 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
               {t(spinSpeedLabelKey(speed))}
             </button>
           ))}
+        </div>
+          {math && featureBuyConfig && (
+            <FeatureBuy
+              price={featureBuyConfig.price}
+              trigger={featureBuyConfig.trigger}
+              triggerCount={featureBuyTriggerCount(math, featureBuyConfig.trigger)}
+              bet={currentBet}
+              cost={featureBuyPrice}
+              balance={wallet?.coins ?? 0}
+              block={featureBuyBlock}
+              onBuy={() => {
+                haptic('medium')
+                void buyFeatureAction()
+              }}
+            />
+          )}
         </div>
 
         <div className="hub-game-screen__controls-row">
@@ -2606,6 +2640,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
             {t('autoSpin')}
           </button>
         </div>
+
+        {(errorCode === 'FEATURE_BUY_BLOCKED' || errorCode === 'FEATURE_BUY_UNAVAILABLE' || errorCode === 'FEATURE_BUY_SEARCH_FAILED') && (
+          <p className="hub-game-screen__bet-hint" role="alert">
+            {t(errorCode === 'FEATURE_BUY_BLOCKED' ? 'featureBuyRejectedBlocked' : 'featureBuyRejectedRetry')}
+          </p>
+        )}
 
         {errorCode === 'BET_LOCKED' && (
           <p className="hub-game-screen__bet-hint" role="alert">
@@ -2858,6 +2898,20 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                   </p>
                   {/* 1개 지급 각주는 표 위에 둔다 — 아래에 두면 390폭에서 스크롤해야 보였다. */}
                   {hasSingleCountPay && <p className="hub-paytable__wild-note">{t('singlePayFootnote')}</p>}
+                  {math.featureBuy && (
+                    <div className="hub-features__section hub-feature-buy__help" data-testid="feature-buy-help">
+                      <h3 className="hub-sheet__subtitle">{t('featureBuyHelpTitle')}</h3>
+                      <p className="hub-sheet__message">
+                        {t('featureBuyHelpRule', {
+                          price: math.featureBuy.price.toLocaleString('en-US'),
+                          start: t(FEATURE_BUY_WHAT_KEY[math.featureBuy.trigger], {
+                            n: featureBuyTriggerCount(math, math.featureBuy.trigger) ?? '',
+                          }),
+                          rtp: (math.rtpTarget * 100).toFixed(1),
+                        })}
+                      </p>
+                    </div>
+                  )}
                   {math.frostRespin && <FrostPaytableSpecials math={math} symbols={theme?.symbols} />}
                   <ul className="hub-paytable__list">
                     {Object.entries(math.paytable).map(([id, payrule]) => {

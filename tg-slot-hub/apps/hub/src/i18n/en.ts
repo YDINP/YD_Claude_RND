@@ -698,6 +698,28 @@ const en = {
   auroraHelpTarget: 'The frozen symbol is the win that pays the most on that spin (on a tie, the one higher in the paytable). {wild} cells freeze too.',
   auroraHelpBonusNote: 'Freeze at least the cell count in a column to get its value. e.g. 8 cells → the 6 value, 13 cells → the 12 value. Fewer than {min} cells gives no Ice Bonus.',
   auroraRoundTotalLabel: 'FREE SPINS TOTAL',
+  // ---- 피처 구매(보너스 바로 사기) ----
+  featureBuy: "Buy Bonus",
+  featureBuyPriceShort: "Bet ×{price}",
+  featureBuyCostLabel: "Cost",
+  featureBuyCostFormula: "Bet {bet} × {price} = {cost}",
+  featureBuyBalanceLabel: "Balance",
+  featureBuyConfirm: "Buy",
+  featureBuyCancel: "Cancel",
+  featureBuyBlockedAutoSpin: "You can't buy during autospin",
+  featureBuyBlockedRound: "You can buy after the bonus ends",
+  featureBuyBlockedSpinning: "You can buy after the spin ends",
+  featureBuyBlockedGamble: "Finish the double-up first",
+  featureBuyBlockedFunds: "Not enough coins (need {cost})",
+  featureBuyWhatFreeSpins: "Starts with a spin that lands {n}+ Scatters. Free spins begin right away.",
+  featureBuyWhatOrderRound: "Starts with a spin that lands {n}+ Scatters. The order card round begins right away.",
+  featureBuyWhatCoinRespin: "Starts with a spin that lands {n}+ coins. Coin respins begin right away.",
+  featureBuyWhatBoard: "Starts with a spin that lands {n}+ Scatters. The board bonus begins right away.",
+  featureBuyWhatRoulette: "Starts with a spin that lands {n}+ Scatters. The stage roulette spins right away.",
+  featureBuyRejectedBlocked: "You can't buy right now. Try again after the bonus or double-up ends.",
+  featureBuyRejectedRetry: "The purchase didn't go through and no coins were taken. Try again in a moment.",
+  featureBuyHelpTitle: "Buy Bonus",
+  featureBuyHelpRule: "Pay {price}x your bet to go straight into the bonus. {start} The spin is picked at random from all such spins, and the average return is the same as normal spins (about {rtp}%).",
 } as const
 
 export default en

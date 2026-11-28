@@ -1,0 +1,111 @@
+/* 피처 구매 — 속도 세그먼트 줄 오른쪽 끝의 작은 버튼. 스핀 줄과 다른 줄이라 390px에서도 스핀 버튼을 좁히지 않는다. */
+.hub-feature-buy__btn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 84px;
+  min-height: 40px;
+  padding: 0 var(--hub-space-sm);
+  border-radius: var(--hub-radius-sm);
+  border: 1px solid var(--hub-gold);
+  background: var(--hub-card-bg);
+  color: var(--hub-gold-light);
+  line-height: 1.1;
+}
+
+.hub-feature-buy__btn-label {
+  font-size: var(--hub-font-sub);
+  font-weight: 800;
+}
+
+.hub-feature-buy__btn-price {
+  font-size: var(--hub-font-small);
+  font-weight: 700;
+  color: var(--hub-text-sub);
+}
+
+.hub-feature-buy__btn[data-blocked='true'] {
+  opacity: 0.45;
+  border-color: var(--hub-border);
+}
+
+.hub-feature-buy__btn:active:not([data-blocked='true']) {
+  transform: scale(0.97);
+}
+
+/* 막힌 이유 — 조작부 바로 위에 잠깐 뜬다(레이아웃을 밀지 않는다). */
+.hub-feature-buy__notice {
+  position: absolute;
+  left: var(--hub-space-lg);
+  right: var(--hub-space-lg);
+  bottom: calc(100% + var(--hub-space-xs));
+  margin: 0;
+  padding: var(--hub-space-xs) var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  background: rgba(8, 12, 22, 0.92);
+  border: 1px solid var(--hub-border);
+  color: var(--hub-text);
+  font-size: var(--hub-font-sub);
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hub-feature-buy__what {
+  margin: 0;
+  color: var(--hub-text);
+  font-size: var(--hub-font-body);
+  line-height: 1.45;
+}
+
+.hub-feature-buy__rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--hub-space-xs);
+  padding: var(--hub-space-md);
+  border-radius: var(--hub-radius-sm);
+  background: var(--hub-card-bg);
+  border: 1px solid var(--hub-border);
+}
+
+.hub-feature-buy__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--hub-space-md);
+  font-size: var(--hub-font-sub);
+  color: var(--hub-text-sub);
+}
+
+.hub-feature-buy__row dd {
+  margin: 0;
+  color: var(--hub-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.hub-feature-buy__row--cost dd {
+  color: var(--hub-gold-light);
+  font-size: var(--hub-font-body);
+}
+
+.hub-feature-buy__reason {
+  margin: 0;
+  color: var(--hub-danger);
+  font-size: var(--hub-font-sub);
+}
+
+.hub-feature-buy__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--hub-space-sm);
+}
+
+.hub-feature-buy__actions .hub-sheet__reveal {
+  margin-top: 0;
+}
