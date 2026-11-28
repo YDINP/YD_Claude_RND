@@ -156,10 +156,10 @@ const en = {
   winTierPlain: 'WIN',
   // 영어는 라틴 대문자. ko는 뜻이 바로 보이는 쉬운 한국어를 쓴다(공용 검수 2026-11-26). 게임팩이
   // theme.json의 celebration.labels로 덮어쓸 수 있고, 값은 문자열 또는 {ko, en} 로케일 맵이다.
-  winTierSurge: 'SURGE',
-  winTierBlast: 'BLAST',
-  winTierStorm: 'STORM',
-  winTierCataclysm: 'CATACLYSM',
+  winTierSurge: 'BIG WIN',
+  winTierBlast: 'HUGE WIN',
+  winTierStorm: 'LEGENDARY WIN',
+  winTierCataclysm: 'TOP WIN',
   winBandUnder: 'Less than bet',
   winBandGood: 'Nice win ×{x}',
   winBandGreat: 'Great win ×{x}',

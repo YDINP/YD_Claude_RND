@@ -1857,6 +1857,32 @@ export function playWin(tier: WinTier, durationMs: number): void {
   else recipe.winBig(c, tier, rollup)
 }
 
+/**
+ * 빅윈 단계 승격(큰 → 엄청난 → 전설 → 최고). 짧은 «승격 스팅»(위로 쓸어 올리는 바람 + 밝은 화음 찌르기)을 내고
+ * 그 단계의 팡파르·동전 소리(`winBig`)를 남은 롤업 길이만큼 덧깐다 — 단계가 오를수록 겹이 늘어 소리가 커진다.
+ */
+export function playWinPromote(tier: Exclude<WinTier, 'none'>, remainingMs: number): void {
+  const c = live()
+  if (!c) return
+  duckBgmFor(Math.min(8, remainingMs / 1000) + 1.2)
+  const lift = { big: 1, mega: 1.12, epic: 1.26, max: 1.41 }[tier]
+  noise(c, { dur: 0.34, vol: 0.22, filter: 'bandpass', freq: 700 * lift, sweepTo: 8000, q: 1.3 })
+  tone(c, { freq: 98 * lift, slideTo: 49 * lift, dur: 0.4, vol: 0.34, type: 'sine', attack: 0.002 })
+  const scale = recipe.scale
+  ;[2, 4, 7].forEach((n, i) => {
+    const f = scale[Math.min(n, scale.length - 1)]
+    if (f === undefined) return
+    tone(c, { freq: f * lift, at: 0.08, dur: 0.5, vol: 0.12 - i * 0.02, type: 'sawtooth', attack: 0.006, lp: 5200, lpTo: 1400 })
+    tone(c, { freq: f * lift * 2, at: 0.08, dur: 0.35, vol: 0.05, type: 'triangle', attack: 0.004 })
+  })
+  sched = 0.18
+  try {
+    recipe.winBig(c, tier, Math.min(6, Math.max(0.6, remainingMs / 1000)))
+  } finally {
+    sched = 0
+  }
+}
+
 /** 짧은 오름 음. 프리셋 음계(`recipe.scale`)의 칸 번호를 `step`초 간격으로 부드러운 삼각파로 친다. */
 function bandSting(c: AudioContext, notes: readonly number[], vol = 0.1): void {
   const scale = recipe.scale

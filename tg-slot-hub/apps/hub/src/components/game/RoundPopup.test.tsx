@@ -57,7 +57,7 @@ describe('RoundPopupView', () => {
         <RoundPopupView popup={{ kind: 'freeSpinsExit', totalWin }} onDismiss={() => {}} />,
       )
       expect(screen.getByText('WIN')).toBeInTheDocument()
-      for (const tierName of ['SURGE', 'BLAST', 'STORM', 'CATACLYSM']) {
+      for (const tierName of ['BIG WIN', 'HUGE WIN', 'LEGENDARY WIN', 'TOP WIN']) {
         expect(screen.queryByText(tierName)).not.toBeInTheDocument()
       }
       unmount()

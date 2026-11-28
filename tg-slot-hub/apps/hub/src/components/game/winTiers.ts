@@ -25,7 +25,8 @@ export { winBandFor, floorMultipleLabel, type WinBand } from '@tgslot/renderer'
 
 /**
  * 축하 등급. 인덱스가 곧 강도이자 결이다 —
- * SURGE(밀려 올라옴) → BLAST(터짐) → STORM(휘몰아침) → CATACLYSM(뒤흔듦).
+ * surge(큰 당첨, 밀려 올라옴) → blast(엄청난 당첨, 터짐) → storm(전설 당첨, 휘몰아침) → cataclysm(최고 당첨, 뒤흔듦).
+ * 키 이름은 내부 식별자다. 화면 이름은 i18n(`winTier*`)이 정한다.
  * `none`은 "축하할 일이 아니다"라는 뜻이고, 일반 스핀에서는 **아무것도 띄우지 않는다**
  * (작은 당첨은 WinStrip만으로 충분하다).
  */
@@ -129,24 +130,34 @@ export function celebrationTiming(tier: CelebrationTier, input: TimingInput = {}
   return { rollupMs: Math.round(base * scale) }
 }
 
-// ---- 빅윈 오버레이 타임라인 (금액이 길이를 정한다) ----
+// ---- 빅윈 오버레이 타임라인 (단계가 승격하며 길어진다) ----
 
 /**
- * 롤업의 양 끝(ms)과, 위쪽 끝에 닿는 배수.
- *
- * 아래 끝은 오버레이가 뜨는 최저 배수(10×)의 길이다 — 여기서도 "뜸을 들인다"가 읽혀야 하므로
- * 1.4초 밑으로는 내리지 않는다. 위쪽 끝은 500× 이상 전부가 나눠 갖는다 — 상한이 없으면
- * 1000× 한 판이 오버레이만 1분을 붙든다.
+ * 단계 구간 길이(ms, normal). 롤업은 0에서 출발해 **문턱을 하나 넘을 때마다 한 단계씩 승격**한다
+ * (큰 당첨 → 엄청난 당첨 → 전설 당첨 → 최고 당첨). 구간마다 시간이 같아 승격이 고르게 찾아온다.
+ * 강조 비트(`BIG_WIN_EMPHASIS_MS`)까지 더하면 normal 기준 큰 3.0s / 엄청난 4.5s / 전설 6.0s / 최고 7.5s.
  */
-export const BIG_WIN_ROLLUP_MIN_MS = 1400
-export const BIG_WIN_ROLLUP_MAX_MS = 6000
-export const BIG_WIN_ROLLUP_MAX_MULTIPLE = 500
+export const BIG_WIN_STAGE_MS: Readonly<Record<NamedTier, number>> = {
+  surge: 1800,
+  blast: 1500,
+  storm: 1500,
+  cataclysm: 1500,
+}
 
 /**
- * 목표 금액에 닿은 뒤의 강조 비트(ms). 한 호흡으로 읽혀야 하는 대목이라 등급으로 쪼개지 않는다 —
- * 여기가 "얼마를 땄다"가 확정되는 순간이고, 짧으면 롤업의 끝처럼 묻히고 길면 정지 화면이 된다.
+ * 목표 금액에 닿은 뒤의 강조 비트(ms). 여기가 "얼마를 땄다"가 확정되는 순간이다.
+ * 승격 연출이 롤업 안에서 이미 몇 번 터지므로 한 호흡(1.2초)으로 줄였다.
  */
-export const BIG_WIN_EMPHASIS_MS = 2400
+export const BIG_WIN_EMPHASIS_MS = 1200
+
+/** 스핀 속도별 배율. quick은 조금, turbo는 절반으로 줄인다. 오토·프리스핀(hurried)과 겹치면 더 짧은 쪽. */
+export const BIG_WIN_SPEED_SCALE = { normal: 1, quick: 0.75, turbo: 0.5 } as const
+
+export type BigWinSpeed = keyof typeof BIG_WIN_SPEED_SCALE
+
+export interface BigWinTimingInput extends TimingInput {
+  readonly speed?: BigWinSpeed
+}
 
 /**
  * 오토스핀·프리스핀이 도는 동안의 결과 화면 유지 시간(ms). 10초 계약(ROUND_POPUP_AUTO_CLOSE_MS)은
@@ -157,6 +168,15 @@ export const BIG_WIN_EMPHASIS_MS = 2400
  */
 export const BIG_WIN_HURRIED_HOLD_MS = 900
 
+/** 롤업 한 구간. 이 구간 동안 화면 단계는 `tier`이고 금액은 `from`→`to`로 오른다. */
+export interface BigWinStage {
+  readonly tier: NamedTier
+  readonly from: number
+  readonly to: number
+  readonly startMs: number
+  readonly endMs: number
+}
+
 /** 빅윈 오버레이의 세 박자. 순서대로 굴리고(rollup) → 못 박고(emphasis) → 붙든다(hold). */
 export interface BigWinTimeline {
   readonly rollupMs: number
@@ -166,44 +186,74 @@ export interface BigWinTimeline {
   readonly holdMs: number
 }
 
-/**
- * 롤업 길이(ms) — 배수(당첨 ÷ 베팅)의 **로그**에 비례한다.
- *
- * 선형이면 500×가 10×의 50배(1분 넘김)라 쓸 수 없고, 그렇다고 상한만 낮추면 실제로 자주 나오는
- * 10~50× 구간이 전부 같은 길이로 뭉개져 "10×나 200×나 똑같다"는 지금의 불만이 그대로 남는다.
- * 로그는 그 사이를 잡는다 — 10× 1.4초 / 50× 2.9초 / 200× 4.9초 / 500× 이상 6초.
- * 사람이 금액을 "크다"고 느끼는 감각 자체가 자릿수(=로그)에 가깝기도 하다.
- */
-export function bigWinRollupMs(totalWin: number, totalBet: number): number {
-  if (totalBet <= 0 || totalWin <= 0) return BIG_WIN_ROLLUP_MIN_MS
-  // 오버레이가 뜨는 최저 배수가 곡선의 원점이다 — 그 밑은 애초에 이 화면을 보지 못한다.
-  const floor = CELEBRATION_TIER_MULTIPLIERS.surge
-  const multiple = totalWin / totalBet
-  if (multiple <= floor) return BIG_WIN_ROLLUP_MIN_MS
-  const progress = Math.min(
-    1,
-    Math.log(multiple / floor) / Math.log(BIG_WIN_ROLLUP_MAX_MULTIPLE / floor),
-  )
-  return Math.round(BIG_WIN_ROLLUP_MIN_MS + (BIG_WIN_ROLLUP_MAX_MS - BIG_WIN_ROLLUP_MIN_MS) * progress)
+function bigWinScale(input: BigWinTimingInput): number {
+  const speed = BIG_WIN_SPEED_SCALE[input.speed ?? 'normal'] ?? 1
+  return Math.min(speed, input.hurried === true ? HURRIED_SCALE : 1)
 }
 
 /**
- * 이번 빅윈 오버레이의 세 박자.
- *
- * 모션 줄이기면 롤업은 "올라간다"는 사실만 남기고 고정 길이로 줄인다(금액에 비례시켜 봐야
- * 움직임이 없으니 길이만 늘어난다). 서두르는 구간에서는 롤업·강조가 함께 줄고, 붙드는 시간은
- * 아예 다른 값을 쓴다(위 `BIG_WIN_HURRIED_HOLD_MS` 참고).
+ * 롤업 구간표. 최종 등급까지의 단계를 차례로 밟는다 — 각 구간의 끝이 다음 단계의 문턱(베팅 × 배수)이다.
+ * 모션 줄이기면 승격 없이 최종 단계 한 구간(짧은 롤업)만 둔다 — 숫자만 보여 준다.
+ * 10× 미만이거나 베팅을 모르면 빈 배열(오버레이가 뜨지 않는다).
+ */
+export function bigWinStages(totalWin: number, totalBet: number, input: BigWinTimingInput = {}): BigWinStage[] {
+  const final = celebrationTier(totalWin, totalBet)
+  if (final === 'none') return []
+  if (input.reducedMotion === true) {
+    return [{ tier: final, from: 0, to: totalWin, startMs: 0, endMs: REDUCED_ROLLUP_MS }]
+  }
+  const scale = bigWinScale(input)
+  const tiers = NAMED_TIERS.slice(0, NAMED_TIERS.indexOf(final) + 1)
+  const stages: BigWinStage[] = []
+  let at = 0
+  tiers.forEach((tier, i) => {
+    const next = tiers[i + 1]
+    const from = i === 0 ? 0 : CELEBRATION_TIER_MULTIPLIERS[tier] * totalBet
+    const to = next === undefined ? totalWin : CELEBRATION_TIER_MULTIPLIERS[next] * totalBet
+    const ms = Math.round(BIG_WIN_STAGE_MS[tier] * scale)
+    stages.push({ tier, from, to, startMs: at, endMs: at + ms })
+    at += ms
+  })
+  return stages
+}
+
+/**
+ * 롤업 `elapsedMs` 시점의 금액. 중간 구간은 문턱 앞에서 살짝 숨을 고르는 곡선(smoothstep)이라
+ * 문턱을 넘는 순간의 승격이 또렷하고, 마지막 구간은 감속(ease-out)하며 목표에 앉는다.
+ */
+export function stagedRollupValue(stages: readonly BigWinStage[], elapsedMs: number): number {
+  const last = stages[stages.length - 1]
+  if (last === undefined) return 0
+  if (elapsedMs >= last.endMs) return last.to
+  const stage = stages.find((s) => elapsedMs < s.endMs) ?? last
+  const span = Math.max(1, stage.endMs - stage.startMs)
+  const p = Math.min(1, Math.max(0, (elapsedMs - stage.startMs) / span))
+  const eased = stage === last ? 1 - Math.pow(1 - p, 3) : p * p * (3 - 2 * p)
+  return Math.round(stage.from + (stage.to - stage.from) * eased)
+}
+
+/** 지금 금액이 몇 번째 단계인가(0부터). 문턱(`from`)에 닿으면 그 단계다. */
+export function stageIndexForValue(stages: readonly BigWinStage[], value: number): number {
+  let index = 0
+  stages.forEach((stage, i) => {
+    if (i > 0 && value >= stage.from) index = i
+  })
+  return index
+}
+
+/**
+ * 이번 빅윈 오버레이의 세 박자. 롤업 = 구간표 끝, 강조는 같은 배율로 줄고, 붙드는 시간은 서두를 때만 짧다.
  */
 export function bigWinTimeline(
   totalWin: number,
   totalBet: number,
-  input: TimingInput = {},
+  input: BigWinTimingInput = {},
 ): BigWinTimeline {
-  const scale = input.hurried === true ? HURRIED_SCALE : 1
-  const rollupBase =
-    input.reducedMotion === true ? REDUCED_ROLLUP_MS : bigWinRollupMs(totalWin, totalBet)
+  const stages = bigWinStages(totalWin, totalBet, input)
+  const rollupMs = stages[stages.length - 1]?.endMs ?? (input.reducedMotion === true ? REDUCED_ROLLUP_MS : BIG_WIN_STAGE_MS.surge)
+  const scale = input.reducedMotion === true ? 1 : bigWinScale(input)
   return {
-    rollupMs: Math.round(rollupBase * scale),
+    rollupMs,
     emphasisMs: Math.round(BIG_WIN_EMPHASIS_MS * scale),
     holdMs: input.hurried === true ? BIG_WIN_HURRIED_HOLD_MS : ROUND_POPUP_AUTO_CLOSE_MS,
   }
@@ -385,6 +435,52 @@ export function showerParticles(skin: ResolvedCelebrationSkin, tier: Celebration
   })
   byTier.set(tier, particles)
   return particles
+}
+
+// ---- 동전 분수 (빅윈 오버레이) ----
+
+/** 화면 바닥 가운데서 솟구쳤다 떨어지는 동전 한 닢. 값은 CSS 커스텀 속성으로 넘어간다. */
+export interface FountainCoin {
+  /** 옆으로 날아가는 거리(vw, 부호가 방향) */
+  readonly dx: number
+  /** 솟는 높이(vh) */
+  readonly rise: number
+  readonly delay: number
+  readonly duration: number
+  readonly size: number
+}
+
+/** 등급별 분수 동전 수. 높을수록 빽빽하다. */
+export const FOUNTAIN_COUNT_BY_TIER: Record<CelebrationTier, number> = {
+  none: 0,
+  surge: 10,
+  blast: 16,
+  storm: 22,
+  cataclysm: 30,
+}
+
+const ALL_FOUNTAIN: readonly FountainCoin[] = Array.from({ length: FOUNTAIN_COUNT_BY_TIER.cataclysm }, (_, i) => {
+  const side = ((i * GOLDEN_RATIO_CONJUGATE) % 1) * 2 - 1
+  return {
+    dx: Number((side * 42).toFixed(1)),
+    rise: 52 + (i % 5) * 7,
+    delay: (i % 9) * 110,
+    duration: 1300 + (i % 4) * 170,
+    size: 14 + (i % 3) * 5,
+  }
+})
+
+const FOUNTAIN_BY_TIER: Record<CelebrationTier, readonly FountainCoin[]> = {
+  none: [],
+  surge: ALL_FOUNTAIN.slice(0, FOUNTAIN_COUNT_BY_TIER.surge),
+  blast: ALL_FOUNTAIN.slice(0, FOUNTAIN_COUNT_BY_TIER.blast),
+  storm: ALL_FOUNTAIN.slice(0, FOUNTAIN_COUNT_BY_TIER.storm),
+  cataclysm: ALL_FOUNTAIN,
+}
+
+/** 등급별 분수. 한 벌을 모듈 로드 때 만들어 접두사로 나눠 쓴다(같은 등급이면 같은 배열 참조). */
+export function fountainCoins(tier: CelebrationTier): readonly FountainCoin[] {
+  return FOUNTAIN_BY_TIER[tier] ?? FOUNTAIN_BY_TIER.none
 }
 
 /** 고리 `count`개의 출발 지연. 스킨이 등급별 고리 수를 바꿀 수 있어 수로 묻는다. */

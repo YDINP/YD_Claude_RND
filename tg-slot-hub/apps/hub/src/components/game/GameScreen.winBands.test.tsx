@@ -231,7 +231,7 @@ describe('GameScreen 당첨 단계(winTotal.band)', () => {
     expect(audioSpies.playWinBand).not.toHaveBeenCalled()
   })
 
-  it('big(10배 이상): 기존 playWin(tier) 경로 그대로, 단계 라벨은 없다', async () => {
+  it('big(10배 이상): 큰 당첨 소리는 빅윈 오버레이가 이미 냈다 — winTotal 롤업은 작은 당첨 소리만, 단계 라벨은 없다', async () => {
     const { container } = render(<GameScreen gameId="classic-777" />)
     await screen.findByText('10')
     await spinAndSettle(spinResponse(10, 250))
@@ -242,7 +242,9 @@ describe('GameScreen 당첨 단계(winTotal.band)', () => {
     })
 
     expect(container.querySelector('.hub-win-strip__label')).toHaveTextContent('WIN')
-    expect(audioSpies.playWin).toHaveBeenCalledWith('big', 20)
+    // 오버레이가 굴리기 시작할 때 큰 당첨(첫 단계) 소리를 냈고, 뒤따르는 winTotal은 겹치지 않게 작은 소리다.
+    expect(audioSpies.playWin).toHaveBeenCalledWith('big', expect.any(Number))
+    expect(audioSpies.playWin).toHaveBeenLastCalledWith('none', 20)
     expect(audioSpies.playWinBand).not.toHaveBeenCalled()
   })
 

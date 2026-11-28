@@ -110,6 +110,7 @@ import { useFrostStore } from '../../store/frost'
 import { useCoinRespinStore } from '../../store/coinRespin'
 import { formatCoinAmount } from '../../lib/coinFormat'
 import {
+  playCelebrationPromote,
   playRespinCelebration,
   playRespinEventSound,
   resetRespinSfx,
@@ -1504,13 +1505,12 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     [gameId],
   )
 
-  // 코인 리스핀 정산 뒤 빅윈: 오버레이 롤업 박자에 맞춰 큰 당첨 소리·틱·마감음을 낸다(일반 판은 winTotal이 낸다).
+  // 빅윈 오버레이: 롤업 박자에 맞춰 큰 당첨 소리·틱·승격 스팅·마감음을 낸다(뒤따르는 winTotal 롤업은 작은 당첨 소리만).
   function handleCelebrationRollPhase(
     rollPhase: 'rolling' | 'settled',
     info: { tier: CelebrationTier; rollupMs: number },
   ): void {
     if (info.tier === 'none') return
-    if (useCoinRespinStore.getState().view.phase !== 'done') return
     playRespinCelebration(rollPhase, info.tier, info.rollupMs)
   }
   useEffect(() => {
@@ -2460,6 +2460,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           onDismiss={dismissWinCelebrationAction}
           skin={celebrationSkin}
           onRollPhase={handleCelebrationRollPhase}
+          onPromote={(tier, info) => playCelebrationPromote(tier, info.remainingMs)}
         />
       )}
 
