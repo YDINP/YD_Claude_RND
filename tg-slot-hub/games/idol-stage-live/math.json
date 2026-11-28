@@ -16,7 +16,7 @@
     },
     {
       "id": "bonus",
-      "name": {"en": "Stage Pass", "ko": "무대 초대권"},
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

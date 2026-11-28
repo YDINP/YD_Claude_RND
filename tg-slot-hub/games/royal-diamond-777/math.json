@@ -20,10 +20,7 @@
     },
     {
       "id": "scatter",
-      "name": {
-        "en": "Deco Star",
-        "ko": "데코 스타"
-      },
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

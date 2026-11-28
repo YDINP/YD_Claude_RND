@@ -13,10 +13,7 @@
     },
     {
       "id": "scatter",
-      "name": {
-        "en": "Comet",
-        "ko": "혜성"
-      },
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

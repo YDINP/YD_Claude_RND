@@ -42,7 +42,7 @@
     },
     {
       "id": "anvil",
-      "name": {"en": "Anvil", "ko": "모루"},
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     }
   ],

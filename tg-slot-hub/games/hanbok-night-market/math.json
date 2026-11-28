@@ -10,7 +10,7 @@
     },
     {
       "id": "bonus",
-      "name": {"en": "Silk Lantern", "ko": "청사초롱"},
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

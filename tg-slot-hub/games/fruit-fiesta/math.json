@@ -4,7 +4,7 @@
   "rows": 3,
   "symbols": [
     { "id": "wild", "name": { "en": "Wild Fruit", "ko": "와일드 과일" }, "wild": true },
-    { "id": "scatter", "name": { "en": "Fiesta Star", "ko": "피에스타 스타" }, "scatter": true },
+    { "id": "scatter", "name": { "en": "Scatter", "ko": "스캐터" }, "scatter": true },
     { "id": "seven", "name": { "en": "Lucky Seven", "ko": "럭키 세븐" } },
     { "id": "bell", "name": { "en": "Golden Bell", "ko": "황금 종" } },
     { "id": "watermelon", "name": { "en": "Watermelon", "ko": "수박" } },

@@ -11,7 +11,7 @@
     },
     {
       "id": "scatter",
-      "name": {"en": "Ribbon Lollipop", "ko": "리본 막대사탕"},
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

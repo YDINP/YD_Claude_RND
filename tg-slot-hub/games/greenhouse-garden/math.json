@@ -14,10 +14,7 @@
     },
     {
       "id": "scatter",
-      "name": {
-        "en": "Watering Can",
-        "ko": "물뿌리개"
-      },
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {

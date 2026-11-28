@@ -5,7 +5,7 @@
   "reelHeights": [3, 4, 5, 4, 3],
   "symbols": [
     {"id": "wild", "name": {"en": "Hex Ice", "ko": "육각 얼음"}, "wild": true},
-    {"id": "scatter", "name": {"en": "Aurora Orb", "ko": "오로라 구슬"}, "scatter": true},
+    {"id": "scatter", "name": { "en": "Scatter", "ko": "스캐터" }, "scatter": true},
     {"id": "bear", "name": {"en": "Polar Bear", "ko": "북극곰"}},
     {"id": "owl", "name": {"en": "Snowy Owl", "ko": "흰올빼미"}},
     {"id": "fox", "name": {"en": "Arctic Fox", "ko": "북극여우"}},

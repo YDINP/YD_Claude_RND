@@ -168,7 +168,7 @@ describe('buildSpinToOptions — 얼림 팩', () => {
 describe('FrostLayer', () => {
   it('기본 판은 «구슬 3개 → 프리스핀 8~12회» 안내 띠', () => {
     render(<FrostLayer math={aurora} locale="ko" inFreeSpins={false} carryLevel={0} />)
-    expect(screen.getByText('오로라 구슬 3개 → 얼려 두기 프리스핀 8~12회')).toBeInTheDocument()
+    expect(screen.getByText('스캐터 3개 → 얼려 두기 프리스핀 8~12회')).toBeInTheDocument()
     expect(screen.queryByText('오로라')).not.toBeInTheDocument()
   })
 
@@ -254,14 +254,15 @@ describe('도움말 · 결과 요약', () => {
     expect(screen.getByText('다시 돌리기 중에 생긴 다른 당첨은 지급하지 않아요.')).toBeInTheDocument()
   })
 
-  it('배당표 맨 위: 육각 얼음(와일드)과 오로라 구슬을 그림과 쉬운 말로', () => {
+  it('배당표 맨 위: 육각 얼음(와일드)과 스캐터를 그림과 쉬운 말로', () => {
     render(<FrostPaytableSpecials math={aurora} symbols={{ wild: 'wild.png', scatter: 'orb.png' }} />)
     expect(screen.getByAltText('육각 얼음')).toHaveAttribute('src', 'wild.png')
-    expect(screen.getByAltText('오로라 구슬')).toHaveAttribute('src', 'orb.png')
-    expect(screen.getByText('2·3·4번 릴에만 나와요. 오로라 구슬을 뺀 모든 그림 대신 맞아요.')).toBeInTheDocument()
+    expect(screen.getByAltText('스캐터')).toHaveAttribute('src', 'orb.png')
+    expect(screen.getByText('2·3·4번 릴에만 나와요. 스캐터를 뺀 모든 그림 대신 맞아요.')).toBeInTheDocument()
     expect(screen.getByText('육각 얼음만으로 이어지면 북극곰 배당을 받아요.')).toBeInTheDocument()
     expect(screen.getByText('3개: 베팅의 2.5배 + 8회')).toBeInTheDocument()
-    expect(screen.queryByText(/와일드|스캐터/)).not.toBeInTheDocument()
+    // 피처를 여는 그림은 13종 공용어 «스캐터»로 부른다(2026-11-28 사용자 결정). 와일드는 그림 이름(육각 얼음)으로 둔다.
+    expect(screen.queryByText(/와일드/)).not.toBeInTheDocument()
   })
 
   it('얼려 두기: 얼리는 그림의 정의와 보너스표 «이상» 기준', () => {

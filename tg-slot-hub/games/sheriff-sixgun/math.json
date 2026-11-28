@@ -13,10 +13,7 @@
     },
     {
       "id": "scatter",
-      "name": {
-        "en": "Bounty Medal",
-        "ko": "현상금 메달"
-      },
+      "name": { "en": "Scatter", "ko": "스캐터" },
       "scatter": true
     },
     {
