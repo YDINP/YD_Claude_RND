@@ -64,7 +64,7 @@ export class AnticipationFx {
    * 기대감 시작. 이미 켜져 있으면(연속 기대 릴) 어둠을 유지한 채 기둥만 옮긴다.
    * `pulse`는 이미 떨어진 스캐터 칸의 뷰 — 크기만 맥동하고 끝나면 1로 돌아온다.
    */
-  begin(columns: readonly FxRect[], pulse: readonly Container[], durationMs: number): void {
+  begin(columns: readonly FxRect[], pulse: readonly Container[], durationMs: number, holes: readonly FxRect[] = []): void {
     // 앞 릴의 꺼짐·되돌림 트윈을 전부 끊고 새로 건다(어둠의 지금 alpha는 그대로 두고 거기서 다시 올린다).
     for (const tween of this.tweens) tween.kill()
     this.tweens.clear()
@@ -74,7 +74,7 @@ export class AnticipationFx {
     for (const view of this.pulsing) view.scale.set(1)
     this.pulsing = []
     this.active = true
-    this.drawDim(columns)
+    this.drawDim(columns, holes)
     this.drawPillar(columns)
     this.flash.clear()
     this.flash.alpha = 0
@@ -184,17 +184,23 @@ export class AnticipationFx {
     }
   }
 
-  private drawDim(columns: readonly FxRect[]): void {
+  /** 화면 전체를 살짝 어둡게 덮되 기대 기둥과 이미 떨어진 스캐터 칸(`holes`)은 뚫어 밝게 남긴다. */
+  private drawDim(columns: readonly FxRect[], holes: readonly FxRect[]): void {
     this.dim.clear()
     this.dim.rect(-COVER, -COVER, COVER * 2, COVER * 2).fill({ color: 0x000000, alpha: ANTICIPATION_DIM_ALPHA })
     for (const rect of columns) this.dim.rect(rect.x, rect.y, rect.width, rect.height).cut()
+    for (const rect of holes) this.dim.roundRect(rect.x, rect.y, rect.width, rect.height, rect.width * 0.18).cut()
   }
 
   private drawPillar(columns: readonly FxRect[]): void {
     this.pillar.clear()
     this.flash.clear()
     for (const rect of columns) {
+      // 기둥 안쪽: 위아래 끝이 더 밝은 빛 띠 두 장 + 전체 옅은 빛.
       this.pillar.rect(rect.x, rect.y, rect.width, rect.height).fill({ color: this.color, alpha: ANTICIPATION_PILLAR_ALPHA })
+      const band = rect.height * 0.16
+      this.pillar.rect(rect.x, rect.y, rect.width, band).fill({ color: 0xffffff, alpha: ANTICIPATION_PILLAR_ALPHA })
+      this.pillar.rect(rect.x, rect.y + rect.height - band, rect.width, band).fill({ color: 0xffffff, alpha: ANTICIPATION_PILLAR_ALPHA })
       for (const layer of ANTICIPATION_GLOW_LAYERS) {
         this.pillar
           .roundRect(rect.x, rect.y, rect.width, rect.height, Math.min(rect.width, rect.height) * 0.08)

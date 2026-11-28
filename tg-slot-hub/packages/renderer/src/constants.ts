@@ -482,15 +482,15 @@ export const ANTICIPATION_MIN_SPEED_RATIO = 0.9
 /** 바퀴를 더하는 상한. */
 export const ANTICIPATION_MAX_EXTRA_TURNS = 24
 /** 기대 중 나머지 릴·배경을 덮는 어둠의 불투명도. «살짝» 어둡게만 한다. */
-export const ANTICIPATION_DIM_ALPHA = 0.38
+export const ANTICIPATION_DIM_ALPHA = 0.42
 /** 기대 기둥 안쪽 빛의 불투명도. */
-export const ANTICIPATION_PILLAR_ALPHA = 0.12
+export const ANTICIPATION_PILLAR_ALPHA = 0.16
 /** 기대 기둥 테두리 광채. 굵고 흐린 선부터 겹친다(블러 필터 없이). 마지막 한 줄은 흰 심지다. */
 export const ANTICIPATION_GLOW_LAYERS = [
-  { widthPx: 16, alpha: 0.12, white: false },
-  { widthPx: 9, alpha: 0.24, white: false },
-  { widthPx: 4, alpha: 0.6, white: false },
-  { widthPx: 1.5, alpha: 0.75, white: true },
+  { widthPx: 22, alpha: 0.14, white: false },
+  { widthPx: 12, alpha: 0.28, white: false },
+  { widthPx: 5, alpha: 0.75, white: false },
+  { widthPx: 2, alpha: 0.9, white: true },
 ] as const
 /** 어둠·기둥이 들어오는 시간(ms). */
 export const ANTICIPATION_FADE_IN_MS = 160

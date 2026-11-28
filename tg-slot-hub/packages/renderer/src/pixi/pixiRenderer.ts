@@ -1309,10 +1309,12 @@ class PixiRenderer implements RendererCore {
     this.anticipatingReel = reel
     const plan = this.reelPlans.find((p) => p.reel === reel)
     const durationMs = Math.round(plan?.anticipationWindowMs ?? plan?.anticipationMs ?? 0)
+    const landed = this.landedTriggerViews(plan?.endMs ?? Number.POSITIVE_INFINITY)
     this.anticipationFx.begin(
       group.map((r) => this.anticipationColumn(r)),
-      this.landedTriggerViews(plan?.endMs ?? Number.POSITIVE_INFINITY),
+      landed.map((cell) => cell.view),
       durationMs,
+      landed.map((cell) => cell.rect),
     )
     this.emit({ type: 'anticipation', phase: 'start', reel, durationMs })
   }
@@ -1361,18 +1363,24 @@ class PixiRenderer implements RendererCore {
     }
   }
 
-  /** 이 시각 전에 선 릴에서 트리거 심볼(스캐터·코인)이 앉은 칸의 뷰. */
-  private landedTriggerViews(beforeMs: number): Container[] {
+  /** 이 시각 전에 선 릴에서 트리거 심볼(스캐터·코인)이 앉은 칸의 뷰와 그 칸 사각형(어둠에서 뚫을 자리). */
+  private landedTriggerViews(beforeMs: number): { view: Container; rect: FxRect }[] {
     const tally = this.anticipationTally
     if (tally === null) return []
-    const views: Container[] = []
+    const size = this.layout.symbolSize
+    const views: { view: Container; rect: FxRect }[] = []
     for (const plan of this.reelPlans) {
       if (plan.endMs >= beforeMs) continue
       const view = this.reels[plan.reel]
       if (view === undefined) continue
       for (let k = 1; k <= this.options.math.rows; k += 1) {
         const cell = view.cells[k]
-        if (cell !== undefined && cell.symbol === tally.symbol) views.push(cell.view)
+        if (cell !== undefined && cell.symbol === tally.symbol) {
+          views.push({
+            view: cell.view,
+            rect: { x: view.root.x + cell.view.x - size / 2, y: view.root.y + cell.view.y - size / 2, width: size, height: size },
+          })
+        }
       }
     }
     return views
