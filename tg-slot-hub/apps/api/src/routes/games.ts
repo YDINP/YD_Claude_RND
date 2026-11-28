@@ -15,11 +15,12 @@ import {
   toSharedFeatures,
   toSharedWinLine,
 } from '../games/engineSpin.js'
+import { FeatureBuyNoMatchError, findFeatureBuyRound } from '../games/featureBuy.js'
 import { DebugNoMatchError, findDebugSeed, isForgePreset, isFrostPreset, isGardenPreset, isRoulettePreset } from '../games/debugSpin.js'
 import type { ApiConfig } from '../config.js'
 import type { GameRegistry } from '../games/registry.js'
 import type { Repos } from '../repos/types.js'
-import { BetRuleError, InsufficientFundsError } from '../repos/types.js'
+import { BetRuleError, FeatureBuyBlockedError, InsufficientFundsError } from '../repos/types.js'
 import type { JwtService } from '../auth/jwt.js'
 import { authMiddleware } from '../middleware/auth.js'
 import type { AuthVariables } from '../middleware/auth.js'
@@ -100,7 +101,16 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
     if (!parsed.success) {
       return c.json({ error: 'Invalid request body', code: 'BAD_REQUEST' }, 400)
     }
-    const { totalBet, idempotencyKey, debug } = parsed.data
+    const { totalBet, idempotencyKey, debug, buyFeature } = parsed.data
+
+    // 피처 구매는 그 게임에 대표 보너스 가격이 있을 때만 받는다. 강제 프리셋과 함께 오면 의미가 겹치므로 거절한다.
+    const featureBuy = buyFeature ? pack.math.featureBuy : undefined
+    if (buyFeature && debug) {
+      return c.json({ error: 'buyFeature cannot be combined with debug presets', code: 'BAD_REQUEST' }, 400)
+    }
+    if (buyFeature && !featureBuy) {
+      return c.json({ error: 'This game has no feature buy', code: 'FEATURE_BUY_UNAVAILABLE' }, 409)
+    }
 
     // 개발 전용 강제 프리셋. 빌드에서 빠졌거나(프로덕션 번들) `allowDebugSpin`이 꺼져 있으면
     // (기본값) 요청 자체를 거부한다. 둘 중 하나라도 아니면 아래 탐색 경로에 닿지 않는다.
@@ -157,6 +167,8 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           idempotencyKey,
           // 더블업 설정은 math.json이 갖고 있다. 없는 게임이면 제안이 열리지 않는다.
           ...(pack.math.gamble ? { gamble: pack.math.gamble } : {}),
+          // 비용 차감·프리스핀/더블업 거부·XP 등 회계는 레포가 락 안에서 한다.
+          ...(featureBuy ? { featureBuy: { price: featureBuy.price } } : {}),
           compute: (ctx) => {
             // 베팅 규칙은 **락을 잡은 뒤** 확정된 값으로 검사한다. 트랜잭션 밖에서 읽은
             // 상태로 판단하면 그 사이 프리스핀이 시작/종료됐을 때 잘못된 판정이 나온다.
@@ -178,7 +190,20 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
             let rng: ReturnType<typeof createRng>
             let result: ReturnType<typeof spinWithState>
 
-            if (process.env.NODE_ENV !== 'production' && debug) {
+            if (featureBuy) {
+              // 피처 구매: 보너스가 열린 유료 판이 나올 때까지 새 시드로 평범한 판을 돌려 거른다(결과는 고치지 않는다).
+              // 레포가 프리스핀 중이면 이미 거부했으므로 여기 오는 판은 항상 유료 판이다(state 없음).
+              const found = findFeatureBuyRound({
+                math: pack.math,
+                config: featureBuy,
+                totalBet: ctx.totalBet,
+                nonce: ctx.nonce,
+                createRng,
+              })
+              seed = found.seed
+              rng = found.rng
+              result = found.result
+            } else if (process.env.NODE_ENV !== 'production' && debug) {
               // 시드 탐색: 실제 스핀과 같은 rng 파생(`${seed}:${nonce}`)과 같은 엔진 경로로
               // 지갑/원장/라운드를 건드리지 않고 조건을 만족하는 시드가 나올 때까지 반복한다.
               // 매칭에 쓴 rng를 그대로 이어받아 잭팟 판정을 뽑으므로 소비 순서가 실제 경로와 같다.
@@ -232,6 +257,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
           levelUp: applied.levelUp?.to,
           freeSpin: applied.isFreeSpin,
           freeSpinsLeft: applied.freeSpins?.left,
+          featureBuyCost: round.featureBuyCost,
         })
       )
 
@@ -279,6 +305,7 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
         freeSpins: applied.freeSpins,
         ...(applied.freeSpinsSummary ? { freeSpinsSummary: applied.freeSpinsSummary } : {}),
         ...(applied.gambleOffer ? { gambleOffer: applied.gambleOffer } : {}),
+        ...(round.featureBuyCost === undefined ? {} : { featureBuy: { cost: round.featureBuyCost } }),
         ...(debugUsed ? { debug: debugUsed } : {}),
       }
       return c.json(response, 200)
@@ -294,6 +321,14 @@ export function createGamesRoute(deps: GamesRouteDeps): Hono<{ Variables: AuthVa
       // 앞에 상수를 붙여 프로덕션 번들에서는 이 `instanceof`(=모듈 참조)까지 함께 지워지게 한다.
       if (process.env.NODE_ENV !== 'production' && error instanceof DebugNoMatchError) {
         return c.json({ error: error.message, code: 'DEBUG_NO_MATCH' }, 409)
+      }
+      if (error instanceof FeatureBuyBlockedError) {
+        return c.json({ error: error.message, code: 'FEATURE_BUY_BLOCKED', reason: error.reason }, 409)
+      }
+      // 탐색 상한 안에서 보너스 판을 못 찾았다(설정 오류일 때만 닿는다). 아무것도 차감되지 않았다.
+      if (error instanceof FeatureBuyNoMatchError) {
+        console.error(`[api] feature buy search exhausted (game=${pack.id})`)
+        return c.json({ error: 'Feature buy is temporarily unavailable, try again', code: 'FEATURE_BUY_SEARCH_FAILED' }, 503)
       }
       if (error instanceof InsufficientFundsError) {
         return c.json({ error: 'Not enough coins', code: 'INSUFFICIENT_FUNDS' }, 402)

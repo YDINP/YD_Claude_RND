@@ -19,6 +19,7 @@ import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
 import { STARTING_COINS } from '@tgslot/shared'
 import type { SpinResponse } from '@tgslot/shared'
+import { createSeededRng } from '@tgslot/slot-engine'
 import type { GambleConfig, Rng } from '@tgslot/slot-engine'
 import { eq } from 'drizzle-orm'
 import { createApp } from '../app.js'
@@ -75,6 +76,14 @@ function makeConfig(): ApiConfig {
 /** 잭팟은 절대 안 터지게 고정. 이 파일의 관심사가 아니다. */
 const noJackpotRng = (): Rng => ({ nextInt: (max) => (max === JACKPOT_ODDS_DENOMINATOR ? max - 1 : 0) })
 
+/**
+ * 피처 구매용: 릴은 진짜 시드 RNG로 돌리고(항상 0이면 보너스가 영영 안 열려 탐색이 상한에 닿는다) 잭팟만 막는다.
+ */
+const seededNoJackpotRng = (seed: string, nonce: number): Rng => {
+  const inner = createSeededRng(`${seed}:${nonce}`)
+  return { nextInt: (max) => (max === JACKPOT_ODDS_DENOMINATOR ? max - 1 : inner.nextInt(max)) }
+}
+
 /** 스핀 당첨액을 테스트가 정해 주는 레포. memory 쪽 테스트의 ScriptedRepos와 같은 수법이다. */
 class ScriptedDrizzleRepos extends DrizzleRepos {
   private win: number | null = null
@@ -121,7 +130,7 @@ interface Harness {
 
 let harness: Harness
 
-async function setup(packs: GamePack[] = [gamblePack()]): Promise<Harness> {
+async function setup(packs: GamePack[] = [gamblePack()], spinRng: (seed: string, nonce: number) => Rng = noJackpotRng): Promise<Harness> {
   const client = new PGlite()
   const db = drizzle(client)
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
@@ -135,7 +144,7 @@ async function setup(packs: GamePack[] = [gamblePack()]): Promise<Harness> {
     repos,
     games: createGameRegistry(packs),
     clock,
-    spinRng: noJackpotRng,
+    spinRng,
     gambleRng: () => ({ nextInt: () => 0 }),
   })
 
@@ -440,6 +449,80 @@ describe('당첨 없는 프리스핀', () => {
 
     expect(res.status).toBe(200)
     expect(await coins()).toBe(before)
+  })
+})
+
+describe('피처 구매는 Postgres에서도 비용을 한 번만 차감하고 재전송은 같은 응답을 낸다', () => {
+  async function buy(key: string, gameId = 'fruit-fiesta'): Promise<Response> {
+    return harness.app.request(`/games/${gameId}/spin`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ totalBet: BET, idempotencyKey: key, buyFeature: true }),
+    })
+  }
+
+  it('feature_buy 원장 1건 + feature_buy_cost 컬럼, 프리스핀 중 재구매는 409이고 아무것도 남기지 않는다', async () => {
+    harness = await setup([packById('fruit-fiesta')], seededNoJackpotRng)
+    const price = packById('fruit-fiesta').math.featureBuy!.price
+    const res = await buy('pg-buy-000001')
+    const text = await res.text()
+    expect(res.status).toBe(200)
+    const body = JSON.parse(text) as SpinResponse
+    expect(body.featureBuy).toEqual({ cost: Math.round(price * BET) })
+    expect(body.features.some((feature) => feature.type === 'freeSpins')).toBe(true)
+
+    const rows = await harness.client.query<{ reason: string; delta: number }>(
+      "select reason, delta::int as delta from ledger where user_id = $1 and reason in ('feature_buy', 'spin_bet')",
+      [harness.userId]
+    )
+    expect(rows.rows).toEqual([{ reason: 'feature_buy', delta: -Math.round(price * BET) }])
+    const stored = await harness.client.query<{ feature_buy_cost: number }>(
+      'select feature_buy_cost::int as feature_buy_cost from rounds where id = $1',
+      [body.roundId]
+    )
+    expect(stored.rows[0]?.feature_buy_cost).toBe(Math.round(price * BET))
+
+    // jsonb는 키 순서를 보존하지 않아(freeSpins 상태) 바이트 대신 값으로 비교한다. featureBuy·지갑·라운드가 같아야 한다.
+    const replay = await buy('pg-buy-000001')
+    expect(JSON.parse(await replay.text())).toEqual(body)
+
+    const before = await coins()
+    const ledgerBefore = await ledgerRowCount()
+    const blocked = await buy('pg-buy-000002')
+    expect(blocked.status).toBe(409)
+    expect(await blocked.json()).toMatchObject({ code: 'FEATURE_BUY_BLOCKED', reason: 'FREE_SPINS_ACTIVE' })
+    expect(await coins()).toBe(before)
+    expect(await ledgerRowCount()).toBe(ledgerBefore)
+
+    const sum = await harness.client.query<{ sum: number }>(
+      "select coalesce(sum(delta), 0)::int as sum from ledger where user_id = $1 and currency = 'coins'",
+      [harness.userId]
+    )
+    expect(Number(sum.rows[0]?.sum)).toBe(await coins())
+  })
+
+  it('탐색 상한 안에서 보너스 판을 못 찾으면 503 FEATURE_BUY_SEARCH_FAILED이고 아무것도 차감하지 않는다', async () => {
+    // 항상 0을 내는 RNG로는 보너스가 열리지 않는다(설정 오류를 흉내낸다).
+    harness = await setup([packById('fruit-fiesta')])
+    const ledgerBefore = await ledgerRowCount()
+    const res = await buy('pg-buy-exhaust-1')
+    expect(res.status).toBe(503)
+    expect(await res.json()).toMatchObject({ code: 'FEATURE_BUY_SEARCH_FAILED' })
+    expect(await coins()).toBe(STARTING_COINS)
+    expect(await ledgerRowCount()).toBe(ledgerBefore)
+  })
+
+  it('잔액이 비용보다 적으면 402이고 아무것도 남기지 않는다', async () => {
+    harness = await setup([packById('fruit-fiesta')], seededNoJackpotRng)
+    const ledgerBefore = await ledgerRowCount()
+    const res = await harness.app.request('/games/fruit-fiesta/spin', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ totalBet: 1000, idempotencyKey: 'pg-buy-funds-01', buyFeature: true }),
+    })
+    expect(res.status).toBe(402)
+    expect(await coins()).toBe(STARTING_COINS)
+    expect(await ledgerRowCount()).toBe(ledgerBefore)
   })
 })
 

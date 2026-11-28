@@ -67,7 +67,7 @@ export const wallets = pgTable(
  * `SUM(delta) == wallet` 검사로는 이 계열을 절대 잡을 수 없다 — 같은 지급이 두 번 일어나면
  * 지갑과 원장이 함께 늘어나 합은 계속 맞기 때문이다 (`scripts/checkLedger.ts` 참고).
  *
- * refId를 붙이는 사유는 전부 "사건 하나 = 행 하나"다: `spin_bet`/`spin_win`/`jackpot_win`/
+ * refId를 붙이는 사유는 전부 "사건 하나 = 행 하나"다: `spin_bet`/`feature_buy`/`spin_win`/`jackpot_win`/
  * `level_up`은 roundId, `gamble_escrow`는 `${roundId}:g0:escrow`, `gamble_collect`는
  * `${roundId}:g${step}`. 전부 roundId(uuid)에서 파생되므로 전역 유일하다.
  * 반대로 정상적으로 반복되는 사유(보너스·미션 보상)는 ref_id가 NULL이고, Postgres의 UNIQUE는
@@ -155,6 +155,8 @@ export const rounds = pgTable(
     freeSpinsAfter: jsonb('free_spins_after'),
     /** 이 스핀으로 세션이 끝났을 때의 요약 `{ total, spins }`. 재전송 복원용 */
     freeSpinsSummary: jsonb('free_spins_summary'),
+    /** 피처 구매 판이면 차감한 비용(코인). 평범한 판·옛 라운드는 NULL. 멱등 재전송 응답에 그대로 싣는다 */
+    featureBuyCost: bigint('feature_buy_cost', { mode: 'number' }),
     /** 이 라운드에서 진행한 더블업 단계 기록. provably fair 공개에 쓴다 */
     gambleSteps: jsonb('gamble_steps'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

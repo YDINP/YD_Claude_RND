@@ -24,7 +24,7 @@ import { applySpinToMissions } from '../economy/missions.js'
 import type { MissionProgress } from '../economy/missions.js'
 import { isoWeekKey, systemClock, utcDayKey } from '../economy/time.js'
 import type { Clock } from '../economy/time.js'
-import { InsufficientFundsError } from './types.js'
+import { FeatureBuyBlockedError, InsufficientFundsError, featureBuyCost } from './types.js'
 import type {
   AppUser,
   AppWallet,
@@ -261,8 +261,18 @@ export class MemoryRepos implements Repos {
     const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
     const multiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
-    if (!isFreeSpin && wallet.coins + walletDelta < totalBet) {
-      throw new InsufficientFundsError(totalBet, wallet.coins + walletDelta)
+    // 피처 구매: 프리스핀이 이어지는 중이거나 더블업 판돈이 살아 있으면 사지 못한다. 만료된 판돈은 평소처럼 위에서 돌려준다.
+    if (input.featureBuy) {
+      if (isFreeSpin) throw new FeatureBuyBlockedError('FREE_SPINS_ACTIVE')
+      if (escrowBefore && escrowBefore.pendingWin > 0 && !isGambleExpired(escrowBefore, now)) {
+        throw new FeatureBuyBlockedError('GAMBLE_OPEN')
+      }
+    }
+    // 이번 판에 실제로 거는 코인. 피처 구매면 비용(진입 판 베팅 포함), 아니면 베팅. 프리스핀은 0을 건다.
+    const stake = input.featureBuy ? featureBuyCost(input.featureBuy.price, totalBet) : totalBet
+
+    if (!isFreeSpin && wallet.coins + walletDelta < stake) {
+      throw new InsufficientFundsError(stake, wallet.coins + walletDelta)
     }
 
     const nonce = wallet.nonce + 1
@@ -277,7 +287,7 @@ export class MemoryRepos implements Repos {
     const roundId = randomUUID()
 
     if (!isFreeSpin) {
-      stage(-totalBet, 'spin_bet', roundId)
+      stage(-stake, input.featureBuy ? LEDGER_REASONS.featureBuy : 'spin_bet', roundId)
     }
     if (result.totalWin > 0) {
       stage(result.totalWin, 'spin_win', roundId)
@@ -307,7 +317,8 @@ export class MemoryRepos implements Repos {
     let gambleAfter: GambleState | null = null
     let gambleOffer: ApplySpinResult['gambleOffer']
     const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
-    if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
+    // 피처 구매 판은 더블업을 열지 않는다(산 보너스의 당첨을 다시 거는 흐름은 두지 않는다).
+    if (!input.featureBuy && isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
       // 방어: 방금 당첨금을 넣었으므로 잔액이 모자랄 수 없다. 그래도 확인하고 못 잠그면 제안을 열지 않는다.
       if (wallet.coins + walletDelta >= result.totalWin) {
         stage(-result.totalWin, LEDGER_REASONS.gambleEscrow, gambleEscrowRefId(roundId))
@@ -326,7 +337,7 @@ export class MemoryRepos implements Repos {
     // 잭팟 적립은 하우스 몫에서 나가므로 유저 원장에 남지 않는다. 지급될 때만 원장에 찍힌다.
     // 적립을 먼저 하므로 당첨자는 자기 스핀의 적립분까지 가져간다.
     // 잭팟은 **유료 스핀만** 적립하고 판정한다. 프리스핀은 풀에 넣은 돈이 없다.
-    const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(totalBet)
+    const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(stake)
     const poolAfterAccrual = this.jackpotPoolHundredths + accrual
     let poolAfterSpin = poolAfterAccrual
     let jackpotWin: number | undefined
@@ -340,7 +351,7 @@ export class MemoryRepos implements Repos {
     // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
     // xp는 **실제로 건 돈**만 센다. 프리스핀은 베팅이 없었으므로 xp도 오르지 않는다.
     const previousLevel = levelFromXp(user.xp)
-    const newXp = user.xp + (isFreeSpin ? 0 : totalBet)
+    const newXp = user.xp + (isFreeSpin ? 0 : stake)
     const newLevel = levelFromXp(newXp)
     let levelUp: ApplySpinResult['levelUp']
     if (newLevel > previousLevel) {
@@ -357,7 +368,7 @@ export class MemoryRepos implements Repos {
       userId: input.userId,
       week,
       totalWin: (boardBefore?.totalWin ?? 0) + result.totalWin,
-      bestMultiplier: Math.max(boardBefore?.bestMultiplier ?? 0, result.totalWin / totalBet),
+      bestMultiplier: Math.max(boardBefore?.bestMultiplier ?? 0, result.totalWin / (isFreeSpin ? totalBet : stake)),
       spins: (boardBefore?.spins ?? 0) + 1,
     }
 
@@ -365,7 +376,7 @@ export class MemoryRepos implements Repos {
     const missions = applySpinToMissions(this.readMissions(input.userId, day), {
       gameId: input.gameId,
       win: result.totalWin,
-      totalBet,
+      totalBet: isFreeSpin ? totalBet : stake,
       isFreeSpin,
     })
 
@@ -392,6 +403,7 @@ export class MemoryRepos implements Repos {
       multiplier,
       freeSpinsAfter,
       freeSpinsSummary: summary,
+      ...(input.featureBuy ? { featureBuyCost: stake } : {}),
       gambleSteps: [],
       createdAt: now,
     }

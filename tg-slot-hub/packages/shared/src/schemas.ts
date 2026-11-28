@@ -204,6 +204,11 @@ export const SpinRequestSchema = z.object({
   idempotencyKey: z.string().min(8).max(64),
   /** 개발 전용: 다음 스핀 결과를 강제하는 프리셋. 프로덕션(`allowDevMock=false`)에서는 항상 거부된다 */
   debug: SpinDebugRequestSchema.optional(),
+  /**
+   * 피처 구매: 이 판을 «대표 보너스가 열리는 판»으로 산다. 비용 = math.json `featureBuy.price × totalBet`를
+   * 한 번만 차감한다(진입 판 베팅 포함). 프리스핀·더블업이 열려 있으면 `409 FEATURE_BUY_BLOCKED`.
+   */
+  buyFeature: z.literal(true).optional(),
 })
 export type SpinRequest = z.infer<typeof SpinRequestSchema>
 
@@ -441,6 +446,8 @@ export const SpinResponseSchema = z.object({
         .optional(),
     })
     .optional(),
+  /** 피처 구매 판일 때만. 이번에 차감한 비용(코인). 멱등 재전송에도 같은 값이 실린다 */
+  featureBuy: z.object({ cost: z.number().int().min(1) }).optional(),
   /**
    * 이 스핀이 개발 전용 강제 프리셋(`debug`)으로 만들어졌을 때만 실린다.
    * 같은 idempotencyKey로 재전송된 응답(멱등 replay)에는 실리지 않는다 — 저장된 결과를 그대로

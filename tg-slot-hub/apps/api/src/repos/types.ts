@@ -118,6 +118,8 @@ export interface RoundRecord {
   freeSpinsAfter: FreeSpinsState | null
   /** 이 스핀으로 세션이 끝났을 때의 요약 */
   freeSpinsSummary?: FreeSpinsSummaryRecord
+  /** 피처 구매 판이면 차감한 비용. 이때 `bet`은 진입 판(과 이어지는 프리스핀)의 계산 기준 베팅이다 */
+  featureBuyCost?: number
   /** 이 라운드에서 진행한 더블업 단계 기록 (provably fair 공개용) */
   gambleSteps: GambleStepRecord[]
   createdAt: Date
@@ -166,11 +168,36 @@ export class BetRuleError extends Error {
   }
 }
 
+/**
+ * 피처 구매를 받을 수 없는 상태. 라우트가 `409 FEATURE_BUY_BLOCKED`로 번역한다.
+ * 프리스핀이 이어지는 중이거나 더블업 판돈이 걸려 있으면 사지 못한다(락을 잡은 뒤 상태로 판정한다).
+ */
+export class FeatureBuyBlockedError extends Error {
+  constructor(readonly reason: 'FREE_SPINS_ACTIVE' | 'GAMBLE_OPEN') {
+    super(
+      reason === 'FREE_SPINS_ACTIVE'
+        ? 'Feature buy is not available while free spins are running'
+        : 'Feature buy is not available while a gamble offer is open'
+    )
+    this.name = 'FeatureBuyBlockedError'
+  }
+}
+
+/** 피처 구매 비용 코인. 스키마가 모든 베팅 단계에서 정수가 되게 강제하므로 반올림은 부동소수 오차만 지운다. */
+export function featureBuyCost(price: number, totalBet: number): number {
+  return Math.round(price * totalBet)
+}
+
 export interface ApplySpinInput {
   userId: string
   gameId: string
   totalBet: number
   idempotencyKey: string
+  /**
+   * 피처 구매 판이면 가격(총 베팅 배수). 비용 `price × totalBet`을 베팅 대신 한 번만 차감하고,
+   * XP·미션·리더보드·잭팟 적립도 비용을 베팅액으로 본다. 프리스핀·더블업이 열려 있으면 `FeatureBuyBlockedError`.
+   */
+  featureBuy?: { price: number }
   /** 이 게임의 더블업 설정. 없으면 더블업을 열지 않는다 */
   gamble?: GambleConfig
   /** 지갑을 잠그고 잔액을 확인한 뒤, 트랜잭션 안에서 정확히 한 번 호출된다. */

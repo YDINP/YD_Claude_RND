@@ -20,6 +20,8 @@ export const LEDGER_REASONS = {
   gambleEscrow: 'gamble_escrow',
   /** 잠겼던 판돈을 지갑으로 돌려줄 때 (양수). 회수·자동 회수·만료 모두 이 사유다 */
   gambleCollect: 'gamble_collect',
+  /** 피처 구매 비용 (음수). 이 판의 `spin_bet`을 대신한다. refId = roundId */
+  featureBuy: 'feature_buy',
 } as const
 
 // ---- 데일리 로그인 보너스 ----

@@ -75,7 +75,7 @@ export async function findLedgerMismatches(sql: postgres.Sql): Promise<Mismatch[
  * 같은 refId로 쌓았다.
  *
  * refId를 붙이는 사유는 전부 "사건 하나 = 행 하나"라 유일해야 한다.
- *   spin_bet / spin_win / jackpot_win / level_up -> refId = roundId
+ *   spin_bet / feature_buy / spin_win / jackpot_win / level_up -> refId = roundId
  *   gamble_escrow                                -> refId = `${roundId}:g0:escrow`
  *   gamble_collect                               -> refId = `${roundId}:g${step}`
  *

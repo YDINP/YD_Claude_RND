@@ -47,7 +47,7 @@ import { applySpinToMissions } from '../economy/missions.js'
 import type { MissionProgress } from '../economy/missions.js'
 import { isoWeekKey, systemClock, utcDayKey } from '../economy/time.js'
 import type { Clock } from '../economy/time.js'
-import { InsufficientFundsError } from './types.js'
+import { FeatureBuyBlockedError, InsufficientFundsError, featureBuyCost } from './types.js'
 import type {
   AppUser,
   AppWallet,
@@ -123,6 +123,7 @@ function toRoundRecord(row: RoundRow): RoundRecord {
     ...(row.freeSpinsSummary
       ? { freeSpinsSummary: row.freeSpinsSummary as FreeSpinsSummaryRecord }
       : {}),
+    ...(row.featureBuyCost === null ? {} : { featureBuyCost: row.featureBuyCost }),
     createdAt: row.createdAt,
   }
 }
@@ -317,8 +318,18 @@ export class DrizzleRepos implements Repos {
       const totalBet = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.totalBet : input.totalBet
       const spinMultiplier = isFreeSpin && freeSpinsBefore ? freeSpinsBefore.multiplier : 1
 
-      if (!isFreeSpin && locked.coins + escrowRelease < totalBet) {
-        throw new InsufficientFundsError(totalBet, locked.coins + escrowRelease)
+      // 피처 구매: 프리스핀이 이어지는 중이거나 더블업 판돈이 살아 있으면 사지 못한다. 만료된 판돈은 평소처럼 돌려준다.
+      if (input.featureBuy) {
+        if (isFreeSpin) throw new FeatureBuyBlockedError('FREE_SPINS_ACTIVE')
+        if (escrowBefore && escrowRelease > 0 && !isGambleExpired(escrowBefore, now)) {
+          throw new FeatureBuyBlockedError('GAMBLE_OPEN')
+        }
+      }
+      // 이번 판에 실제로 거는 코인. 피처 구매면 비용(진입 판 베팅 포함), 아니면 베팅. 프리스핀은 0을 건다.
+      const stake = input.featureBuy ? featureBuyCost(input.featureBuy.price, totalBet) : totalBet
+
+      if (!isFreeSpin && locked.coins + escrowRelease < stake) {
+        throw new InsufficientFundsError(stake, locked.coins + escrowRelease)
       }
 
       const nonce = locked.nonce + 1
@@ -348,12 +359,12 @@ export class DrizzleRepos implements Repos {
       if (!isFreeSpin) {
         entries.push({
           userId: input.userId,
-          delta: -totalBet,
+          delta: -stake,
           currency: 'coins',
-          reason: 'spin_bet',
+          reason: input.featureBuy ? LEDGER_REASONS.featureBuy : 'spin_bet',
           refId: roundId,
         })
-        walletDelta -= totalBet
+        walletDelta -= stake
       }
 
       if (result.totalWin > 0) {
@@ -370,7 +381,7 @@ export class DrizzleRepos implements Repos {
       // 레벨: xp = 누적 베팅. 여러 레벨을 한 번에 뛸 수 있고 보너스는 도달 레벨 기준 1회다.
       // xp는 **실제로 건 돈**만 센다. 프리스핀은 베팅이 없었으므로 xp도 오르지 않는다.
       const previousLevel = levelFromXp(userRow.xp)
-      const newXp = userRow.xp + (isFreeSpin ? 0 : totalBet)
+      const newXp = userRow.xp + (isFreeSpin ? 0 : stake)
       const newLevel = levelFromXp(newXp)
       let levelUp: ApplySpinResult['levelUp']
       if (newLevel > previousLevel) {
@@ -388,7 +399,7 @@ export class DrizzleRepos implements Repos {
       await tx.update(users).set({ xp: newXp, level: newLevel }).where(eq(users.id, input.userId))
 
       // 주간 리더보드
-      const multiplier = result.totalWin / totalBet
+      const multiplier = result.totalWin / (isFreeSpin ? totalBet : stake)
       await tx
         .insert(leaderboardWeekly)
         .values({
@@ -413,7 +424,7 @@ export class DrizzleRepos implements Repos {
       const missions = applySpinToMissions(await readMissionRows(tx, input.userId, day), {
         gameId: input.gameId,
         win: result.totalWin,
-        totalBet,
+        totalBet: isFreeSpin ? totalBet : stake,
         isFreeSpin,
       })
       for (const mission of missions) {
@@ -458,7 +469,8 @@ export class DrizzleRepos implements Repos {
       let gambleAfter: GambleState | null = null
       let gambleOffer: ApplySpinResult['gambleOffer']
       const opensFreeSpins = !isFreeSpin && freeSpinsAfter !== null
-      if (isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
+      // 피처 구매 판은 더블업을 열지 않는다(산 보너스의 당첨을 다시 거는 흐름은 두지 않는다).
+      if (!input.featureBuy && isGambleEligible({ isFreeSpin, totalWin: result.totalWin, totalBet, config: input.gamble, opensFreeSpins }) && input.gamble) {
         // 방어: 이번 스핀의 당첨금이 그대로 잠기므로 잔액이 모자랄 수 없다.
         if (locked.coins + walletDelta >= result.totalWin) {
           entries.push({
@@ -501,7 +513,7 @@ export class DrizzleRepos implements Repos {
       // 적립분은 하우스 몫이라 원장에 남지 않고 베팅 차감도 그대로다. 적립을 먼저 하므로
       // 당첨자는 자기 스핀의 적립분까지 가져간다.
       // 잭팟은 **유료 스핀만** 적립하고 판정한다. 프리스핀은 풀에 넣은 돈이 없다.
-      const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(totalBet)
+      const accrual = isFreeSpin ? 0 : jackpotAccrualHundredths(stake)
       const pool = await accrueJackpot(tx, accrual)
       let poolAfterSpin = pool
 
@@ -555,6 +567,7 @@ export class DrizzleRepos implements Repos {
           multiplier: spinMultiplier,
           freeSpinsAfter,
           freeSpinsSummary: summary ?? null,
+          featureBuyCost: input.featureBuy ? stake : null,
           gambleSteps: [],
         })
         .returning()

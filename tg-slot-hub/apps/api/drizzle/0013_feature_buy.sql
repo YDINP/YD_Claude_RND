@@ -1,0 +1,1 @@
+ALTER TABLE "rounds" ADD COLUMN "feature_buy_cost" bigint;
