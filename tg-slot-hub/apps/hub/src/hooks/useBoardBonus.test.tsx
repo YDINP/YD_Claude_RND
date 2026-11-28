@@ -126,7 +126,7 @@ describe('useBoardBonus', () => {
     act(() => vi.advanceTimersByTime(330))
     expect(container.querySelector('.board-bonus')).toBeNull()
     expect(renderer.setPaused).toHaveBeenLastCalledWith(false)
-    expect(onWinStrip).toHaveBeenLastCalledWith(totalWin, 900)
+    expect(onWinStrip).toHaveBeenLastCalledWith(totalWin, 900, feature.win)
     // 아직 커튼이 걷히는 중 — 스토어의 멈춰 있던 판은 끝나야 풀린다.
     expect(useGameStore.getState().boardPlay).not.toBeNull()
 

@@ -33,7 +33,8 @@ interface UseBoardBonusArgs {
   /** 테마 로딩이 실패했어도(그래픽 없음) 말판은 코드 그림으로 돌 수 있다. 복원을 시도해도 되는 시점인지. */
   themeSettled: boolean
   /** 말판 진입·종료 때 WinStrip 금액을 올린다(올리기만 한다 — 내려가지 않는다). */
-  onWinStrip: (value: number, ms: number) => void
+  /** 마지막 인자는 말판 정산(끝남) 때만 온다: 말판 몫 코인. */
+  onWinStrip: (value: number, ms: number, boardWin?: number) => void
 }
 
 export interface BoardBonusController {
@@ -190,7 +191,7 @@ export function useBoardBonus({ gameId, theme, themeSettled, onWinStrip }: UseBo
     setStarted(false)
     const play = useGameStore.getState().boardPlay
     // 요약 뒤 WinStrip이 라인 + 초롱 + 말판 합계까지 오른다.
-    if (play !== null && play.totalWin > 0) onWinStripRef.current(play.totalWin, 900)
+    if (play !== null && play.totalWin > 0) onWinStripRef.current(play.totalWin, 900, play.feature.win)
   }, [])
 
   const handleExitReveal = useCallback(() => {
@@ -220,7 +221,7 @@ export function useBoardBonus({ gameId, theme, themeSettled, onWinStrip }: UseBo
     setStage('idle')
     if (play !== null) {
       markBoardProgress(gameId, play.roundId, 'done')
-      if (play.totalWin > 0) onWinStripRef.current(play.totalWin, 0)
+      if (play.totalWin > 0) onWinStripRef.current(play.totalWin, 0, play.feature.win)
     }
     useGameStore.getState().finishBoard()
   }, [gameId])

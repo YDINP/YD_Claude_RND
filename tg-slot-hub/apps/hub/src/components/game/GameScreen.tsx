@@ -253,6 +253,8 @@ type LineLabelSource =
   | { kind: 'order'; order: CompletedOrder; key: number }
   /** 무대 룰렛이 끝난 뒤 «무대 룰렛 +N» 한 줄. */
   | { kind: 'roulette'; total: number; key: number }
+  /** 말판 보너스가 끝나 정산된 뒤 «말판 +N» 한 줄. 이때 WinStrip은 단계 라벨 대신 «말판 합계»다. */
+  | { kind: 'board'; total: number; key: number }
   /** 얼림이 끝나 얼음 보너스가 정산된 뒤 «얼음 보너스 +N» 한 줄. */
   | { kind: 'frost'; bonus: number; key: number }
 
@@ -682,7 +684,13 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
     gameId,
     theme,
     themeSettled: theme !== null || rendererError,
-    onWinStrip: (value, ms) => tickWinTo(value, Math.max(1, ms)),
+    onWinStrip: (value, ms, boardWin) => {
+      if (boardWin !== undefined) {
+        lineLabelKeyRef.current += 1
+        setLineLabelSource({ kind: 'board', total: boardWin, key: lineLabelKeyRef.current })
+      }
+      tickWinTo(value, Math.max(1, ms))
+    },
   })
   const roundBusy = isRoundFlowBusy(roundFlow) || winCelebration !== null || board.active || roulette !== null
   const roundPopup = activePopup(roundFlow)
@@ -1679,8 +1687,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
   const respinCollecting = respinPhase === 'collecting' || (respinPhase === 'done' && respinActive)
   // 룰렛이 클립 단계로 들어가면 WinStrip은 «룰렛 합계»가 된다(그 전까지는 기본 지급을 보여 준다).
   const rouletteStripActive = roulette !== null && roulette.stage !== 'pre'
+  const boardStripSettled = lineLabelSource?.kind === 'board'
   const winStripLabel = rouletteStripActive
     ? t('stageRouletteTotal')
+    : boardStripSettled
+    ? t('boardRoundTotal')
     : frostRoundTotal !== null
     ? t('auroraRoundTotalLabel')
     : showGambleActions
@@ -1782,6 +1793,8 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
                 ? t('auroraIceBonusLine', { amount: lineLabelSource.bonus.toLocaleString('en-US') })
               : lineLabelSource.kind === 'roulette'
                 ? t('stageRouletteWinAdd', { amount: lineLabelSource.total.toLocaleString('en-US') })
+              : lineLabelSource.kind === 'board'
+                ? t('boardWinAdd', { amount: lineLabelSource.total.toLocaleString('en-US') })
               : lineLabelSource.kind === 'order'
                 ? `${orderCardText(lineLabelSource.order, math, locale, t, true)} · +${lineLabelSource.order.prize.toLocaleString('en-US')}`
                 : math
@@ -2416,7 +2429,7 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           몫이다(handleSkipWinsAndAdvance). 더블업 세션이 있으면 받기/더블 버튼을 보여준다 —
           한 번 뜨면 사용자가 누르거나 만료될 때까지 고정이다(더 이상 승리 배너에 가려 깜빡이지 않는다). */}
       <WinStrip
-        band={showGambleActions || respinOnBoard || respinCollecting || rouletteStripActive ? undefined : winBandInfo?.band}
+        band={showGambleActions || respinOnBoard || respinCollecting || rouletteStripActive || boardStripSettled ? undefined : winBandInfo?.band}
         label={winStripLabel}
         amount={winStripAmount}
         lineLabel={lineLabel}

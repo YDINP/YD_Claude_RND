@@ -371,6 +371,8 @@ const en = {
   boardDebugBig: 'Board 100x+',
   // ---- board bonus screen & help (hanbok-night-market) ----
   boardTitle: 'Board Bonus',
+  boardRoundTotal: 'Board total',
+  boardWinAdd: 'Board +{amount}',
   boardAria: 'Board bonus screen',
   boardChances: 'Chances',
   boardChancesAria: '{n} chances left',

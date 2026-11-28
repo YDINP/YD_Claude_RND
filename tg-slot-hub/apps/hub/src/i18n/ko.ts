@@ -368,6 +368,8 @@ const ko: Record<TranslationKey, string> = {
   boardDebugBig: '말판 100배+',
   // ---- 말판 보너스 화면·도움말(hanbok-night-market) ----
   boardTitle: '말판 보너스',
+  boardRoundTotal: '말판 합계',
+  boardWinAdd: '말판 +{amount}',
   boardAria: '말판 보너스 화면',
   boardChances: '기회',
   boardChancesAria: '남은 기회 {n}번',
