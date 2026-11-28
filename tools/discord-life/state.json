@@ -82,7 +82,15 @@
     "info:housing-pension": "1575672728638201979",
     "remind:culture-nuri": "1575672732719386745",
     "hotdeal:20261127": "1575674112947396639",
-    "hotdeal:20261127:thread": "1575674112947396639"
+    "hotdeal:20261127:thread": "1575674112947396639",
+    "hotdeal:20261128": "1576037332417650781",
+    "hotdeal:20261128:thread": "1576037332417650781",
+    "info:ltc-apply": "1576037366152560775",
+    "info:nps-expected": "1576037367830024293",
+    "info:online-fixed-date": "1576037369050701867",
+    "info:scaling-yearly": "1576037370598391809",
+    "info:basic-pension-2026": "1576037371982512259",
+    "remind:eitc-late-apply": "1576037379565687076"
   },
   "channels": {
     "category": "1571853801588137984",
