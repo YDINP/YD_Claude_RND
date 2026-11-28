@@ -255,6 +255,7 @@
       }
     ]
   },
+  "featureBuy": { "price": 25.9, "trigger": "orderRound" },
   "betLevels": [
     20,
     40,

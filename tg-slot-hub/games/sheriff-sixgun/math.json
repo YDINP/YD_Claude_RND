@@ -561,6 +561,7 @@
     "payout": 2,
     "maxSteps": 5
   },
+  "featureBuy": { "price": 17, "trigger": "freeSpins" },
   "betLevels": [
     20,
     40,

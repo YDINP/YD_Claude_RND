@@ -12,7 +12,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "audit": "tsx src/audit-cli.ts",
-    "tune": "tsx src/tune-cli.ts"
+    "tune": "tsx src/tune-cli.ts",
+    "feature-buy": "tsx src/feature-buy-cli.ts"
   },
   "dependencies": {
     "@tgslot/game-sdk": "workspace:*",

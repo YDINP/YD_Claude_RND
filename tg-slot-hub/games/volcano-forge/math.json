@@ -160,6 +160,7 @@
       "retrigger": false
     }
   },
+  "featureBuy": { "price": 81.5, "trigger": "freeSpins" },
   "betLevels": [
     20,
     40,

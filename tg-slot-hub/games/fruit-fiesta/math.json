@@ -60,6 +60,7 @@
     "pays": { "3": 2, "4": 10, "5": 50 },
     "freeSpins": { "trigger": 3, "count": 10, "multiplier": 2, "retrigger": true }
   },
+  "featureBuy": { "price": 20, "trigger": "freeSpins" },
   "betLevels": [20, 40, 100, 200, 400, 1000],
   "rtpTarget": 0.945,
   "volatility": "high"

@@ -505,6 +505,7 @@
       "c": "center"
     }
   },
+  "featureBuy": { "price": 43, "trigger": "boardBonus" },
   "betLevels": [
     25,
     50,

@@ -4114,6 +4114,7 @@
       "6": 50
     }
   },
+  "featureBuy": { "price": 63, "trigger": "freeSpins" },
   "betLevels": [
     20,
     40,

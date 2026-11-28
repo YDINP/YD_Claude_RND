@@ -286,6 +286,7 @@
   "round": {
     "maxWinCap": 2000
   },
+  "featureBuy": { "price": 46.5, "trigger": "stageRoulette" },
   "betLevels": [
     50,
     100,

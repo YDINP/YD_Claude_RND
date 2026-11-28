@@ -81,6 +81,7 @@
     "treasures": {"small": 20, "medium": 50, "large": 200, "top": 1000},
     "columnBonus": {"multiplier": 2}
   },
+  "featureBuy": { "price": 54.4, "trigger": "coinRespin" },
   "betLevels": [20, 40, 100, 200, 500, 1000],
   "rtpTarget": 0.945,
   "volatility": "high"

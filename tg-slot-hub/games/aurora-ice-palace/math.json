@@ -69,6 +69,7 @@
     "aurora": {"ladder": [1, 2, 3, 5], "threshold": 15}
   },
   "round": {"maxWinCap": 2500},
+  "featureBuy": { "price": 45.2, "trigger": "freeSpins" },
   "betLevels": [50, 100, 250, 500, 1000, 2500],
   "rtpTarget": 0.945,
   "volatility": "high"
