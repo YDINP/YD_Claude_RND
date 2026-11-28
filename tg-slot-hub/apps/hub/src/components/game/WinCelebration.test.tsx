@@ -17,6 +17,7 @@ import { DEFAULT_CELEBRATION_SKIN, resolveCelebrationSkin } from '@tgslot/render
 import {
   BIG_WIN_EMPHASIS_MS,
   BIG_WIN_HURRIED_HOLD_MS,
+  BIG_WIN_HOLD_MS,
   BIG_WIN_STAGE_MS,
   FOUNTAIN_COUNT_BY_TIER,
   CELEBRATION_TIER_MULTIPLIERS,
@@ -46,7 +47,6 @@ import {
   shockwaveDelaysFor,
   showerParticles,
 } from './winTiers'
-import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import { useSettingsStore } from '../../store/settings'
 
 function amountText(): string {
@@ -150,12 +150,16 @@ describe('winTiers (pure)', () => {
       expect(BIG_WIN_STAGE_MS.surge).toBeGreaterThan(BIG_WIN_STAGE_MS.blast)
     })
 
-    it('holds the result for the same 10s the free-spins ceremony popup uses', () => {
-      expect(bigWinTimeline(50 * bet, bet)).toEqual({
+    it('closes by itself shortly after the stage length — no 20s linger without a tap', () => {
+      const t = bigWinTimeline(50 * bet, bet)
+      expect(t).toEqual({
         rollupMs: bigWinStages(50 * bet, bet).at(-1)!.endMs,
         emphasisMs: BIG_WIN_EMPHASIS_MS,
-        holdMs: ROUND_POPUP_AUTO_CLOSE_MS,
+        holdMs: BIG_WIN_HOLD_MS,
       })
+      // 최고 단계도 롤업 + 강조 + 유지가 10초 안이다.
+      const top = bigWinTimeline(500 * bet, bet)
+      expect(top.rollupMs + top.emphasisMs + top.holdMs).toBeLessThan(10_000)
     })
 
     it('shrinks for quick and turbo', () => {
@@ -417,7 +421,7 @@ describe('WinCelebrationOverlay', () => {
     await waitFor(() => expect(amountText()).toBe('4,820'))
   })
 
-  it('runs the emphasis beat and only then starts the 10s hold', () => {
+  it('runs the emphasis beat and only then starts the short hold', () => {
     vi.useFakeTimers()
     try {
       const onDismiss = vi.fn()
@@ -440,7 +444,7 @@ describe('WinCelebrationOverlay', () => {
       expect(container.querySelector('.hub-win-overlay')).toHaveAttribute('data-beat', 'hold')
 
       act(() => {
-        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
+        vi.advanceTimersByTime(BIG_WIN_HOLD_MS - 1)
       })
       expect(onDismiss).not.toHaveBeenCalled()
 
@@ -470,7 +474,7 @@ describe('WinCelebrationOverlay', () => {
       })
       // 마운트에서 한 번 걸어 둔 시계였다면 여기(마운트 + 12.4초)서 이미 닫혔을 것이다(예전 결함).
       act(() => {
-        vi.advanceTimersByTime(ROUND_POPUP_AUTO_CLOSE_MS - 1)
+        vi.advanceTimersByTime(BIG_WIN_HOLD_MS - 1)
       })
       expect(onDismiss).not.toHaveBeenCalled()
 

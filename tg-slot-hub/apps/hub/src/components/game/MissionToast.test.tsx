@@ -66,6 +66,17 @@ describe('MissionToast', () => {
     expect(screen.queryByTestId('mission-toast')).not.toBeInTheDocument()
   })
 
+  it('피처 팝업·큰 당첨 연출 중(held)에는 숨긴 채 큐에 두고, 끝난 뒤부터 표시 시간을 잰다', () => {
+    const { rerender } = render(<MissionToast idle={false} autoSpinning={false} held />)
+    expect(screen.queryByTestId('mission-toast')).not.toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(MISSION_TOAST_MS * 2)
+    })
+    expect(useHubStore.getState().missionNotices).toHaveLength(1)
+    rerender(<MissionToast idle autoSpinning={false} held={false} />)
+    expect(screen.getByTestId('mission-toast')).toBeInTheDocument()
+  })
+
   it('6초 뒤 사라지고 미션 목록에는 남는다', () => {
     render(<MissionToast idle autoSpinning={false} />)
     expect(screen.getByTestId('mission-toast')).toHaveTextContent('Mission done · Mission a')

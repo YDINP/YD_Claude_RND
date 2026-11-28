@@ -2332,7 +2332,11 @@ export function GameScreen({ gameId }: GameScreenProps): ReactNode {
           )}
         </div>
 
-        <MissionToast idle={phase === 'idle' && !roundBusy} autoSpinning={autoSpinning} />
+        <MissionToast
+          idle={phase === 'idle' && !roundBusy}
+          autoSpinning={autoSpinning}
+          held={winCelebration !== null || roundPopup !== null}
+        />
         {autoSpinNotice && (
           <AutoSpinStopToast
             noticeId={autoSpinNotice.id}

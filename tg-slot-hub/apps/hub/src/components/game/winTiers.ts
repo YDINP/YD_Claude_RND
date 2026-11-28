@@ -12,7 +12,6 @@
  */
 import type { CelebrationLabel } from '@tgslot/game-sdk'
 import type { Locale } from '@tgslot/shared'
-import { ROUND_POPUP_AUTO_CLOSE_MS } from '../../game/roundFlow'
 import {
   celebrationParticleCount,
   planCelebrationParticles,
@@ -168,6 +167,12 @@ export interface BigWinTimingInput extends TimingInput {
  */
 export const BIG_WIN_HURRIED_HOLD_MS = 900
 
+/**
+ * 사용자가 화면의 주인일 때(오토·프리스핀 아님) 강조 뒤 결과를 붙드는 시간(ms). 예전에는 10초(약 20초 머묾)라
+ * 탭하지 않으면 오래 남는다는 검수 지적이 있었다 — 단계별 길이가 끝나면 짧게 보여 주고 스스로 닫힌다.
+ */
+export const BIG_WIN_HOLD_MS = 1500
+
 /** 롤업 한 구간. 이 구간 동안 화면 단계는 `tier`이고 금액은 `from`→`to`로 오른다. */
 export interface BigWinStage {
   readonly tier: NamedTier
@@ -255,7 +260,7 @@ export function bigWinTimeline(
   return {
     rollupMs,
     emphasisMs: Math.round(BIG_WIN_EMPHASIS_MS * scale),
-    holdMs: input.hurried === true ? BIG_WIN_HURRIED_HOLD_MS : ROUND_POPUP_AUTO_CLOSE_MS,
+    holdMs: input.hurried === true ? BIG_WIN_HURRIED_HOLD_MS : BIG_WIN_HOLD_MS,
   }
 }
 

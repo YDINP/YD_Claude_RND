@@ -50,10 +50,12 @@ function refreshWalletWhenIdle(): void {
 export interface MissionToastProps {
   /** 게임 화면이 idle(릴 정지·정산 끝)인지 */
   idle: boolean
+  /** 피처 팝업·큰 당첨 연출이 화면을 쥐고 있다 — 알림을 큐에 둔 채 숨기고, 표시 시간도 끝난 뒤부터 잰다. */
+  held?: boolean
   autoSpinning: boolean
 }
 
-export function MissionToast({ idle, autoSpinning }: MissionToastProps): ReactNode {
+export function MissionToast({ idle, autoSpinning, held = false }: MissionToastProps): ReactNode {
   const t = useT()
   const locale = useEffectiveLocale()
   const notice = useHubStore((s) => s.missionNotices[0])
@@ -67,11 +69,11 @@ export function MissionToast({ idle, autoSpinning }: MissionToastProps): ReactNo
   // 알림이 새로 앞자리에 오면 그때의 오토 여부로 표시 시간을 정한다.
   const noticeId = notice?.id
   useEffect(() => {
-    if (noticeId === undefined || claimed) return
+    if (noticeId === undefined || claimed || held) return
     const ms = autoRef.current ? MISSION_TOAST_AUTO_MS : MISSION_TOAST_MS
     const id = setTimeout(() => dismiss(noticeId), ms)
     return () => clearTimeout(id)
-  }, [noticeId, claimed, dismiss])
+  }, [noticeId, claimed, dismiss, held])
 
   useEffect(() => {
     if (!claimed) return
@@ -80,7 +82,7 @@ export function MissionToast({ idle, autoSpinning }: MissionToastProps): ReactNo
   }, [claimed])
 
   const current = claimed?.mission ?? notice
-  if (!current) return null
+  if (!current || (held && !claimed)) return null
 
   const name = locale === 'ko' && current.name.ko ? current.name.ko : current.name.en
   const fmt = (n: number): string => n.toLocaleString('en-US')
