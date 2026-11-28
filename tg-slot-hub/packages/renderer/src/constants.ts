@@ -453,12 +453,55 @@ export const REEL_BACKDROP_RADIUS_RATIO = 0.08
 export const REEL_BACKDROP_INSET_RATIO = 0
 
 /**
- * 기대감 연출: 스캐터가 트리거 직전 개수까지 먼저 떨어지면 남은 릴 하나마다 이만큼(ms, `normal` 기준)
- * 더 돌다 선다. 이후 릴은 그만큼 뒤로 밀린다. 결과(정지 위치)는 그대로고 시간만 늘어난다.
+ * 기대감 연출(«쪼는 맛»): 스캐터가 트리거 직전 개수까지 먼저 떨어지면 남은 릴이 감속하며 천천히 선다.
+ * 결과(정지 위치)는 그대로고 시간만 늘어난다. 아래 값은 `normal` 기준이다.
+ *
+ * - 대상 릴 순번 `i`(0부터)의 추가 시간 = min(`ANTICIPATION_REEL_CAP_MS`, `BASE + GROWTH × i`) — 뒤 릴일수록 길다.
+ * - 한 판의 추가 시간 합이 `ANTICIPATION_TOTAL_CAP_MS`를 넘으면 전부 같은 비율로 줄인다(순서는 유지).
  */
-export const ANTICIPATION_EXTRA_MS = 800
+export const ANTICIPATION_BASE_MS = 1300
+export const ANTICIPATION_GROWTH_MS = 150
+export const ANTICIPATION_REEL_CAP_MS = 1600
+export const ANTICIPATION_TOTAL_CAP_MS = 4000
 /** 속도 프로파일별 기대감 배율. 터보는 리듬을 깨지 않도록 끈다. 모션 축소도 끈다. */
-export const ANTICIPATION_SPEED_SCALE = { normal: 1, quick: 0.7, turbo: 0 } as const
+export const ANTICIPATION_SPEED_SCALE = { normal: 1, quick: 0.55, turbo: 0 } as const
+/**
+ * 기대 창(앞 릴이 선 뒤 이 릴이 서기까지) 가운데 마지막 «크롤» 구간이 차지하는 비율. 나머지 앞부분은 감속이다.
+ * 크롤 구간에서는 심볼이 한 칸씩 «툭, 툭» 넘어간다.
+ */
+export const ANTICIPATION_CRAWL_PORTION = 0.55
+/** 크롤 한 칸 안에서 실제로 움직이는 몫. 남는 시간은 멈춘 듯 머문다. */
+export const ANTICIPATION_STEP_MOVE_PORTION = 0.42
+/** 크롤 칸 수를 정하는 기준 길이(ms). 크롤 구간이 짧으면 칸 수가 줄어든다. */
+export const ANTICIPATION_STEP_TARGET_MS = 280
+export const ANTICIPATION_MAX_CRAWL_STEPS = 3
+/** 감속이 끝나는 속도 = 이 값 ÷ 크롤 한 칸 길이(칸/ms). 크롤 첫 칸으로 자연스럽게 이어지게 한다. */
+export const ANTICIPATION_CRAWL_ENTRY_SPEED = 1.6
+/** 기대 릴이 감속 전까지 내는 최고 속도가 보통 릴의 이 비율 이상이 되도록 바퀴를 더한다(느리게 도는 착시 방지). */
+export const ANTICIPATION_MIN_SPEED_RATIO = 0.9
+/** 바퀴를 더하는 상한. */
+export const ANTICIPATION_MAX_EXTRA_TURNS = 24
+/** 기대 중 나머지 릴·배경을 덮는 어둠의 불투명도. «살짝» 어둡게만 한다. */
+export const ANTICIPATION_DIM_ALPHA = 0.38
+/** 기대 기둥 안쪽 빛의 불투명도. */
+export const ANTICIPATION_PILLAR_ALPHA = 0.12
+/** 기대 기둥 테두리 광채. 굵고 흐린 선부터 겹친다(블러 필터 없이). 마지막 한 줄은 흰 심지다. */
+export const ANTICIPATION_GLOW_LAYERS = [
+  { widthPx: 16, alpha: 0.12, white: false },
+  { widthPx: 9, alpha: 0.24, white: false },
+  { widthPx: 4, alpha: 0.6, white: false },
+  { widthPx: 1.5, alpha: 0.75, white: true },
+] as const
+/** 어둠·기둥이 들어오는 시간(ms). */
+export const ANTICIPATION_FADE_IN_MS = 160
+/** 기둥 맥동·떨어진 스캐터 맥동의 반주기(ms). */
+export const ANTICIPATION_PULSE_MS = 320
+/** 떨어진 스캐터가 맥동하며 커지는 배율. */
+export const ANTICIPATION_PULSE_SCALE = 1.12
+/** 트리거가 완성됐을 때 터지는 반짝임 길이(ms). */
+export const ANTICIPATION_HIT_MS = 420
+/** 빗나갔을 때 조용히 꺼지는 시간(ms). */
+export const ANTICIPATION_MISS_FADE_MS = 260
 
 /**
  * 연쇄 1단계의 기본 길이(ms): 강조 → 팝 → 낙하. 행은 속도 프로파일과 모션 축소다.

@@ -1,6 +1,12 @@
 import {
-  ANTICIPATION_EXTRA_MS,
+  ANTICIPATION_BASE_MS,
+  ANTICIPATION_CRAWL_PORTION,
+  ANTICIPATION_GROWTH_MS,
+  ANTICIPATION_MAX_CRAWL_STEPS,
+  ANTICIPATION_REEL_CAP_MS,
   ANTICIPATION_SPEED_SCALE,
+  ANTICIPATION_STEP_TARGET_MS,
+  ANTICIPATION_TOTAL_CAP_MS,
   BASE_REVOLUTIONS,
   DEFAULT_SPIN_SPEED,
   FAST_SPIN_FACTOR,
@@ -54,7 +60,7 @@ export interface SpinPlanInput {
    */
   speed?: SpinSpeed
   /**
-   * 기대감을 걸 릴 인덱스(`anticipatedReels`). 이 릴들은 `ANTICIPATION_EXTRA_MS`만큼 더 돌고,
+   * 기대감을 걸 릴 인덱스(`anticipatedReels`). 이 릴들은 `anticipationExtrasMs`만큼 더 돌며 감속·크롤하고,
    * 뒤따르는 릴도 그만큼 밀린다. 모션 축소·터보에서는 무시된다.
    */
   anticipation?: readonly number[]
@@ -79,6 +85,34 @@ export interface ReelSpinPlan {
   revolutions: number
   /** 기대감으로 이 릴에 얹힌 시간(ms). 앞선 기대감 릴의 누적분은 포함하지 않는다. 아니면 0. */
   anticipationMs: number
+  /**
+   * 기대 창 길이(ms) — 앞 릴이 선 순간부터 이 릴이 서기까지. 이 구간에서 감속하고 크롤한다.
+   * 기대감이 없는 릴은 0.
+   */
+  anticipationWindowMs?: number
+  /** 크롤 구간에서 한 칸씩 넘어가는 횟수. 기대감이 없는 릴은 0. */
+  crawlSteps?: number
+}
+
+/**
+ * 기대 릴 `count`개의 추가 시간(ms, 왼쪽부터). 뒤 릴일수록 길고, 합은 상한을 넘지 않는다.
+ * 속도 배율(quick 축소·turbo 0)과 판 배율(`scale`)을 마지막에 곱한다. 결과는 바뀌지 않고 시간만 정한다.
+ */
+export function anticipationExtrasMs(count: number, speed?: SpinSpeed, scale = 1): number[] {
+  const n = Math.max(0, Math.floor(count))
+  const factor = (ANTICIPATION_SPEED_SCALE[speed ?? DEFAULT_SPIN_SPEED] ?? 1) * scale
+  if (n === 0 || !(factor > 0)) return new Array<number>(n).fill(0)
+  const raw = Array.from({ length: n }, (_, i) => Math.min(ANTICIPATION_REEL_CAP_MS, ANTICIPATION_BASE_MS + ANTICIPATION_GROWTH_MS * i))
+  const sum = raw.reduce((a, b) => a + b, 0)
+  const fit = sum > ANTICIPATION_TOTAL_CAP_MS ? ANTICIPATION_TOTAL_CAP_MS / sum : 1
+  return raw.map((ms) => Math.floor(ms * fit * factor))
+}
+
+/** 기대 창 길이에 맞춘 크롤 칸 수(1~최대). 창이 없으면 0. */
+export function crawlStepsFor(windowMs: number): number {
+  if (!(windowMs > 0)) return 0
+  const crawlMs = windowMs * ANTICIPATION_CRAWL_PORTION
+  return Math.max(1, Math.min(ANTICIPATION_MAX_CRAWL_STEPS, Math.round(crawlMs / ANTICIPATION_STEP_TARGET_MS)))
 }
 
 export interface SpinPlan {
@@ -122,18 +156,21 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
   // 터보는 프로파일이 당김을 0으로 두어 같은 자리에서 생략된다.
   const pullUpMs = reduced ? 0 : profile.pullUpMs
 
-  const extraMs = reduced
-    ? 0
-    : Math.round(
-        ANTICIPATION_EXTRA_MS * (ANTICIPATION_SPEED_SCALE[input.speed ?? DEFAULT_SPIN_SPEED] ?? 1) * (input.anticipationScale ?? 1),
-      )
-  const anticipated = new Set(extraMs > 0 ? (input.anticipation ?? []) : [])
+  // 대상 릴을 왼쪽부터 세어 순번마다 추가 시간을 준다(뒤 릴일수록 길다).
+  const targets = reduced ? [] : [...new Set(input.anticipation ?? [])].filter((r) => r >= 0 && r < reels).sort((a, b) => a - b)
+  const extras = anticipationExtrasMs(targets.length, input.speed, input.anticipationScale ?? 1)
+  const extraByReel = new Map<number, number>()
+  targets.forEach((reel, i) => {
+    const ms = extras[i] ?? 0
+    if (ms > 0) extraByReel.set(reel, ms)
+  })
 
   const plans: ReelSpinPlan[] = []
   let shiftMs = 0
   for (let reel = 0; reel < reels; reel += 1) {
-    const anticipationMs = anticipated.has(reel) ? extraMs : 0
+    const anticipationMs = extraByReel.get(reel) ?? 0
     shiftMs += anticipationMs
+    const anticipationWindowMs = anticipationMs > 0 ? anticipationMs + (reel > 0 ? stagger : 0) : 0
     const spinTotal = duration + stagger * reel + shiftMs
     const settleMs = reduced ? 0 : Math.min(profile.settleMs, spinTotal * LANDING_SETTLE_MAX_PORTION)
     plans.push({
@@ -144,6 +181,8 @@ export function buildSpinPlan(input: SpinPlanInput): SpinPlan {
       endMs: pullUpMs + spinTotal,
       revolutions: BASE_REVOLUTIONS + reel,
       anticipationMs,
+      anticipationWindowMs,
+      crawlSteps: crawlStepsFor(anticipationWindowMs),
     })
   }
 

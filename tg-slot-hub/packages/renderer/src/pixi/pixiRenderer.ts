@@ -63,8 +63,10 @@ import {
   type SpinPlan,
   type SpinSpeed,
 } from '../timing.js'
-import { anticipatedReels, featureTriggerCount } from '../anticipation.js'
-import { coinAnticipatedReels } from '../coinAnticipation.js'
+import { anticipatedReels, anticipationOutcome, featureTriggerCount, scatterCountsByReel } from '../anticipation.js'
+import { coinAnticipatedReels, coinCountsByReel } from '../coinAnticipation.js'
+import { crawlStepAt, crawlTravel, planCrawl, type CrawlCurve } from '../reelCrawl.js'
+import { AnticipationFx, type AnticipationOutcome, type FxRect } from './anticipationFx.js'
 import {
   buildRespinPlan,
   compressRespin,
@@ -132,6 +134,7 @@ import {
   gardenCellRect,
   gardenPlanIndexOf,
   gardenSkipStepMs,
+  gardenTriggerCount,
   gardenWindowFromStops,
   sameGardenBounds,
   type GardenCamera,
@@ -497,6 +500,14 @@ class PixiRenderer implements RendererCore {
   private anticipatedPlan = new Set<number>()
   /** 지금 기대감 구간(start 보냄, end 아직)인 릴. 없으면 null. */
   private anticipatingReel: number | null = null
+  /** 기대감 그림(기둥 빛·어둠·맥동·터짐). */
+  private readonly anticipationFx: AnticipationFx
+  /** 이번 스핀의 릴별 트리거 심볼 개수와 문턱. 기대 릴이 설 때 «터짐/꺼짐»을 고른다. 기대감이 없는 판은 null. */
+  private anticipationTally: { counts: number[]; trigger: number; symbol: string } | null = null
+  /** 이번 스핀의 릴별 계획(정지 시각·기대 창). */
+  private reelPlans: ReelSpinPlan[] = []
+  /** 정원 팩: 이번 스핀의 활성 범위(기대 기둥을 그 행에만 그린다). */
+  private gardenSpinBounds: GardenBounds | null = null
   /** 대기 중인 타이머와 그 대기자. 취소할 때 깨워서 내보내려고 resolver를 함께 들고 있다. */
   private readonly timers = new Map<ReturnType<typeof setTimeout>, () => void>()
   private destroyed = false
@@ -558,6 +569,7 @@ class PixiRenderer implements RendererCore {
     this.ownedTextures = ownedTextures
     this.confettiTexture = createSolidTexture(ownedTextures)
     this.frameSprite = frameTexture === null ? null : new Sprite(frameTexture)
+    this.anticipationFx = new AnticipationFx(options.theme.palette.frame)
     this.geometry = this.measureGeometry()
 
     // 창 맞춤에서는 프레임이 컨테이너 밖으로 나가므로 잘라 줘야 한다.
@@ -597,6 +609,7 @@ class PixiRenderer implements RendererCore {
         this.shapeVeil,
         this.reelsLayer,
         this.maskGraphics,
+        this.anticipationFx.container,
         this.cascadeOutline,
         this.mutationLayer,
         this.featureGraphics,
@@ -610,6 +623,7 @@ class PixiRenderer implements RendererCore {
       // 마름모 판·얼림 층은 정원 팩에서 비어 있지만 함께 소멸되도록 무대에는 단다.
       this.cameraLayer.addChild(
         this.reelsLayer,
+        this.anticipationFx.container,
         this.cascadeOutline,
         this.mutationLayer,
         this.featureGraphics,
@@ -1076,6 +1090,9 @@ class PixiRenderer implements RendererCore {
                 : anticipatedReels(this.options.math, stops),
             })
     this.anticipatedPlan = new Set(plan.reels.filter((r) => r.anticipationMs > 0).map((r) => r.reel))
+    this.reelPlans = plan.reels
+    this.gardenSpinBounds = garden?.start ?? null
+    this.anticipationTally = this.anticipatedPlan.size > 0 ? this.tallyFor(stops, garden?.start) : null
 
     await Promise.all(
       plan.reels.map(async (reelPlan) => {
@@ -1143,8 +1160,10 @@ class PixiRenderer implements RendererCore {
     const start = view.position
     // 양수가 위쪽이다. 반동은 릴을 위로 끌어올린다.
     const pullUpTo = reduced ? start : start + PULL_UP_SYMBOLS
-    const target = spinTargetPosition(start, stop, length, plan.revolutions)
     const settle = reduced ? 0 : LANDING_SETTLE_SYMBOLS
+    // 기대 릴: 감속 → 크롤 곡선. 바퀴를 더할 수는 있어도 서는 칸(stop)은 같다.
+    const crawl = reduced ? null : this.crawlFor(plan, start, stop, length, pullUpTo, settle)
+    const target = crawl?.target ?? spinTargetPosition(start, stop, length, plan.revolutions)
     const landing = target - settle
     const distance = pullUpTo - landing
     const accelTo = pullUpTo - distance * ACCEL_DISTANCE_RATIO
@@ -1167,7 +1186,7 @@ class PixiRenderer implements RendererCore {
         view.faceOn = true
         this.renderReel(plan.reel)
         if (token === this.spinToken && !this.destroyed) {
-          this.endAnticipation()
+          this.endAnticipation(this.skipRequestedToken === token ? undefined : this.outcomeFor(plan.reel))
           // 정원: 카메라 밖 열은 소리를 내지 않는다. 보이는 열만 0부터 센다.
           const active = this.spinActive
           if (active === null) this.emit({ type: 'reelStop', reel: plan.reel })
@@ -1177,10 +1196,7 @@ class PixiRenderer implements RendererCore {
           const order = this.stopOrder
           if (order === null) {
             const next = plan.reel + 1
-            if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) {
-              this.anticipatingReel = next
-              this.emit({ type: 'anticipation', phase: 'start', reel: next })
-            }
+            if (this.anticipatedPlan.has(next) && this.skipRequestedToken !== token) this.beginAnticipation(next, [next])
           } else {
             // 묶음으로 서는 판: 묶음의 릴이 전부 선 뒤에 다음 묶음의 기대감이 시작된다.
             this.landedReels.add(plan.reel)
@@ -1192,8 +1208,7 @@ class PixiRenderer implements RendererCore {
               this.anticipatedPlan.has(first) &&
               this.skipRequestedToken !== token
             ) {
-              this.anticipatingReel = first
-              this.emit({ type: 'anticipation', phase: 'start', reel: first })
+              this.beginAnticipation(first, order[group + 1] ?? [first])
             }
           }
         }
@@ -1219,21 +1234,50 @@ class PixiRenderer implements RendererCore {
         })
       }
 
-      timeline
-        .to(state, {
-          p: accelTo,
-          duration: (plan.spinMs * ACCEL_TIME_RATIO) / 1000,
-          ease: 'power2.in',
-          onUpdate,
+      if (crawl !== null) {
+        const curve = crawl.curve
+        const clock = { t: 0 }
+        const decelAt = curve.accelMs + curve.cruiseMs
+        let facesOn = false
+        let lastStep = -1
+        timeline.to(clock, {
+          t: curve.spinMs,
+          duration: curve.spinMs / 1000,
+          ease: 'none',
+          onUpdate: () => {
+            state.p = pullUpTo - crawlTravel(curve, clock.t)
+            if (!facesOn && clock.t >= decelAt) {
+              facesOn = true
+              this.enableReelFaces(plan.reel)
+            }
+            onUpdate()
+            // 크롤 한 칸이 넘어가는 순간마다 알린다(허브가 틱 소리를 낸다). 기대감이 켜진 릴만.
+            const step = crawlStepAt(curve, clock.t)
+            if (step > lastStep) {
+              lastStep = step
+              if (this.anticipatingReel === plan.reel && token === this.spinToken) {
+                this.emit({ type: 'anticipationStep', reel: plan.reel, step, steps: curve.steps })
+              }
+            }
+          },
         })
-        // 감속 구간에 들어서면 서는 자리의 코인이 금액을 달고 들어온다(착지 프레임에서 바뀌어 보이지 않게).
-        .call(() => this.enableReelFaces(plan.reel))
-        .to(state, {
-          p: landing,
-          duration: (plan.spinMs * (1 - ACCEL_TIME_RATIO)) / 1000,
-          ease: 'power2.out',
-          onUpdate,
-        })
+      } else {
+        timeline
+          .to(state, {
+            p: accelTo,
+            duration: (plan.spinMs * ACCEL_TIME_RATIO) / 1000,
+            ease: 'power2.in',
+            onUpdate,
+          })
+          // 감속 구간에 들어서면 서는 자리의 코인이 금액을 달고 들어온다(착지 프레임에서 바뀌어 보이지 않게).
+          .call(() => this.enableReelFaces(plan.reel))
+          .to(state, {
+            p: landing,
+            duration: (plan.spinMs * (1 - ACCEL_TIME_RATIO)) / 1000,
+            ease: 'power2.out',
+            onUpdate,
+          })
+      }
 
       if (plan.settleMs > 0) {
         timeline.to(state, {
@@ -1252,15 +1296,130 @@ class PixiRenderer implements RendererCore {
    * 진행 중인 스핀을 끊는다. GSAP은 kill 시 onComplete를 부르지 않으므로
    * 대기 중인 promise를 여기서 직접 풀어 준다. 그러지 않으면 이전 `spinTo`가 영원히 매달린다.
    */
-  private endAnticipation(): void {
+  private endAnticipation(outcome?: AnticipationOutcome): void {
     if (this.anticipatingReel === null) return
     const reel = this.anticipatingReel
     this.anticipatingReel = null
-    this.emit({ type: 'anticipation', phase: 'end', reel })
+    this.anticipationFx.end(outcome)
+    this.emit(outcome === undefined ? { type: 'anticipation', phase: 'end', reel } : { type: 'anticipation', phase: 'end', reel, outcome })
+  }
+
+  /** 기대감 시작: 기둥 빛·어둠·떨어진 스캐터 맥동을 켜고 허브에 창 길이를 알린다. `group`은 함께 서는 릴들. */
+  private beginAnticipation(reel: number, group: readonly number[]): void {
+    this.anticipatingReel = reel
+    const plan = this.reelPlans.find((p) => p.reel === reel)
+    const durationMs = Math.round(plan?.anticipationWindowMs ?? plan?.anticipationMs ?? 0)
+    this.anticipationFx.begin(
+      group.map((r) => this.anticipationColumn(r)),
+      this.landedTriggerViews(plan?.endMs ?? Number.POSITIVE_INFINITY),
+      durationMs,
+    )
+    this.emit({ type: 'anticipation', phase: 'start', reel, durationMs })
+  }
+
+  /** 기대 릴의 감속·크롤 곡선. 기대감이 없거나 곡선을 못 세우면 null(예전 트윈으로 돈다). */
+  private crawlFor(
+    plan: ReelSpinPlan,
+    start: number,
+    stop: number,
+    length: number,
+    pullUpTo: number,
+    settle: number,
+  ): { curve: CrawlCurve; target: number } | null {
+    const windowMs = plan.anticipationWindowMs ?? 0
+    const steps = plan.crawlSteps ?? 0
+    if (plan.anticipationMs <= 0 || windowMs <= 0 || steps <= 0) return null
+    const targetFor = (extra: number): number => spinTargetPosition(start, stop, length, plan.revolutions + extra)
+    const picked = planCrawl({
+      distanceFor: (extra) => pullUpTo - (targetFor(extra) - settle),
+      spinMs: plan.spinMs,
+      baseSpinMs: Math.max(1, plan.spinMs - plan.anticipationMs),
+      windowMs,
+      steps,
+    })
+    if (!picked.curve.valid) return null
+    return { curve: picked.curve, target: targetFor(picked.extraTurns) }
+  }
+
+  /** 기대 기둥 사각형(콘텐츠/카메라 지역 좌표). 모양 판은 그 릴의 창, 정원은 활성 행만. */
+  private anticipationColumn(reel: number): FxRect {
+    const layout = this.layout
+    const pitch = cellPitch(layout)
+    if (this.shape !== null) {
+      const rect = reelWindowRects(layout, this.shape)[reel]
+      if (rect !== undefined) return rect
+    }
+    const bounds = this.gardenSpinBounds
+    if (bounds !== null) {
+      return { x: reelLeft(layout, reel) - layout.gap / 2, y: rowTop(layout, bounds.y) - layout.gap / 2, width: pitch, height: bounds.size * pitch }
+    }
+    return {
+      x: reelLeft(layout, reel) - layout.gap / 2,
+      y: layout.reelArea.y - layout.gap / 2,
+      width: pitch,
+      height: layout.reelArea.height + layout.gap,
+    }
+  }
+
+  /** 이 시각 전에 선 릴에서 트리거 심볼(스캐터·코인)이 앉은 칸의 뷰. */
+  private landedTriggerViews(beforeMs: number): Container[] {
+    const tally = this.anticipationTally
+    if (tally === null) return []
+    const views: Container[] = []
+    for (const plan of this.reelPlans) {
+      if (plan.endMs >= beforeMs) continue
+      const view = this.reels[plan.reel]
+      if (view === undefined) continue
+      for (let k = 1; k <= this.options.math.rows; k += 1) {
+        const cell = view.cells[k]
+        if (cell !== undefined && cell.symbol === tally.symbol) views.push(cell.view)
+      }
+    }
+    return views
+  }
+
+  /** 기대 릴이 설 때 트리거가 완성됐는지. 기대감이 없는 판이면 undefined. */
+  private outcomeFor(reel: number): AnticipationOutcome | undefined {
+    const tally = this.anticipationTally
+    if (tally === null || this.anticipatingReel === null) return undefined
+    const endMs: number[] = []
+    for (const plan of this.reelPlans) endMs[plan.reel] = plan.endMs
+    return anticipationOutcome(tally.counts, endMs, reel, tally.trigger)
+  }
+
+  /** 이번 스핀의 릴별 트리거 심볼 개수. 기대감 대상 함수와 같은 규칙으로 센다. */
+  private tallyFor(stops: readonly number[], garden: GardenBounds | undefined): { counts: number[]; trigger: number; symbol: string } | null {
+    const math = this.options.math
+    if (math.coinRespin !== undefined) {
+      const counts = coinCountsByReel(math, stops)
+      return counts === null ? null : { counts, trigger: math.coinRespin.trigger, symbol: math.coinRespin.symbol }
+    }
+    const scatter = math.scatter?.symbol
+    if (scatter === undefined) return null
+    if (garden !== undefined) {
+      const trigger = gardenTriggerCount(math)
+      if (trigger === undefined) return null
+      const window = gardenWindowFromStops(this.strips, stops, math.rows)
+      const counts = new Array<number>(math.reels).fill(0)
+      for (let reel = garden.x; reel < garden.x + garden.size; reel += 1) {
+        for (let row = garden.y; row < garden.y + garden.size; row += 1) {
+          if (window[row]?.[reel] === scatter) counts[reel] = (counts[reel] ?? 0) + 1
+        }
+      }
+      return { counts, trigger, symbol: scatter }
+    }
+    if (this.stopOrder !== null) {
+      const trigger = math.frostRespin?.freeSpins.trigger ?? featureTriggerCount(math)
+      return trigger === undefined ? null : { counts: shapeScatterCounts(math, stops, scatter), trigger, symbol: scatter }
+    }
+    const trigger = featureTriggerCount(math)
+    const counts = scatterCountsByReel(math, stops)
+    return trigger === undefined || counts === null ? null : { counts, trigger, symbol: scatter }
   }
 
   private killSpinTimelines(): void {
     this.endAnticipation()
+    this.anticipationFx.clear()
     for (const timeline of this.spinTimelines) timeline.kill()
     this.spinTimelines = []
     this.activeReels.clear()
@@ -3505,6 +3664,7 @@ class PixiRenderer implements RendererCore {
     this.killRespinTweens()
     // 동굴 무대는 앱(스테이지)이 내려가기 전에 정리한다. 앱이 먼저 지우면 풀이 이미 파괴된 스프라이트를 만진다.
     this.respinScene?.destroy()
+    this.anticipationFx.destroy()
     this.cameraTween?.kill()
     this.gardenScene?.destroy()
     this.releaseFreeSpinsBackground()

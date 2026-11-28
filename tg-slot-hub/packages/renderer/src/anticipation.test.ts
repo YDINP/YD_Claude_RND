@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { anticipatedReels, featureTriggerCount, scatterCountsByReel, type AnticipationMath } from './anticipation.js'
-import { ANTICIPATION_EXTRA_MS, SPIN_SPEED_PROFILES } from './constants.js'
+import { ANTICIPATION_BASE_MS, ANTICIPATION_GROWTH_MS, SPIN_SPEED_PROFILES } from './constants.js'
 import { buildSpinPlan } from './timing.js'
 
 const strip = ['a', 'b', 'S', 'c', 'd', 'e']
@@ -92,15 +92,15 @@ describe('buildSpinPlan 기대감', () => {
     const plan = buildSpinPlan({ reels: 5, anticipation: [2] })
     for (const reel of [0, 1]) expect(plan.reels[reel]?.endMs).toBe(base.reels[reel]?.endMs)
     for (const reel of [2, 3, 4]) {
-      expect(plan.reels[reel]?.endMs).toBe((base.reels[reel]?.endMs ?? 0) + ANTICIPATION_EXTRA_MS)
+      expect(plan.reels[reel]?.endMs).toBe((base.reels[reel]?.endMs ?? 0) + ANTICIPATION_BASE_MS)
     }
-    expect(plan.reels[2]?.anticipationMs).toBe(ANTICIPATION_EXTRA_MS)
+    expect(plan.reels[2]?.anticipationMs).toBe(ANTICIPATION_BASE_MS)
     expect(plan.reels[3]?.anticipationMs).toBe(0)
   })
 
   it('릴이 연속으로 대상이면 지연이 누적된다', () => {
     const plan = buildSpinPlan({ reels: 5, anticipation: [3, 4] })
-    expect(plan.reels[4]?.endMs).toBe((base.reels[4]?.endMs ?? 0) + ANTICIPATION_EXTRA_MS * 2)
+    expect(plan.reels[4]?.endMs).toBe((base.reels[4]?.endMs ?? 0) + ANTICIPATION_BASE_MS * 2 + ANTICIPATION_GROWTH_MS)
     expect(plan.totalMs).toBe(plan.reels[4]?.endMs)
   })
 
