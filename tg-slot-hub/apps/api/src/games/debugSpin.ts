@@ -1,6 +1,6 @@
 import { createRoundSeed } from '../spin/provablyFair.js'
 import { spinWithState } from './engineSpin.js'
-import { VOID_CELL } from '@tgslot/slot-engine'
+import { VOID_CELL, isFeatureBuyTriggered } from '@tgslot/slot-engine'
 import type { FrostChainTrigger, GameMath, Rng, RoundState, SpinResult } from '@tgslot/slot-engine'
 import type { SpinDebugPreset } from '@tgslot/shared'
 
@@ -132,7 +132,8 @@ export function matchesDebugPreset(
     case 'bigWin':
       return result.totalWin >= BIG_WIN_MULTIPLIER * totalBet
     case 'freeSpins':
-      return result.features.some((feature) => feature.type === 'freeSpins')
+      // 대표 보너스 진입 판정은 피처 구매(엔진 `isFeatureBuyTriggered`)와 같은 함수를 쓴다.
+      return isFeatureBuyTriggered('freeSpins', result)
     case 'gamble':
       // 프리스핀을 여는 스핀과 베팅 미만 당첨은 더블업을 열지 않는다(isGambleEligible) — 그런 판은 맞추지 않는다.
       return !isFreeSpin && result.totalWin > 0 && result.totalWin >= totalBet && result.nextState === undefined
@@ -149,11 +150,11 @@ export function matchesDebugPreset(
     case 'cascade3':
       return (result.cascades?.length ?? 0) >= 3 || gardenPopSteps(result) >= 3
     case 'orderRound':
-      return !isFreeSpin && result.features.some((feature) => feature.type === 'orderRound')
+      return !isFreeSpin && isFeatureBuyTriggered('orderRound', result)
     case 'orderComplete':
       return result.features.some((feature) => feature.type === 'orderComplete')
     case 'coinRespin':
-      return result.features.some((feature) => feature.type === 'coinRespin')
+      return isFeatureBuyTriggered('coinRespin', result)
     case 'columnWrap':
       // 진입 감기만으로는 리스핀 중 촉수 연출 순서를 볼 수 없다. **도중** 감기가 있어야 한다.
       return result.features.some(
@@ -166,7 +167,7 @@ export function matchesDebugPreset(
     case 'coinRespinFull':
       return result.features.some((feature) => feature.type === 'coinRespin' && feature.full)
     case 'boardBonus':
-      return boardOf(result) !== undefined
+      return isFeatureBuyTriggered('boardBonus', result)
     case 'boardGoal':
       return boardOf(result)?.end === 'goal'
     case 'boardTraps':

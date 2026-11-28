@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FeatureBuyConfigSchema, canTriggerFeatureBuy } from './featureBuySchema.js'
 import { VolatilitySchema } from '@tgslot/shared'
 import { MAX_FREE_SPINS_PER_ROUND } from './limits.js'
 import { CoinRespinSchema, checkCoinRespin } from './coinRespinSchema.js'
@@ -303,6 +304,8 @@ const BaseGameMathSchema = z.object({
   /** 기본 게임만의 목표 RTP. 잭팟 같은 허브 기여분은 포함하지 않는다. */
   rtpTarget: z.number().gt(0).max(1),
   volatility: VolatilitySchema,
+  /** 피처 구매(보너스 바로 사기). 대표 보너스가 없는 팩은 두지 않는다(허브가 버튼을 숨긴다). */
+  featureBuy: FeatureBuyConfigSchema.optional(),
 })
 
 /**
@@ -724,6 +727,17 @@ export const GameMathSchema = BaseGameMathSchema.superRefine((math, ctx) => {
   checkForgeRail(math, issue)
   checkShape(math, issue)
   checkFrostRespin(math, issue)
+  if (math.featureBuy !== undefined && !canTriggerFeatureBuy(math, math.featureBuy.trigger)) {
+    issue(`피처 구매 trigger '${math.featureBuy.trigger}'를 여는 보너스 설정이 이 팩에 없다`, ['featureBuy', 'trigger'])
+  }
+  if (math.featureBuy !== undefined) {
+    const price = math.featureBuy.price
+    for (const level of math.betLevels) {
+      if (!isWholeCoin(level * price)) {
+        issue(`피처 구매 비용: 총 베팅액 ${level} x 가격 ${price} = ${level * price}로 정수가 아니다`, ['featureBuy', 'price'])
+      }
+    }
+  }
   const roulette = math.stageRoulette
   if (roulette !== undefined) {
     const at = (...path: (string | number)[]): (string | number)[] => ['stageRoulette', ...path]

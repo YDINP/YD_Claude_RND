@@ -145,6 +145,21 @@ export {
   type FrostChainRun,
 } from './frost.js'
 export { createSeededRng } from './rng/seeded.js'
+export {
+  FEATURE_BUY_TRIGGERS,
+  FeatureBuyConfigSchema,
+  FeatureBuyTriggerSchema,
+  canTriggerFeatureBuy,
+  type FeatureBuyConfig,
+  type FeatureBuyTrigger,
+} from './featureBuySchema.js'
+export {
+  FEATURE_BUY_MAX_TRIES,
+  findFeatureBuySpin,
+  isFeatureBuyTriggered,
+  type FeatureBuySearchParams,
+  type FeatureBuySearchResult,
+} from './featureBuy.js'
 export * from './gardenTypes.js'
 export {
   GARDEN_MAX_STAGE,
